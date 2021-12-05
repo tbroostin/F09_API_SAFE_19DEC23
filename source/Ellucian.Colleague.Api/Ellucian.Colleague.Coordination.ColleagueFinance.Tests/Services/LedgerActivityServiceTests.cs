@@ -220,23 +220,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             #endregion
 
             [TestMethod]
-            [ExpectedException(typeof(IntegrationApiException))]
-            public async Task LedgerActivitiesService_GetLedgerActivitiesAsync_PermissionsException()
-            {
-                try
-                {
-                    roleRepositoryMock.Setup(r => r.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
-                    await ledgerActivityService.GetLedgerActivitiesAsync(0, 2, "", "", "", "");
-                }
-                catch (IntegrationApiException ex)
-                {
-                    Assert.IsNotNull(ex.Errors);
-                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, ex.Errors[0].StatusCode);
-                    throw;
-                }
-            }
-
-            [TestMethod]
             public async Task LedgerActivitiesService_GetLedgerActivitiesAsync_Sending_Empty_Filters()
             {
                 var result = await ledgerActivityService.GetLedgerActivitiesAsync(0, 2, "", "", "", "");
@@ -367,23 +350,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 Assert.AreEqual(result.Item2, 3);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(IntegrationApiException))]
-            public async Task LedgerActivitiesService_GetLedgerActivityByGuidAsync_PermissionException()
-            {
-                try
-                {
-                    roleRepositoryMock.Setup(r => r.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
-                    await ledgerActivityService.GetLedgerActivityByGuidAsync(guid);
-                }
-                catch (IntegrationApiException ex)
-                {
-                    Assert.IsNotNull(ex.Errors);
-                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, ex.Errors[0].StatusCode);
-                    throw;
-                }
-            }
-
+          
             [TestMethod]
             [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetLedgerActivityByGuidAsync_PermissionException_From_Repository()

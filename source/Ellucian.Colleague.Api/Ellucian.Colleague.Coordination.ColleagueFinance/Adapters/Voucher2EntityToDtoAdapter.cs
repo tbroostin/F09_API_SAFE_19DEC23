@@ -41,7 +41,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
             voucherDto.VendorState = Source.VendorState;
             voucherDto.VendorZip = Source.VendorZip;
             voucherDto.VendorCountry = Source.VendorCountry;
-                        
+
+            voucherDto.VendorAddressTypeCode = Source.VendorAddressTypeCode;
+            voucherDto.VendorAddressTypeDesc = Source.VendorAddressTypeDesc;
+
             voucherDto.Amount = Source.Amount;
             voucherDto.Date = Source.Date;
             voucherDto.DueDate = Source.DueDate;

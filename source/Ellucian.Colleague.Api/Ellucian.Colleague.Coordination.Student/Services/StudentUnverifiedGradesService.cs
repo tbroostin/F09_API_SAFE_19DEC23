@@ -1,4 +1,4 @@
-﻿//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -66,8 +66,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.StudentUnverifiedGrades>, int>> GetStudentUnverifiedGradesAsync(int offset, int limit,
             string student = "", string sectionRegistration = "", string section = "", bool bypassCache = false)
         {
-            CheckViewStudentUnverifiedGradesPermission();
-
+          
             string newStudent = string.Empty;
             if (!string.IsNullOrEmpty(student))
             {
@@ -157,8 +156,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>StudentUnverifiedGrades DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.StudentUnverifiedGrades> GetStudentUnverifiedGradesByGuidAsync(string guid, bool bypassCache = true)
         {
-            CheckViewStudentUnverifiedGradesPermission();
-
             Domain.Student.Entities.StudentUnverifiedGrades studentUnverifiedGradesEntity = null;
 
             try
@@ -238,9 +235,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             ValidateStudentUnverifiedGradesSubmissions(studentUnverifiedGradesSubmissions);
 
-            // verify the user has the permission to update a studentUnverifiedGradesSubmissions
-            this.CheckCreateStudentUnverifiedGradesSubmissionsPermission();
-
             _studentUnverifiedGradesRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
             // get the ID associated with the incoming guid
@@ -303,9 +297,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             //Validate the request 
             ValidateStudentUnverifiedGradesSubmissions(studentUnverifiedGradesSubmissions);
-
-            // verify the user has the permission to create a studentUnverifiedGradesSubmissions
-            this.CheckCreateStudentUnverifiedGradesSubmissionsPermission();
 
             _studentUnverifiedGradesRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -543,22 +534,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
-        /// Helper method to determine if the user has permission to create/update StudentUnverifiedGradesSubmissions.
-        /// </summary>
-        /// <exception><see cref="IntegrationApiException">IntegrationApiException</see></exception>
-        private void CheckCreateStudentUnverifiedGradesSubmissionsPermission()
-        {
-            bool hasPermission = HasPermission(StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions);
-
-            // User is not allowed to view student unverified grades without the appropriate permissions
-            if (!hasPermission)
-            {
-                IntegrationApiExceptionAddError("User '" + CurrentUser.UserId + "' is not authorized to create student-unverified-grades-submissions.", "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
-                throw IntegrationApiException;
-            }
-        }
-
-        /// <summary>
         /// Validate StudentUnverifiedGradesSubmissions DTO
         /// </summary>
         /// <param name="source"></param>
@@ -702,7 +677,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             else if (!string.IsNullOrEmpty(source.MidtermGrade3))
             {
-                var gradeGuid = (await GetGradesAsync(bypassCache)).FirstOrDefault(g => g.Id == source.MidtermGrade1);
+                var gradeGuid = (await GetGradesAsync(bypassCache)).FirstOrDefault(g => g.Id == source.MidtermGrade3);
                 if (gradeGuid == null)
                 {
                     throw new Exception(string.Format("Invalid midterm grade 3 '{0}' for Student Course Sec {1}.", source.MidtermGrade3, source.Guid));
@@ -1138,23 +1113,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             }
             return retval;
-        }
-
-        /// <summary>
-        /// Helper method to determine if the user has permission to view Student Unverified Grades.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckViewStudentUnverifiedGradesPermission()
-        {
-            bool hasPermission = HasPermission(StudentPermissionCodes.ViewStudentUnverifiedGrades)
-                || HasPermission(StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions);
-
-            // User is not allowed to view student unverified grades without the appropriate permissions
-            if (!hasPermission)
-            {
-                IntegrationApiExceptionAddError("User '" + CurrentUser.UserId + "' is not authorized to view student-unverified-grades.", "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
-                throw IntegrationApiException;
-            }
         }
 
         /// <summary>

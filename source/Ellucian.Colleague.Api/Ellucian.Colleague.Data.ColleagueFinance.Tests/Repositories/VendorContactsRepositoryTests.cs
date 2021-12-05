@@ -74,7 +74,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         public async Task VendorContactsRepository_GetVendorContacts2Async_noRecord()
         {
             transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
             var actuals = await vendorContactRepository.GetVendorContactsAsync(offset, limit, It.IsAny<string>());
             Assert.IsNotNull(actuals);
             Assert.AreEqual(actuals.Item2, 0);
@@ -85,7 +85,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         public async Task VendorContactsRepository_GetVendorContacts2Async_noOrgContactRecord()
         {
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Ellucian.Colleague.Data.ColleagueFinance.DataContracts.OrganizationContact>("ORGANIZATION.CONTACT", ids, true))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
             var actuals = await vendorContactRepository.GetVendorContactsAsync(offset, limit, It.IsAny<string>());
             Assert.IsNotNull(actuals);
             Assert.AreEqual(actuals.Item2, 0);
@@ -104,7 +104,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         public async Task VendorContactsRepository_GetVendorContacts2Async_NoPersonRecord()
         {
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>(ids, It.IsAny<bool>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
             var actuals = await vendorContactRepository.GetVendorContactsAsync(offset, limit, It.IsAny<string>());
         }
 
@@ -157,7 +157,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         public async Task VendorContactsRepository_GetVendorContacts2Async_NoRelationshipRecord()
         {
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Relationship>(relids, It.IsAny<bool>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
             var actuals = await vendorContactRepository.GetVendorContactsAsync(offset, limit, It.IsAny<string>());
         }
 
@@ -229,7 +229,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             dataReaderMock.Setup( repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>( expectedPerson.Recordkey, true ) ).ReturnsAsync( expectedPerson );
             dataReaderMock.Setup( repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Relationship>( expectedRelationship.Recordkey, true ) ).ReturnsAsync( expectedRelationship );
             dataReaderMock.Setup( repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Address>( expectedAddr.Recordkey, true ) ).ReturnsAsync( expectedAddr );
-            dataReaderMock.Setup( repo => repo.ReadRecordAsync<DataContracts.Vendors>( It.IsAny<string>(), It.IsAny<bool>() ) ).ReturnsAsync( null );
+            dataReaderMock.Setup( repo => repo.ReadRecordAsync<DataContracts.Vendors>( It.IsAny<string>(), It.IsAny<bool>() ) ).ReturnsAsync(() => null);
             var actual = await vendorContactRepository.GetGetVendorContactsByGuidAsync( guid );
             Assert.IsNotNull( actual );
         }
@@ -245,7 +245,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.ColleagueFinance.DataContracts.OrganizationContact>(expectedRecordKey, true)).ReturnsAsync(expectedContact);
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>(expectedPerson.Recordkey, true)).ReturnsAsync(expectedPerson);
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Relationship>(expectedRelationship.Recordkey, true)).ReturnsAsync(expectedRelationship);
-            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Address>(expectedAddr.Recordkey, true)).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Address>(expectedAddr.Recordkey, true)).ReturnsAsync(() => null);
             var actual = await vendorContactRepository.GetGetVendorContactsByGuidAsync(guid);
             Assert.IsNotNull(actual);
         }
@@ -272,7 +272,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var expectedContact = vendorContacts.FirstOrDefault(i => i.RecordGuid.Equals(guid));
             var expectedPerson = people.FirstOrDefault(i => i.Recordkey.Equals(expectedContact.OcnPersonId));
             var expectedRelationship = relationships.FirstOrDefault(i => i.Recordkey == expectedContact.OcnRelationship);
-            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.ColleagueFinance.DataContracts.OrganizationContact>(expectedRecordKey, true)).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.ColleagueFinance.DataContracts.OrganizationContact>(expectedRecordKey, true)).ReturnsAsync(() => null);
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>(expectedPerson.Recordkey, true)).ReturnsAsync(expectedPerson);
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Relationship>(expectedRelationship.Recordkey, true)).ReturnsAsync(expectedRelationship);
             var actual = await vendorContactRepository.GetGetVendorContactsByGuidAsync(guid);
@@ -286,7 +286,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var expectedPerson = people.FirstOrDefault(i => i.Recordkey.Equals(expectedContact.OcnPersonId));
             var expectedRelationship = relationships.FirstOrDefault(i => i.Recordkey == expectedContact.OcnRelationship);
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.ColleagueFinance.DataContracts.OrganizationContact>(expectedRecordKey, true)).ReturnsAsync(expectedContact);
-            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>(expectedPerson.Recordkey, true)).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>(expectedPerson.Recordkey, true)).ReturnsAsync(() => null);
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Relationship>(expectedRelationship.Recordkey, true)).ReturnsAsync(expectedRelationship);
             var actual = await vendorContactRepository.GetGetVendorContactsByGuidAsync(guid);
         }
@@ -302,7 +302,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var expectedRelationship = relationships.FirstOrDefault(i => i.Recordkey == expectedContact.OcnRelationship);
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.ColleagueFinance.DataContracts.OrganizationContact>(expectedRecordKey, true)).ReturnsAsync(expectedContact);
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>(expectedPerson.Recordkey, true)).ReturnsAsync(expectedPerson);
-            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Relationship>(expectedRelationship.Recordkey, true)).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Relationship>(expectedRelationship.Recordkey, true)).ReturnsAsync(() => null);
             var actual = await vendorContactRepository.GetGetVendorContactsByGuidAsync(guid);
         }
 
@@ -389,7 +389,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         {
             try
             {
-                dataReaderMock.Setup( r => r.ReadRecordAsync<Dflts>( "CORE.PARMS", "DEFAULTS", It.IsAny<bool>() ) ).ReturnsAsync( null );
+                dataReaderMock.Setup( r => r.ReadRecordAsync<Dflts>( "CORE.PARMS", "DEFAULTS", It.IsAny<bool>() ) ).ReturnsAsync(() => null);
                 var actual = await vendorContactRepository.CreateVendorContactInitiationProcessAsync( orgCtInitProc );
             }
             catch( RepositoryException e )

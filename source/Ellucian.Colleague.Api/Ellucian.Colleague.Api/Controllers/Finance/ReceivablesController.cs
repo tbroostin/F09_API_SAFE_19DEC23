@@ -74,6 +74,7 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// Retrieves the privacy-restricted account holder information for a specified person.
         /// </summary>
         /// <param name="personId">Person ID</param>
+        /// <param name="bypassCache">bypassCache</param>
         /// <accessComments>
         /// Users may request their own data. Additionally, users who have VIEW.STUDENT.ACCOUNT.ACTIVITY
         /// permission or proxy permissions can request other users' data
@@ -83,11 +84,11 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
         /// X-Content-Restricted header with a value of "partial" to indicate only partial information is returned for some subset of account holders. In this situation, 
         /// all details except the advisee name are cleared from the specific AccountHolder object.</returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to access this information</exception>
-        public AccountHolder GetAccountHolder2(string personId)
+        public async Task<AccountHolder> GetAccountHolder2Async(string personId, bool bypassCache)
         {
             try
             {
-                var privacyWrapper = _service.GetAccountHolder2(personId);
+                var privacyWrapper = await _service.GetAccountHolder2Async(personId, bypassCache);
                 var accountHolder = privacyWrapper.Dto as AccountHolder;
                 if (privacyWrapper.HasPrivacyRestrictions)
                 {

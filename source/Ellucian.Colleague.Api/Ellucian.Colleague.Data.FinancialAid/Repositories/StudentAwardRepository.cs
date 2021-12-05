@@ -320,6 +320,34 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             return studentAward;
         }
 
+        public async Task<IEnumerable<string>> GetCFPVersionAsync(string studentId, string awardYear)
+        {
+            if (studentId == null)
+            {
+                throw new ArgumentNullException("studentId");
+            }
+            if (awardYear == null)
+            {
+                throw new ArgumentNullException("awardYear");
+            }
+
+            var cfpVersion = new List<string>();
+            var request = new GetFaCfpVersionRequest();
+            request.FaYear = awardYear;
+            request.StudentId = studentId;
+            var response = await transactionInvoker.ExecuteAsync<GetFaCfpVersionRequest, GetFaCfpVersionResponse>(request);
+            if (response.CfpVersion != null)
+            {
+                cfpVersion.Add(response.CfpVersion);
+                return cfpVersion;
+            }
+            else
+            {
+                return response.ErrorMsgs;
+            }
+
+        }
+
 
         public async Task<IEnumerable<StudentAward>> UpdateStudentAwardsAsync(StudentAwardYear studentAwardYear, IEnumerable<StudentAward> studentAwards, IEnumerable<Award> allAwards, IEnumerable<AwardStatus> allAwardStatuses)
         {

@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -80,7 +80,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             try
             {
-                CheckUserAdmissionApplicationsViewPermissions();
+                //CheckUserAdmissionApplicationsViewPermissions();
 
                 var admissionApplicationsCollection = new List<Ellucian.Colleague.Dtos.AdmissionApplication>();
 
@@ -135,7 +135,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             try
             {
-                CheckUserAdmissionApplicationsViewPermissions();
+                //CheckUserAdmissionApplicationsViewPermissions();
 
                 var admissionApplicationsCollection = new List<Ellucian.Colleague.Dtos.AdmissionApplication2>();
 
@@ -188,7 +188,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         public async Task<Tuple<IEnumerable<Dtos.AdmissionApplication3>, int>> GetAdmissionApplications3Async(int offset, int limit, Dtos.AdmissionApplication3 filterCriteria = null, Dtos.Filters.PersonFilterFilter2 personFilterCriteria = null, bool bypassCache = false)
         {
-            CheckUserAdmissionApplicationsViewPermissions2();
+            //CheckUserAdmissionApplicationsViewPermissions2();
 
             var admissionApplicationsCollection = new List<Ellucian.Colleague.Dtos.AdmissionApplication3>();
 
@@ -287,7 +287,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             try
             {
-                CheckUserAdmissionApplicationsViewPermissions();
+                //CheckUserAdmissionApplicationsViewPermissions();
 
                 var admissionApplication = await _admissionApplicationsRepository.GetAdmissionApplicationByIdAsync(guid);
                 var admissionApplications = new List<Domain.Student.Entities.AdmissionApplication>() { admissionApplication };
@@ -334,7 +334,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             try
             {
-                CheckUserAdmissionApplicationsViewPermissions();
+                //CheckUserAdmissionApplicationsViewPermissions();
 
                 var admissionApplication = await _admissionApplicationsRepository.GetAdmissionApplicationByIdAsync(guid);
                 if (admissionApplication == null)
@@ -383,7 +383,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>AdmissionApplications2 DTO object</returns>
         public async Task<AdmissionApplication3> GetAdmissionApplicationsByGuid3Async(string guid)
         {
-            CheckUserAdmissionApplicationsViewPermissions2();
+            //CheckUserAdmissionApplicationsViewPermissions2();
 
             Domain.Student.Entities.AdmissionApplication admissionApplication = null;
             try
@@ -2168,11 +2168,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             ValidatePayload(admissionApplicationDto);
 
-            if (!await CheckAdmissionApplicationCreateUpdatePermAsync())
-            {
-                logger.Error(string.Format("User '{0}' is not authorized to create admission-applications.", CurrentUser.UserId));
-                throw new PermissionsException("User is not authorized to create admission-applications.");
-            }
+            //if (!await CheckAdmissionApplicationCreateUpdatePermAsync())
+            //{
+            //    logger.Error(string.Format("User '{0}' is not authorized to create admission-applications.", CurrentUser.UserId));
+            //    throw new PermissionsException("User is not authorized to create admission-applications.");
+            //}
                         
             var applicationsId = await _admissionApplicationsRepository.GetRecordKeyAsync(admissionApplicationDto.Id);
             if (!string.IsNullOrEmpty(applicationsId))
@@ -2211,11 +2211,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             ValidatePayload(admissionApplication);
 
-            if (!await CheckAdmissionApplicationCreateUpdatePermAsync())
-            {
-                logger.Error(string.Format("User '{0}' is not authorized to create admission-applications.", CurrentUser.UserId));
-                throw new PermissionsException("User is not authorized to create admission-applications.");
-            }
+            //if (!await CheckAdmissionApplicationCreateUpdatePermAsync())
+            //{
+            //    logger.Error(string.Format("User '{0}' is not authorized to create admission-applications.", CurrentUser.UserId));
+            //    throw new PermissionsException("User is not authorized to create admission-applications.");
+            //}
 
             try
             {

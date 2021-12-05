@@ -5,6 +5,7 @@ using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
@@ -57,7 +58,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns>List of FinancialAidApplications <see cref="Dtos.FinancialAidApplication"/> objects representing matching financialAidApplications</returns>
         [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
         [HttpGet]
-        [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
+        [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewFinancialAidApplications)]
         [ValidateQueryStringFilter()]
         [QueryStringFilterFilter("criteria", typeof(Dtos.FinancialAidApplication)), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetAsync(Paging page, QueryStringFilter criteria)
@@ -76,6 +77,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                studentFinancialAidApplicationService.ValidatePermissions(GetPermissionsMetaData());
                 var criteriaObject = GetFilterObject<Dtos.FinancialAidApplication>(logger, "criteria");
                 if (CheckForEmptyFilterParameters())
                     return new PagedHttpActionResult<IEnumerable<Dtos.FinancialAidApplication>>(new List<Dtos.FinancialAidApplication>(), page, 0, this.Request);
@@ -126,7 +128,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="id">GUID to desired financialAidApplications</param>
         /// <returns>A financialAidApplications object <see cref="Dtos.FinancialAidApplication"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewFinancialAidApplications)]
         public async Task<Dtos.FinancialAidApplication> GetByIdAsync(string id)
         {
             var bypassCache = false;
@@ -145,6 +147,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                studentFinancialAidApplicationService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                     await studentFinancialAidApplicationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await studentFinancialAidApplicationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),

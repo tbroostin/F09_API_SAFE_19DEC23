@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using slf4net;
 using System;
-using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Web.Http.Controllers;
@@ -32,10 +32,11 @@ namespace Ellucian.Web.Http.ModelBinding
         public bool BindModel(HttpActionContext context, ModelBindingContext bindingContext)
         {
             exceptionObject = null;
-                
+            var retVal = true;
+            
             var logger = context.Request.GetDependencyScope().GetService(typeof(ILogger)) as ILogger;
 
-         
+
             if (bindingContext != null && bindingContext.ModelType != null && !string.IsNullOrEmpty(bindingContext.ModelType.AssemblyQualifiedName))
             {
                 var bodyString = context.Request.Content.ReadAsStringAsync().Result;
@@ -45,15 +46,25 @@ namespace Ellucian.Web.Http.ModelBinding
                 {
                     bodyObject = JsonConvert.DeserializeObject(bodyString, Type.GetType(bindingContext.ModelType.AssemblyQualifiedName));
                 }
-
-                var isBodyProvided = ValidateMessageBody(context, bodyObject);
-
-                if (!isBodyProvided || string.IsNullOrEmpty(bodyString))
+                // if this is being invoked by the EthosApiBuilder, then do not perform validations with model binder.
+                if (!bindingContext.ModelType.Name.Equals("EthosApiBuilder", StringComparison.OrdinalIgnoreCase))
                 {
-                    return false;
+                    var isBodyProvided = ValidateMessageBody(context, bodyObject);
+
+                    if (!isBodyProvided || string.IsNullOrEmpty(bodyString))
+                    {
+                        return false;
+                    }
+
+                    retVal = ValidateInputGuids(context, bodyObject);
                 }
-             
-                var retVal = ValidateInputGuids(context, bodyObject);
+                else
+                {
+                    if (string.IsNullOrEmpty(bodyString))
+                    {
+                        return false;
+                    }
+                }
 
                 bindingContext.Model = bodyObject;
 
@@ -61,8 +72,8 @@ namespace Ellucian.Web.Http.ModelBinding
                 //add this property for PartialUpdates
                 context.Request.Properties.Add("PartialInputJsonObject", jsonObject);
                 //add this property for Extended Data checks
-                context.Request.Properties.Add("EthosExtendedDataObject", jsonObject); 
-                
+                context.Request.Properties.Add("EthosExtendedDataObject", jsonObject);
+
                 return retVal;
             }
 
@@ -85,15 +96,42 @@ namespace Ellucian.Web.Http.ModelBinding
             var guidInBody = string.Empty;
             var paramName = string.Empty;
             var httpMethod = context.Request.Method.Method;
+            if (!context.Request.Method.Equals(HttpMethod.Post) && !context.Request.Method.Equals(HttpMethod.Put))
+            {
+                return true;
+            }
+
+            // If our Accept header is not Ethos GUID enabled then return.
+            if (context.Request.Headers != null && context.Request.Headers.Accept != null && !context.Request.Headers.Accept.ToString().Contains("hedtech"))
+            {
+                return true;
+            }
 
             //Get the api name e.g. person-visas or section-registrations etc. used in the error message.
-            var routeTemplate = context.Request.GetRouteData().Route.RouteTemplate;
+                var routeTemplate = context.Request.GetRouteData().Route.RouteTemplate;
             if (routeTemplate.Contains("/"))
             {
                 var splitRoute = routeTemplate.Split(new string[] { "/" }, StringSplitOptions.None);
                 if (splitRoute.Any() && splitRoute.Count() > 1)
                 {
                     routeTemplate = splitRoute[0];
+                }
+                if (routeTemplate == "{resource}" || context.ActionArguments == null)
+                {
+                    splitRoute = context.Request.RequestUri.AbsoluteUri.Split(new string[] { "/" }, StringSplitOptions.None);
+                    int index = splitRoute.Count() - 1;
+                    if (context.Request.Method.Equals(HttpMethod.Post))
+                    {
+                        routeTemplate = splitRoute.LastOrDefault();
+                    }
+                    else
+                    {
+                        if (index > 1)
+                        {
+                            routeTemplate = splitRoute.ElementAt(index - 1);
+                        }
+                        guidInUrl = splitRoute.LastOrDefault();
+                    }
                 }
             }
 
@@ -183,8 +221,14 @@ namespace Ellucian.Web.Http.ModelBinding
             if ((context.Response == null) && (exceptionObject != null) && (exceptionObject.Errors.Any()))
             {
                 var serialized = JsonConvert.SerializeObject(exceptionObject);
+               
                 context.Response = new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest) { Content = new StringContent(serialized) };
-                context.Response.Headers.Add(CustomMediaType, BaseCompressedApiController.IntegrationErrors2);
+                context.Response.Headers.Remove(CustomMediaType);
+
+                IEnumerable<string> customMediaTypeValue = null;
+                if (!context.Response.Headers.TryGetValues(CustomMediaType, out customMediaTypeValue))
+                    context.Response.Headers.Add(CustomMediaType, BaseCompressedApiController.IntegrationErrors2);
+
                 return false;
             }
 

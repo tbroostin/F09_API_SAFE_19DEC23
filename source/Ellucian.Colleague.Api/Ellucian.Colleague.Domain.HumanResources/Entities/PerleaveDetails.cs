@@ -70,7 +70,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         {
             if (string.IsNullOrEmpty(guid))
             {
-                throw new ArgumentNullException(string.Concat("EmployeeLeaveTransactions guid can not be null or empty. Entity: ‘PERLVDTL’, Record ID: '", id, "'"));
+                throw new ArgumentException(string.Concat("EmployeeLeaveTransactions guid can not be null or empty. Entity: ‘PERLVDTL’, Record ID: '", id, "'"));
             }
             if (string.IsNullOrEmpty(id))
             {

@@ -1,4 +1,5 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
@@ -68,7 +69,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             allGrades = await gradeRepo.GetAsync();
             foreach (var testGrade in allTestRepoGrades)
             {
-                var grade = allGrades.Where(g=>g.Id == testGrade.Id).FirstOrDefault();
+                var grade = allGrades.Where(g => g.Id == testGrade.Id).FirstOrDefault();
                 Assert.IsNotNull(grade);
                 Assert.AreEqual(testGrade.Description, grade.Description);
                 Assert.AreEqual(testGrade.GradeSchemeCode, grade.GradeSchemeCode);
@@ -79,7 +80,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(testGrade.ComparisonGrade == null ? null : testGrade.ComparisonGrade.ComparisonGradeValue, grade.ComparisonGrade == null ? null : grade.ComparisonGrade.ComparisonGradeValue);
                 Assert.AreEqual(testGrade.ComparisonGrade == null ? null : testGrade.ComparisonGrade.ComparisonGradeSchemeCode, grade.ComparisonGrade == null ? null : grade.ComparisonGrade.ComparisonGradeSchemeCode);
                 // Grade priority is set to 0 if incoming value is null.
-                Assert.AreEqual(testGrade.GradePriority == null? 0 : testGrade.GradePriority, grade.GradePriority);
+                Assert.AreEqual(testGrade.GradePriority == null ? 0 : testGrade.GradePriority, grade.GradePriority);
                 Assert.AreEqual(testGrade.ExcludeFromFacultyGrading, grade.ExcludeFromFacultyGrading);
                 Assert.AreEqual(testGrade.IncludeInWebFinalGradesList, grade.IncludeInWebFinalGradesList);
                 Assert.AreEqual(testGrade.IncludeInWebMidtermGradesList, grade.IncludeInWebMidtermGradesList);
@@ -149,7 +150,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             var guid = grdDataContract.RecordGuid;
             var id = grdDataContract.Recordkey;
-            var guidLookupResult = new GuidLookupResult() { Entity = "GRADES", PrimaryKey = id }; 
+            var guidLookupResult = new GuidLookupResult() { Entity = "GRADES", PrimaryKey = id };
             var guidLookupDict = new Dictionary<string, GuidLookupResult>();
             dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).Returns<GuidLookup[]>(gla =>
             {
@@ -181,8 +182,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             // Verify that the GetById returns a grade in the test repository
             // with fields properly initialized
-            Grade grade_element = await gradeRepo.GetHedmGradeByIdAsync("d874e05d-9d97-4fa3-8862-5044ef2384d0");    
-           
+            Grade grade_element = await gradeRepo.GetHedmGradeByIdAsync("d874e05d-9d97-4fa3-8862-5044ef2384d0");
+
             Assert.IsNotNull(grade_element);
             Assert.AreEqual(grade.Description, grade_element.Description);
             Assert.AreEqual(grade.GradeSchemeCode, grade_element.GradeSchemeCode);
@@ -198,6 +199,60 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Assert.AreEqual(grade.IncludeInWebFinalGradesList, grade_element.IncludeInWebFinalGradesList);
             Assert.AreEqual(grade.IncludeInWebMidtermGradesList, grade_element.IncludeInWebMidtermGradesList);
             Assert.AreEqual(grade.CanBeUsedAfterDropGradeRequiredDate, grade_element.CanBeUsedAfterDropGradeRequiredDate);
+        }
+
+
+
+        [TestMethod]
+        public async Task GradeRepo_GetHedmById_EmptyComparisonGradeCollection()
+        {
+            var grade = allTestRepoGrades.FirstOrDefault();
+            // Work back to a data contract record from the grade domain entity.
+            Data.Student.DataContracts.Grades grdDataContract = BuildGradesResponse(grade);
+
+            var guid = grdDataContract.RecordGuid;
+            var id = grdDataContract.Recordkey;
+            var guidLookupResult = new GuidLookupResult() { Entity = "GRADES", PrimaryKey = id };
+            var guidLookupDict = new Dictionary<string, GuidLookupResult>();
+            dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).Returns<GuidLookup[]>(gla =>
+            {
+                if (gla.Any(gl => gl.Guid == guid))
+                {
+                    guidLookupDict.Add(guid, guidLookupResult);
+                }
+                return Task.FromResult(guidLookupDict);
+            });
+
+            dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.Grades>(grdDataContract.Recordkey, true)).ReturnsAsync(grdDataContract);
+
+            if (grdDataContract.GrdComparisonGrade != null)
+            {
+                var compGrade = allTestRepoGrades.Where(g => g.Id == grdDataContract.GrdComparisonGrade).FirstOrDefault();
+                if (compGrade != null)
+                {
+                    dataReaderMock.Setup(acc => acc.ReadRecordAsync<Grades>(compGrade.Id, true)).ReturnsAsync(() => null);
+                }
+            }
+            Grade grade_element = await gradeRepo.GetHedmGradeByIdAsync("d874e05d-9d97-4fa3-8862-5044ef2384d0");
+
+            Assert.IsNotNull(grade_element, "Not null");
+            Assert.AreEqual(grade.Description, grade_element.Description, "Description");
+            Assert.AreEqual(grade.GradeSchemeCode, grade_element.GradeSchemeCode, "GradeSchemeCode");
+            Assert.AreEqual(grade.GradeValue, grade_element.GradeValue, "GradeValue");
+            Assert.AreEqual(grade.IsWithdraw, grade_element.IsWithdraw, "IsWithdraw");
+            Assert.AreEqual(grade.LetterGrade, grade_element.LetterGrade, "LetterGrade");
+            Assert.AreEqual(null,
+                grade_element.ComparisonGrade == null ? null : grade_element.ComparisonGrade.ComparisonGradeId, "ComparisonGradeId");
+            Assert.AreEqual(null,
+                grade_element.ComparisonGrade == null ? null : grade_element.ComparisonGrade.ComparisonGradeValue, "ComparisonGradeValue");
+            Assert.AreEqual(null,
+                grade_element.ComparisonGrade == null ? null : grade_element.ComparisonGrade.ComparisonGradeSchemeCode, "ComparisonGradeSchemeCode");
+
+            // Grade priority is set to 0 if incoming value is null.
+            Assert.AreEqual(grade.GradePriority == null ? 0 : grade.GradePriority, grade_element.GradePriority, "GradePriority");
+            Assert.AreEqual(grade.IncludeInWebFinalGradesList, grade_element.IncludeInWebFinalGradesList, "IncludeInWebFinalGradesList");
+            Assert.AreEqual(grade.IncludeInWebMidtermGradesList, grade_element.IncludeInWebMidtermGradesList, "IncludeInWebMidtermGradesList");
+            Assert.AreEqual(grade.CanBeUsedAfterDropGradeRequiredDate, grade_element.CanBeUsedAfterDropGradeRequiredDate, "CanBeUsedAfterDropGradeRequiredDate");
         }
 
         [TestMethod]
@@ -237,11 +292,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         {
             var regDefaultsResponse = new RegDefaults();
             dataReaderMock.Setup(acc => acc.ReadRecordAsync<Data.Student.DataContracts.RegDefaults>("ST.PARMS", "REG.DEFAULTS", true)).ReturnsAsync(regDefaultsResponse);
-            
+
             // Verify that the Get (all) returns all grades in the test repository
             // with fields properly initialized
             allGrades = await gradeRepo.GetAsync();
-            var grade = allGrades.Where(g=>g.Id == "WD").FirstOrDefault();
+            var grade = allGrades.Where(g => g.Id == "WD").FirstOrDefault();
             Assert.IsFalse(grade.IsWithdraw);
         }
 
@@ -254,7 +309,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             // Verify that the Get (all) returns all grades in the test repository
             // with fields properly initialized
-            allGrades =await gradeRepo.GetAsync();
+            allGrades = await gradeRepo.GetAsync();
             var grade = allGrades.Where(g => g.Id == "WD").FirstOrDefault();
             Assert.IsTrue(grade.IsWithdraw);
         }
@@ -282,7 +337,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             var guid = grd.RecordGuid;
             var id = grd.Recordkey;
-            var guidLookupResult = new GuidLookupResult() { Entity = "GRADES", PrimaryKey = null }; 
+            var guidLookupResult = new GuidLookupResult() { Entity = "GRADES", PrimaryKey = null };
             var guidLookupDict = new Dictionary<string, GuidLookupResult>();
             dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).Returns<GuidLookup[]>(gla =>
             {
@@ -293,7 +348,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 return Task.FromResult(guidLookupDict);
             });
 
-            dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.Grades>(grd.Recordkey, true)).ReturnsAsync(grd); 
+            dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.Grades>(grd.Recordkey, true)).ReturnsAsync(grd);
 
 
             // Verify that the GetById returns a grade in the test repository
@@ -321,7 +376,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 return Task.FromResult(guidLookupDict);
             });
 
-            dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.Grades>(grd.Recordkey, true)).ReturnsAsync(null); 
+            dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.Grades>(grd.Recordkey, true)).ReturnsAsync(() => null);
 
 
             // Verify that the GetById returns a grade in the test repository
@@ -359,7 +414,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         public async Task GradeRepo_GetHedm_GradeMissingGradeScheme()
         {
             var grade = allTestRepoGrades.FirstOrDefault();
-            IEnumerable<Grade>  gradeList = new List<Grade>() { grade };
+            IEnumerable<Grade> gradeList = new List<Grade>() { grade };
             Collection<Grades> gradesList = BuildGradesResponse(gradeList);
             gradesList.First().GrdGradeScheme = "";
 
@@ -388,7 +443,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             dataReaderMock.Setup<Task<Collection<Grades>>>(acc => acc.BulkReadRecordAsync<Grades>("", true)).Returns(Task.FromResult(gradesResponseData));
 
             var regDefaultsResponse = BuildRegDefaultsValidResponse();
-            dataReaderMock.Setup<Task<RegDefaults>>(acc => acc.ReadRecordAsync<Data.Student.DataContracts.RegDefaults>("ST.PARMS", "REG.DEFAULTS",true)).Returns(Task.FromResult(regDefaultsResponse));
+            dataReaderMock.Setup<Task<RegDefaults>>(acc => acc.ReadRecordAsync<Data.Student.DataContracts.RegDefaults>("ST.PARMS", "REG.DEFAULTS", true)).Returns(Task.FromResult(regDefaultsResponse));
 
             // Construct referenceData repository. (BaseRepositorySetup does basic mocking setup for all these objects.)
             gradeRepo = new GradeRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
@@ -471,10 +526,10 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             var regDefaults = new RegDefaults();
             regDefaults.RgdPhoneDropsEntityAssociation = new List<RegDefaultsRgdPhoneDrops>();
             regDefaults.RgdPhoneDropsEntityAssociation.Add(new RegDefaultsRgdPhoneDrops()
-               {
-                   RgdPhoneDropGradeAssocMember = "WD",
-                   RgdPhoneDropGradeSchemeAssocMember = "UG"
-               });
+            {
+                RgdPhoneDropGradeAssocMember = "WD",
+                RgdPhoneDropGradeSchemeAssocMember = "UG"
+            });
             return regDefaults;
         }
 

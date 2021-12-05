@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -50,11 +50,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             {
                 if (Type == PayStatementDeductionType.Tax)
                 {
-                    return yearToDateTaxEntries.Sum(t => t.EmployeeTaxAmount);
+                    return (yearToDateTaxEntries.Sum(t => t.EmployeeTaxAmount)
+                        + yearToDateTaxEntries.Sum(t => t.EmployeeAdjustmentAmount));
                 }
                 else
                 {
-                    return yearToDateBenefitDeductionEntries.Sum(t => t.EmployeeAmount);
+                    return (yearToDateBenefitDeductionEntries.Sum(t => t.EmployeeAmount)
+                        + yearToDateBenefitDeductionEntries.Sum(t => t.EmployeeAdjustmentAmount));
                 }
             }
         }
@@ -67,17 +69,19 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             {
                 if (Type == PayStatementDeductionType.Tax)
                 {
-                    return yearToDateTaxEntries.Sum(t => t.EmployerTaxAmount);
+                    return (yearToDateTaxEntries.Sum(t => t.EmployerTaxAmount)
+                        + yearToDateTaxEntries.Sum(t => t.EmployerAdjustmentAmount)); 
                 }
                 else
                 {
-                    return yearToDateBenefitDeductionEntries.Sum(t => t.EmployerAmount);
+                    return (yearToDateBenefitDeductionEntries.Sum(t => t.EmployerAmount)
+                        + yearToDateBenefitDeductionEntries.Sum(t => t.EmployerAdjustmentAmount)); 
                 }
             }
         }
 
         /// <summary>
-        /// The total basis amount on which the deduction amounts are calculated.
+        /// The total basis amount on which the deduction amounts are calculated plus/minus any adjustments
         /// </summary>
         public decimal? ApplicableGrossYearToDateAmount
         {
@@ -85,11 +89,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             {
                 if (Type == PayStatementDeductionType.Tax)
                 {
-                    return yearToDateTaxEntries.Sum(t => t.EmployeeTaxableAmount);
+                    return (yearToDateTaxEntries.Sum(t => t.EmployeeTaxableAmount)
+                        + yearToDateTaxEntries.Sum(t => t.EmployeeTaxableAdjustmentAmount));
                 }
                 else
                 {
-                    return yearToDateBenefitDeductionEntries.Sum(t => t.EmployeeBasisAmount);
+                    return (yearToDateBenefitDeductionEntries.Sum(t => t.EmployeeBasisAmount)
+                        + yearToDateBenefitDeductionEntries.Sum(t => t.EmployeeBasisAdjustmentAmount));
                 }
             }
         }

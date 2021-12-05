@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -38,13 +38,26 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             _logger = logger;
         }
 
-    /// <remarks>FOR USE WITH ELLUCIAN DATA MODEL</remarks>
-    /// <summary>
-    /// Gets all sources
-    /// </summary>
-    /// <returns>Collection of Source DTO objects</returns>
-    public async Task<IEnumerable<Ellucian.Colleague.Dtos.Source>> GetSourcesAsync(bool bypassCache)
+        /// <remarks>FOR USE WITH ELLUCIAN DATA MODEL</remarks>
+        /// <summary>
+        /// Gets all sources
+        /// </summary>
+        /// <returns>Collection of Source DTO objects</returns>
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.Source>> GetSourcesAsync(bool bypassCache)
         {
+            var sourceContextsGuidCollection = new Dictionary<string, string>();
+            var sourceContextEntities = await _referenceDataRepository.GetSourceContextsAsync(bypassCache);
+            if (sourceContextEntities != null && sourceContextEntities.Any())
+            {
+                foreach (var sourceContext in sourceContextEntities)
+                {
+                    if (!string.IsNullOrEmpty(sourceContext.Guid) && !string.IsNullOrEmpty(sourceContext.Code))
+                    {
+                        sourceContextsGuidCollection.Add(sourceContext.Code, sourceContext.Guid);
+                    }
+                }
+            }
+
             var sourceCollection = new List<Ellucian.Colleague.Dtos.Source>();
 
             var testSourceEntities = (await _studentReferenceDataRepository.GetTestSourcesAsync(bypassCache));
@@ -52,7 +65,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 foreach (var source in testSourceEntities)
                 {
-                    sourceCollection.Add(await ConvertTestSourceEntityToSourceDtoAsync(source));
+                    sourceCollection.Add(ConvertTestSourceEntityToSourceDtoAsync(source, sourceContextsGuidCollection));
                 }
             }
 
@@ -61,7 +74,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 foreach (var remarkCode in remarkCodeEntities)
                 {
-                    sourceCollection.Add(await ConvertRemarkCodeEntityToSourceDtoAsync(remarkCode));
+                    sourceCollection.Add(ConvertRemarkCodeEntityToSourceDtoAsync(remarkCode, sourceContextsGuidCollection));
                 }
             }
 
@@ -70,7 +83,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 foreach (var addressChangeSources in addressChangeSourceEntities)
                 {
-                    sourceCollection.Add(await ConvertAddressChangeSourceEntityToSourceDtoAsync(addressChangeSources));
+                    sourceCollection.Add(ConvertAddressChangeSourceEntityToSourceDtoAsync(addressChangeSources, sourceContextsGuidCollection));
                 }
             }
 
@@ -79,7 +92,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 foreach (var applicationSource in appplicationSourceEntities)
                 {
-                    sourceCollection.Add(await ConvertApplicationSourceEntityToSourceDtoAsync(applicationSource));
+                    sourceCollection.Add(ConvertApplicationSourceEntityToSourceDtoAsync(applicationSource, sourceContextsGuidCollection));
                 }
             }
 
@@ -93,34 +106,58 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Source DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.Source> GetSourceByIdAsync(string id)
         {
+            var sourceContextsGuidCollection = new Dictionary<string, string>();
+            var sourceContextEntities = await _referenceDataRepository.GetSourceContextsAsync(true);
+            if (sourceContextEntities != null && sourceContextEntities.Any())
+            {
+                foreach (var sourceContext in sourceContextEntities)
+                {
+                    if (!string.IsNullOrEmpty(sourceContext.Guid) && !string.IsNullOrEmpty(sourceContext.Code))
+                    {
+                        sourceContextsGuidCollection.Add(sourceContext.Code, sourceContext.Guid);
+                    }
+                }
+            }
+
             try
             {
                 var lookupResult = await _referenceDataRepository.GetGuidLookupResultFromGuidAsync(id);
                 if (lookupResult == null)
-                    throw new KeyNotFoundException("Source not found for ID " + id);
-               
-                switch (lookupResult.PrimaryKey.ToUpperInvariant())
+                    throw new KeyNotFoundException("No sources found for GUID " + id);
+
+
+                try
                 {
-                    case "APPL.TEST.SOURCES":
-                        return await ConvertTestSourceEntityToSourceDtoAsync((await _studentReferenceDataRepository.GetTestSourcesAsync(true)).Where(s => s.Guid == id).First());
-                        
-                    case "REMARK.CODES":
-                        return await ConvertRemarkCodeEntityToSourceDtoAsync((await _referenceDataRepository.GetRemarkCodesAsync(true)).Where(s => s.Guid == id).First());
-                        
-                    case "ADDRESS.CHANGE.SOURCES":
-                        return await ConvertAddressChangeSourceEntityToSourceDtoAsync((await _referenceDataRepository.GetAddressChangeSourcesAsync(true)).Where(s => s.Guid == id).First());
+                    switch (lookupResult.PrimaryKey.ToUpperInvariant())
+                    {
+                        case "APPL.TEST.SOURCES":
+                            return ConvertTestSourceEntityToSourceDtoAsync((await _studentReferenceDataRepository.GetTestSourcesAsync(true)).Where(s => s.Guid == id).First(),
+                                sourceContextsGuidCollection);
 
-                    case "APPLICATION.SOURCES":
-                        return await ConvertApplicationSourceEntityToSourceDtoAsync((await _studentReferenceDataRepository.GetApplicationSourcesAsync(true)).Where(s => s.Guid == id).First());
-                  
+                        case "REMARK.CODES":
+                            return ConvertRemarkCodeEntityToSourceDtoAsync((await _referenceDataRepository.GetRemarkCodesAsync(true)).Where(s => s.Guid == id).First(),
+                                sourceContextsGuidCollection);
 
-                    default:
-                        throw new KeyNotFoundException("Source not found for ID " + id);
+                        case "ADDRESS.CHANGE.SOURCES":
+                            return ConvertAddressChangeSourceEntityToSourceDtoAsync((await _referenceDataRepository.GetAddressChangeSourcesAsync(true)).Where(s => s.Guid == id).First(),
+                                sourceContextsGuidCollection);
+
+                        case "APPLICATION.SOURCES":
+                            return ConvertApplicationSourceEntityToSourceDtoAsync((await _studentReferenceDataRepository.GetApplicationSourcesAsync(true)).Where(s => s.Guid == id).First(),
+                                sourceContextsGuidCollection);
+
+                        default:
+                            throw new KeyNotFoundException("No sources found for GUID " + id);
+                    }
                 }
-            }
+                catch (InvalidOperationException ex)
+                {
+                    throw new InvalidOperationException("No sources found for GUID " + id, ex);
+                }
+        }
             catch (KeyNotFoundException ex)
             {
-                throw new KeyNotFoundException("No source was found for guid  " + id, ex);
+                throw new KeyNotFoundException("No sources found for GUID " + id, ex);
             }
         }
 
@@ -130,7 +167,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="testsource">TestSource domain entity</param>
         /// <returns>Source DTO</returns>
-        private async Task<Ellucian.Colleague.Dtos.Source> ConvertTestSourceEntityToSourceDtoAsync(Ellucian.Colleague.Domain.Student.Entities.TestSource testsource)
+        private Ellucian.Colleague.Dtos.Source ConvertTestSourceEntityToSourceDtoAsync(Ellucian.Colleague.Domain.Student.Entities.TestSource testsource,
+            Dictionary<string, string> sourceContextsGuidCollection)
         {
             var source = new Ellucian.Colleague.Dtos.Source();
 
@@ -140,9 +178,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             source.Description = null;
             source.Status = Dtos.LifeCycleStatus.Active;
 
-            var context = (await _referenceDataRepository.GetSourceContextsAsync(false)).FirstOrDefault(x => x.Code == "TESTS");
-            if (context != null)
-                source.Contexts = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2(context.Guid) };
+            if (sourceContextsGuidCollection != null && sourceContextsGuidCollection.Any())
+            {
+                var context = sourceContextsGuidCollection.FirstOrDefault(x => x.Key == "TESTS");
+                if (context.Value != null)
+                {
+                    source.Contexts = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2(context.Value) };
+                }
+            }
 
             return source;
         }
@@ -153,7 +196,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="remarkCode">RemarkCode domain entity</param>
         /// <returns>Source DTO</returns>
-        private async Task<Ellucian.Colleague.Dtos.Source> ConvertRemarkCodeEntityToSourceDtoAsync(Ellucian.Colleague.Domain.Base.Entities.RemarkCode remarkCode)
+        private Ellucian.Colleague.Dtos.Source ConvertRemarkCodeEntityToSourceDtoAsync(Ellucian.Colleague.Domain.Base.Entities.RemarkCode remarkCode,
+            Dictionary<string, string> sourceContextsGuidCollection)
         {
             var source = new Ellucian.Colleague.Dtos.Source();
 
@@ -163,9 +207,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             source.Description = null;
             source.Status = Dtos.LifeCycleStatus.Active;
 
-            var context = (await _referenceDataRepository.GetSourceContextsAsync(false)).FirstOrDefault(x => x.Code == "REMARKS");
-            if (context != null)
-                source.Contexts = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2(context.Guid) };
+            if (sourceContextsGuidCollection != null && sourceContextsGuidCollection.Any())
+            {
+                var context = sourceContextsGuidCollection.FirstOrDefault(x => x.Key == "REMARKS");
+                if (context.Value != null)
+                {
+                    source.Contexts = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2(context.Value) };
+                }
+            }
 
             return source;
         }
@@ -176,7 +225,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="addressChangeSource">AddressTypeSource domain entity</param>
         /// <returns>Source DTO</returns>
-        private async Task<Ellucian.Colleague.Dtos.Source> ConvertAddressChangeSourceEntityToSourceDtoAsync(Ellucian.Colleague.Domain.Base.Entities.AddressChangeSource addressChangeSource)
+        private Ellucian.Colleague.Dtos.Source ConvertAddressChangeSourceEntityToSourceDtoAsync(Ellucian.Colleague.Domain.Base.Entities.AddressChangeSource addressChangeSource,
+            Dictionary<string, string> sourceContextsGuidCollection)
         {
             var source = new Ellucian.Colleague.Dtos.Source();
 
@@ -186,9 +236,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             source.Description = null;
             source.Status = Dtos.LifeCycleStatus.Active;
 
-            var context = (await _referenceDataRepository.GetSourceContextsAsync(false)).FirstOrDefault(x => x.Code == "ADDRESSES");
-            if (context != null)
-                source.Contexts = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2(context.Guid) };
+            if (sourceContextsGuidCollection != null && sourceContextsGuidCollection.Any())
+            {
+                var context = sourceContextsGuidCollection.FirstOrDefault(x => x.Key == "ADDRESSES");
+                if (context.Value != null)
+                {
+                    source.Contexts = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2(context.Value) };
+                }
+            }
 
             return source;
         }
@@ -199,7 +254,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="applicationSource">ApplicationSource domain entity</param>
         /// <returns>Source DTO</returns>
-        private async Task<Ellucian.Colleague.Dtos.Source> ConvertApplicationSourceEntityToSourceDtoAsync(Ellucian.Colleague.Domain.Student.Entities.ApplicationSource applicationSource)
+        private Ellucian.Colleague.Dtos.Source ConvertApplicationSourceEntityToSourceDtoAsync(Ellucian.Colleague.Domain.Student.Entities.ApplicationSource applicationSource,
+            Dictionary<string, string> sourceContextsGuidCollection)
         {
             var source = new Ellucian.Colleague.Dtos.Source();
 
@@ -209,9 +265,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             source.Description = null;
             source.Status = Dtos.LifeCycleStatus.Active;
 
-            var context = (await _referenceDataRepository.GetSourceContextsAsync(false)).FirstOrDefault(x => x.Code == "APPLS");
-            if (context != null)
-                source.Contexts = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2(context.Guid) };
+            if (sourceContextsGuidCollection != null && sourceContextsGuidCollection.Any())
+            {
+                var context = sourceContextsGuidCollection.FirstOrDefault(x => x.Key == "APPLS");
+                if (context.Value != null)
+                {
+                    source.Contexts = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2(context.Value) };
+                }
+            }
 
             return source;
         }

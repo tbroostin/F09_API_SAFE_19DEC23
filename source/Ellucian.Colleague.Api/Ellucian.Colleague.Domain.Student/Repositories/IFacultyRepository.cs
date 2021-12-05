@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,5 +16,6 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<IEnumerable<Faculty>> GetFacultyByIdsAsync(IEnumerable<string> facultyIds);
         Task<IEnumerable<string>> SearchFacultyIdsAsync(bool facultyOnlyFlag = false, bool advisorOnlyFlag = true);
         Task<IEnumerable<Domain.Student.Entities.FacultyOfficeHours>> GetFacultyOfficeHoursByIdsAsync(IEnumerable<string> facultyIds);
+        Task<FacultyDropRegistrationPermissions> GetFacultyRegistrationEligibilityAsync(string personId);
     }
 }

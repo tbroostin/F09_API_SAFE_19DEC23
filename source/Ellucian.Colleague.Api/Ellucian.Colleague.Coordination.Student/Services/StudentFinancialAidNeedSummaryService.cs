@@ -1,10 +1,9 @@
-﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos;
@@ -28,7 +27,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private readonly IPersonRepository _personRepository;
         private readonly IStudentReferenceDataRepository _studentReferenceDataRepository;
         private readonly IConfigurationRepository configurationRepository;
-
         public StudentFinancialAidNeedSummaryService(
 
             IStudentFinancialAidNeedSummaryRepository StudentFinancialAidNeedSummaryRespository,
@@ -54,9 +52,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <returns>Collection of FinancialAidApplications DTO objects</returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.StudentFinancialAidNeedSummary>, int>> GetAsync(int offset, int limit, bool bypassCache = false)
-        {
-            CheckViewStudentFinancialAidNeedSummariesPermission();
-
+        {        
             // Get all financial aid years
             var aidYearEntity = (await _studentReferenceDataRepository.GetFinancialAidYearsAsync(bypassCache));
             if (aidYearEntity == null)
@@ -87,7 +83,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 return new Tuple<IEnumerable<Dtos.StudentFinancialAidNeedSummary>, int>(studentFinancialAidNeedSummaryDtos, 0);
             }
             
-
             var personIds = studentFinancialAidNeedSummaryDomainEntities
                     .Where(x => (!string.IsNullOrEmpty(x.StudentId)))
                     .Select(x => x.StudentId).Distinct().ToList();
@@ -103,7 +98,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     .Select(x => x.CsInstitutionalIsirId).Distinct().ToList();
 
             var isirIds = isirIdsFederal.Union(isirIdsInst);
-
 
             var csFederalIsirCollection = await _studentFinancialAidNeedSummaryRespository.GetIsirCalcResultsGuidsCollectionAsync(isirIds);
 
@@ -132,11 +126,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>FinancialAidApplications DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.StudentFinancialAidNeedSummary> GetByIdAsync(string id)
         {
-
-            CheckViewStudentFinancialAidNeedSummariesPermission();
-
             StudentNeedSummary studentNeedSummaryDomainEntity = null;
-
             try
             {
                 //// Get the student financial aid awards domain entity from the repository
@@ -151,7 +141,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw ex;
             }
-
 
             var personGuidCollection = await this._personRepository.GetPersonGuidsCollectionAsync(new List<string> { studentNeedSummaryDomainEntity.StudentId });
 
@@ -431,21 +420,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             return studentFinancialAidNeedSummaryDto;
-        }
-
-        /// <summary>
-        /// Helper method to determine if the user has permission to view Student StudentFinancialAidNeedSummaries.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckViewStudentFinancialAidNeedSummariesPermission()
-        {
-            bool hasPermission = HasPermission(StudentPermissionCodes.ViewStudentFinancialAidNeedSummaries);
-
-            // User is not allowed to read StudentFinancialAidNeedSummaries without the appropriate permissions
-            if (!hasPermission)
-            {
-                throw new PermissionsException(string.Format("User {0} does not have permission to view student-financial-aid-need-summaries.", CurrentUser.UserId));
-            }
         }
     }
 }

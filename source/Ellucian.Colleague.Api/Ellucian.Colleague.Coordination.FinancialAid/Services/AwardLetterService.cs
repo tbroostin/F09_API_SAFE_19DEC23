@@ -1139,6 +1139,20 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 awardLetterDto.OpeningParagraph = awardLetterDto.OpeningParagraph.Replace(Environment.NewLine, "<br />");
                 awardLetterDto.ClosingParagraph = awardLetterDto.ClosingParagraph.Replace(Environment.NewLine, "<br />");
 
+                //Convert Environment.NewLine into line breaks for the Pre/Post Award and Closing paragraphs when they are populated
+                if (awardLetterDto.PreAwardText != null)
+                {
+                    awardLetterDto.PreAwardText = awardLetterDto.PreAwardText.Replace(Environment.NewLine, "<br / >");
+                }
+                if (awardLetterDto.PostAwardText != null)
+                {
+                    awardLetterDto.PostAwardText = awardLetterDto.PostAwardText.Replace(Environment.NewLine, "<br / >");
+                }
+                if (awardLetterDto.PostClosingText != null)
+                {
+                    awardLetterDto.PostClosingText = awardLetterDto.PostClosingText.Replace(Environment.NewLine, "<br / >");
+                }
+
                 var parameters = new List<ReportParameter>();
                 parameters.Add(new ReportParameter("IsContactBlockActive", awardLetterConfigurationDto.IsContactBlockActive.ToString()));
                 parameters.Add(new ReportParameter("IsNeedBlockActive", awardLetterConfigurationDto.IsNeedBlockActive.ToString()));

@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Diagnostics;
@@ -877,6 +877,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             // Check that the user has permissions to do these particular updates
             await CheckUpdatePermissions2Async(degreePlanToUpdate, storedDegreePlan);
 
+            //Current user id needed in the transaction to send the email notifications appropriately when advisor saves a note for the student
+            degreePlanToUpdate.CurrentUserId = CurrentUser.PersonId;
+            
             // Update the degree plan
             var updatedDegreePlan = await _studentDegreePlanRepository.UpdateAsync(degreePlanToUpdate);
 
@@ -1326,8 +1329,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                 }
 
-                // Run all planned courses against course rules
-                var plannedCourseIds = degreePlan.PlannedCourses.Select(pc => pc.CourseId);
+                // Run all planned courses against course rules excluding course placeholders
+                var plannedCourseIds = degreePlan.PlannedCourses.Where(pc => !string.IsNullOrEmpty(pc.CourseId)).Select(pc => pc.CourseId);
                 foreach (var course in courses.Where(c => plannedCourseIds.Contains(c.Id)))
                 {
                     foreach (var rule in allRules.Where(rr => rr.CourseRule != null))
@@ -1385,14 +1388,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             // Note: the second parameter for GetStudentProgramsByIdsAsync is includeInactivePrograms. Setting that to false will only return active programs.
             var activeStudentPrograms = await _studentProgramRepository.GetStudentProgramsByIdsAsync(new List<string>() { studentId }, false);
             return student != null ? student.GetPrimaryLocation(activeStudentPrograms) : null;
-        }
-        /// <summary>
-        /// This validates is Planning license module exists. 
-        /// if User is self then its okay, doesn't need to have planning license
-        /// But if user is not self; does not matter what permissions that user have; planning license should exist
-        /// </summary>
-        /// <param name="studentId"></param>
-       
-        
+        }       
     }
 }

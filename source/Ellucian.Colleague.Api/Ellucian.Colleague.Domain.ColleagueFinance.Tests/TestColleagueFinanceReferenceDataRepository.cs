@@ -617,5 +617,15 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             return await Task.FromResult(records.FirstOrDefault(c => c.Code == code).Guid);
             
         }
+
+        public Task<string> GetAssetCategoriesGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> GetAssetTypesGuidAsync(string code)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

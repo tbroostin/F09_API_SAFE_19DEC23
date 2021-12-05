@@ -1,4 +1,4 @@
-﻿//Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -316,6 +316,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             // get the ID associated with the incoming guid
             var compoundConfigurationSettingsEntityId = await _compoundSettingsRepository.GetCompoundConfigurationSettingsIdFromGuidAsync(compoundConfigurationSettings.Id);
+
+            Domain.Base.Entities.CompoundConfigurationSettings original_compoundConfigurationSettingsEntity = await _compoundSettingsRepository.GetCompoundConfigurationSettingsByGuidAsync(compoundConfigurationSettings.Id);
+
+           
+
             if (!string.IsNullOrEmpty(compoundConfigurationSettingsEntityId))
             {
                 // verify the user has the permission to update a compoundConfigurationSettings
@@ -327,7 +332,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 {
                     // map the DTO to entities
                     var compoundConfigurationSettingsEntity
-                    = ConvertCompoundConfigurationSettingsDtoToEntityAsync(compoundConfigurationSettingsEntityId, compoundConfigurationSettings);
+                    = ConvertCompoundConfigurationSettingsDtoToEntityAsync(
+                        compoundConfigurationSettingsEntityId, compoundConfigurationSettings,
+                        original_compoundConfigurationSettingsEntity);
 
                     // update the entity in the database
                     var updatedCompoundConfigurationSettingsEntity =
@@ -365,11 +372,13 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
         /// <summary>
         /// Converts CompoundConfigurationSettings DTO to Entity
+        /// Converts CompoundConfigurationSettings DTO to Entity
         /// </summary>
         /// <param name="compoundConfigurationSettingsId">Id</param>
         /// <param name="compoundConfigurationSettingsDto">compoundConfigurationSettings DTO</param>
         /// <returns>CompoundConfigurationSettings Entity</returns>
-        private Domain.Base.Entities.CompoundConfigurationSettings ConvertCompoundConfigurationSettingsDtoToEntityAsync(string compoundConfigurationSettingsId, Dtos.CompoundConfigurationSettings compoundConfigurationSettingsDto)
+        private Domain.Base.Entities.CompoundConfigurationSettings ConvertCompoundConfigurationSettingsDtoToEntityAsync(string compoundConfigurationSettingsId,
+            Dtos.CompoundConfigurationSettings compoundConfigurationSettingsDto, Domain.Base.Entities.CompoundConfigurationSettings original_compoundConfigurationSettings)
         {
             if (string.IsNullOrEmpty(compoundConfigurationSettingsDto.Title))
             {
@@ -451,6 +460,43 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     //else if (compoundConfigurationSettingsDto.Source.PairedSettings != null && compoundConfigurationSettingsDto.Source.PairedSettings.Any())
                     if (compoundConfigurationSettingsDto.Source.PairedSettings != null && compoundConfigurationSettingsDto.Source.PairedSettings.Any())
                     {
+                        var primary = compoundConfigurationSettingsDto.Source.PrimaryDisplayLabel;
+                        var secondary = compoundConfigurationSettingsDto.Source.SecondaryDisplayLabel;
+                        var subjectDepartment = false;
+                        if ((primary.Equals("Subject", StringComparison.OrdinalIgnoreCase)) && (secondary.Equals("Department", StringComparison.OrdinalIgnoreCase)))
+                            subjectDepartment = true;
+                        var pairedSettings = compoundConfigurationSettingsDto.Source.PairedSettings;
+
+                        //perform validation.. determine if there are any configurations in the original data
+                        //  which are not found in the  incoming data set 
+                        // this check should only occur on the Subject/Department Mapping
+                        if (subjectDepartment && original_compoundConfigurationSettings != null)
+                        {
+                            List<CompoundConfigurationSettingsProperty> L1 = original_compoundConfigurationSettings.Properties;
+                            List<CompoundConfigurationSettingsPairedSettings> L2 = compoundConfigurationSettingsDto.Source.PairedSettings;
+
+                            //var isAnyElementFromL1NotInL2 = L1
+                            //    .Select(x => x.PrimaryValue + "*" + x.SecondaryValue + "*" + x.PrimaryTitle + "*" + x.SecondaryTitle)
+                            //    .Except(L2
+                            //        .Select(y => y.PrimaryValue + "*" + y.SecondaryValue + "*" + y.PrimaryTitle + "*" + y.SecondaryTitle)).ToList(); //.Any();
+                            var isAnyElementFromL1NotInL2 = L1
+                                .Select(x => x.PrimaryValue + "*" + x.PrimaryTitle )
+                                .Except(L2
+                                    .Where(z => z.PrimaryTitle != null && z.PrimaryTitle != null)
+                                    .Select(y => y.PrimaryValue.Trim() + "*" + y.PrimaryTitle.Trim())
+                                    ).ToList();
+                            if ((isAnyElementFromL1NotInL2 != null) && (isAnyElementFromL1NotInL2.Any()))
+                            {
+                                foreach (var element in isAnyElementFromL1NotInL2)
+                                {
+                                    var elementSplit = element.Split('*');
+                                    //IntegrationApiExceptionAddError("Record can not be deleted.  primaryValue '" + elementSplit[0] + "'. secondaryValue: '" + elementSplit[1] + "'",
+                                    IntegrationApiExceptionAddError("Record can not be deleted.  primaryValue '" + elementSplit[0] + "'",
+                                               "Validation.Exception", compoundConfigurationSettingsDto.Id, compoundConfigurationSettingsId);
+                                }
+                            }
+                        }
+
                         if (!string.IsNullOrEmpty(compoundConfigurationSettingsDto.Source.TertiaryDisplayLabel))
                         {
                             IntegrationApiExceptionAddError("Source.tertiaryDisplayLabel is not valid for the source with pairedSettings.", "Validation.Exception", compoundConfigurationSettingsDto.Id, compoundConfigurationSettingsId);
@@ -467,14 +513,34 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                                 if (!string.IsNullOrEmpty(setting.SecondaryTitle) && string.IsNullOrEmpty(setting.SecondaryValue))
                                 {
                                     IntegrationApiExceptionAddError("Source.pairedSettings.SecondaryTitle is not valid for empty SecondaryValue.", "Validation.Exception", compoundConfigurationSettingsDto.Id, compoundConfigurationSettingsId);
+                                    continue;
+                                }
+
+                                //primary value can not be used multiple times. 
+                                var matches1 = properties.Any(p => p.PrimaryValue == setting.PrimaryValue);
+                                //check if Primaryvalue and Secondaryvalue have already been added.  If so, this is a dup
+                                var matches2 = properties.Any(p => p.PrimaryValue == setting.PrimaryValue && p.SecondaryValue == setting.SecondaryValue);
+                                if (matches1)
+                                {
+                                    IntegrationApiExceptionAddError("primaryValue can not be specified multiple times.  PrimaryValue: '" + setting.PrimaryValue + "'.",
+                                            "Validation.Exception", compoundConfigurationSettingsDto.Id, compoundConfigurationSettingsId);
+                                }
+                                else if (matches2)
+                                {
+                                    IntegrationApiExceptionAddError("Source.pairedSettings can not contain duplicates. PrimaryValue: '" + setting.PrimaryValue + "'. SecondaryValue: '" + setting.SecondaryValue + "'",
+                                            "Validation.Exception", compoundConfigurationSettingsDto.Id, compoundConfigurationSettingsId);
                                 }
                                 else
                                 {
                                     var property = new CompoundConfigurationSettingsProperty();
-                                    property.PrimaryTitle = setting.PrimaryTitle;
-                                    property.PrimaryValue = setting.PrimaryValue;
-                                    property.SecondaryTitle = setting.SecondaryTitle;
-                                    property.SecondaryValue = setting.SecondaryValue;
+                                    property.PrimaryTitle = string.IsNullOrEmpty(setting.PrimaryTitle)? null 
+                                        : setting.PrimaryTitle.Trim();
+                                    property.PrimaryValue = string.IsNullOrEmpty(setting.PrimaryValue) ? null
+                                        : setting.PrimaryValue.Trim();
+                                    property.SecondaryTitle = string.IsNullOrEmpty(setting.SecondaryTitle) ? null
+                                        : setting.SecondaryTitle.Trim();
+                                    property.SecondaryValue = string.IsNullOrEmpty(setting.SecondaryValue) ? null
+                                        : setting.SecondaryValue.Trim();
                                     properties.Add(property);
                                 }
                             }

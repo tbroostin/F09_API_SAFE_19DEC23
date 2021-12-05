@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -224,8 +224,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         }
                         catch (Exception ex)
                         {
-                            var apString = "Person Agreement Id: " + pa.Recordkey + ", Title: " + pa.PagrTitle;
-                            LogDataError("Person Agreement", pa.Recordkey, pa, ex, apString);
+                            logger.Error("Unable to retrieve person agreement information for agreement " + pa.Recordkey + ". " + ex.Message);
                         }
                     }
                 }

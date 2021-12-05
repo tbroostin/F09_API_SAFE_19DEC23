@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -27,11 +27,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         private readonly IInstitutionEmployersRepository _institutionEmployersRepository;
         private readonly IConfigurationRepository _configurationRepository;
         private Dictionary<string, string> _employerGuidDictionary;
+        private readonly IReferenceDataRepository _referenceDataRepository;
 
         public InstitutionEmployersService(
             IPositionRepository positionRepository,
             IHumanResourcesReferenceDataRepository hrReferenceDataRepository,
-             IReferenceDataRepository referenceDataRepository,
+            IReferenceDataRepository referenceDataRepository,
             IPersonRepository personRepository,
             IInstitutionEmployersRepository institutionEmployersRepository,
             IConfigurationRepository configurationRepository,
@@ -46,6 +47,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             _configurationRepository = configurationRepository;
 
             _employerGuidDictionary = new Dictionary<string, string>();
+            _referenceDataRepository = referenceDataRepository;
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -63,7 +65,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 {                    
                     foreach (var institutionEmployer in institutionEmployerEntities)
                     {
-                        var thisInstitutionEmployerDto = await (BuildInstitutionEmployer(institutionEmployer));
+                        var thisInstitutionEmployerDto = await (BuildInstitutionEmployer(institutionEmployer, bypassCache));
                         institutionEmployerCollection.Add(thisInstitutionEmployerDto);
                     }
                 }
@@ -80,7 +82,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// Get a InstitutionEmployers from its GUID
         /// </summary>
         /// <returns>InstitutionEmployers DTO object</returns>
-        public async Task<Dtos.InstitutionEmployers> GetInstitutionEmployersByGuidAsync(string guid)
+        public async Task<Dtos.InstitutionEmployers> GetInstitutionEmployersByGuidAsync(string guid, bool bypassCache = true)
         {
             if (string.IsNullOrEmpty(guid))
             {
@@ -89,7 +91,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             try
             {
                 var institutionEmployerEntity = await _institutionEmployersRepository.GetInstitutionEmployerByGuidAsync(guid);
-                var institutionEmployerDto = await (BuildInstitutionEmployer(institutionEmployerEntity));
+                var institutionEmployerDto = await (BuildInstitutionEmployer(institutionEmployerEntity, bypassCache));
                 return institutionEmployerDto;
             }
             catch (KeyNotFoundException)
@@ -103,7 +105,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// Build an institution employer DTO object from domain entity
         /// </summary>
         /// <returns>InstitutionEmployers DTO object</returns>
-        private async Task<InstitutionEmployers> BuildInstitutionEmployer(Ellucian.Colleague.Domain.HumanResources.Entities.InstitutionEmployers institutionEmployer)
+        private async Task<InstitutionEmployers> BuildInstitutionEmployer(Ellucian.Colleague.Domain.HumanResources.Entities.InstitutionEmployers institutionEmployer, bool bypassCache)
         {
             if (string.IsNullOrEmpty(institutionEmployer.Guid))
             {
@@ -141,12 +143,38 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             address.AddressLines = institutionEmployer.AddressLines;
             address.City = institutionEmployer.City;
             address.State = institutionEmployer.State;
-            address.Country = institutionEmployer.Country;
+            // translate to country ISO code
+            var countryCode = institutionEmployer.Country;
+            if (!string.IsNullOrEmpty(countryCode))
+            {
+                try
+                {
+                    address.Country =
+                        (await GetCountryCodesAsync(false)).FirstOrDefault(
+                            cc => cc.Code == countryCode).Iso3Code;
+                }
+                catch
+                {
+                    address.Country = (countryCode.Length > 3) ? countryCode.Substring(0, 3) : countryCode;
+                }
+            }
+
             address.PostalCode = institutionEmployer.PostalCode;
             thisInstitutionEmployerDto.Address = address;
             thisInstitutionEmployerDto.PhoneNumber = institutionEmployer.PhoneNumber;
 
             return thisInstitutionEmployerDto;
         }
+
+        public IEnumerable<Domain.Base.Entities.Country> _countries { get; set; }
+        private async Task<IEnumerable<Domain.Base.Entities.Country>> GetCountryCodesAsync(bool bypassCache = false)
+        {
+            if (_countries == null)
+            {
+                _countries = await _referenceDataRepository.GetCountryCodesAsync(bypassCache);
+            }
+            return _countries;
+        }
+
     }
 }

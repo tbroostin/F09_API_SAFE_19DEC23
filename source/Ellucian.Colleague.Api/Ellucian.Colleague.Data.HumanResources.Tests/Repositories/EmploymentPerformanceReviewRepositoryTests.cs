@@ -1,8 +1,8 @@
-﻿using Ellucian.Colleague.Data.Base.Tests.Repositories;
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.HumanResources.Repositories;
 using Ellucian.Colleague.Data.HumanResources.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Data.Colleague;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
@@ -17,6 +17,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Domain.Base.Transactions;
 
 namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 {
@@ -26,33 +27,34 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         [TestClass]
         public class EmploymentPerformanceReviewTests : BaseRepositorySetup
         {
-            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<ICacheProvider> iCacheProviderMock;
+            Mock<IColleagueTransactionFactory> iColleagueTransactionFactoryMock;
+            Mock<IColleagueTransactionInvoker> iColleagueTransactionInvokerMock;
             Mock<IColleagueTransactionInvoker> transInvokerMock;
             Mock<IColleagueDataReader> dataReaderMock;
-            Mock<ICacheProvider> cacheProviderMock;
-            Mock<IColleagueDataReader> dataAccessorMock;
-            Mock<ILogger> loggerMock;
             Collection<DataContracts.Perpos> _perposCollection;
             List<Domain.HumanResources.Entities.EmploymentPerformanceReview> employmentPerformanceReviewsEntities;
             CreatePerposReviewRequest employmentPerformanceReviewRequest;
             CreatePerposReviewResponse updateResponse;
             DeletePerposReviewRequest deleteEmploymentPerformanceReviewRequest;
             DeletePerposReviewResponse deleteEmploymentPerformanceReviewResponse;
-            string codeItemName;
-            ApiSettings apiSettings;
-
             EmploymentPerformanceReviewsRepository referenceDataRepo;
 
             [TestInitialize]
             public void Initialize()
             {
                 loggerMock = new Mock<ILogger>();
-                dataAccessorMock = new Mock<IColleagueDataReader>();
                 cacheProviderMock = new Mock<ICacheProvider>();
                 transFactoryMock = new Mock<IColleagueTransactionFactory>();
                 transInvokerMock = new Mock<IColleagueTransactionInvoker>();
                 dataReaderMock = new Mock<IColleagueDataReader>();
                 apiSettings = new ApiSettings("TEST");
+
+                iCacheProviderMock = new Mock<ICacheProvider>();
+                iColleagueTransactionFactoryMock = new Mock<IColleagueTransactionFactory>();
+                iColleagueTransactionInvokerMock = new Mock<IColleagueTransactionInvoker>();
+                iColleagueTransactionFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataReaderMock.Object);
+                iColleagueTransactionFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(iColleagueTransactionInvokerMock.Object);
 
                 string id, guid, id2, guid2, id3, guid3, sid, sid2, sid3;
                 GuidLookup guidLookup;
@@ -95,34 +97,25 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 recordLookup = new RecordKeyLookup("PERPOS", id, "PERPOS.EVAL.RATINGS.DATE", offsetDate.ToString(), false);
                 recordLookupResult = new RecordKeyLookupResult() { Guid = guid };
                 recordLookupDict = new Dictionary<string, RecordKeyLookupResult>();
-                //guidLookupDict.Add(guid, new GuidLookupResult() { Entity = "PERPOS", PrimaryKey = id, SecondaryKey = offsetDate.ToString() });
-                //guidLookupDict.Add(guid2, new GuidLookupResult() { Entity = "PERPOS", PrimaryKey = id2, SecondaryKey = offsetDate.ToString() });
-                //guidLookupDict.Add(guid3, new GuidLookupResult() { Entity = "PERPOS", PrimaryKey = id3, SecondaryKey = offsetDate.ToString() });
-
-                //recordLookupDict.Add("PERPOS+" + id + "+" + offsetDate.ToString(), new RecordKeyLookupResult() { Guid = guid });
-                //recordLookupDict.Add("PERPOS+" + id2 + "+" + offsetDate.ToString(), new RecordKeyLookupResult() { Guid = guid2 });
-                //recordLookupDict.Add("PERPOS+" + id3 + "+" + offsetDate.ToString(), new RecordKeyLookupResult() { Guid = guid3 });
 
                 dataReaderMock.SetupSequence(acc => acc.SelectAsync(It.IsAny<GuidLookup[]>()))
                     .Returns(Task.FromResult(new Dictionary<string, GuidLookupResult>() { { guid, new GuidLookupResult() { Entity = "PERPOS", PrimaryKey = id, SecondaryKey = DmiString.DateTimeToPickDate(new DateTime(2007, 02, 05)).ToString() } } }))
                     .Returns(Task.FromResult(new Dictionary<string, GuidLookupResult>() { { guid2, new GuidLookupResult() { Entity = "PERPOS", PrimaryKey = id2, SecondaryKey = DmiString.DateTimeToPickDate(new DateTime(2007, 02, 06)).ToString() } } }))
                     .Returns(Task.FromResult(new Dictionary<string, GuidLookupResult>() { { guid3, new GuidLookupResult() { Entity = "PERPOS", PrimaryKey = id3, SecondaryKey = DmiString.DateTimeToPickDate(new DateTime(2007, 02, 07)).ToString() } } }));
-                dataReaderMock.SetupSequence(ep => ep.SelectAsync(It.IsAny<RecordKeyLookup[]>()))
-                    .Returns(Task.FromResult(new Dictionary<string, RecordKeyLookupResult>() { { "PERPOS+" + id + "+" + DmiString.DateTimeToPickDate(new DateTime(2007, 02, 05)).ToString(), new RecordKeyLookupResult() { Guid = guid } } }))
-                    .Returns(Task.FromResult(new Dictionary<string, RecordKeyLookupResult>() { { "PERPOS+" + id2 + "+" + DmiString.DateTimeToPickDate(new DateTime(2007, 02, 06)).ToString(), new RecordKeyLookupResult() { Guid = guid2 } } }))
-                    .Returns(Task.FromResult(new Dictionary<string, RecordKeyLookupResult>() { { "PERPOS+" + id3 + "+" + DmiString.DateTimeToPickDate(new DateTime(2007, 02, 07)).ToString(), new RecordKeyLookupResult() { Guid = guid3 } } }));
-                //dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(guidLookupDict);
-                //dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(recordLookupDict);
-                //dataAccessorMock.Setup(da => da.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(recordLookupDict);
+
+                //var recordKeyLookupResults = await DataReader.SelectAsync(guidLookup);
+
+                Dictionary<string, RecordKeyLookupResult> recordKeyLookupResults = new Dictionary<string, RecordKeyLookupResult>();
+                recordKeyLookupResults.Add("PERPOS+" + id + "+" + DmiString.DateTimeToPickDate(new DateTime(2007, 02, 05)).ToString(), new RecordKeyLookupResult() { Guid = guid });
+                recordKeyLookupResults.Add("PERPOS+" + id2 + "+" + DmiString.DateTimeToPickDate(new DateTime(2007, 02, 06)).ToString(), new RecordKeyLookupResult() { Guid = guid2 });
+                recordKeyLookupResults.Add("PERPOS+" + id3 + "+" + DmiString.DateTimeToPickDate(new DateTime(2007, 02, 07)).ToString(), new RecordKeyLookupResult() { Guid = guid3 });
+                dataReaderMock.Setup(i => i.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(recordKeyLookupResults);
 
                 employmentPerformanceReviewsEntities = new List<Domain.HumanResources.Entities.EmploymentPerformanceReview>() 
                 {
                     new Domain.HumanResources.Entities.EmploymentPerformanceReview("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "d2253ac7-9931-4560-b42f-1fccd43c952e", new DateTime(2007, 02, 05), "CODE1", "CODE1"),
                     new Domain.HumanResources.Entities.EmploymentPerformanceReview("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "d2253ac7-9931-4560-b42f-1fccd43c952e", "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", new DateTime(2007, 02, 06), "CODE2", "CODE2"),
-                    new Domain.HumanResources.Entities.EmploymentPerformanceReview("d2253ac7-9931-4560-b42f-1fccd43c952e", "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", new DateTime(2007, 02, 07), "CODE3", "CODE3")
-                    //new Domain.HumanResources.Entities.EmploymentPerformanceReview("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "d2253ac7-9931-4560-b42f-1fccd43c952e", new DateTime(18080), "d2253ac7-9931-4560-b42f-1fccd43c952e", "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc"),
-                    //new Domain.HumanResources.Entities.EmploymentPerformanceReview("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "d2253ac7-9931-4560-b42f-1fccd43c952e", "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", new DateTime(18080), "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "d2253ac7-9931-4560-b42f-1fccd43c952e"),
-                    //new Domain.HumanResources.Entities.EmploymentPerformanceReview("d2253ac7-9931-4560-b42f-1fccd43c952e", "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", new DateTime(18080), "d2253ac7-9931-4560-b42f-1fccd43c952e", "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d")
+                    new Domain.HumanResources.Entities.EmploymentPerformanceReview("d2253ac7-9931-4560-b42f-1fccd43c952e", "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", new DateTime(2007, 02, 07), "CODE3", "CODE3")                    
                 };
 
                 employmentPerformanceReviewRequest = new CreatePerposReviewRequest()
@@ -148,12 +141,58 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 {
                     employmentPerformanceReviewGuids.Add(mp.RecordGuid);
                 };
-                //dataReaderMock.Setup(repo => repo.SelectAsync("PERPOS", It.IsAny<string>())).ReturnsAsync(employmentPerformanceReviewGuids.ToArray());
                 dataReaderMock.Setup(repo => repo.SelectAsync("PERPOS", "WITH PERPOS.EVAL.RATINGS.DATE NE '' BY.EXP PERPOS.EVAL.RATINGS.DATE")).ReturnsAsync(new List<string>() { id, id2, id3 }.ToArray());
                 dataReaderMock.Setup(repo => repo.SelectAsync("PERPOS", "WITH PERPOS.EVAL.RATINGS.DATE NE '' BY.EXP PERPOS.EVAL.RATINGS.DATE SAVING PERPOS.EVAL.RATINGS.DATE")).ReturnsAsync(new List<string>() { "14281", "14282", "14283" }.ToArray());
                 dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Perpos>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(_perposCollection);
                 dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Perpos>("PERPOS", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(_perposCollection);
                 dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Perpos>("PERPOS", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(_perposCollection.FirstOrDefault());
+
+                var invalidRecords = new Dictionary<string, string>();
+                var results = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.Perpos>()
+                {
+                    BulkRecordsRead = _perposCollection,
+                    InvalidRecords = invalidRecords,
+                    InvalidKeys = new string[] { }
+                };
+                dataReaderMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.Perpos>("PERPOS", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(results);
+
+                var transManagerMock = new Mock<IColleagueTransactionInvoker>();
+
+                var date1 = new DateTime(2007, 02, 05);
+                string[] requestedIds1 = {"1|14281", "2|14282", "3|14283"};
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 100,
+                    CacheName = "AllEmploymentPerformanceReviews",
+                    Entity = "",
+                    Sublist = requestedIds1.ToList(),
+                    TotalCount = 3,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+               {
+                   new KeyCacheInfo()
+                   {
+                       KeyCacheMax = 5905,
+                       KeyCacheMin = 1,
+                       KeyCachePart = "000",
+                       KeyCacheSize = 5905
+                   },
+                   new KeyCacheInfo()
+                   {
+                       KeyCacheMax = 7625,
+                       KeyCacheMin = 5906,
+                       KeyCachePart = "001",
+                       KeyCacheSize = 1720
+                   }
+               }
+                };
+                transInvokerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
+                var transManager = transInvokerMock.Object;
+
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager);
 
                 referenceDataRepo = BuildValidReferenceDataRepository();
 
@@ -163,9 +202,13 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             public void Cleanup()
             {
                 MockCleanup();
+                
+                iCacheProviderMock = null;
+                iColleagueTransactionFactoryMock = null;
+                iColleagueTransactionInvokerMock = null;
 
                 transFactoryMock = null;
-                dataAccessorMock = null;
+                dataReaderMock = null;
                 cacheProviderMock = null;
                 _perposCollection = null;
                 referenceDataRepo = null;
@@ -185,12 +228,12 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(RepositoryException))]
             public async Task EmploymentPerformanceReviewsRepo_GetsGetEmploymentPerformanceReviews_Exception()
             {
-                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
-                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(null);
-                dataAccessorMock.Setup(da => da.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(null);
+
+                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
+                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(() => null);
 
                 await referenceDataRepo.GetEmploymentPerformanceReviewsAsync(0, 2, true);
             }
@@ -265,16 +308,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 
                 // Cache mocking
                 var cacheProviderMock = new Mock<ICacheProvider>();
-                /*cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
-                x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
-                .Returns(Task.FromResult(new Tuple<object, SemaphoreSlim>(
-                null,
-                new SemaphoreSlim(1, 1)
-                )));*/
 
-             //   cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
-             //x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
-             //.ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, null));
+                cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                    .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
 
                 referenceDataRepo = new EmploymentPerformanceReviewsRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
                 return referenceDataRepo;

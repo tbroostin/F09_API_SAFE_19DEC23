@@ -5,6 +5,7 @@ using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
@@ -53,7 +54,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="id">The requested student financial aid award GUID</param>
         /// <returns>A StudentFinancialAidAward DTO</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewStudentFinancialAidAwards)]
         public async Task<Dtos.StudentFinancialAidAward> GetByIdAsync([FromUri] string id)
         {
             bool bypassCache = false;
@@ -67,6 +68,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                studentFinancialAidAwardService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(id))
                 {
                     throw new ArgumentNullException("id", "id is required.");
@@ -113,7 +115,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="id">The requested student financial aid award GUID</param>
         /// <returns>A StudentFinancialAidAward DTO</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewStudentFinancialAidAwards)]
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.StudentFinancialAidAward2> GetById2Async([FromUri] string id)
         {
@@ -128,6 +130,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                studentFinancialAidAwardService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(id))
                 {
                     throw new ArgumentNullException("id", "id is required.");
@@ -177,13 +180,14 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// is the non-restricted version using student-financial-aid-awards.
         /// </summary>
         /// <returns>A Collection of StudentFinancialAidAwards</returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(StudentPermissionCodes.ViewStudentFinancialAidAwards)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetAsync(Paging page)
         {
             try
             {
+                studentFinancialAidAwardService.ValidatePermissions(GetPermissionsMetaData());
                 bool bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {
@@ -234,7 +238,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// is the non-restricted version using student-financial-aid-awards.
         /// </summary>
         /// <returns>A Collection of StudentFinancialAidAwards</returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(StudentPermissionCodes.ViewStudentFinancialAidAwards)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [QueryStringFilterFilter("criteria", typeof(Dtos.StudentFinancialAidAward2))]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
@@ -242,6 +246,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         {
             try
             {
+                studentFinancialAidAwardService.ValidatePermissions(GetPermissionsMetaData());
                 bool bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {
@@ -298,7 +303,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// is the non-restricted version using student-financial-aid-awards.
         /// </summary>
         /// <returns>A Collection of StudentFinancialAidAwards</returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(StudentPermissionCodes.ViewStudentFinancialAidAwards)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [QueryStringFilterFilter("criteria", typeof(Dtos.StudentFinancialAidAward2))]
         [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter2))]
@@ -308,6 +313,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         {
             try
             {
+                studentFinancialAidAwardService.ValidatePermissions(GetPermissionsMetaData());
                 bool bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {
@@ -381,7 +387,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="id">The requested student financial aid award GUID</param>
         /// <returns>A StudentFinancialAidAward DTO</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewStudentFinancialAidAwards)]
         public async Task<Dtos.StudentFinancialAidAward> GetRestrictedByIdAsync([FromUri] string id)
         {
             bool bypassCache = false;
@@ -395,6 +401,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                studentFinancialAidAwardService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(id))
                 {
                     throw new ArgumentNullException("id", "id is required.");
@@ -440,7 +447,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="id">The requested student financial aid award GUID</param>
         /// <returns>A StudentFinancialAidAward DTO</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewRestrictedStudentFinancialAidAwards)]
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.StudentFinancialAidAward2> GetRestrictedById2Async([FromUri] string id)
         {
@@ -455,6 +462,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                studentFinancialAidAwardService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(id))
                 {
                     throw new ArgumentNullException("id", "id is required.");
@@ -504,13 +512,14 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// is the restricted version using restricted-student-financial-aid-awards.
         /// </summary>
         /// <returns>A Collection of StudentFinancialAidAwards</returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(StudentPermissionCodes.ViewStudentFinancialAidAwards)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetRestrictedAsync(Paging page)
         {
             try
             {
+                studentFinancialAidAwardService.ValidatePermissions(GetPermissionsMetaData());
                 bool bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {
@@ -560,7 +569,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// is the restricted version using restricted-student-financial-aid-awards.
         /// </summary>
         /// <returns>A Collection of StudentFinancialAidAwards</returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(StudentPermissionCodes.ViewRestrictedStudentFinancialAidAwards)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [QueryStringFilterFilter("criteria", typeof(Dtos.StudentFinancialAidAward2))]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
@@ -630,7 +639,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// is the restricted version using restricted-student-financial-aid-awards.
         /// </summary>
         /// <returns>A Collection of StudentFinancialAidAwards</returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(StudentPermissionCodes.ViewRestrictedStudentFinancialAidAwards)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [QueryStringFilterFilter("criteria", typeof(Dtos.StudentFinancialAidAward2))]
         [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter2))]
@@ -640,6 +649,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         {
             try
             {
+                studentFinancialAidAwardService.ValidatePermissions(GetPermissionsMetaData());
                 bool bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {

@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -22,6 +22,11 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// </summary>
         public string TaxForm { get { return this.taxForm; } }
         private readonly string taxForm;
+
+        /// <summary>
+        /// For the tax form, show or hide the consent information on the view.
+        /// </summary>
+        public bool HideConsent { get; set; }
 
         /// <summary>
         /// The tax form consent given and consent withheld paragraphs.

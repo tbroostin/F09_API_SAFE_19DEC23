@@ -249,11 +249,14 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             if (ConvertValueToDay(payCycleRecord.PcyWorkWeekStartDy, ref workWeekStartDay) ||
                 ConvertValueToDay((await GetHRSSDefaultsAsync()).HrssDfltWorkWeekStartDy, ref workWeekStartDay))
             {
-                return new PayCycle(payCycleRecord.Recordkey, payCycleRecord.PcyDesc, workWeekStartDay)
+                //pay cycle description: self-service description field value if present, default otherwise
+                string description = !string.IsNullOrEmpty(payCycleRecord.PcySelfServiceDesc) ? payCycleRecord.PcySelfServiceDesc : payCycleRecord.PcyDesc;
+                return new PayCycle(payCycleRecord.Recordkey, description, workWeekStartDay)
                 {
                     PayClassIds = payCycleRecord.PcyPayclasses,
                     PayPeriods = payPeriodEntities,
                     AnnualPayFrequency = annualPayFrequency,
+                    DisplayInSelfService = !string.IsNullOrEmpty(payCycleRecord.PcyDisplayInSelfService) && payCycleRecord.PcyDisplayInSelfService.ToUpper() == "Y"
                 };
             }
             else // make a note if the default cannot be obtained.  no pay cycle will be added in this scenario

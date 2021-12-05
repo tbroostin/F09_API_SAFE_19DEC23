@@ -19,6 +19,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
     public class BuyerRepository: PersonRepository, IBuyerRepository
     {
+        private RepositoryException repositoryException = new RepositoryException();
         /// <summary>
         /// Initializes a new instance of the <see cref="BuyerRepository"/> class.
         /// </summary>
@@ -75,7 +76,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     throw new Exception("Error occurred while getting staff records.", ex);
                 }
             }
-
+            if (repositoryException != null && repositoryException.Errors != null && repositoryException.Errors.Any())
+            {
+                throw repositoryException;
+            }
             return new Tuple<IEnumerable<Buyer>, int>(buyers, totalRecords);
         }
 
@@ -101,11 +105,22 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             List<Ellucian.Colleague.Data.Base.DataContracts.Person> personRecords = new List<Ellucian.Colleague.Data.Base.DataContracts.Person>();
             personRecords.Add(personRecord);
             var staffStatusesValidationTable = await GetStaffStatusesValcode();
-            return await GetBuyerEntity(staffRecord, personRecords, staffStatusesValidationTable);
+            var buyerEntity =  await GetBuyerEntity(staffRecord, personRecords, staffStatusesValidationTable);
+            if (repositoryException != null && repositoryException.Errors != null && repositoryException.Errors.Any())
+            {
+                throw repositoryException;
+            }
+            return buyerEntity;
+
         }
 
         private async Task<Buyer> GetBuyerEntity(Ellucian.Colleague.Data.Base.DataContracts.Staff staff, List<Ellucian.Colleague.Data.Base.DataContracts.Person> StaffEntities, ApplValcodes staffStatusesValidationTable)
         {
+            if (string.IsNullOrEmpty(staff.RecordGuid))
+            {
+                repositoryException.AddError(new RepositoryError("GUID.Not.Found", string.Concat("No Guid found, Entity:'STAFF', Record ID:'", staff.Recordkey, "'")
+                    ));        
+            }
             Buyer BuyerEntity = new Buyer()
             {
                 RecordKey = staff.Recordkey,
@@ -129,7 +144,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 BuyerEntity.Status = "inactive";
             }
-            BuyerEntity.PersonGuid = await GetGuidFromRecordInfoAsync("PERSON", staff.Recordkey);
+            try
+            {
+                BuyerEntity.PersonGuid = await GetGuidFromRecordInfoAsync("PERSON", staff.Recordkey);
+            }
+            catch (Exception ex)
+            {
+                repositoryException.AddError(new RepositoryError("GUID.Not.Found", string.Concat("No Guid found, Entity:'PERSON', Record ID:'", staff.Recordkey, "'")
+                   ));
+            }
             Ellucian.Colleague.Data.Base.DataContracts.Person StaffEntity = StaffEntities.FirstOrDefault(x => x.Recordkey == BuyerEntity.RecordKey);
 
             if (StaffEntity != null)

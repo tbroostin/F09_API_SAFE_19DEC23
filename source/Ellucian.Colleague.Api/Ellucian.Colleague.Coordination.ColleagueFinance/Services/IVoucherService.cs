@@ -62,5 +62,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="invoiceNo">Invoice number</param>
         /// <returns>List of <see cref="Voucher2">Vouchers</see></returns>
         Task<IEnumerable<Voucher2>> GetVouchersByVendorAndInvoiceNoAsync(string vendorId, string invoiceNo);
+
+        /// <summary>
+        /// Get Voucher summary list for the given user
+        /// </summary>
+        /// <param name="criteria">procurement filter criteria</param>
+        /// <returns>Voucher summary DTOs</returns>
+        Task<IEnumerable<VoucherSummary>> QueryVoucherSummariesAsync(Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria criteria);
     }
 }

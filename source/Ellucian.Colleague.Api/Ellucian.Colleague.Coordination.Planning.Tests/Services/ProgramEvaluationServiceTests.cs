@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -86,7 +86,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                 academicCreditRepo = academicCreditRepoMock.Object;
 
                 referenceDataRepo = new Mock<IReferenceDataRepository>().Object;
-                academicCreditRepoMock.Setup(repo => repo.GetAsync(It.IsAny<string[]>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns((string[] s, bool b1, bool b2) => Task.FromResult(academicCreditRepoInstance.GetAsync(s, b1, b2).Result));
+                academicCreditRepoMock.Setup(repo => repo.GetAsync(It.IsAny<string[]>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns((string[] s, bool b1, bool b2, bool b3) => Task.FromResult(academicCreditRepoInstance.GetAsync(s, b1, b2, b3).Result));
                 academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditByStudentIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns((IEnumerable<string> s, bool b1, bool b2, bool b3) => Task.FromResult(GetCredits(s)));
 
                 studentDegreePlanRepoMock = new Mock<IStudentDegreePlanRepository>();
@@ -1392,7 +1392,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                 academicCreditRepoMock = new Mock<IAcademicCreditRepository>();
                 academicCreditRepo = academicCreditRepoMock.Object;
                 referenceDataRepo = new Mock<IReferenceDataRepository>().Object;
-                academicCreditRepoMock.Setup(repo => repo.GetAsync(It.IsAny<string[]>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns((string[] s, bool b1, bool b2) => Task.FromResult(academicCreditRepoInstance.GetAsync(s, b1, b2).Result));
+                academicCreditRepoMock.Setup(repo => repo.GetAsync(It.IsAny<string[]>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns((string[] s, bool b1, bool b2, bool b3) => Task.FromResult(academicCreditRepoInstance.GetAsync(s, b1, b2, b3).Result));
                 academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditByStudentIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns((IEnumerable<string> s, bool b1, bool b2, bool b3) => Task.FromResult(GetCredits(s)));
 
                 studentDegreePlanRepoMock = new Mock<IStudentDegreePlanRepository>();
@@ -1589,6 +1589,10 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                 creditDictionary["0016285"][1].EndDate = null;
                 creditDictionary["0016285"][2].EndDate = null;
                 creditDictionary["0016285"][2].StartDate = new DateTime(2017, 03, 01);
+                //Since they are inprogress courses adjustec credits will be null
+                creditDictionary["0016285"][0].AdjustedCredit = null;
+                creditDictionary["0016285"][1].AdjustedCredit = null;
+                creditDictionary["0016285"][2].AdjustedCredit = null;
 
                 var student = studentRepo.Get(studentid);
                 var planningStudent = new Domain.Student.Entities.PlanningStudent(student.Id, student.LastName, student.DegreePlanId, student.ProgramIds);
@@ -1608,7 +1612,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                 //110 and 110 will not be applied to any group but will fall in other group category
 
                 Assert.AreEqual(3, programResult.InProgressCredits);
-                Assert.AreEqual(3, programResult.Credits);
+                Assert.AreEqual(0, programResult.Credits);
                 Assert.AreEqual(2, programResult.OtherAcademicCredits.Count);
                 //other courses
                 Assert.AreEqual("110", programResult.OtherAcademicCredits[0]);
@@ -1845,7 +1849,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             }
 
             [TestMethod]
-            public async Task Evaluate_ReplaceStatuses_TwoCoursesAreCompeletedOneInProgress_WithCatalog()
+            public async Task Evaluate_ReplaceStatuses_TwoCoursesAreCompletedOneInProgress_WithCatalog()
             {
                 string studentid = "0016287";
                 GetCredits(new List<string>() { studentid });
@@ -1862,6 +1866,8 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                 creditDictionary[studentid][2].CanBeReplaced = true;
                 creditDictionary[studentid][1].ReplacedStatus = ReplacedStatus.Replaced;
                 creditDictionary[studentid][1].AdjustedCredit = 0m;
+                //adjusted credit for IP is null
+                creditDictionary[studentid][0].AdjustedCredit = null;
                 creditDictionary[studentid][0].EndDate = null;
                 creditDictionary[studentid][2].StartDate = new DateTime(2017, 03, 01);
 
@@ -1884,7 +1890,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                 //115 course will have status of replacement
 
                 Assert.AreEqual(3, programResult.InProgressCredits);
-                Assert.AreEqual(3, programResult.Credits);
+                Assert.AreEqual(0, programResult.Credits);
                 Assert.AreEqual(2, programResult.OtherAcademicCredits.Count);
                 //other courses
                 Assert.AreEqual("113", programResult.OtherAcademicCredits[0]);
@@ -1913,7 +1919,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             }
 
             [TestMethod]
-            public async Task Evaluate_ReplaceStatuses_OneCourseIsCompeletedTwoInProgress()
+            public async Task Evaluate_ReplaceStatuses_OneCourseIsCompletedTwoInProgress()
             {
                 string studentid = "0016288";
                 GetCredits(new List<string>() { studentid });
@@ -1927,6 +1933,9 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                 creditDictionary[studentid][1].EndDate = null;
                 creditDictionary[studentid][2].EndDate = null;
                 creditDictionary[studentid][1].StartDate = new DateTime(2017, 03, 01);
+                //make adjusted credit to null for IP
+                creditDictionary[studentid][0].AdjustedCredit = null;
+                creditDictionary[studentid][1].AdjustedCredit = null;
 
                 var student = studentRepo.Get(studentid);
                 var planningStudent = new Domain.Student.Entities.PlanningStudent(student.Id, student.LastName, student.DegreePlanId, student.ProgramIds);
@@ -1942,7 +1951,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                 var programResult = (await programEvaluationService.EvaluateAsync(studentid, new List<string>() { "REPEAT.BB" }, null)).First();
                 Assert.IsNotNull(programResult);
                 Assert.AreEqual(3, programResult.InProgressCredits);
-                Assert.AreEqual(3, programResult.Credits);
+                Assert.AreEqual(0, programResult.Credits);
                 Assert.AreEqual(2, programResult.OtherAcademicCredits.Count);
                 //other courses
                 Assert.AreEqual("110", programResult.OtherAcademicCredits[0]);
@@ -1971,7 +1980,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             }
 
             [TestMethod]
-            public async Task Evaluate_ReplaceStatuses_OneCourseIsCompeletedTwoInProgress_WithCatalog()
+            public async Task Evaluate_ReplaceStatuses_OneCourseIsCompletedTwoInProgress_WithCatalog()
             {
                 string studentid = "0016288";
                 GetCredits(new List<string>() { studentid });
@@ -1985,6 +1994,8 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                 creditDictionary[studentid][1].EndDate = null;
                 creditDictionary[studentid][2].EndDate = null;
                 creditDictionary[studentid][1].StartDate = new DateTime(2017, 03, 01);
+                creditDictionary[studentid][0].AdjustedCredit = null;
+                creditDictionary[studentid][1].AdjustedCredit = null;
 
                 var student = studentRepo.Get(studentid);
                 var planningStudent = new Domain.Student.Entities.PlanningStudent(student.Id, student.LastName, student.DegreePlanId, student.ProgramIds);
@@ -2000,7 +2011,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                 var programResult = (await programEvaluationService.EvaluateAsync(studentid, new List<string>() { "REPEAT.BB" }, "2012")).First();
                 Assert.IsNotNull(programResult);
                 Assert.AreEqual(3, programResult.InProgressCredits);
-                Assert.AreEqual(3, programResult.Credits);
+                Assert.AreEqual(0, programResult.Credits);
                 Assert.AreEqual(2, programResult.OtherAcademicCredits.Count);
                 //other courses
                 Assert.AreEqual("110", programResult.OtherAcademicCredits[0]);
@@ -2062,7 +2073,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
 
                 Assert.IsNotNull(programResult);
                 Assert.AreEqual(3, programResult.InProgressCredits);
-                Assert.AreEqual(3, programResult.Credits);
+                Assert.AreEqual(0, programResult.Credits);
                 Assert.AreEqual(0, programResult.OtherAcademicCredits.Count);
                 Assert.AreEqual(0, programResult.CumGpa.HasValue ? decimal.Round(programResult.CumGpa.Value, 3) : 0);
 
@@ -2109,7 +2120,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                 //inprogress will be applied
                 Assert.IsNotNull(programResult);
                 Assert.AreEqual(3, programResult.InProgressCredits);
-                Assert.AreEqual(6, programResult.Credits);
+                Assert.AreEqual(3, programResult.Credits);
                 Assert.AreEqual(1, programResult.OtherAcademicCredits.Count); //graded drop and inprogress
                 Assert.AreEqual(3.333m, programResult.CumGpa.HasValue ? decimal.Round(programResult.CumGpa.Value, 3) : 0); //gpa will include drop courses
 
@@ -2221,7 +2232,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                 //124 inprogress will be applied
                 Assert.IsNotNull(programResult);
                 Assert.AreEqual(3, programResult.InProgressCredits);
-                Assert.AreEqual(9, programResult.Credits); //graded dropped included
+                Assert.AreEqual(6, programResult.Credits); //graded dropped included
                 Assert.AreEqual(2, programResult.OtherAcademicCredits.Count); //graded dropped
                 Assert.AreEqual(3.667m, programResult.CumGpa.HasValue ? decimal.Round(programResult.CumGpa.Value, 3) : 0); //gpa will include drop courses
 
@@ -2351,7 +2362,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
 
                 Assert.IsNotNull(programResult);
                 Assert.AreEqual(3, programResult.InProgressCredits);
-                Assert.AreEqual(6, programResult.Credits); //graded drop and to be replaced course
+                Assert.AreEqual(3, programResult.Credits); //graded drop and to be replaced course
                 Assert.AreEqual(2, programResult.OtherAcademicCredits.Count); //graded drop and replaced course
                 Assert.AreEqual(3.667m, programResult.CumGpa.HasValue ? decimal.Round(programResult.CumGpa.Value, 3) : 0); //gpa will include drop class
 
@@ -2587,6 +2598,386 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
 
             }
 
+            //repeats with planned courses such as planned course takes precedence over completed and inporgress courses
+            //all planned with coure retake for credits is N
+            [TestMethod]
+            public async Task Evaluate_ReplaceStatuses_AllPlannedCourses()
+            {
+                string studentid = "0016302";
+                //no academic credits
+                creditDictionary = new Dictionary<string, List<AcademicCredit>>();
+
+               
+
+                var student = studentRepo.Get(studentid);
+                var planningStudent = new Domain.Student.Entities.PlanningStudent(student.Id, student.LastName, student.DegreePlanId, student.ProgramIds);
+                planningStudent.Advisements = student.Advisements;
+                planningStudentRepoMock.Setup(psr => psr.GetAsync(studentid, It.IsAny<bool>())).Returns(Task.FromResult(planningStudent));
+                
+               academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditByStudentIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns((IEnumerable<string> s, bool b1, bool b2, bool b3) => Task.FromResult(creditDictionary));
+                programEvaluationService = new ProgramEvaluationService(
+                    adapterRegistry, studentDegreePlanRepo, programRequirementsRepo, studentRepo, planningStudentRepo, studentProgramRepo,
+                    requirementRepo, academicCreditRepo, null, courseRepo, termRepo, ruleRepo, programRepo,
+                    catalogRepo, planningConfigRepo, referenceDataRepo, currentUserFactory, roleRepository, logger, configRepo);
+                var programResult = (await programEvaluationService.EvaluateAsync(studentid, new List<string>() { "REPEAT.BB" }, null)).First();
+
+                //7435 course is planned 3 times - 2012/FA, 2013/FA, 2014/FA  
+                //2014/fa course will be applied and all others will end in other planned courses with notation of possible replace in progress
+                Assert.IsNotNull(programResult);
+                Assert.AreEqual(0, programResult.InProgressCredits);
+                Assert.AreEqual(0, programResult.Credits);
+                Assert.AreEqual(3m, programResult.PlannedCredits);
+                Assert.AreEqual(0, programResult.OtherAcademicCredits.Count);
+                Assert.AreEqual(2, programResult.OtherPlannedCredits.Count);
+                //first group result
+                Assert.AreEqual(3, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results.Count);
+                Assert.AreEqual(1, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].GetAppliedAndPlannedApplied().Count());
+                Assert.AreEqual("2014/FA", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[0].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[0].GetCourse().Id);
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[0].Result);
+                Assert.AreEqual(ReplacedStatus.ReplaceInProgress, (programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[0] as CourseResult).PlannedCourse.ReplacedStatus);
+                Assert.AreEqual(null, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[0].GetAcadCredId());
+                
+                Assert.AreEqual("2016/FA", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[1].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[1].GetCourse().Id);
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[1].Result);
+                Assert.AreEqual(ReplacedStatus.ReplaceInProgress, (programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[1] as CourseResult).PlannedCourse.ReplacedStatus);
+                Assert.AreEqual(null, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[1].GetAcadCredId());
+               
+                Assert.AreEqual("2029/FA", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[2].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[2].GetCourse().Id);
+                Assert.AreEqual(Result.PlannedApplied, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[2].Result);
+                Assert.AreEqual(Result.PlannedApplied, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[2].Result);
+                Assert.AreEqual(ReplacementStatus.PossibleReplacement, (programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[2] as CourseResult).PlannedCourse.ReplacementStatus);
+
+                //second group result
+                Assert.AreEqual(3, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results.Count);
+                Assert.AreEqual(1, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].GetAppliedAndPlannedApplied().Count());
+                Assert.AreEqual("2014/FA", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[0].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[0].GetCourse().Id);
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[0].Result);
+                Assert.AreEqual(ReplacedStatus.ReplaceInProgress, (programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[0] as CourseResult).PlannedCourse.ReplacedStatus);
+                Assert.AreEqual(null, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[0].GetAcadCredId());
+
+                Assert.AreEqual("2016/FA", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[1].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[1].GetCourse().Id);
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[1].Result);
+                Assert.AreEqual(ReplacedStatus.ReplaceInProgress, (programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[1] as CourseResult).PlannedCourse.ReplacedStatus);
+                Assert.AreEqual(null, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[1].GetAcadCredId());
+
+                Assert.AreEqual("2029/FA", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[2].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[2].GetCourse().Id);
+                Assert.AreEqual(Result.PlannedApplied, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[2].Result);
+                Assert.AreEqual(Result.PlannedApplied, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[2].Result);
+                Assert.AreEqual(ReplacementStatus.PossibleReplacement, (programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[2] as CourseResult).PlannedCourse.ReplacementStatus);
+                //third group result
+                Assert.AreEqual(3, programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results.Count);
+                Assert.AreEqual(1, programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].GetAppliedAndPlannedApplied().Count());
+                Assert.AreEqual("2014/FA", programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[0].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[0].GetCourse().Id);
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[0].Result);
+                Assert.AreEqual(ReplacedStatus.ReplaceInProgress, (programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[0] as CourseResult).PlannedCourse.ReplacedStatus);
+                Assert.AreEqual(null, programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[0].GetAcadCredId());
+
+                Assert.AreEqual("2016/FA", programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[1].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[1].GetCourse().Id);
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[1].Result);
+                Assert.AreEqual(ReplacedStatus.ReplaceInProgress, (programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[1] as CourseResult).PlannedCourse.ReplacedStatus);
+                Assert.AreEqual(null, programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[1].GetAcadCredId());
+
+                Assert.AreEqual("2029/FA", programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[2].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[2].GetCourse().Id);
+                Assert.AreEqual(Result.PlannedApplied, programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[2].Result);
+                Assert.AreEqual(Result.PlannedApplied, programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[2].Result);
+                Assert.AreEqual(ReplacementStatus.PossibleReplacement, (programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[2] as CourseResult).PlannedCourse.ReplacementStatus);
+
+            }
+            //planned with inprogress
+
+            [TestMethod]
+            public async Task Evaluate_ReplaceStatuses_PlannedWithInProgressCompletedCourses()
+            {
+                string studentid = "0016302";
+                GetCredits(new List<string>() { studentid });
+
+                //for this particular student all these acadcredits are completed
+                //We willa ssume Colleague has grade policy set to BEST,and F grade has no repeat value
+                //these student acadCredits are retaken 
+                //123 is 2018/fa MATH-3300BB credit course-  completed
+                //124 is 2019/sp math-300bb credit course- inprogress
+                //119 is 2018/sp  engl-201 completed course
+                creditDictionary["0016302"][0].RepeatAcademicCreditIds = new List<string>() { "123", "124" };
+                creditDictionary["0016302"][1].RepeatAcademicCreditIds = new List<string>() { "123", "124", };
+                creditDictionary["0016302"][0].CanBeReplaced = true;
+                creditDictionary["0016302"][1].CanBeReplaced = true;
+                creditDictionary["0016302"][2].CanBeReplaced = true;
+                creditDictionary["0016302"][0].ReplacedStatus = ReplacedStatus.NotReplaced;
+                creditDictionary["0016302"][1].ReplacedStatus = ReplacedStatus.NotReplaced;
+                creditDictionary["0016302"][2].ReplacedStatus = ReplacedStatus.NotReplaced;
+
+
+
+                var student = studentRepo.Get(studentid);
+                var planningStudent = new Domain.Student.Entities.PlanningStudent(student.Id, student.LastName, student.DegreePlanId, student.ProgramIds);
+                planningStudent.Advisements = student.Advisements;
+                planningStudentRepoMock.Setup(psr => psr.GetAsync(studentid, It.IsAny<bool>())).Returns(Task.FromResult(planningStudent));
+
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditByStudentIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns((IEnumerable<string> s, bool b1, bool b2, bool b3) => Task.FromResult(creditDictionary));
+                programEvaluationService = new ProgramEvaluationService(
+                    adapterRegistry, studentDegreePlanRepo, programRequirementsRepo, studentRepo, planningStudentRepo, studentProgramRepo,
+                    requirementRepo, academicCreditRepo, null, courseRepo, termRepo, ruleRepo, programRepo,
+                    catalogRepo, planningConfigRepo, referenceDataRepo, currentUserFactory, roleRepository, logger, configRepo);
+                var programResult = (await programEvaluationService.EvaluateAsync(studentid, new List<string>() { "REPEAT.BB" }, null)).First();
+
+                //7435 course is planned 3 times - 2012/FA, 2013/FA, 2014/FA  
+                //2014/fa course will be applied and all others will end in other planned courses with notation of possible replace in progress
+                Assert.IsNotNull(programResult);
+                Assert.AreEqual(0, programResult.InProgressCredits);
+                Assert.AreEqual(0, programResult.Credits);
+                Assert.AreEqual(3m, programResult.PlannedCredits);
+                Assert.AreEqual(2, programResult.OtherAcademicCredits.Count);
+                Assert.AreEqual(2, programResult.OtherPlannedCredits.Count);
+                //first group result
+                Assert.AreEqual(5, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results.Count);
+                Assert.AreEqual(1, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].GetAppliedAndPlannedApplied().Count());
+                Assert.AreEqual("2018/FA", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[0].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[0].GetCourse().Id);
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[0].Result);
+                Assert.AreEqual(ReplacedStatus.ReplaceInProgress, (programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[0] as CreditResult).Credit.ReplacedStatus);
+                Assert.AreEqual("123", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[0].GetAcadCredId());
+
+                Assert.AreEqual("2019/SP", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[1].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[1].GetCourse().Id);
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[1].Result);
+                Assert.AreEqual(ReplacedStatus.ReplaceInProgress, (programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[1] as CreditResult).Credit.ReplacedStatus);
+                Assert.AreEqual("124", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[1].GetAcadCredId());
+
+                Assert.AreEqual("2014/FA", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[2].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[2].GetCourse().Id);
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[2].Result);
+                Assert.AreEqual(ReplacedStatus.ReplaceInProgress, (programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[2] as CourseResult).PlannedCourse.ReplacedStatus);
+                Assert.AreEqual(null, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[2].GetAcadCredId());
+
+                Assert.AreEqual("2016/FA", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[3].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[3].GetCourse().Id);
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[3].Result);
+                Assert.AreEqual(ReplacedStatus.ReplaceInProgress, (programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[3] as CourseResult).PlannedCourse.ReplacedStatus);
+                Assert.AreEqual(null, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[3].GetAcadCredId());
+
+                Assert.AreEqual("2029/FA", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[4].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[4].GetCourse().Id);
+                Assert.AreEqual(Result.PlannedApplied, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[4].Result);
+                Assert.AreEqual(Result.PlannedApplied, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[4].Result);
+                Assert.AreEqual(ReplacementStatus.PossibleReplacement, (programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[4] as CourseResult).PlannedCourse.ReplacementStatus);
+
+                //second group result
+                Assert.AreEqual(5, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results.Count);
+                Assert.AreEqual(1, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].GetAppliedAndPlannedApplied().Count());
+                Assert.AreEqual("2018/FA", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[0].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[0].GetCourse().Id);
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[0].Result);
+                Assert.AreEqual(ReplacedStatus.ReplaceInProgress, (programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[0] as CreditResult).Credit.ReplacedStatus);
+                Assert.AreEqual("123", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[0].GetAcadCredId());
+
+                Assert.AreEqual("2019/SP", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[1].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[1].GetCourse().Id);
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[1].Result);
+                Assert.AreEqual(ReplacedStatus.ReplaceInProgress, (programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[1] as CreditResult).Credit.ReplacedStatus);
+                Assert.AreEqual("124", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[1].GetAcadCredId());
+
+                Assert.AreEqual("2014/FA", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[2].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[2].GetCourse().Id);
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[2].Result);
+                Assert.AreEqual(ReplacedStatus.ReplaceInProgress, (programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[2] as CourseResult).PlannedCourse.ReplacedStatus);
+                Assert.AreEqual(null, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[2].GetAcadCredId());
+
+                Assert.AreEqual("2016/FA", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[3].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[3].GetCourse().Id);
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[3].Result);
+                Assert.AreEqual(ReplacedStatus.ReplaceInProgress, (programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[3] as CourseResult).PlannedCourse.ReplacedStatus);
+                Assert.AreEqual(null, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[3].GetAcadCredId());
+
+                Assert.AreEqual("2029/FA", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[4].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[4].GetCourse().Id);
+                Assert.AreEqual(Result.PlannedApplied, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[4].Result);
+                Assert.AreEqual(Result.PlannedApplied, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[4].Result);
+                Assert.AreEqual(ReplacementStatus.PossibleReplacement, (programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[4] as CourseResult).PlannedCourse.ReplacementStatus);
+
+                //third group result
+                Assert.AreEqual(5, programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results.Count);
+                Assert.AreEqual(1, programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].GetAppliedAndPlannedApplied().Count());
+                Assert.AreEqual("2018/FA", programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[0].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[0].GetCourse().Id);
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[0].Result);
+                Assert.AreEqual(ReplacedStatus.ReplaceInProgress, (programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[0] as CreditResult).Credit.ReplacedStatus);
+                Assert.AreEqual("123", programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[0].GetAcadCredId());
+
+                Assert.AreEqual("2019/SP", programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[1].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[1].GetCourse().Id);
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[1].Result);
+                Assert.AreEqual(ReplacedStatus.ReplaceInProgress, (programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[1] as CreditResult).Credit.ReplacedStatus);
+                Assert.AreEqual("124", programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[1].GetAcadCredId());
+
+                Assert.AreEqual("2014/FA", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[2].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[2].GetCourse().Id);
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[2].Result);
+                Assert.AreEqual(ReplacedStatus.ReplaceInProgress, (programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[2] as CourseResult).PlannedCourse.ReplacedStatus);
+                Assert.AreEqual(null, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[2].GetAcadCredId());
+
+                Assert.AreEqual("2016/FA", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[3].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[3].GetCourse().Id);
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[3].Result);
+                Assert.AreEqual(ReplacedStatus.ReplaceInProgress, (programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[3] as CourseResult).PlannedCourse.ReplacedStatus);
+                Assert.AreEqual(null, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[3].GetAcadCredId());
+
+                Assert.AreEqual("2029/FA", programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[4].GetTermCode());
+                Assert.AreEqual("7435", programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[4].GetCourse().Id);
+                Assert.AreEqual(Result.PlannedApplied, programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[4].Result);
+                Assert.AreEqual(Result.PlannedApplied, programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[4].Result);
+                Assert.AreEqual(ReplacementStatus.PossibleReplacement, (programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[4] as CourseResult).PlannedCourse.ReplacementStatus);
+            }
+
+            [TestMethod]
+            public async Task Evaluate_CumulativeGPA_DoNotCountReplaceInProgressCompletedCourses()
+            {
+                string studentid = "0016287";
+                GetCredits(new List<string>() { studentid });
+
+                //these student acadCredits are retaken but will replace and count only one because this course have retakeforcredits flag as N; 
+                //degree parameters says exclude repeated completed courses for cum gpa
+                //111 is 2009/sp MATH-3300BB credit course- This is inprogress
+                //113 is 2010/sp math-300bb credit course- //This is complete graded this will be replaced by collegue
+                //115 is 2017/sp math-300bb credit course // this is complete- graded
+                creditDictionary[studentid][0].RepeatAcademicCreditIds = new List<string>() { "111", "113", "115" };
+                creditDictionary[studentid][1].RepeatAcademicCreditIds = new List<string>() { "111", "113", "115" };
+                creditDictionary[studentid][2].RepeatAcademicCreditIds = new List<string>() { "111", "113", "115" };
+                creditDictionary[studentid][0].CanBeReplaced = true;
+                creditDictionary[studentid][1].CanBeReplaced = true;
+                creditDictionary[studentid][2].CanBeReplaced = true;
+                creditDictionary[studentid][1].ReplacedStatus = ReplacedStatus.Replaced;
+                creditDictionary[studentid][1].AdjustedCredit = 0m;
+                //adjusted credit for IP is null
+                creditDictionary[studentid][0].AdjustedCredit = null;
+                creditDictionary[studentid][0].EndDate = null;
+                //For 115 completed acad credit GPA points and credits will be adjusted to 0 since there is another inprogress course that would take the precedence 
+                creditDictionary[studentid][2].StartDate = new DateTime(2017, 03, 01);
+
+                var student = studentRepo.Get(studentid);
+                var planningStudent = new Domain.Student.Entities.PlanningStudent(student.Id, student.LastName, student.DegreePlanId, student.ProgramIds);
+                planningStudent.Advisements = student.Advisements;
+                planningStudentRepoMock.Setup(psr => psr.GetAsync(studentid, It.IsAny<bool>())).Returns(Task.FromResult(planningStudent));
+
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditByStudentIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns((IEnumerable<string> s, bool b1, bool b2, bool b3) => Task.FromResult(creditDictionary));
+                requirementRepoMock.Setup(repo => repo.GetDegreeAuditParametersAsync()).Returns(Task.FromResult(new DegreeAuditParameters(ExtraCourses.Apply, false, false, false, true)));
+                programEvaluationService = new ProgramEvaluationService(
+                    adapterRegistry, studentDegreePlanRepo, programRequirementsRepo, studentRepo, planningStudentRepo, studentProgramRepo,
+                    requirementRepo, academicCreditRepo, null, courseRepo, termRepo, ruleRepo, programRepo, catalogRepo, planningConfigRepo,
+                    referenceDataRepo, currentUserFactory, roleRepository, logger, configRepo);
+
+                var programResult = (await programEvaluationService.EvaluateAsync(studentid, new List<string>() { "REPEAT.BB" }, "2012")).First();
+                Assert.IsNotNull(programResult);
+                //since these course are replacing each other and a flag on course math-300bb says do not retake for credits
+                //total inprogress credits will be 3 ; completed credits are 0; 
+
+                Assert.AreEqual(3, programResult.InProgressCredits);
+                Assert.AreEqual(0, programResult.Credits);
+                Assert.AreEqual(2, programResult.OtherAcademicCredits.Count);
+                Assert.AreEqual(4m, programResult.CumGpa);
+                Assert.AreEqual(4m, programResult.InstGpa);
+                //other courses
+                Assert.AreEqual("113", programResult.OtherAcademicCredits[0]);
+                Assert.AreEqual("115", programResult.OtherAcademicCredits[1]);
+                //first group result
+                Assert.AreEqual("113", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[0].GetAcadCredId());
+                Assert.AreEqual(Result.ReplacedWithGPAValues, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[0].Result);
+                Assert.AreEqual("115", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[1].GetAcadCredId());
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[1].Result);
+                Assert.AreEqual("111", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[2].GetAcadCredId());
+                Assert.AreEqual(Result.Applied, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[2].Result);
+                //second group result
+                Assert.AreEqual("113", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[0].GetAcadCredId());
+                Assert.AreEqual(Result.ReplacedWithGPAValues, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[0].Result);
+                Assert.AreEqual("115", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[1].GetAcadCredId());
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[1].Result);
+                Assert.AreEqual("111", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[2].GetAcadCredId());
+                Assert.AreEqual(Result.Applied, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[2].Result);
+                //third group result
+                Assert.AreEqual("113", programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[0].GetAcadCredId());
+                Assert.AreEqual(Result.ReplacedWithGPAValues, programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[0].Result);
+                Assert.AreEqual("115", programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[1].GetAcadCredId());
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[1].Result);
+                Assert.AreEqual("111", programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[2].GetAcadCredId());
+                Assert.AreEqual(Result.Applied, programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[2].Result);
+            }
+
+            [TestMethod]
+            public async Task Evaluate_CumulativeGPA_CountReplaceInProgressCompletedCourses()
+            {
+                string studentid = "0016287";
+                GetCredits(new List<string>() { studentid });
+
+                //these student acadCredits are retaken but will replace and count only one because this course have retakeforcredits flag as N
+                //111 is 2009/sp MATH-3300BB credit course- This is inprogress
+                //113 is 2010/sp math-300bb credit course- //This is complete graded this will be replaced by collegue
+                //115 is 2017/sp math-300bb credit course // this is complete- graded
+                creditDictionary[studentid][0].RepeatAcademicCreditIds = new List<string>() { "111", "113", "115" };
+                creditDictionary[studentid][1].RepeatAcademicCreditIds = new List<string>() { "111", "113", "115" };
+                creditDictionary[studentid][2].RepeatAcademicCreditIds = new List<string>() { "111", "113", "115" };
+                creditDictionary[studentid][0].CanBeReplaced = true;
+                creditDictionary[studentid][1].CanBeReplaced = true;
+                creditDictionary[studentid][2].CanBeReplaced = true;
+                creditDictionary[studentid][1].ReplacedStatus = ReplacedStatus.Replaced;
+                creditDictionary[studentid][1].AdjustedCredit = 0m;
+                //adjusted credit for IP is null
+                creditDictionary[studentid][0].AdjustedCredit = null;
+                creditDictionary[studentid][0].EndDate = null;
+                creditDictionary[studentid][2].StartDate = new DateTime(2017, 03, 01);
+
+                var student = studentRepo.Get(studentid);
+                var planningStudent = new Domain.Student.Entities.PlanningStudent(student.Id, student.LastName, student.DegreePlanId, student.ProgramIds);
+                planningStudent.Advisements = student.Advisements;
+                planningStudentRepoMock.Setup(psr => psr.GetAsync(studentid, It.IsAny<bool>())).Returns(Task.FromResult(planningStudent));
+
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditByStudentIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns((IEnumerable<string> s, bool b1, bool b2, bool b3) => Task.FromResult(creditDictionary));
+                requirementRepoMock.Setup(repo => repo.GetDegreeAuditParametersAsync()).Returns(Task.FromResult(new DegreeAuditParameters(ExtraCourses.Apply, false, false, false, false)));
+                programEvaluationService = new ProgramEvaluationService(
+                    adapterRegistry, studentDegreePlanRepo, programRequirementsRepo, studentRepo, planningStudentRepo, studentProgramRepo,
+                    requirementRepo, academicCreditRepo, null, courseRepo, termRepo, ruleRepo, programRepo, catalogRepo, planningConfigRepo,
+                    referenceDataRepo, currentUserFactory, roleRepository, logger, configRepo);
+
+                var programResult = (await programEvaluationService.EvaluateAsync(studentid, new List<string>() { "REPEAT.BB" }, "2012")).First();
+                Assert.IsNotNull(programResult);
+
+                Assert.AreEqual(3, programResult.InProgressCredits);
+                Assert.AreEqual(0, programResult.Credits);
+                Assert.AreEqual(2, programResult.OtherAcademicCredits.Count);
+                Assert.AreEqual(3.33m, Decimal.Round(programResult.CumGpa.Value,2));
+                Assert.AreEqual(3.33m, Decimal.Round(programResult.InstGpa.Value, 2));
+                //other courses
+                Assert.AreEqual("113", programResult.OtherAcademicCredits[0]);
+                Assert.AreEqual("115", programResult.OtherAcademicCredits[1]);
+                //first group result
+                Assert.AreEqual("113", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[0].GetAcadCredId());
+                Assert.AreEqual(Result.ReplacedWithGPAValues, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[0].Result);
+                Assert.AreEqual("115", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[1].GetAcadCredId());
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[1].Result);
+                Assert.AreEqual("111", programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[2].GetAcadCredId());
+                Assert.AreEqual(Result.Applied, programResult.RequirementResults[0].SubRequirementResults[0].GroupResults[0].Results[2].Result);
+                //second group result
+                Assert.AreEqual("113", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[0].GetAcadCredId());
+                Assert.AreEqual(Result.ReplacedWithGPAValues, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[0].Result);
+                Assert.AreEqual("115", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[1].GetAcadCredId());
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[1].Result);
+                Assert.AreEqual("111", programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[2].GetAcadCredId());
+                Assert.AreEqual(Result.Applied, programResult.RequirementResults[0].SubRequirementResults[1].GroupResults[0].Results[2].Result);
+                //third group result
+                Assert.AreEqual("113", programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[0].GetAcadCredId());
+                Assert.AreEqual(Result.ReplacedWithGPAValues, programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[0].Result);
+                Assert.AreEqual("115", programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[1].GetAcadCredId());
+                Assert.AreEqual(Result.ReplaceInProgress, programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[1].Result);
+                Assert.AreEqual("111", programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[2].GetAcadCredId());
+                Assert.AreEqual(Result.Applied, programResult.RequirementResults[0].SubRequirementResults[2].GroupResults[0].Results[2].Result);
+            }
 
         }
 

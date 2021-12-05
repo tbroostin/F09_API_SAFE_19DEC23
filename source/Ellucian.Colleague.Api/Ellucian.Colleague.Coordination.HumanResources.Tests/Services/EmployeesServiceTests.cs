@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -16,7 +16,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Data.Colleague;
-using Ellucian.Colleague.Coordination.Base.Tests.Services;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 {
@@ -120,7 +120,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task Employees_QueryEmployeeNameByPostAsync_ThrowsArgumentNullException()
             {
-                 await employeesService.QueryEmployeeNamesByPostAsync(null);
+                await employeesService.QueryEmployeeNamesByPostAsync(null);
             }
 
             private void BuildData()
@@ -254,7 +254,22 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 }
             }
 
-           
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task Employees_GETAllAsync_EmptyGUID()
+            {
+                employeesEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>()
+                    {
+                        new Ellucian.Colleague.Domain.HumanResources.Entities.Employee("", "001")
+                        {                         
+                        }
+                };
+                var actualsTuple =
+                    await
+                        employeesService.GetEmployeesAsync(offset, limit, It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>());            
+            }
+
             [TestMethod]
             public async Task Employees_GETAllFilterAsync()
             {
@@ -283,7 +298,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                     Assert.AreEqual(expected.Guid, actual.Id);
                 }
             }
-           
+
             [TestMethod]
             public async Task Employees_GETAllAsync_EmptyTuple()
             {
@@ -326,7 +341,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 Assert.AreEqual(0, actualsTuple.Item1.Count());
             }
 
-           
+
 
             [TestMethod]
             public async Task Employees_GETAllAsync_EmptyTuple_InvalidStartDateFilter()
@@ -528,6 +543,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
     }
 
+    [TestClass]
     public class EmployeeServiceTests_V11 : CurrentUserSetup
     {
         [TestClass]
@@ -631,7 +647,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 }
             }
 
-            
+
             [TestMethod]
             public async Task Employees_GETAllFilterAsync()
             {
@@ -660,7 +676,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                     Assert.AreEqual(expected.Guid, actual.Id);
                 }
             }
-            
+
 
             [TestMethod]
             public async Task Employees_GETAllAsync_EmptyTuple()
@@ -704,7 +720,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 Assert.AreEqual(0, actualsTuple.Item1.Count());
             }
 
-          
+
 
             [TestMethod]
             public async Task Employees_GETAllAsync_EmptyTuple_InvalidStartDateFilter()
@@ -907,6 +923,380 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
     }
 
     [TestClass]
+    public class EmployeeServiceTests_V12 : CurrentUserSetup
+    {
+        [TestClass]
+        public class EmployeeServiceTests_GET_V12 : CurrentUserSetup
+        {
+            Mock<IEmployeeRepository> employeeRepositoryMock;
+            Mock<IHumanResourcesReferenceDataRepository> hrReferenceDataRepositoryMock;
+            Mock<IPositionRepository> positionRepositoryMock;
+            Mock<IPersonRepository> personRepositoryMock;
+            Mock<IPersonBaseRepository> personBaseRepositoryMock;
+            Mock<IAdapterRegistry> adapterRegistryMock;
+            Mock<IReferenceDataRepository> referenceDataRepositoryMock;
+            ICurrentUserFactory currentUserFactory;
+            Mock<IRoleRepository> roleRepositoryMock;
+            Mock<ILogger> loggerMock;
+
+            EmployeeService employeesService;
+            IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee> employeesEntities;
+            Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>, int> employeesEntityTuple;
+
+            //IEnumerable<Domain.Base.Entities.Person> personEntities;
+            private IConfigurationRepository baseConfigurationRepository;
+            private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+
+            IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.RehireType> rehireTypeEntities;
+            IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.EmploymentStatusEndingReason> employmentStatusEndingReasonEntities;
+            //IEnumerable<Domain.ColleagueFinance.Entities.AccountsPayableSources> acctPaySourceEntities;
+            //IEnumerable<Domain.ColleagueFinance.Entities.CurrencyConversion> currencyConversionEntities;
+            //IEnumerable<Domain.Base.Entities.Institution> institutionsEntities;
+            //IEnumerable<Domain.HumanResources.Entities.employeePay> employeePayEntities;
+
+            private Ellucian.Colleague.Domain.Entities.Permission permissionViewAnyPerson;
+
+            int offset = 0;
+            int limit = 4;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                employeeRepositoryMock = new Mock<IEmployeeRepository>();
+                hrReferenceDataRepositoryMock = new Mock<IHumanResourcesReferenceDataRepository>();
+                positionRepositoryMock = new Mock<IPositionRepository>();
+                personRepositoryMock = new Mock<IPersonRepository>();
+                personBaseRepositoryMock = new Mock<IPersonBaseRepository>();
+                referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                roleRepositoryMock = new Mock<IRoleRepository>();
+                loggerMock = new Mock<ILogger>();
+
+                baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
+                baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+
+                BuildData();
+                // Set up current user
+                currentUserFactory = new CurrentUserSetup.PersonUserFactory();
+
+                // Mock permissions
+                permissionViewAnyPerson = new Ellucian.Colleague.Domain.Entities.Permission(HumanResourcesPermissionCodes.ViewEmployeeData);
+                personRole.AddPermission(permissionViewAnyPerson);
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Ellucian.Colleague.Domain.Entities.Role>() { personRole });
+
+                employeesService = new EmployeeService(personRepositoryMock.Object, personBaseRepositoryMock.Object, employeeRepositoryMock.Object, referenceDataRepositoryMock.Object, hrReferenceDataRepositoryMock.Object,
+                                               positionRepositoryMock.Object, baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                employeesEntityTuple = null;
+                employeesEntities = null;
+                rehireTypeEntities = null;
+                employmentStatusEndingReasonEntities = null;
+                employeeRepositoryMock = null;
+                hrReferenceDataRepositoryMock = null;
+                adapterRegistryMock = null;
+                currentUserFactory = null;
+                roleRepositoryMock = null;
+                loggerMock = null;
+                referenceDataRepositoryMock = null;
+            }
+
+            [TestMethod]
+            public async Task Employees_GETAllAsync()
+            {
+                var actualsTuple =
+                    await
+                        employeesService.GetEmployees2Async(offset, limit, It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>());
+
+                Assert.IsNotNull(actualsTuple);
+
+                int count = actualsTuple.Item1.Count();
+
+                for (int i = 0; i < count; i++)
+                {
+                    var expected = employeesEntities.ToList()[i];
+                    var actual = actualsTuple.Item1.ToList()[i];
+
+                    Assert.IsNotNull(actual);
+
+                    Assert.AreEqual(expected.Guid, actual.Id);
+                }
+            }
+
+
+            [TestMethod]
+            public async Task Employees_GETAllFilterAsync()
+            {
+                string personId = "0000011";
+                personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(personId);
+                string employeeId = "x";
+                employeeRepositoryMock.Setup(i => i.GetEmployeeIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(employeeId);
+
+                var actualsTuple =
+                    await
+                        employeesService.GetEmployees3Async(offset, limit, It.IsAny<bool>(), "cd385d31-75ed-4d93-9a1b-4776a951396d",
+                        "", "", "2000-01-01 00:00:00.000",
+                        "2020-12-31 00:00:00.000", "", "");
+
+                Assert.IsNotNull(actualsTuple);
+
+                int count = actualsTuple.Item1.Count();
+
+                for (int i = 0; i < count; i++)
+                {
+                    var expected = employeesEntities.ToList()[i];
+                    var actual = actualsTuple.Item1.ToList()[i];
+
+                    Assert.IsNotNull(actual);
+
+                    Assert.AreEqual(expected.Guid, actual.Id);
+                }
+            }
+
+            [TestMethod]
+            public async Task Employees_GETAllAsync_EmptyTuple()
+            {
+                employeesEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>()
+                {
+
+                };
+                employeesEntityTuple = new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>, int>(employeesEntities, 0);
+                employeeRepositoryMock.Setup(i => i.GetEmployees2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(employeesEntityTuple);
+                var actualsTuple = await employeesService.GetEmployees3Async(offset, limit, It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>());
+
+                Assert.AreEqual(0, actualsTuple.Item1.Count());
+            }
+
+            [TestMethod]
+            public async Task Employees_GETAllAsync_EmptyTuple_InvalidPersonFilter()
+            {
+                employeesEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>()
+                {
+
+                };
+                employeesEntityTuple = new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>, int>(employeesEntities, 0);
+                employeeRepositoryMock.Setup(i => i.GetEmployees2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(employeesEntityTuple);
+                var actualsTuple = await employeesService.GetEmployees3Async(offset, limit, It.IsAny<bool>(), "INVALID", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>());
+
+                Assert.AreEqual(0, actualsTuple.Item1.Count());
+            }
+
+            [TestMethod]
+            public async Task Employees_GETAllAsync_EmptyTuple_InvalidEmployerFilter()
+            {
+                employeesEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>()
+                {
+
+                };
+                employeesEntityTuple = new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>, int>(employeesEntities, 0);
+                employeeRepositoryMock.Setup(i => i.GetEmployees2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(employeesEntityTuple);
+                var actualsTuple = await employeesService.GetEmployees3Async(offset, limit, It.IsAny<bool>(), "INVALID", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>());
+
+                Assert.AreEqual(0, actualsTuple.Item1.Count());
+            }
+
+
+            [TestMethod]
+            public async Task Employees_GETAllAsync_EmptyTuple_InvalidStartDateFilter()
+            {
+                employeesEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>()
+                {
+
+                };
+                employeesEntityTuple = new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>, int>(employeesEntities, 0);
+                employeeRepositoryMock.Setup(i => i.GetEmployees2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(employeesEntityTuple);
+                var actualsTuple = await employeesService.GetEmployees3Async(offset, limit, It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), "INVALID", It.IsAny<string>(), It.IsAny<string>());
+
+                Assert.AreEqual(0, actualsTuple.Item1.Count());
+            }
+
+            [TestMethod]
+            public async Task Employees_GETAllAsync_EmptyTuple_InvalidEndDateFilter()
+            {
+                employeesEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>()
+                {
+
+                };
+                employeesEntityTuple = new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>, int>(employeesEntities, 0);
+                employeeRepositoryMock.Setup(i => i.GetEmployees2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(employeesEntityTuple);
+                var actualsTuple = await employeesService.GetEmployees3Async(offset, limit, It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), "INVALID", It.IsAny<string>(), It.IsAny<string>());
+
+                Assert.AreEqual(0, actualsTuple.Item1.Count());
+            }
+
+
+            [TestMethod]
+            public async Task Employees_GETAllAsync_EmptyTuple_InvalidStatusFilter()
+            {
+                employeesEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>()
+                {
+
+                };
+                employeesEntityTuple = new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>, int>(employeesEntities, 0);
+                employeeRepositoryMock.Setup(i => i.GetEmployees2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(employeesEntityTuple);
+                var actualsTuple = await employeesService.GetEmployees3Async(offset, limit, It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), "INVALID", It.IsAny<string>());
+
+                Assert.AreEqual(0, actualsTuple.Item1.Count());
+            }
+
+            [TestMethod]
+            public async Task Employees_GETAllAsync_EmptyTuple_StatusLeaveFilter()
+            {
+                employeesEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>()
+                {
+                };
+                employeesEntityTuple = new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>, int>(employeesEntities, 0);
+                employeeRepositoryMock.Setup(i => i.GetEmployees2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(employeesEntityTuple);
+                var actualsTuple = await employeesService.GetEmployees2Async(offset, limit, It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), "leave", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>());
+
+                Assert.AreEqual(0, actualsTuple.Item1.Count());
+            }
+
+            [TestMethod]
+            public async Task Employees_GET_ById()
+            {
+                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
+                var expected = employeesEntities.ToList()[0];
+                employeeRepositoryMock.Setup(i => i.GetEmployee2ByGuidAsync(id)).ReturnsAsync(expected);
+                referenceDataRepositoryMock.Setup(i => i.GetGuidLookupResultFromGuidAsync(id)).ReturnsAsync(new GuidLookupResult() { Entity = "HRPER", PrimaryKey = id });
+                var actual = await employeesService.GetEmployee3ByIdAsync(id);
+
+                Assert.IsNotNull(actual);
+
+                Assert.AreEqual(expected.Guid, actual.Id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task Employees_GET_ById_NullId_ArgumentNullException()
+            {
+                await employeesService.GetEmployee3ByIdAsync(string.Empty);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(KeyNotFoundException))]
+            public async Task Employees_GET_ById_ReturnsNullEntity_KeyNotFoundException()
+            {
+                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
+                employeeRepositoryMock.Setup(i => i.GetEmployee2ByGuidAsync(id)).Throws<KeyNotFoundException>();
+                await employeesService.GetEmployee3ByIdAsync(id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task Employees_GET_ById_ReturnsNullEntity_RepositoryException()
+            {
+                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
+                employeeRepositoryMock.Setup(i => i.GetEmployee2ByGuidAsync(id)).Throws<RepositoryException>();
+                await employeesService.GetEmployee3ByIdAsync(id);
+            }
+
+
+            private void BuildData()
+            {
+                employmentStatusEndingReasonEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.EmploymentStatusEndingReason>()
+                {
+                    new Ellucian.Colleague.Domain.HumanResources.Entities.EmploymentStatusEndingReason("d4ff9cf9-3300-4dca-b52e-59c905021893", "Admissions", "Admissions"),
+                    new Ellucian.Colleague.Domain.HumanResources.Entities.EmploymentStatusEndingReason("161b17b2-5b8b-482b-8ff3-2454323aa8e6", "Agriculture Business", "Agriculture Business"),
+                    new Ellucian.Colleague.Domain.HumanResources.Entities.EmploymentStatusEndingReason("5f8aeedd-8102-4d8f-8dbc-ecd32c374e87", "Agriculture Mechanics", "Agriculture Mechanics"),
+                    new Ellucian.Colleague.Domain.HumanResources.Entities.EmploymentStatusEndingReason("ba66205d-79a8-4244-95f9-d2770a129a97", "Animal Science", "Animal Science"),
+                    new Ellucian.Colleague.Domain.HumanResources.Entities.EmploymentStatusEndingReason("ccce9689-aab1-47ab-ae76-fa128fe8b97e", "Anthropology", "Anthropology"),
+                };
+
+
+                hrReferenceDataRepositoryMock.Setup(i => i.GetEmploymentStatusEndingReasonsAsync(It.IsAny<bool>())).ReturnsAsync(employmentStatusEndingReasonEntities);
+                foreach (var record in employmentStatusEndingReasonEntities)
+                {
+                    hrReferenceDataRepositoryMock.Setup(r => r.GetEmploymentStatusEndingReasonsGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
+                rehireTypeEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.RehireType>()
+                    {
+                        new Ellucian.Colleague.Domain.HumanResources.Entities.RehireType("c1b91008-ba77-4b5b-8b77-84f5a7ae1632", "ADJ", "Adjunct Faculty", "i"),
+                        new Ellucian.Colleague.Domain.HumanResources.Entities.RehireType("874dee09-8662-47e6-af0d-504c257493a3", "SUP", "Support", "o"),
+                        new Ellucian.Colleague.Domain.HumanResources.Entities.RehireType("29391a8c-75e7-41e8-a5ff-5d7f7598b87c", "AS", "Anuj Test", "i"),
+                        new Ellucian.Colleague.Domain.HumanResources.Entities.RehireType("5b05410c-c94c-464a-98ee-684198bde60b", "ITS", "IT Support", "o"),
+                    };
+                hrReferenceDataRepositoryMock.Setup(i => i.GetRehireTypesAsync(It.IsAny<bool>())).ReturnsAsync(rehireTypeEntities);
+
+
+                //var perposwgItems = new List<Domain.HumanResources.Entities.PersonemployeeWageItem>()
+                //{
+                //    new Domain.HumanResources.Entities.PersonemployeeWageItem()
+                //    {
+                //        GlNumber = "11-00-02-67-60000-53011",
+                //        PpwgProjectsId = "12345",
+                //        GlPercentDistribution = 100,
+                //        StartDate = new DateTime(2017,7,17)
+                //    }
+                //};
+
+                employeesEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>()
+                    {
+                        new Ellucian.Colleague.Domain.HumanResources.Entities.Employee("ce4d68f6-257d-4052-92c8-17eed0f088fa", "4")
+                        {
+                            StartDate = DateTime.Now,
+                            //PayClass = "5b05410c-c94c-464a-98ee-684198bde60b",
+                            EndDate = DateTime.Now,
+                            PayStatus = Ellucian.Colleague.Domain.HumanResources.Entities.PayStatus.WithPay,
+                            BenefitsStatus = Ellucian.Colleague.Domain.HumanResources.Entities.BenefitsStatus.WithBenefits,
+                            PpwgCycleWorkTimeAmt = new decimal(40.0),
+                            PpwgYearWorkTimeAmt = new decimal(1600.0)
+
+                        },
+                        new Ellucian.Colleague.Domain.HumanResources.Entities.Employee("5bc2d86c-6a0c-46b1-824d-485ccb27dc67", "3")
+                        {
+                            StartDate = DateTime.Now,
+                            //PayClass = "5b05410c-c94c-464a-98ee-684198bde60b",
+                            EndDate = DateTime.Now,
+                            PayStatus = Ellucian.Colleague.Domain.HumanResources.Entities.PayStatus.WithPay,
+                            BenefitsStatus = Ellucian.Colleague.Domain.HumanResources.Entities.BenefitsStatus.WithBenefits,
+                            PpwgCycleWorkTimeAmt = new decimal(40.0),
+                            PpwgYearWorkTimeAmt = new decimal(1600.0)
+                        },
+                        new Ellucian.Colleague.Domain.HumanResources.Entities.Employee("7ea5142f-12f1-4ac9-b9f3-73e4205dfc11", "2")
+                        {
+                            StartDate = DateTime.Now,
+                            //PayClass = "5b05410c-c94c-464a-98ee-684198bde60b",
+                            EndDate = DateTime.Now,
+                            PayStatus = Ellucian.Colleague.Domain.HumanResources.Entities.PayStatus.WithPay,
+                            BenefitsStatus = Ellucian.Colleague.Domain.HumanResources.Entities.BenefitsStatus.WithBenefits,
+                            PpwgCycleWorkTimeAmt = new decimal(40.0),
+                            PpwgYearWorkTimeAmt = new decimal(1600.0)
+                        },
+                        new Ellucian.Colleague.Domain.HumanResources.Entities.Employee("db8f690b-071f-4d98-8da8-d4312511a4c1", "1")
+                        {
+                            StartDate = DateTime.Now,
+                            //PayClass = "5b05410c-c94c-464a-98ee-684198bde60b",
+                            EndDate = DateTime.Now,
+                            PayStatus = Ellucian.Colleague.Domain.HumanResources.Entities.PayStatus.WithPay,
+                            BenefitsStatus = Ellucian.Colleague.Domain.HumanResources.Entities.BenefitsStatus.WithBenefits,
+                            PpwgCycleWorkTimeAmt = new decimal(40.0),
+                            PpwgYearWorkTimeAmt = new decimal(1600.0)
+                        }
+                    };
+                employeesEntityTuple = new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>, int>(employeesEntities, employeesEntities.Count());
+                employeeRepositoryMock.Setup(i => i.GetEmployees2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(employeesEntityTuple);
+                employeeRepositoryMock.Setup(i => i.GetEmployee2ByGuidAsync(It.IsAny<string>())).ReturnsAsync(employeesEntities.ToList()[0]);
+                personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("db8f690b-071f-4d98-8da8-d4312511a4c2");
+                var personGuidDictionary = new Dictionary<string, string>() { };
+                personGuidDictionary.Add("4", "ce4d68f6-257d-4052-92c8-17eed0f088fa");
+                personGuidDictionary.Add("3", "5bc2d86c-6a0c-46b1-824d-485ccb27dc67");
+                personGuidDictionary.Add("2", "7ea5142f-12f1-4ac9-b9f3-73e4205dfc11");
+                personGuidDictionary.Add("1", "db8f690b-071f-4d98-8da8-d4312511a4c1");
+                personGuidDictionary.Add("5", "db8f690b-071f-4d98-8da8-d4312511a4c2");
+                personRepositoryMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>()))
+                    .ReturnsAsync(personGuidDictionary);
+                // employeeRepositoryMock.Setup(i => i..GetemployeeGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("db8f690b-071f-4d98-8da8-d4312511a4c2");
+
+
+            }
+        }
+
+
+        [TestClass]
         public class EmployeeServiceTests_POST_PUT_V12 : CurrentUserSetup
         {
             #region DECLARATION
@@ -1098,7 +1488,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task PostEmployeeAsync_Person_Id_Null_From_Repository()
             {
-                personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 await employeeService.PostEmployee2Async(employee);
             }
 
@@ -1115,7 +1505,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             public async Task PostEmployeeAsync_Invalid_Employee_Status()
             {
                 employee.Status = Dtos.EnumProperties.EmployeeStatus.NotSet;
-                employeeRepositoryMock.Setup(e => e.GetEmployeeIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                employeeRepositoryMock.Setup(e => e.GetEmployeeIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
                 await employeeService.PostEmployee2Async(employee);
             }
@@ -1168,14 +1558,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 await employeeService.PostEmployee2Async(employee);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task EmployeeService_PostEmployeeAsync_PermissionException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                await employeeService.PostEmployee2Async(employee);
-            }
-
+            
             [TestMethod]
             [ExpectedException(typeof(RepositoryException))]
             public async Task EmployeeService_PostEmployeeAsync_RepositoryException()
@@ -1658,7 +2041,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 employee.Status = Dtos.EnumProperties.EmployeeStatus.Leave;
                 employee.RehireableStatus.Type = new Dtos.GuidObject2("123");
                 employee.RehireableStatus.Eligibility = Dtos.EnumProperties.RehireEligibility.Ineligible;
-                
+
                 domainEmployee.StatusCode = "2";
                 domainEmployee.PayStatus = Domain.HumanResources.Entities.PayStatus.WithPay;
                 domainEmployee.BenefitsStatus = Domain.HumanResources.Entities.BenefitsStatus.WithoutBenefits;
@@ -1723,381 +2106,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 Assert.IsNotNull(result);
             }
         }
+
     }
-
-    [TestClass]
-    public class EmployeeServiceTests_V12 : CurrentUserSetup
-    {
-        [TestClass]
-        public class EmployeeServiceTests_GET_V12 : CurrentUserSetup
-        {
-            Mock<IEmployeeRepository> employeeRepositoryMock;
-            Mock<IHumanResourcesReferenceDataRepository> hrReferenceDataRepositoryMock;
-            Mock<IPositionRepository> positionRepositoryMock;
-            Mock<IPersonRepository> personRepositoryMock;
-            Mock<IPersonBaseRepository> personBaseRepositoryMock;
-            Mock<IAdapterRegistry> adapterRegistryMock;
-            Mock<IReferenceDataRepository> referenceDataRepositoryMock;
-            ICurrentUserFactory currentUserFactory;
-            Mock<IRoleRepository> roleRepositoryMock;
-            Mock<ILogger> loggerMock;
-
-            EmployeeService employeesService;
-            IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee> employeesEntities;
-            Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>, int> employeesEntityTuple;
-
-            //IEnumerable<Domain.Base.Entities.Person> personEntities;
-            private IConfigurationRepository baseConfigurationRepository;
-            private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
-
-            IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.RehireType> rehireTypeEntities;
-            IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.EmploymentStatusEndingReason> employmentStatusEndingReasonEntities;
-            //IEnumerable<Domain.ColleagueFinance.Entities.AccountsPayableSources> acctPaySourceEntities;
-            //IEnumerable<Domain.ColleagueFinance.Entities.CurrencyConversion> currencyConversionEntities;
-            //IEnumerable<Domain.Base.Entities.Institution> institutionsEntities;
-            //IEnumerable<Domain.HumanResources.Entities.employeePay> employeePayEntities;
-
-            private Ellucian.Colleague.Domain.Entities.Permission permissionViewAnyPerson;
-
-            int offset = 0;
-            int limit = 4;
-
-            [TestInitialize]
-            public void Initialize()
-            {
-                employeeRepositoryMock = new Mock<IEmployeeRepository>();
-                hrReferenceDataRepositoryMock = new Mock<IHumanResourcesReferenceDataRepository>();
-                positionRepositoryMock = new Mock<IPositionRepository>();
-                personRepositoryMock = new Mock<IPersonRepository>();
-                personBaseRepositoryMock = new Mock<IPersonBaseRepository>();
-                referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
-                adapterRegistryMock = new Mock<IAdapterRegistry>();
-                roleRepositoryMock = new Mock<IRoleRepository>();
-                loggerMock = new Mock<ILogger>();
-
-                baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
-                baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
-
-                BuildData();
-                // Set up current user
-                currentUserFactory = new CurrentUserSetup.PersonUserFactory();
-
-                // Mock permissions
-                permissionViewAnyPerson = new Ellucian.Colleague.Domain.Entities.Permission(HumanResourcesPermissionCodes.ViewEmployeeData);
-                personRole.AddPermission(permissionViewAnyPerson);
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Ellucian.Colleague.Domain.Entities.Role>() { personRole });
-
-                employeesService = new EmployeeService(personRepositoryMock.Object, personBaseRepositoryMock.Object, employeeRepositoryMock.Object, referenceDataRepositoryMock.Object, hrReferenceDataRepositoryMock.Object,
-                                               positionRepositoryMock.Object, baseConfigurationRepository, adapterRegistryMock.Object, currentUserFactory, roleRepositoryMock.Object, loggerMock.Object);
-            }
-
-            [TestCleanup]
-            public void Cleanup()
-            {
-                employeesEntityTuple = null;
-                employeesEntities = null;
-                rehireTypeEntities = null;
-                employmentStatusEndingReasonEntities = null;
-                employeeRepositoryMock = null;
-                hrReferenceDataRepositoryMock = null;
-                adapterRegistryMock = null;
-                currentUserFactory = null;
-                roleRepositoryMock = null;
-                loggerMock = null;
-                referenceDataRepositoryMock = null;
-            }
-
-            [TestMethod]
-            public async Task Employees_GETAllAsync()
-            {
-                var actualsTuple =
-                    await
-                        employeesService.GetEmployees2Async(offset, limit, It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>());
-
-                Assert.IsNotNull(actualsTuple);
-
-                int count = actualsTuple.Item1.Count();
-
-                for (int i = 0; i < count; i++)
-                {
-                    var expected = employeesEntities.ToList()[i];
-                    var actual = actualsTuple.Item1.ToList()[i];
-
-                    Assert.IsNotNull(actual);
-
-                    Assert.AreEqual(expected.Guid, actual.Id);
-                }
-            }
-
-        
-            [TestMethod]
-            public async Task Employees_GETAllFilterAsync()
-            {
-                string personId = "0000011";
-                personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(personId);
-                string employeeId = "x";
-                employeeRepositoryMock.Setup(i => i.GetEmployeeIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(employeeId);
-
-                var actualsTuple =
-                    await
-                        employeesService.GetEmployees3Async(offset, limit, It.IsAny<bool>(), "cd385d31-75ed-4d93-9a1b-4776a951396d",
-                        "", "", "2000-01-01 00:00:00.000",
-                        "2020-12-31 00:00:00.000", "", "");
-
-                Assert.IsNotNull(actualsTuple);
-
-                int count = actualsTuple.Item1.Count();
-
-                for (int i = 0; i < count; i++)
-                {
-                    var expected = employeesEntities.ToList()[i];
-                    var actual = actualsTuple.Item1.ToList()[i];
-
-                    Assert.IsNotNull(actual);
-
-                    Assert.AreEqual(expected.Guid, actual.Id);
-                }
-            }
-
-            [TestMethod]
-            public async Task Employees_GETAllAsync_EmptyTuple()
-            {
-                employeesEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>()
-                {
-
-                };
-                employeesEntityTuple = new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>, int>(employeesEntities, 0);
-                employeeRepositoryMock.Setup(i => i.GetEmployees2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(employeesEntityTuple);
-                var actualsTuple = await employeesService.GetEmployees3Async(offset, limit, It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>());
-
-                Assert.AreEqual(0, actualsTuple.Item1.Count());
-            }
-
-            [TestMethod]
-            public async Task Employees_GETAllAsync_EmptyTuple_InvalidPersonFilter()
-            {
-                employeesEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>()
-                {
-
-                };
-                employeesEntityTuple = new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>, int>(employeesEntities, 0);
-                employeeRepositoryMock.Setup(i => i.GetEmployees2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(employeesEntityTuple);
-                var actualsTuple = await employeesService.GetEmployees3Async(offset, limit, It.IsAny<bool>(), "INVALID", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>());
-
-                Assert.AreEqual(0, actualsTuple.Item1.Count());
-            }
-
-            [TestMethod]
-            public async Task Employees_GETAllAsync_EmptyTuple_InvalidEmployerFilter()
-            {
-                employeesEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>()
-                {
-
-                };
-                employeesEntityTuple = new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>, int>(employeesEntities, 0);
-                employeeRepositoryMock.Setup(i => i.GetEmployees2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(employeesEntityTuple);
-                var actualsTuple = await employeesService.GetEmployees3Async(offset, limit, It.IsAny<bool>(), "INVALID", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>());
-
-                Assert.AreEqual(0, actualsTuple.Item1.Count());
-            }
-        
-
-            [TestMethod]
-            public async Task Employees_GETAllAsync_EmptyTuple_InvalidStartDateFilter()
-            {
-                employeesEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>()
-                {
-
-                };
-                employeesEntityTuple = new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>, int>(employeesEntities, 0);
-                employeeRepositoryMock.Setup(i => i.GetEmployees2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(employeesEntityTuple);
-                var actualsTuple = await employeesService.GetEmployees3Async(offset, limit, It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), "INVALID", It.IsAny<string>(), It.IsAny<string>());
-
-                Assert.AreEqual(0, actualsTuple.Item1.Count());
-            }
-
-            [TestMethod]
-            public async Task Employees_GETAllAsync_EmptyTuple_InvalidEndDateFilter()
-            {
-                employeesEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>()
-                {
-
-                };
-                employeesEntityTuple = new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>, int>(employeesEntities, 0);
-                employeeRepositoryMock.Setup(i => i.GetEmployees2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(employeesEntityTuple);
-                var actualsTuple = await employeesService.GetEmployees3Async(offset, limit, It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), "INVALID", It.IsAny<string>(), It.IsAny<string>());
-
-                Assert.AreEqual(0, actualsTuple.Item1.Count());
-            }
-
-
-            [TestMethod]
-            public async Task Employees_GETAllAsync_EmptyTuple_InvalidStatusFilter()
-            {
-                employeesEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>()
-                {
-
-                };
-                employeesEntityTuple = new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>, int>(employeesEntities, 0);
-                employeeRepositoryMock.Setup(i => i.GetEmployees2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(employeesEntityTuple);
-                var actualsTuple = await employeesService.GetEmployees3Async(offset, limit, It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), "INVALID", It.IsAny<string>());
-
-                Assert.AreEqual(0, actualsTuple.Item1.Count());
-            }
-
-            [TestMethod]
-            public async Task Employees_GETAllAsync_EmptyTuple_StatusLeaveFilter()
-            {
-                employeesEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>()
-                {
-                };
-                employeesEntityTuple = new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>, int>(employeesEntities, 0);
-                employeeRepositoryMock.Setup(i => i.GetEmployees2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(employeesEntityTuple);
-                var actualsTuple = await employeesService.GetEmployees2Async(offset, limit, It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), "leave", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>());
-
-                Assert.AreEqual(0, actualsTuple.Item1.Count());
-            }
-
-            [TestMethod]
-            public async Task Employees_GET_ById()
-            {
-                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
-                var expected = employeesEntities.ToList()[0];
-                employeeRepositoryMock.Setup(i => i.GetEmployee2ByGuidAsync(id)).ReturnsAsync(expected);
-                referenceDataRepositoryMock.Setup(i => i.GetGuidLookupResultFromGuidAsync(id)).ReturnsAsync(new GuidLookupResult() { Entity = "HRPER", PrimaryKey = id });
-                var actual = await employeesService.GetEmployee3ByIdAsync(id);
-
-                Assert.IsNotNull(actual);
-
-                Assert.AreEqual(expected.Guid, actual.Id);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public async Task Employees_GET_ById_NullId_ArgumentNullException()
-            {
-                await employeesService.GetEmployee3ByIdAsync(string.Empty);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task Employees_GET_ById_ReturnsNullEntity_KeyNotFoundException()
-            {
-                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
-                employeeRepositoryMock.Setup(i => i.GetEmployee2ByGuidAsync(id)).Throws<KeyNotFoundException>();
-                await employeesService.GetEmployee3ByIdAsync(id);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task Employees_GET_ById_ReturnsNullEntity_InvalidOperationException()
-            {
-                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
-                employeeRepositoryMock.Setup(i => i.GetEmployee2ByGuidAsync(id)).Throws<InvalidOperationException>();
-                await employeesService.GetEmployee3ByIdAsync(id);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task Employees_GET_ById_ReturnsNullEntity_RepositoryException()
-            {
-                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
-                employeeRepositoryMock.Setup(i => i.GetEmployee2ByGuidAsync(id)).Throws<RepositoryException>();
-                await employeesService.GetEmployee3ByIdAsync(id);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task Employees_GET_ById_ReturnsNullEntity_Exception()
-            {
-                var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
-                employeeRepositoryMock.Setup(i => i.GetEmployee2ByGuidAsync(id)).Throws<Exception>();
-                await employeesService.GetEmployee3ByIdAsync(id);
-            }
-
-            private void BuildData()
-            {
-                employmentStatusEndingReasonEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.EmploymentStatusEndingReason>()
-                {
-                    new Ellucian.Colleague.Domain.HumanResources.Entities.EmploymentStatusEndingReason("d4ff9cf9-3300-4dca-b52e-59c905021893", "Admissions", "Admissions"),
-                    new Ellucian.Colleague.Domain.HumanResources.Entities.EmploymentStatusEndingReason("161b17b2-5b8b-482b-8ff3-2454323aa8e6", "Agriculture Business", "Agriculture Business"),
-                    new Ellucian.Colleague.Domain.HumanResources.Entities.EmploymentStatusEndingReason("5f8aeedd-8102-4d8f-8dbc-ecd32c374e87", "Agriculture Mechanics", "Agriculture Mechanics"),
-                    new Ellucian.Colleague.Domain.HumanResources.Entities.EmploymentStatusEndingReason("ba66205d-79a8-4244-95f9-d2770a129a97", "Animal Science", "Animal Science"),
-                    new Ellucian.Colleague.Domain.HumanResources.Entities.EmploymentStatusEndingReason("ccce9689-aab1-47ab-ae76-fa128fe8b97e", "Anthropology", "Anthropology"),
-                };
-                hrReferenceDataRepositoryMock.Setup(i => i.GetEmploymentStatusEndingReasonsAsync(It.IsAny<bool>())).ReturnsAsync(employmentStatusEndingReasonEntities);
-
-                rehireTypeEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.RehireType>()
-                    {
-                        new Ellucian.Colleague.Domain.HumanResources.Entities.RehireType("c1b91008-ba77-4b5b-8b77-84f5a7ae1632", "ADJ", "Adjunct Faculty", "i"),
-                        new Ellucian.Colleague.Domain.HumanResources.Entities.RehireType("874dee09-8662-47e6-af0d-504c257493a3", "SUP", "Support", "o"),
-                        new Ellucian.Colleague.Domain.HumanResources.Entities.RehireType("29391a8c-75e7-41e8-a5ff-5d7f7598b87c", "AS", "Anuj Test", "i"),
-                        new Ellucian.Colleague.Domain.HumanResources.Entities.RehireType("5b05410c-c94c-464a-98ee-684198bde60b", "ITS", "IT Support", "o"),
-                    };
-                hrReferenceDataRepositoryMock.Setup(i => i.GetRehireTypesAsync(It.IsAny<bool>())).ReturnsAsync(rehireTypeEntities);
-
-                //var perposwgItems = new List<Domain.HumanResources.Entities.PersonemployeeWageItem>()
-                //{
-                //    new Domain.HumanResources.Entities.PersonemployeeWageItem()
-                //    {
-                //        GlNumber = "11-00-02-67-60000-53011",
-                //        PpwgProjectsId = "12345",
-                //        GlPercentDistribution = 100,
-                //        StartDate = new DateTime(2017,7,17)
-                //    }
-                //};
-
-                employeesEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>()
-                    {
-                        new Ellucian.Colleague.Domain.HumanResources.Entities.Employee("ce4d68f6-257d-4052-92c8-17eed0f088fa", "e9e6837f-2c51-431b-9069-4ac4c0da3041")
-                        {
-                            StartDate = DateTime.Now,
-                            //PayClass = "5b05410c-c94c-464a-98ee-684198bde60b",
-                            EndDate = DateTime.Now,
-                            PayStatus = Ellucian.Colleague.Domain.HumanResources.Entities.PayStatus.WithPay,
-                            BenefitsStatus = Ellucian.Colleague.Domain.HumanResources.Entities.BenefitsStatus.WithBenefits,
-                            PpwgCycleWorkTimeAmt = new decimal(40.0),
-                            PpwgYearWorkTimeAmt = new decimal(1600.0)
-
-                        },
-                        new Ellucian.Colleague.Domain.HumanResources.Entities.Employee("5bc2d86c-6a0c-46b1-824d-485ccb27dc67", "9ae3a175-1dfd-4937-b97b-3c9ad596e023")
-                        {
-                            StartDate = DateTime.Now,
-                            //PayClass = "5b05410c-c94c-464a-98ee-684198bde60b",
-                            EndDate = DateTime.Now,
-                            PayStatus = Ellucian.Colleague.Domain.HumanResources.Entities.PayStatus.WithPay,
-                            BenefitsStatus = Ellucian.Colleague.Domain.HumanResources.Entities.BenefitsStatus.WithBenefits,
-                            PpwgCycleWorkTimeAmt = new decimal(40.0),
-                            PpwgYearWorkTimeAmt = new decimal(1600.0)
-                        },
-                        new Ellucian.Colleague.Domain.HumanResources.Entities.Employee("7ea5142f-12f1-4ac9-b9f3-73e4205dfc11", "e9e6837f-2c51-431b-9069-4ac4c0da3041")
-                        {
-                            StartDate = DateTime.Now,
-                            //PayClass = "5b05410c-c94c-464a-98ee-684198bde60b",
-                            EndDate = DateTime.Now,
-                            PayStatus = Ellucian.Colleague.Domain.HumanResources.Entities.PayStatus.WithPay,
-                            BenefitsStatus = Ellucian.Colleague.Domain.HumanResources.Entities.BenefitsStatus.WithBenefits,
-                            PpwgCycleWorkTimeAmt = new decimal(40.0),
-                            PpwgYearWorkTimeAmt = new decimal(1600.0)
-                        },
-                        new Ellucian.Colleague.Domain.HumanResources.Entities.Employee("db8f690b-071f-4d98-8da8-d4312511a4c1", "bfea651b-8e27-4fcd-abe3-04573443c04c")
-                        {
-                            StartDate = DateTime.Now,
-                            //PayClass = "5b05410c-c94c-464a-98ee-684198bde60b",
-                            EndDate = DateTime.Now,
-                            PayStatus = Ellucian.Colleague.Domain.HumanResources.Entities.PayStatus.WithPay,
-                            BenefitsStatus = Ellucian.Colleague.Domain.HumanResources.Entities.BenefitsStatus.WithBenefits,
-                            PpwgCycleWorkTimeAmt = new decimal(40.0),
-                            PpwgYearWorkTimeAmt = new decimal(1600.0)
-                        }
-                    };
-                employeesEntityTuple = new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>, int>(employeesEntities, employeesEntities.Count());
-                employeeRepositoryMock.Setup(i => i.GetEmployees2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>())).ReturnsAsync(employeesEntityTuple);
-                employeeRepositoryMock.Setup(i => i.GetEmployee2ByGuidAsync(It.IsAny<string>())).ReturnsAsync(employeesEntities.ToList()[0]);
-                personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("db8f690b-071f-4d98-8da8-d4312511a4c2");
-                // employeeRepositoryMock.Setup(i => i..GetemployeeGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("db8f690b-071f-4d98-8da8-d4312511a4c2");
-
-
-            }
-        }
-    }
+}

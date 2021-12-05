@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates
 
 using System;
 using System.Collections.Generic;
@@ -15,6 +15,7 @@ using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Base.Services;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -24,6 +25,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class MealPlanReqsIntgRepository : BaseColleagueRepository, IMealPlanReqsIntgRepository
     {
+        readonly int readSize;
+        const string AllMealPlanRequestsRecordsCache = "AllMealPlanRequestsRecordKeys";
+        const int AllMealPlanRequestsRecordsCacheTimeout = 20;
+        private RepositoryException exception = new RepositoryException();
+
         /// <summary>
         /// Constructor to instantiate a Meal Plan Request repository object
         /// </summary>
@@ -42,28 +48,52 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <param name="id">Meal Plan Request GUID</param>
         /// <exception cref="ArgumentNullException">Thrown if the id argument is null or empty</exception>
         /// <exception cref="KeyNotFoundException">Thrown if no database records exist for the given id argument</exception>
-        public async Task<Domain.Student.Entities.MealPlanReqsIntg> GetByIdAsync(string id)
+        public async Task<Domain.Student.Entities.MealPlanReqsIntg> GetByIdAsync(string guid)
         {
-            if (string.IsNullOrEmpty(id))
+            try
             {
-                throw new ArgumentNullException("id");
-            }
-
-            // Read the INTG.GL.POSTINGS record
-            var recordInfo = await GetRecordInfoFromGuidAsync(id);
-            if (recordInfo == null || string.IsNullOrEmpty(recordInfo.PrimaryKey) || recordInfo.Entity != "MEAL.PLAN.REQS.INTG")
-            {
-                throw new KeyNotFoundException(string.Format("No Meal Plan Request was found for guid '{0}'. ", id));
-            }
-            var MealPlanReqsIntgs = await DataReader.ReadRecordAsync<DataContracts.MealPlanReqsIntg>(recordInfo.PrimaryKey);
-            {
-                if (MealPlanReqsIntgs == null)
+                if (string.IsNullOrEmpty(guid))
                 {
-                    throw new KeyNotFoundException(string.Format("No Meal Plan Request was found for guid '{0}'. ", id));
+                    throw new ArgumentNullException("guid");
                 }
-            }
 
-            return BuildMealPlanReqsIntg(MealPlanReqsIntgs);
+                // Read the MEAL.PLAN.REQS.INTG record
+                var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
+                if (idDict == null || idDict.Count == 0)
+                {
+                    throw new KeyNotFoundException(string.Format("No meal-plan-requests was found for GUID '{0}'. ", guid));
+                }
+
+                var foundEntry = idDict.FirstOrDefault();
+                if (foundEntry.Value == null)
+                {
+                    throw new KeyNotFoundException(string.Format("No meal-plan-requests was found for GUID '{0}'. ", guid));
+                }
+
+                if (foundEntry.Value.Entity != "MEAL.PLAN.REQS.INTG")
+                {
+                    exception.AddError(new RepositoryError("Bad.Data", "GUID " + guid + " has different entity, " + foundEntry.Value.Entity + ", than expected, MEAL.PLAN.REQS.INTG")
+                    {
+                        Id = guid
+                    });
+                    throw exception;
+                }
+
+                var MealPlanReqsIntgs = await DataReader.ReadRecordAsync<DataContracts.MealPlanReqsIntg>(foundEntry.Value.PrimaryKey);
+                {
+                    if (MealPlanReqsIntgs == null)
+                    {
+                        throw new KeyNotFoundException(string.Format("No meal-plan-requests was found for GUID '{0}'. ", guid));
+                    }
+                }
+
+                return BuildMealPlanReqsIntg(MealPlanReqsIntgs);
+
+            }
+            catch (RepositoryException ex)
+            {
+                throw ex;
+            }
         }
 
         /// <summary>
@@ -78,29 +108,90 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <exception cref="KeyNotFoundException">Thrown if no database records exist for the given id argument</exception>
         public async Task<Tuple<IEnumerable<Domain.Student.Entities.MealPlanReqsIntg>,int>> GetAsync(int offset, int limit, bool bypassCache)
         {
-            var MealPlanReqsIntgEntities = new List<Domain.Student.Entities.MealPlanReqsIntg>();
-            var criteria = new StringBuilder();
-            
-            string select = criteria.ToString();
-            string[] MealPlanReqsIntgIds = await DataReader.SelectAsync("MEAL.PLAN.REQS.INTG", select);
-            var totalCount = MealPlanReqsIntgIds.Count();
+            string selectedRecordCacheKey = CacheSupport.BuildCacheKey(AllMealPlanRequestsRecordsCache);
+            List<MealPlanReqsIntg> mealPlanRequests = new List<MealPlanReqsIntg>();
 
-            Array.Sort(MealPlanReqsIntgIds);
+            if (limit == 0) limit = readSize;
+            int totalCount = 0;
+            var selectionCriteria = new StringBuilder();
 
-            var subList = MealPlanReqsIntgIds.Skip(offset).Take(limit).ToArray();
-            var MealPlanReqsIntgs = await DataReader.BulkReadRecordAsync<DataContracts.MealPlanReqsIntg>("MEAL.PLAN.REQS.INTG", subList);
-            {
-                if (MealPlanReqsIntgs == null)
+            var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                selectedRecordCacheKey,
+                "MEAL.PLAN.REQS.INTG",
+                offset,
+                limit,
+                AllMealPlanRequestsRecordsCacheTimeout,
+                async () =>
                 {
-                    throw new KeyNotFoundException("No records selected from MEAL.PLAN.REQS.INTG in Colleague.");
+                    return new CacheSupport.KeyCacheRequirements();
+                });
+
+            if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
+            {
+                return new Tuple<IEnumerable<MealPlanReqsIntg>, int>(new List<MealPlanReqsIntg>(), 0);
+            }
+
+            totalCount = keyCacheObject.TotalCount.Value;
+
+            var subList = keyCacheObject.Sublist.ToArray();
+
+            if (subList == null || !subList.Any())
+            {
+                return new Tuple<IEnumerable<MealPlanReqsIntg>, int>(new List<MealPlanReqsIntg>(), 0);
+            }
+
+            var mealPlanReqsIntgs = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.MealPlanReqsIntg>("MEAL.PLAN.REQS.INTG", subList);
+            if ((mealPlanReqsIntgs.InvalidKeys != null && mealPlanReqsIntgs.InvalidKeys.Any()) ||
+    mealPlanReqsIntgs.InvalidRecords != null && mealPlanReqsIntgs.InvalidRecords.Any())
+            {
+                if (mealPlanReqsIntgs.InvalidKeys.Any())
+                {
+                    exception.AddErrors(mealPlanReqsIntgs.InvalidKeys
+                        .Select(key => new RepositoryError("Bad.Data",
+                        string.Format("Unable to locate the following MEAL.PLAN.REQS.INTG key '{0}'.", key.ToString()))));
+                }
+                if (mealPlanReqsIntgs.InvalidRecords.Any())
+                {
+                    exception.AddErrors(mealPlanReqsIntgs.InvalidRecords
+                       .Select(r => new RepositoryError("Bad.Data",
+                       string.Format("Error: '{0}' ", r.Value))
+                       { SourceId = r.Key }));
                 }
             }
 
-            foreach (var intgStudentMealPlansEntity in MealPlanReqsIntgs)
+            foreach (var mealPlanReqIntg in mealPlanReqsIntgs.BulkRecordsRead)
             {
-                MealPlanReqsIntgEntities.Add(BuildMealPlanReqsIntg(intgStudentMealPlansEntity));
+                if (mealPlanReqIntg != null)
+                {
+
+                    try
+                    {
+                        mealPlanRequests.Add(BuildMealPlanReqsIntg(mealPlanReqIntg));
+                    }
+                    catch (Exception e)
+                    {
+                        exception.AddError(new RepositoryError("Bad.Data", e.Message)
+                        {
+                            SourceId = mealPlanReqIntg.Recordkey,
+                            Id = mealPlanReqIntg.RecordGuid
+                        });
+                    }
+                }
             }
-            return new Tuple<IEnumerable<Domain.Student.Entities.MealPlanReqsIntg>, int>(MealPlanReqsIntgEntities, totalCount);
+            
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+
+            return mealPlanRequests.Any() ?
+               new Tuple<IEnumerable<Domain.Student.Entities.MealPlanReqsIntg>, int>(mealPlanRequests, totalCount) :
+               new Tuple<IEnumerable<Domain.Student.Entities.MealPlanReqsIntg>, int>(new List<Domain.Student.Entities.MealPlanReqsIntg>(), 0);
         }
 
         /// <summary>
@@ -132,9 +223,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             mealPlanReqsIntg.StartDate = source.MpriStartDate;
             mealPlanReqsIntg.SubmittedDate = source.MpriSubmittedDate;
             mealPlanReqsIntg.Term = source.MpriTerm;
-            //status is required but we do not want to enforce it in GET all.
-           // if (string.IsNullOrEmpty(crntStatus))
-            //    throw new ArgumentNullException("MealPlanReqsIntgEntity", string.Concat("Invalid status. Status is required. Entity: 'MEAL.PLAN.REQS.INTG', Record ID: '", source.Recordkey, "'"));
             mealPlanReqsIntg.Status = crntStatus;
             mealPlanReqsIntg.StatusDate = crntStatusDate;
             
@@ -270,5 +358,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             request.StatusDate = MealPlanReqsIntg.StatusDate;
             return request;
         }
-   }
+
+    }
 }

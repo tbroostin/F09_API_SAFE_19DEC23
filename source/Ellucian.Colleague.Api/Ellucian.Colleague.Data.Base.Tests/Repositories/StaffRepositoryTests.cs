@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Runtime.Caching;
@@ -446,7 +446,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 MockInitialize();
 
                 expectedRepository = new TestStaffRepository();
-                
+
                 staffRepository = BuildMockStaffRepository();
             }
 
@@ -483,7 +483,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
         private StaffRepository BuildMockStaffRepository()
         {
-            dataReaderMock.Setup<IEnumerable<Staff>>(a => a.BulkReadRecord<Staff>(It.IsAny<string[]>(), true))
+            dataReaderMock.Setup(a => a.BulkReadRecord<Staff>(It.IsAny<string[]>(), true))
                 .Returns<string[], bool>((ids, b) =>
                     (expectedRepository.staffData == null) ? null :
                     new Collection<DataContracts.Staff>(
@@ -582,10 +582,10 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             dataReaderMock.Setup<Task<Ellucian.Colleague.Data.Base.DataContracts.NameAddrHierarchy>>(a =>
                 a.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.NameAddrHierarchy>("NAME.ADDR.HIERARCHY", "PREFERRED", true))
                 .ReturnsAsync(new Ellucian.Colleague.Data.Base.DataContracts.NameAddrHierarchy()
-                    {
-                        Recordkey = "PREFERRED",
-                        NahNameHierarchy = new List<string>() { "MA", "XYZ", "PF" }
-                    });
+                {
+                    Recordkey = "PREFERRED",
+                    NahNameHierarchy = new List<string>() { "MA", "XYZ", "PF" }
+                });
             StaffRepository repository = new StaffRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
             return repository;

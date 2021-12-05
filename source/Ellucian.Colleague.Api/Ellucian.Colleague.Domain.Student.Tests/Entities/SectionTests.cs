@@ -1,10 +1,11 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Student.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Domain.Student.Tests.Entities
 {
@@ -563,6 +564,12 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 sec.Synonym = "0003444";
                 Assert.AreEqual("0003444", sec.Synonym);
             }
+
+            [TestMethod]
+            public void Section_ShowDropRoster_IsFalseWhenNotSet()
+            {
+                Assert.IsFalse(sec.ShowDropRoster);
+            }
         }
 
         [TestClass]
@@ -710,7 +717,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
         }
 
         [TestClass]
-        public class Section_AddActiveStudent 
+        public class Section_AddActiveStudent
         {
             private Section sec;
             private string title;
@@ -787,7 +794,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
             {
                 Assert.AreEqual(2, sec.Books.Count);
             }
-                
+
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
@@ -1203,7 +1210,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 Section sec3 = new Section("2", "333", "01", startDate, 3m, 1m, "New Title", "IN", depts, courseLevels, acadLevel, statuses, allowWaitlist: true, waitlistClosed: false);
                 sec3.NumberOnWaitlist = 6;
                 sec3.GlobalWaitlistMaximum = 10;
-                sec2.AddCrossListedSection(sec3); 
+                sec2.AddCrossListedSection(sec3);
                 Assert.IsTrue(sec2.WaitlistAvailable);
             }
 
@@ -1239,6 +1246,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
             }
 
             [TestMethod]
+            [Ignore]
+
             public void Section_CalculatedSectionProperties_OnlineCategory_Online()
             {
                 Section onlineSection = new Section("1", course1, number, startDate, 4m, 1m, title, "IN", depts, courseLevels, acadLevel, statuses, allowWaitlist: true, waitlistClosed: false);
@@ -1266,6 +1275,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
             }
 
             [TestMethod]
+            [Ignore]
             public void Section_CalculatedSectionProperties_OnlineCategory_Hybrid()
             {
                 Section onlineSection = new Section("1", course1, number, startDate, 4m, 1m, title, "IN", depts, courseLevels, acadLevel, statuses, allowWaitlist: true, waitlistClosed: false);
@@ -1345,7 +1355,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 string title = "Title";
                 sec = new Section("S001", course1, number, startDate, 4m, 1m, title, "IN", depts, courseLevels, acadLevel, statuses);
 
-                sectionMeetings.Add(new SectionMeeting("1", "S001", "LEC", DateTime.Today, DateTime.Today.AddMonths(2), "2") {Room="R1" });
+                sectionMeetings.Add(new SectionMeeting("1", "S001", "LEC", DateTime.Today, DateTime.Today.AddMonths(2), "2") { Room = "R1" });
                 sectionMeetings.Add(new SectionMeeting("1", "S001", "LAB", DateTime.Today.AddDays(3), DateTime.Today.AddMonths(5), "3"));
             }
 
@@ -1356,11 +1366,11 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 Assert.IsNotNull(sec.PrimarySectionMeetings);
                 Assert.AreEqual(2, sec.PrimarySectionMeetings.Count());
 
-                Assert.AreEqual("S001",sec.PrimarySectionMeetings[0].SectionId);
-                Assert.AreEqual("LEC",sec.PrimarySectionMeetings[0].InstructionalMethodCode);
-                Assert.AreEqual(sectionMeetings[0].StartDate,sec.PrimarySectionMeetings[0].StartDate);
-                Assert.AreEqual(sectionMeetings[0].EndDate,sec.PrimarySectionMeetings[0].EndDate);
-                Assert.AreEqual("R1",sec.PrimarySectionMeetings[0].Room);
+                Assert.AreEqual("S001", sec.PrimarySectionMeetings[0].SectionId);
+                Assert.AreEqual("LEC", sec.PrimarySectionMeetings[0].InstructionalMethodCode);
+                Assert.AreEqual(sectionMeetings[0].StartDate, sec.PrimarySectionMeetings[0].StartDate);
+                Assert.AreEqual(sectionMeetings[0].EndDate, sec.PrimarySectionMeetings[0].EndDate);
+                Assert.AreEqual("R1", sec.PrimarySectionMeetings[0].Room);
 
                 Assert.AreEqual("S001", sec.PrimarySectionMeetings[1].SectionId);
                 Assert.AreEqual("LAB", sec.PrimarySectionMeetings[1].InstructionalMethodCode);
@@ -1414,6 +1424,930 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 Assert.IsNotNull(sec.PrimarySectionMeetings);
                 Assert.AreEqual(0, sec.PrimarySectionMeetings.Count());
             }
+
+        }
+
+        [TestClass]
+        public class Section_AvailabilityStatus
+        {
+            private Section sec;
+            string acadLevel = "UG";
+            List<string> courseLevels = new List<string>() { "100" };
+            List<OfferingDepartment> depts = new List<OfferingDepartment>() { new OfferingDepartment("CS", 100m) };
+            List<SectionStatusItem> statuses = new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-4)) };
+            string course1 = "1";
+            string number = "01";
+            DateTime startDate = DateTime.Now;
+            string title = "Title";
+            [TestInitialize]
+            public void Initialize()
+            {
+                sec = new Section("S001", course1, number, startDate, 4m, 1m, title, "IN", depts, courseLevels, acadLevel, statuses);
+            }
+            [TestMethod]
+            public void Section_AvailabilityStatus_Capacity_Is_Null()
+            {
+                sec.GlobalCapacity = null;
+                sec.SectionCapacity = null;
+                SectionAvailabilityStatusType status = sec.AvailabilityStatus;
+                Assert.AreEqual(SectionAvailabilityStatusType.Open, status);
+            }
+
+            [TestMethod]
+            public void Section_AvailabilityStatus_NoStudentInWaitlist_SeatsAvailable()
+            {
+                //if (Waitlisted == 0 && (Available == null || Available > 0))
+                //no crosslisted section
+                sec.SectionCapacity = 2;
+                sec.AddActiveStudent("1111");
+                sec.CombineCrosslistWaitlists = false;
+                sec.NumberOnWaitlist = 0;
+                SectionAvailabilityStatusType status = sec.AvailabilityStatus;
+                Assert.AreEqual(SectionAvailabilityStatusType.Open, status);
+            }
+
+            [TestMethod]
+            public void Section_AvailabilityStatus_SeatsAvailable_WaitlistIsEmpty()
+            {
+                sec = new Section("S001", course1, number, startDate, 4m, 1m, title, "IN", depts, courseLevels, acadLevel, statuses, allowWaitlist: true, waitlistClosed: false);
+                sec.SectionCapacity = 2;
+                sec.AddActiveStudent("1111");
+                sec.CombineCrosslistWaitlists = false;
+                sec.NumberOnWaitlist = 0;
+                sec.WaitlistMaximum = 2;
+                SectionAvailabilityStatusType status = sec.AvailabilityStatus;
+                Assert.AreEqual(SectionAvailabilityStatusType.Open, status);
+
+            }
+            [TestMethod]
+            public void Section_AvailabilityStatus_NoSeatsAvailable_NoStudentsInWaitlist_WaitlistIsNotAllowed()
+            {
+                sec = new Section("S001", course1, number, startDate, 4m, 1m, title, "IN", depts, courseLevels, acadLevel, statuses, allowWaitlist: false, waitlistClosed: false);
+                sec.SectionCapacity = 2;
+                sec.AddActiveStudent("1111");
+                sec.AddActiveStudent("1112");
+                sec.CombineCrosslistWaitlists = false;
+                sec.NumberOnWaitlist = null;
+                SectionAvailabilityStatusType status = sec.AvailabilityStatus;
+                Assert.AreEqual(SectionAvailabilityStatusType.Closed, status);
+            }
+            [TestMethod]
+            public void Section_AvailabilityStatus_NoSeatsAvailable_StudentsInWaitlist_WaitlistIsClosed()
+            {
+                sec = new Section("S001", course1, number, startDate, 4m, 1m, title, "IN", depts, courseLevels, acadLevel, statuses, allowWaitlist: true, waitlistClosed: true);
+                sec.SectionCapacity = 2;
+                sec.AddActiveStudent("1111");
+                sec.AddActiveStudent("1112");
+                sec.CombineCrosslistWaitlists = false;
+                sec.NumberOnWaitlist = 2;
+                SectionAvailabilityStatusType status = sec.AvailabilityStatus;
+                Assert.AreEqual(SectionAvailabilityStatusType.Closed, status);
+            }
+            [TestMethod]
+            public void Section_AvailabilityStatus_NoSeatsAvailable_StudentsInWaitlist_WaitlistIsAlsoFull()
+            {
+                sec = new Section("S001", course1, number, startDate, 4m, 1m, title, "IN", depts, courseLevels, acadLevel, statuses, allowWaitlist: true, waitlistClosed: false);
+                sec.SectionCapacity = 2;
+                sec.AddActiveStudent("1111");
+                sec.AddActiveStudent("1112");
+                sec.CombineCrosslistWaitlists = false;
+                sec.NumberOnWaitlist = 2;
+                sec.WaitlistMaximum = 2;
+                SectionAvailabilityStatusType status = sec.AvailabilityStatus;
+                Assert.AreEqual(SectionAvailabilityStatusType.Closed, status);
+
+            }
+            [TestMethod]
+            public void Section_AvailabilityStatus_NoSeatsAvailable_StudentsNotInWaitlist_WaitlistIsAllowed()
+            {
+                sec = new Section("S001", course1, number, startDate, 4m, 1m, title, "IN", depts, courseLevels, acadLevel, statuses, allowWaitlist: true, waitlistClosed: false);
+                sec.SectionCapacity = 2;
+                sec.AddActiveStudent("1111");
+                sec.AddActiveStudent("1112");
+                sec.CombineCrosslistWaitlists = false;
+                sec.NumberOnWaitlist = null;
+                sec.WaitlistMaximum = null;
+                SectionAvailabilityStatusType status = sec.AvailabilityStatus;
+                Assert.AreEqual(SectionAvailabilityStatusType.Waitlisted, status);
+
+            }
+            [TestMethod]
+            public void Section_AvailabilityStatus_NoSeatsAvailable_WaitlistAvailable_WaitlistIsAllowed()
+            {
+                sec = new Section("S001", course1, number, startDate, 4m, 1m, title, "IN", depts, courseLevels, acadLevel, statuses, allowWaitlist: true, waitlistClosed: false);
+                sec.SectionCapacity = 2;
+                sec.AddActiveStudent("1111");
+                sec.AddActiveStudent("1112");
+                sec.CombineCrosslistWaitlists = false;
+                sec.NumberOnWaitlist = 1;
+                sec.WaitlistMaximum = 2;
+                SectionAvailabilityStatusType status = sec.AvailabilityStatus;
+                Assert.AreEqual(SectionAvailabilityStatusType.Waitlisted, status);
+
+            }
+            [TestMethod]
+            //this condition can rarely happen- like waitlist was open, students enrolled in it and then become full. admin went to colleague and made AllwWaitList flag to N
+            public void Section_AvailabilityStatus_NoSeatsAvailable_WaitlistIsFull_WaitlistIsNotAllowed()
+            {
+                sec = new Section("S001", course1, number, startDate, 4m, 1m, title, "IN", depts, courseLevels, acadLevel, statuses, allowWaitlist: false, waitlistClosed: false);
+                sec.SectionCapacity = 2;
+                sec.AddActiveStudent("1111");
+                sec.AddActiveStudent("1112");
+                sec.CombineCrosslistWaitlists = false;
+                sec.NumberOnWaitlist = 2;
+                sec.WaitlistMaximum = 2;
+                SectionAvailabilityStatusType status = sec.AvailabilityStatus;
+                Assert.AreEqual(SectionAvailabilityStatusType.Closed, status);
+
+            }
+            [TestMethod]
+            //This is when section was full, waitlist also got full but a student dropped such as one registeration seat was available but this should still keep the section in waitlisted state
+            public void Section_AvailabilityStatus_SeatsAvailable_WaitlistIsFull_WaitlistIsAllowed()
+            {
+                sec = new Section("S001", course1, number, startDate, 4m, 1m, title, "IN", depts, courseLevels, acadLevel, statuses, allowWaitlist: true, waitlistClosed: false);
+                sec.SectionCapacity = 2;
+                sec.AddActiveStudent("1111");
+                sec.CombineCrosslistWaitlists = false;
+                sec.NumberOnWaitlist = 2;
+                sec.WaitlistMaximum = 2;
+                SectionAvailabilityStatusType status = sec.AvailabilityStatus;
+                Assert.AreEqual(SectionAvailabilityStatusType.Waitlisted, status);
+
+            }
+            //this is when a student registered and then section become full, other students started putting in waitlist, now student drops from regular registration such as seat is available
+            //but section should still be in waitlisted state
+            [TestMethod]
+            public void Section_AvailabilityStatus_SeatsAvailable_WaitlistIsAvailable_WaitlistIsAllowed()
+            {
+                sec = new Section("S001", course1, number, startDate, 4m, 1m, title, "IN", depts, courseLevels, acadLevel, statuses, allowWaitlist: true, waitlistClosed: false);
+                sec.SectionCapacity = 2;
+                sec.AddActiveStudent("1111");
+                sec.CombineCrosslistWaitlists = false;
+                sec.NumberOnWaitlist = 1;
+                sec.WaitlistMaximum = 2;
+                SectionAvailabilityStatusType status = sec.AvailabilityStatus;
+                Assert.AreEqual(SectionAvailabilityStatusType.Waitlisted, status);
+
+            }
+
+
+
+        }
+
+        [TestClass]
+        public class Section_Sorting
+        {
+            List<OfferingDepartment> depts = new List<OfferingDepartment>();
+            List<SectionStatusItem> statuses = new List<SectionStatusItem>();
+            List<SectionMeeting> sectionMeetings = new List<SectionMeeting>();
+            List<string> courseLevels = new List<string>();
+            [TestInitialize]
+            public void Initialize()
+            {
+                courseLevels = new List<string>() { "100" };
+                depts = new List<OfferingDepartment>() { new OfferingDepartment("CS", 100m) };
+                statuses = new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-4)) };
+            }
+            //on term -> reporting year and then code
+            [TestClass]
+            public class Sort_On_Term : Section_Sorting
+            {
+                List<Section> sections = new List<Section>();
+                [TestInitialize]
+                public new void Initialize()
+                {
+                    base.Initialize();
+                    //reporting year->sequence->section name
+                    //no term sections at end
+                    Section sec1 = new Section("sec-1", "crs-1", "04", new DateTime(1999, 01, 02), 4m, null, "Biology", "IN", depts, courseLevels, "UG", statuses);
+                    sec1.TermId = "2020/FA";
+                    sec1.AddSectionTerm(new Term("2020/FA", "DESC", DateTime.Today.AddYears(-1), DateTime.Today.AddYears(1), 2019, 1, true, true, "2020/fa", false));
+                    sec1.CourseName = "BIO-200";
+
+
+                    Section sec2 = new Section("sec-2", "crs-2", "01", new DateTime(1999, 01, 02), 4m, null, "Hindi", "IN", depts, courseLevels, "UG", statuses);
+                    sec2.TermId = "2019/SP";
+                    sec2.AddSectionTerm(new Term("2019/SP", "DESC", DateTime.Today.AddYears(-1), DateTime.Today.AddYears(1), 2018, 4, true, true, "2019/SP", false));
+                    sec2.CourseName = "HIND-100";
+
+                    Section sec3 = new Section("sec-3", "crs-3", "01", new DateTime(1999, 01, 02), 4m, null, "English", "IN", depts, courseLevels, "UG", statuses);
+                    sec3.TermId = "2019/SP";
+                    sec3.AddSectionTerm(new Term("2019/SP", "DESC", DateTime.Today.AddYears(-1), DateTime.Today.AddYears(1), 2018, 3, true, true, "2019/SP", false));
+                    sec3.CourseName = "ENGL-100";
+
+                    Section sec4 = new Section("sec-4", "crs-4", "03", new DateTime(1999, 01, 02), 4m, null, "Zoology", "IN", depts, courseLevels, "UG", statuses);
+                    sec4.TermId = "2019/SP";
+                    sec4.AddSectionTerm(new Term("2019/SP", "DESC", DateTime.Today.AddYears(-1), DateTime.Today.AddYears(1), 2019, 2, true, true, "2019/SP", false));
+                    sec4.CourseName = "Zoo-100";
+
+                    Section sec5 = new Section("sec-5", "crs-2", "02", new DateTime(1999, 01, 02), 4m, null, "Hindi 2", "IN", depts, courseLevels, "UG", statuses);
+                    sec5.TermId = "2019/FA";
+                    sec5.AddSectionTerm(new Term("2019/SP", "DESC", DateTime.Today.AddYears(-1), DateTime.Today.AddYears(1), 2018, 2, true, true, "2019/SP", false));
+                    sec5.CourseName = "HIND-200";
+
+                    Section sec6 = new Section("sec-6", "crs-3", "02", new DateTime(1999, 01, 02), 4m, null, "English 2", "IN", depts, courseLevels, "UG", statuses);
+                    sec6.TermId = "2019/FA";
+                    sec6.AddSectionTerm(new Term("2019/FA", "DESC", DateTime.Today.AddYears(-1), DateTime.Today.AddYears(1), 2018, 1, true, true, "2019/FA", false));
+                    sec6.CourseName = "ENGL-200";
+
+                    Section sec7 = new Section("sec-7", "crs-7", "03", new DateTime(1999, 01, 02), 4m, null, "Aviation", "IN", depts, courseLevels, "UG", statuses);
+                    sec7.TermId = "2019/SP";
+                    sec7.AddSectionTerm(new Term("2019/SP", "DESC", DateTime.Today.AddYears(-1), DateTime.Today.AddYears(1), 2019, 1, true, true, "2019/SP", false));
+                    sec7.CourseName = "AVI-200";
+
+                    Section sec8 = new Section("sec-8", "crs-7", "03", new DateTime(1999, 01, 02), 4m, null, "Aviation", "IN", depts, courseLevels, "UG", statuses);
+                    sec8.TermId = null;
+                    sec8.AddSectionTerm(new Term("2019/SP", "DESC", DateTime.Today.AddYears(-1), DateTime.Today.AddYears(1), 2019, 1, true, true, "2019/SP", false));
+                    sec8.CourseName = "WhatDoYouWant-200";
+
+
+                    Section sec9 = new Section("sec-9", "crs-7", "03", new DateTime(1999, 01, 02), 4m, null, "Aviation", "IN", depts, courseLevels, "UG", statuses);
+                    sec9.TermId = string.Empty;
+                    sec9.AddSectionTerm(new Term("2019/SP", "DESC", DateTime.Today.AddYears(-1), DateTime.Today.AddYears(1), 2019, 1, true, true, "2019/SP", false));
+                    sec9.CourseName = "WhatDoYouWant-100";
+
+
+                    sections.Add(sec1);
+                    sections.Add(sec2);
+                    sections.Add(sec3);
+                    sections.Add(sec4);
+                    sections.Add(sec5);
+                    sections.Add(sec6);
+                    sections.Add(sec7);
+                    sections.Add(sec8);
+                    sections.Add(sec9);
+
+
+                }
+                [TestMethod]
+                public void SortOn_Term_Ascending()
+                {
+                    sections.Sort(new SectionSortHelper(CatalogSortType.Term, CatalogSortDirection.Ascending));
+                    Assert.AreEqual(9, sections.Count);
+                    Assert.AreEqual("sec-6", sections[0].Id);
+                    Assert.AreEqual("sec-5", sections[1].Id);
+                    Assert.AreEqual("sec-3", sections[2].Id);
+                    Assert.AreEqual("sec-2", sections[3].Id);
+                    Assert.AreEqual("sec-7", sections[4].Id);
+                    Assert.AreEqual("sec-1", sections[5].Id);
+                    Assert.AreEqual("sec-4", sections[6].Id);
+                    Assert.AreEqual("sec-9", sections[7].Id);
+                    Assert.AreEqual("sec-8", sections[8].Id);
+
+
+                }
+                [TestMethod]
+                public void SortOn_Term_Descending()
+                {
+                    sections.Sort(new SectionSortHelper(CatalogSortType.Term, CatalogSortDirection.Descending));
+                    Assert.AreEqual(9, sections.Count);
+                    Assert.AreEqual("sec-9", sections[0].Id);
+                    Assert.AreEqual("sec-8", sections[1].Id);
+                    Assert.AreEqual("sec-4", sections[2].Id);
+                    Assert.AreEqual("sec-7", sections[3].Id);
+                    Assert.AreEqual("sec-1", sections[4].Id);
+                    Assert.AreEqual("sec-2", sections[5].Id);
+                    Assert.AreEqual("sec-3", sections[6].Id);
+                    Assert.AreEqual("sec-5", sections[7].Id);
+                    Assert.AreEqual("sec-6", sections[8].Id);
+                }
+            }
+
+            [TestClass]
+            public class Sort_On_SectionName : Section_Sorting
+            {
+                List<Section> sections = new List<Section>();
+                [TestInitialize]
+                public new void Initialize()
+                {
+                    base.Initialize();
+                    //reporting year->termid->section name
+                    Section sec1 = new Section("sec-1", "crs-1", "04", new DateTime(1999, 01, 02), 4m, null, "Biology", "IN", depts, courseLevels, "UG", statuses);
+                    sec1.TermId = "2020/FA";
+                    sec1.CourseName = "BIO-200";
+
+
+                    Section sec2 = new Section("sec-2", "crs-2", "01", new DateTime(1999, 01, 02), 4m, null, "Hindi", "IN", depts, courseLevels, "UG", statuses);
+                    sec2.TermId = "2019/SP";
+                    sec2.CourseName = "HIND-100";
+
+                    Section sec3 = new Section("sec-3", "crs-3", "01", new DateTime(1999, 01, 02), 4m, null, "English", "IN", depts, courseLevels, "UG", statuses);
+                    sec3.TermId = "2019/SP";
+                    sec3.CourseName = "ENGL-100";
+
+                    Section sec4 = new Section("sec-4", "crs-4", "03", new DateTime(1999, 01, 02), 4m, null, "Zoology", "IN", depts, courseLevels, "UG", statuses);
+                    sec4.TermId = "2019/SP";
+                    sec4.CourseName = "Zoo-100";
+
+                    Section sec5 = new Section("sec-5", "crs-2", "02", new DateTime(1999, 01, 02), 4m, null, "Hindi 2", "IN", depts, courseLevels, "UG", statuses);
+                    sec5.TermId = "2019/FA";
+                    sec5.CourseName = "HIND-200";
+
+                    Section sec6 = new Section("sec-6", "crs-3", "02", new DateTime(1999, 01, 02), 4m, null, "English 2", "IN", depts, courseLevels, "UG", statuses);
+                    sec6.TermId = "2019/FA";
+                    sec6.CourseName = "ENGL-200";
+
+                    Section sec7 = new Section("sec-7", "crs-7", "03", new DateTime(1999, 01, 02), 4m, null, "Aviation", "IN", depts, courseLevels, "UG", statuses);
+                    sec7.TermId = "2019/SP";
+                    sec7.CourseName = "AVI-200";
+
+
+
+                    sections.Add(sec1);
+                    sections.Add(sec2);
+                    sections.Add(sec3);
+                    sections.Add(sec4);
+                    sections.Add(sec5);
+                    sections.Add(sec6);
+                    sections.Add(sec7);
+
+
+                }
+                [TestMethod]
+                public void SortOn_SectionName_Ascending()
+                {
+                    sections.Sort(new SectionSortHelper(CatalogSortType.SectionName, CatalogSortDirection.Ascending));
+                    Assert.AreEqual(7, sections.Count);
+                    Assert.AreEqual("sec-7", sections[0].Id);
+                    Assert.AreEqual("sec-1", sections[1].Id);
+                    Assert.AreEqual("sec-3", sections[2].Id);
+                    Assert.AreEqual("sec-6", sections[3].Id);
+                    Assert.AreEqual("sec-2", sections[4].Id);
+                    Assert.AreEqual("sec-5", sections[5].Id);
+                    Assert.AreEqual("sec-4", sections[6].Id);
+
+                }
+                [TestMethod]
+                public void SortOn_SectionName_Descending()
+                {
+                    sections.Sort(new SectionSortHelper(CatalogSortType.SectionName, CatalogSortDirection.Descending));
+                    Assert.AreEqual(7, sections.Count);
+                    Assert.AreEqual("sec-4", sections[0].Id);
+                    Assert.AreEqual("sec-5", sections[1].Id);
+                    Assert.AreEqual("sec-2", sections[2].Id);
+                    Assert.AreEqual("sec-6", sections[3].Id);
+                    Assert.AreEqual("sec-3", sections[4].Id);
+                    Assert.AreEqual("sec-1", sections[5].Id);
+                    Assert.AreEqual("sec-7", sections[6].Id);
+                }
+
+
+                //on status -> Open, Closed, Waitlisted - AvailabilityStatus
+                //on section name -> course name + SECTION NUMBER
+                // on  location
+                //on title
+                //on dates
+                //on first instrcutional method
+                //on first course type
+                //on faculty name (preffered or professional or last name + first chararcter from first name)
+                //on credits or ceus
+                //on acad level
+                //on first meeting info (Date, Instructional Method, Days, Time, Building, Room - in sequence comparison)
+
+            }
+
+            [TestClass]
+            public class Sort_On_Location : Section_Sorting
+            {
+                List<Section> sections = new List<Section>();
+                [TestInitialize]
+                public new void Initialize()
+                {
+                    base.Initialize();
+                    //reporting year->termid->section name
+                    Section sec1 = new Section("sec-1", "crs-1", "04", new DateTime(1999, 01, 02), 4m, null, "Biology", "IN", depts, courseLevels, "UG", statuses);
+                    sec1.TermId = "2020/FA";
+                    sec1.CourseName = "ENGL-100";
+                    sec1.Location = "MD";
+
+
+                    Section sec2 = new Section("sec-2", "crs-2", "01", new DateTime(1999, 01, 02), 4m, null, "Hindi", "IN", depts, courseLevels, "UG", statuses);
+                    sec2.TermId = "2019/SP";
+                    sec2.CourseName = "HIND-100";
+                    sec2.Location = "AM";
+
+                    Section sec3 = new Section("sec-3", "crs-3", "01", new DateTime(1999, 01, 02), 4m, null, "English", "IN", depts, courseLevels, "UG", statuses);
+                    sec3.TermId = "2019/SP";
+                    sec3.CourseName = "BIO-200";
+                    sec3.Location = "MD";
+
+                    Section sec4 = new Section("sec-4", "crs-4", "03", new DateTime(1999, 01, 02), 4m, null, "Zoology", "IN", depts, courseLevels, "UG", statuses);
+                    sec4.TermId = "2019/SP";
+                    sec4.CourseName = "Zoo-100";
+                    sec4.Location = "CC";
+
+                    Section sec5 = new Section("sec-5", "crs-2", "02", new DateTime(1999, 01, 02), 4m, null, "Hindi 2", "IN", depts, courseLevels, "UG", statuses);
+                    sec5.TermId = "2019/FA";
+                    sec5.CourseName = "HIND-200";
+                    sec5.Location = "MD";
+
+                    Section sec6 = new Section("sec-6", "crs-3", "02", new DateTime(1999, 01, 02), 4m, null, "English 2", "IN", depts, courseLevels, "UG", statuses);
+                    sec6.TermId = "2019/FA";
+                    sec6.CourseName = "ENGL-200";
+                    sec6.Location = "DA";
+
+                    Section sec7 = new Section("sec-7", "crs-7", "03", new DateTime(1999, 01, 02), 4m, null, "Aviation", "IN", depts, courseLevels, "UG", statuses);
+                    sec7.TermId = "2019/SP";
+                    sec7.CourseName = "AVI-200";
+                    sec7.Location = "ZZ";
+
+
+
+                    sections.Add(sec1);
+                    sections.Add(sec2);
+                    sections.Add(sec3);
+                    sections.Add(sec4);
+                    sections.Add(sec5);
+                    sections.Add(sec6);
+                    sections.Add(sec7);
+
+
+                }
+                [TestMethod]
+                public void SortOn_Location_Ascending()
+                {
+                    sections.Sort(new SectionSortHelper(CatalogSortType.Location, CatalogSortDirection.Ascending));
+                    Assert.AreEqual(7, sections.Count);
+                    Assert.AreEqual("sec-2", sections[0].Id);
+                    Assert.AreEqual("sec-4", sections[1].Id);
+                    Assert.AreEqual("sec-6", sections[2].Id);
+                    Assert.AreEqual("sec-3", sections[3].Id);
+                    Assert.AreEqual("sec-1", sections[4].Id);
+                    Assert.AreEqual("sec-5", sections[5].Id);
+                    Assert.AreEqual("sec-7", sections[6].Id);
+
+                }
+                [TestMethod]
+                public void SortOn_Location_Descending()
+                {
+                    sections.Sort(new SectionSortHelper(CatalogSortType.Location, CatalogSortDirection.Descending));
+                    Assert.AreEqual(7, sections.Count);
+                    Assert.AreEqual("sec-7", sections[0].Id);
+                    Assert.AreEqual("sec-3", sections[1].Id);
+                    Assert.AreEqual("sec-1", sections[2].Id);
+                    Assert.AreEqual("sec-5", sections[3].Id);
+                    Assert.AreEqual("sec-6", sections[4].Id);
+                    Assert.AreEqual("sec-4", sections[5].Id);
+                    Assert.AreEqual("sec-2", sections[6].Id);
+                }
+
+            }
+
+            [TestClass]
+            public class Sort_On_Title : Section_Sorting
+            {
+                List<Section> sections = new List<Section>();
+                [TestInitialize]
+                public new void Initialize()
+                {
+                    base.Initialize();
+                    //reporting year->termid->section name
+                    Section sec1 = new Section("sec-1", "crs-1", "04", new DateTime(1999, 01, 02), 4m, null, "Biology", "IN", depts, courseLevels, "UG", statuses);
+                    sec1.TermId = "2020/FA";
+                    sec1.CourseName = "ENGL-100";
+                    sec1.Location = "MD";
+
+                    Section sec2 = new Section("sec-2", "crs-2", "01", new DateTime(1999, 01, 02), 4m, null, "Hindi", "IN", depts, courseLevels, "UG", statuses);
+                    sec2.TermId = "2019/SP";
+                    sec2.CourseName = "HIND-100";
+                    sec2.Location = "AM";
+
+                    Section sec3 = new Section("sec-3", "crs-3", "01", new DateTime(1999, 01, 02), 4m, null, "English", "IN", depts, courseLevels, "UG", statuses);
+                    sec3.TermId = "2019/SP";
+                    sec3.CourseName = "BIO-200";
+                    sec3.Location = "MD";
+
+                    Section sec4 = new Section("sec-4", "crs-4", "03", new DateTime(1999, 01, 02), 4m, null, "Zoology", "IN", depts, courseLevels, "UG", statuses);
+                    sec4.TermId = "2019/SP";
+                    sec4.CourseName = "Zoo-100";
+                    sec4.Location = "CC";
+
+                    Section sec5 = new Section("sec-5", "crs-2", "02", new DateTime(1999, 01, 02), 4m, null, "Hindi", "IN", depts, courseLevels, "UG", statuses);
+                    sec5.TermId = "2019/FA";
+                    sec5.CourseName = "HIND-200";
+                    sec5.Location = "MD";
+
+                    Section sec6 = new Section("sec-6", "crs-3", "02", new DateTime(1999, 01, 02), 4m, null, "English 2", "IN", depts, courseLevels, "UG", statuses);
+                    sec6.TermId = "2019/FA";
+                    sec6.CourseName = "ENGL-200";
+                    sec6.Location = "DA";
+
+                    Section sec7 = new Section("sec-7", "crs-7", "03", new DateTime(1999, 01, 02), 4m, null, "Aviation", "IN", depts, courseLevels, "UG", statuses);
+                    sec7.TermId = "2019/SP";
+                    sec7.CourseName = "AVI-200";
+                    sec7.Location = "ZZ";
+
+
+
+                    sections.Add(sec1);
+                    sections.Add(sec2);
+                    sections.Add(sec3);
+                    sections.Add(sec4);
+                    sections.Add(sec5);
+                    sections.Add(sec6);
+                    sections.Add(sec7);
+
+
+                }
+                [TestMethod]
+                public void SortOn_Title_Ascending()
+                {
+                    sections.Sort(new SectionSortHelper(CatalogSortType.Title, CatalogSortDirection.Ascending));
+                    Assert.AreEqual(7, sections.Count);
+                    Assert.AreEqual("sec-7", sections[0].Id);
+                    Assert.AreEqual("sec-1", sections[1].Id);
+                    Assert.AreEqual("sec-3", sections[2].Id);
+                    Assert.AreEqual("sec-6", sections[3].Id);
+                    Assert.AreEqual("sec-2", sections[4].Id);
+                    Assert.AreEqual("sec-5", sections[5].Id);
+                    Assert.AreEqual("sec-4", sections[6].Id);
+
+                }
+                [TestMethod]
+                public void SortOn_Title_Descending()
+                {
+                    sections.Sort(new SectionSortHelper(CatalogSortType.Title, CatalogSortDirection.Descending));
+                    Assert.AreEqual(7, sections.Count);
+                    Assert.AreEqual("sec-4", sections[0].Id);
+                    Assert.AreEqual("sec-2", sections[1].Id);
+                    Assert.AreEqual("sec-5", sections[2].Id);
+                    Assert.AreEqual("sec-6", sections[3].Id);
+                    Assert.AreEqual("sec-3", sections[4].Id);
+                    Assert.AreEqual("sec-1", sections[5].Id);
+                    Assert.AreEqual("sec-7", sections[6].Id);
+                }
+            }
+
+            [TestClass]
+            public class Sort_On_InstructionalMethod : Section_Sorting
+            {
+                List<Section> sections = new List<Section>();
+                [TestInitialize]
+                public new void Initialize()
+                {
+                    base.Initialize();
+                    //ONly first instructional method is used- sorted on description. 
+                    Section sec1 = new Section("sec-1", "crs-1", "04", new DateTime(1999, 01, 02), 4m, null, "Biology", "IN", depts, courseLevels, "UG", statuses);
+                    sec1.TermId = "2020/FA";
+                    sec1.CourseName = "ENGL-100";
+                    sec1.AddSectionInstructionalMethod(new SectionInstructionalMethod("LEC", "Lecture", false));
+                    sec1.AddSectionInstructionalMethod(new SectionInstructionalMethod("LAB", "Laboratory", false));
+
+                    Section sec2 = new Section("sec-2", "crs-2", "01", new DateTime(1999, 01, 02), 4m, null, "Hindi", "IN", depts, courseLevels, "UG", statuses);
+                    sec2.TermId = "2019/SP";
+                    sec2.CourseName = "HIND-100";
+                    sec2.AddSectionInstructionalMethod(new SectionInstructionalMethod("Empty", "", false));
+
+                    Section sec3 = new Section("sec-3", "crs-3", "01", new DateTime(1999, 01, 02), 4m, null, "English", "IN", depts, courseLevels, "UG", statuses);
+                    sec3.TermId = "2019/SP";
+                    sec3.CourseName = "BIO-200";
+                    sec3.AddSectionInstructionalMethod(new SectionInstructionalMethod("null", null, false));
+
+                    Section sec4 = new Section("sec-4", "crs-4", "03", new DateTime(1999, 01, 02), 4m, null, "Zoology", "IN", depts, courseLevels, "UG", statuses);
+                    sec4.TermId = "2019/SP";
+                    sec4.CourseName = "Zoo-100";
+                    sec4.AddSectionInstructionalMethod(new SectionInstructionalMethod("online", "Online class", true));
+
+                    Section sec5 = new Section("sec-5", "crs-2", "02", new DateTime(1999, 01, 02), 4m, null, "Hindi", "IN", depts, courseLevels, "UG", statuses);
+                    sec5.TermId = "2019/FA";
+                    sec5.CourseName = "HIND-200";
+                    sec5.AddSectionInstructionalMethod(new SectionInstructionalMethod("online", "Online class", true));
+
+                    Section sec6 = new Section("sec-6", "crs-3", "02", new DateTime(1999, 01, 02), 4m, null, "English 2", "IN", depts, courseLevels, "UG", statuses);
+                    sec6.TermId = "2019/FA";
+                    sec6.CourseName = "ENGL-200";
+                    sec6.AddSectionInstructionalMethod(new SectionInstructionalMethod("LAB", "Laboratory", false));
+
+                    Section sec7 = new Section("sec-7", "crs-7", "03", new DateTime(1999, 01, 02), 4m, null, "Aviation", "IN", depts, courseLevels, "UG", statuses);
+                    sec7.TermId = "2019/SP";
+                    sec7.CourseName = "AVI-200";
+                    sec7.AddSectionInstructionalMethod(new SectionInstructionalMethod("LEC", "Lecture", false));
+
+                    sections.Add(sec1);
+                    sections.Add(sec2);
+                    sections.Add(sec3);
+                    sections.Add(sec4);
+                    sections.Add(sec5);
+                    sections.Add(sec6);
+                    sections.Add(sec7);
+                }
+                [TestMethod]
+                public void SortOn_InstructionalMethod_Ascending()
+                {
+                    sections.Sort(new SectionSortHelper(CatalogSortType.InstructionalMethod, CatalogSortDirection.Ascending));
+                    Assert.AreEqual(7, sections.Count);
+                    Assert.AreEqual("sec-3", sections[0].Id);
+                    Assert.AreEqual("sec-2", sections[1].Id);
+                    Assert.AreEqual("sec-6", sections[2].Id);
+                    Assert.AreEqual("sec-7", sections[3].Id);
+                    Assert.AreEqual("sec-1", sections[4].Id);
+                    Assert.AreEqual("sec-5", sections[5].Id);
+                    Assert.AreEqual("sec-4", sections[6].Id);
+
+                }
+                [TestMethod]
+                public void SortOn_InstructionalMethod_Descending()
+                {
+                    sections.Sort(new SectionSortHelper(CatalogSortType.InstructionalMethod, CatalogSortDirection.Descending));
+                    Assert.AreEqual(7, sections.Count);
+                    Assert.AreEqual("sec-5", sections[0].Id);
+                    Assert.AreEqual("sec-4", sections[1].Id);
+                    Assert.AreEqual("sec-7", sections[2].Id);
+                    Assert.AreEqual("sec-1", sections[3].Id);
+                    Assert.AreEqual("sec-6", sections[4].Id);
+                    Assert.AreEqual("sec-2", sections[5].Id);
+                    Assert.AreEqual("sec-3", sections[6].Id);
+                }
+
+            }
+
+            [TestClass]
+            public class Sort_On_SectionMeeting : Section_Sorting
+            {
+                // Date, Instructional Method, Days, Time, Building, Room - in sequence comparison
+                List<Section> sections = new List<Section>();
+                List<DayOfWeek> days1 = new List<DayOfWeek>();
+                List<DayOfWeek> days2 = new List<DayOfWeek>();
+                [TestInitialize]
+                public new void Initialize()
+                {
+                    base.Initialize();
+                    days1.Add(DayOfWeek.Monday);
+                    days1.Add(DayOfWeek.Tuesday);
+
+                }
+
+                [TestClass]
+                public class Sort_On_SectionMeeting_BldngRoom : Sort_On_SectionMeeting
+                {
+                    [TestInitialize]
+                    public new void Initialize()
+                    {
+                        base.Initialize();
+                        //declare meetings
+                        SectionMeeting mtngOwenBldngRoom1 = new SectionMeeting("mtngOwenBldngRoom1", "", "LEC", DateTime.Today, DateTime.Today.AddYears(2), "W");
+                        mtngOwenBldngRoom1.Days = days1;
+                        mtngOwenBldngRoom1.Room = "Owen-Hall*R1";
+
+                        SectionMeeting mtngOwenBldngRoom2 = new SectionMeeting("mtngOwenBldngRoom2", "", "LEC", DateTime.Today, DateTime.Today.AddYears(2), "W");
+                        mtngOwenBldngRoom2.Days = days1;
+                        mtngOwenBldngRoom2.Room = "Owen-Hall*R2";
+
+                        SectionMeeting mtngAaronBldngRoom1 = new SectionMeeting("mtngAaronBldngRoom1", "", "LEC", DateTime.Today, DateTime.Today.AddYears(2), "W");
+                        mtngAaronBldngRoom1.Days = days1;
+                        mtngAaronBldngRoom1.Room = "Aaron-Hall*R1";
+
+                        SectionMeeting mtngAaronBldngRoom2 = new SectionMeeting("mtngAaronBldngRoom2", "", "LEC", DateTime.Today, DateTime.Today.AddYears(2), "W");
+                        mtngAaronBldngRoom2.Days = days1;
+                        mtngAaronBldngRoom2.Room = "Aaron-Hall*R2";
+
+                        SectionMeeting mtngZoomBldngRoom1 = new SectionMeeting("mtngZoomBldngRoom1", "", "LEC", DateTime.Today, DateTime.Today.AddYears(2), "W");
+                        mtngZoomBldngRoom1.Days = days1;
+                        mtngZoomBldngRoom1.Room = "Zoom-Hall*R2";
+
+                        SectionMeeting mtngIsNull = new SectionMeeting("mtngIsNull", "", "LEC", DateTime.Today, DateTime.Today.AddYears(2), "W");
+                        mtngIsNull.Days = days1;
+                        mtngIsNull.Room = null;
+
+                        SectionMeeting mtngIsEmpty = new SectionMeeting("mtngIsEmpty", "", "LEC", DateTime.Today, DateTime.Today.AddYears(2), "W");
+                        mtngIsEmpty.Days = days1;
+                        mtngIsEmpty.Room = string.Empty;
+
+                        //with two meetings- only first is considered for comparison
+                        Section sec1 = new Section("sec-1", "crs-1", "04", new DateTime(1999, 01, 02), 4m, null, "Biology", "IN", depts, courseLevels, "UG", statuses);
+                        sec1.TermId = "2020/FA";
+                        sec1.CourseName = "ENGL-100";
+                        sec1.AddSectionMeeting(mtngOwenBldngRoom2);
+                        sec1.AddSectionMeeting(mtngZoomBldngRoom1);
+
+                        //with no meetings
+                        Section sec2 = new Section("sec-2", "crs-2", "01", new DateTime(1999, 01, 02), 4m, null, "Hindi", "IN", depts, courseLevels, "UG", statuses);
+                        sec2.TermId = "2019/SP";
+                        sec2.CourseName = "HIND-100";
+                        sec2.Location = "AM";
+
+
+                        //with no bldg*room
+                        Section sec3 = new Section("sec-3", "crs-3", "01", new DateTime(1999, 01, 02), 4m, null, "English", "IN", depts, courseLevels, "UG", statuses);
+                        sec3.TermId = "2019/SP";
+                        sec3.CourseName = "BIO-200";
+                        sec3.Location = "MD";
+                        sec3.AddSectionMeeting(mtngIsEmpty);
+
+
+                        //with one meeting
+                        Section sec4 = new Section("sec-4", "crs-4", "03", new DateTime(1999, 01, 02), 4m, null, "Zoology", "IN", depts, courseLevels, "UG", statuses);
+                        sec4.TermId = "2019/SP";
+                        sec4.CourseName = "Zoo-100";
+                        sec4.Location = "CC";
+                        sec4.AddSectionMeeting(mtngAaronBldngRoom2);
+
+                        //with one meeting same as 4th section
+                        Section sec5 = new Section("sec-5", "crs-2", "02", new DateTime(1999, 01, 02), 4m, null, "Hindi 2", "IN", depts, courseLevels, "UG", statuses);
+                        sec5.TermId = "2019/FA";
+                        sec5.CourseName = "HIND-200";
+                        sec5.Location = "MD";
+                        sec5.AddSectionMeeting(mtngAaronBldngRoom2);
+
+                        // //with null bldg*room
+                        Section sec6 = new Section("sec-6", "crs-3", "02", new DateTime(1999, 01, 02), 4m, null, "English 2", "IN", depts, courseLevels, "UG", statuses);
+                        sec6.TermId = "2019/FA";
+                        sec6.CourseName = "ENGL-200";
+                        sec6.Location = "DA";
+                        sec6.AddSectionMeeting(mtngIsNull);
+
+                        //with one meeting
+                        Section sec7 = new Section("sec-7", "crs-7", "03", new DateTime(1999, 01, 02), 4m, null, "Aviation", "IN", depts, courseLevels, "UG", statuses);
+                        sec7.TermId = "2019/SP";
+                        sec7.CourseName = "AVI-200";
+                        sec7.Location = "ZZ";
+                        sec7.AddSectionMeeting(mtngOwenBldngRoom1);
+
+
+
+                        sections.Add(sec1);
+                      sections.Add(sec2);
+                        sections.Add(sec3);
+                       sections.Add(sec4);
+                       sections.Add(sec5);
+                        sections.Add(sec6);
+                        sections.Add(sec7);
+                    }
+                    [TestMethod]
+                    public void SortOn_SectionMeeting_BldngRoom_Ascending()
+                    {
+                        sections.Sort(new SectionSortHelper(CatalogSortType.MeetingInformation, CatalogSortDirection.Ascending));
+                        Assert.AreEqual(7, sections.Count);
+                        Assert.AreEqual("sec-2", sections[0].Id);
+                        Assert.AreEqual("sec-6", sections[1].Id);
+                        Assert.AreEqual("sec-3", sections[2].Id);
+                        Assert.AreEqual("sec-5", sections[3].Id);
+                        Assert.AreEqual("sec-4", sections[4].Id);
+                        Assert.AreEqual("sec-7", sections[5].Id);
+                        Assert.AreEqual("sec-1", sections[6].Id);
+
+                    }
+                    [TestMethod]
+                    public void SortOn_SectionMeeting_BldngRoomDescending()
+                    {
+                        sections.Sort(new SectionSortHelper(CatalogSortType.MeetingInformation, CatalogSortDirection.Descending));
+                        Assert.AreEqual(7, sections.Count);
+                        Assert.AreEqual("sec-1", sections[0].Id);
+                        Assert.AreEqual("sec-7", sections[1].Id);
+                        Assert.AreEqual("sec-5", sections[2].Id);
+                        Assert.AreEqual("sec-4", sections[3].Id);
+                        Assert.AreEqual("sec-3", sections[4].Id);
+                        Assert.AreEqual("sec-6", sections[5].Id);
+                        Assert.AreEqual("sec-2", sections[6].Id);
+                    }
+
+                }
+
+                [TestClass]
+                public class Sort_On_SectionMeeting_Days_Time : Sort_On_SectionMeeting
+                {
+                    [TestInitialize]
+                    public new void Initialize()
+                    {
+                        base.Initialize();
+
+                        var now = DateTime.Now;
+                        var offset = now.ToLocalTime() - now.ToUniversalTime();
+                        DateTimeOffset timeIs1000 = new DateTimeOffset(new DateTime(1, 1, 1, 10, 0, 0), offset);
+                        DateTimeOffset timeIs1130 = new DateTimeOffset(new DateTime(1, 1, 1, 11, 30, 0), offset);
+                        DateTimeOffset timeIs0945 = new DateTimeOffset(new DateTime(1, 1, 1, 09, 45, 0), offset);
+                        DateTimeOffset timeIs1300 = new DateTimeOffset(new DateTime(1, 1, 1, 13, 0, 0), offset);
+                        //declare meetings
+                        SectionMeeting mtngOnWed1000 = new SectionMeeting("mtngOnWed1000", "", "LEC", DateTime.Today, DateTime.Today.AddYears(2), "W");
+                        mtngOnWed1000.Days = new List<DayOfWeek>() { DayOfWeek.Wednesday };
+                        mtngOnWed1000.StartTime = timeIs1000;
+                        mtngOnWed1000.Room = "Owen-Hall*R1";
+
+                        SectionMeeting mtngOnWebThurs945 = new SectionMeeting("mtngOnWebThurs945", "", "LEC", DateTime.Today, DateTime.Today.AddYears(2), "W");
+                        mtngOnWebThurs945.Days = new List<DayOfWeek>() { DayOfWeek.Wednesday, DayOfWeek.Thursday }; ;
+                        mtngOnWebThurs945.StartTime = timeIs0945;
+                        mtngOnWebThurs945.Room = "Owen-Hall*R2";
+
+                        SectionMeeting mtngOnMonWed1300 = new SectionMeeting("mtngOnMonWed1300", "", "LEC", DateTime.Today, DateTime.Today.AddYears(2), "W");
+                        mtngOnMonWed1300.Room = "Aaron-Hall*R1";
+                        mtngOnMonWed1300.Days = new List<DayOfWeek>() { DayOfWeek.Monday, DayOfWeek.Tuesday };
+                        mtngOnMonWed1300.StartTime = timeIs1300;
+
+
+                        SectionMeeting mtngOnMonTues1130 = new SectionMeeting("mtngOnMonTues1130", "", "LEC", DateTime.Today, DateTime.Today.AddYears(2), "W");
+                        mtngOnMonTues1130.Days = days1;
+                        mtngOnMonTues1130.Room = "Aaron-Hall*R2";
+                        mtngOnMonTues1130.Days = new List<DayOfWeek>() { DayOfWeek.Monday, DayOfWeek.Tuesday };
+                        mtngOnMonTues1130.StartTime = timeIs1130;
+
+                        //empty days and no time
+                        SectionMeeting mtngWithEmptyDaysAndNoTime = new SectionMeeting("mtngWithEmptyDaysAndNoTime", "", "LEC", DateTime.Today, DateTime.Today.AddYears(2), "W");
+                        mtngWithEmptyDaysAndNoTime.Days = new List<DayOfWeek>();
+                        mtngWithEmptyDaysAndNoTime.Room = "Zoom-Hall*R2";
+
+                        //days are null but time is there
+                        SectionMeeting mtngDaysNullAt1130 = new SectionMeeting("mtngDaysNullAt1130", "", "LEC", DateTime.Today, DateTime.Today.AddYears(2), "W");
+                        mtngDaysNullAt1130.Days = null;
+                        mtngDaysNullAt1130.StartTime = timeIs1130;
+                        mtngDaysNullAt1130.Room = null;
+
+                        //sunday
+                        SectionMeeting mtngIsOnSunday = new SectionMeeting("mtngIsOnSunday", "", "LEC", DateTime.Today, DateTime.Today.AddYears(2), "W");
+                        mtngIsOnSunday.Days = new List<DayOfWeek>() { DayOfWeek.Sunday };
+                        mtngIsOnSunday.StartTime = timeIs1130;
+                        mtngIsOnSunday.Room = string.Empty;
+
+                        //with two meetings- Wed/Thurs 9:45  and Wed 10:00
+                        Section sec1 = new Section("sec-1", "crs-1", "04", new DateTime(1999, 01, 02), 4m, null, "Biology", "IN", depts, courseLevels, "UG", statuses);
+                        sec1.TermId = "2020/FA";
+                        sec1.CourseName = "ENGL-100";
+                        sec1.AddSectionMeeting(mtngOnWed1000);
+                        sec1.AddSectionMeeting(mtngIsOnSunday);
+
+                        //with no meetings
+                        Section sec2 = new Section("sec-2", "crs-2", "01", new DateTime(1999, 01, 02), 4m, null, "Hindi", "IN", depts, courseLevels, "UG", statuses);
+                        sec2.TermId = "2019/SP";
+                        sec2.CourseName = "HIND-100";
+                        sec2.Location = "AM";
+
+
+                        //with empty days 
+                        Section sec3 = new Section("sec-3", "crs-3", "01", new DateTime(1999, 01, 02), 4m, null, "English", "IN", depts, courseLevels, "UG", statuses);
+                        sec3.TermId = "2019/SP";
+                        sec3.CourseName = "BIO-200";
+                        sec3.Location = "MD";
+                        sec3.AddSectionMeeting(mtngWithEmptyDaysAndNoTime);
+
+
+                        Section sec4 = new Section("sec-4", "crs-4", "03", new DateTime(1999, 01, 02), 4m, null, "Zoology", "IN", depts, courseLevels, "UG", statuses);
+                        sec4.TermId = "2019/SP";
+                        sec4.CourseName = "Zoo-100";
+                        sec4.Location = "CC";
+                        sec4.AddSectionMeeting(mtngOnMonWed1300);
+
+                        Section sec5 = new Section("sec-5", "crs-2", "02", new DateTime(1999, 01, 02), 4m, null, "Hindi 2", "IN", depts, courseLevels, "UG", statuses);
+                        sec5.TermId = "2019/FA";
+                        sec5.CourseName = "HIND-200";
+                        sec5.Location = "MD";
+                        sec5.AddSectionMeeting(mtngOnMonTues1130);
+
+                        Section sec6 = new Section("sec-6", "crs-3", "02", new DateTime(1999, 01, 02), 4m, null, "English 2", "IN", depts, courseLevels, "UG", statuses);
+                        sec6.TermId = "2019/FA";
+                        sec6.CourseName = "ENGL-200";
+                        sec6.Location = "DA";
+                        sec6.AddSectionMeeting(mtngDaysNullAt1130);
+
+                        //with one meeting
+                        Section sec7 = new Section("sec-7", "crs-7", "03", new DateTime(1999, 01, 02), 4m, null, "Aviation", "IN", depts, courseLevels, "UG", statuses);
+                        sec7.TermId = "2019/SP";
+                        sec7.CourseName = "AVI-200";
+                        sec7.Location = "ZZ";
+                        sec7.AddSectionMeeting(mtngOnWebThurs945);
+
+
+
+                        sections.Add(sec1);
+                        sections.Add(sec2);
+                        sections.Add(sec3);
+                        sections.Add(sec4);
+                        sections.Add(sec5);
+                        sections.Add(sec6);
+                        sections.Add(sec7);
+
+
+                    }
+                    [TestMethod]
+                    public void SortOn_SectionMeeting_Days_Time_Ascending()
+                    {
+                        sections.Sort(new SectionSortHelper(CatalogSortType.MeetingInformation, CatalogSortDirection.Ascending));
+                        Assert.AreEqual(7, sections.Count);
+                        Assert.AreEqual("sec-2", sections[0].Id);
+                        Assert.AreEqual("sec-6", sections[1].Id);
+                        Assert.AreEqual("sec-3", sections[2].Id);
+                        Assert.AreEqual("sec-5", sections[3].Id);
+                        Assert.AreEqual("sec-4", sections[4].Id);
+                        Assert.AreEqual("sec-7", sections[5].Id);
+                        Assert.AreEqual("sec-1", sections[6].Id);
+
+                    }
+                    [TestMethod]
+                    public void SortOn_SectionMeeting_Days_Time_Descending()
+                    {
+                        sections.Sort(new SectionSortHelper(CatalogSortType.MeetingInformation, CatalogSortDirection.Descending));
+                        Assert.AreEqual(7, sections.Count);
+                        Assert.AreEqual("sec-1", sections[0].Id);
+                        Assert.AreEqual("sec-7", sections[1].Id);
+                        Assert.AreEqual("sec-4", sections[2].Id);
+                        Assert.AreEqual("sec-5", sections[3].Id);
+                        Assert.AreEqual("sec-3", sections[4].Id);
+                        Assert.AreEqual("sec-6", sections[5].Id);
+                        Assert.AreEqual("sec-2", sections[6].Id);
+                    }
+
+                }
+
+            }
+
 
         }
     }

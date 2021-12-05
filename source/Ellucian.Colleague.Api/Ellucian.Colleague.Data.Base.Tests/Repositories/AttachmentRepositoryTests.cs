@@ -608,7 +608,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
                 transManagerMock.Setup(accessor =>
                     accessor.ExecuteAsync<UpdateAttachmentsRequest, UpdateAttachmentsResponse>
-                    (It.IsAny<UpdateAttachmentsRequest>())).ReturnsAsync(null);
+                    (It.IsAny<UpdateAttachmentsRequest>())).ReturnsAsync(() => null);
 
                 try
                 {
@@ -768,7 +768,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
                 transManagerMock.Setup(accessor =>
                     accessor.ExecuteAsync<UpdateAttachmentsRequest, UpdateAttachmentsResponse>
-                    (It.IsAny<UpdateAttachmentsRequest>())).ReturnsAsync(null);
+                    (It.IsAny<UpdateAttachmentsRequest>())).ReturnsAsync(() => null);
 
                 try
                 {
@@ -875,7 +875,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
                 transManagerMock.Setup(accessor =>
                     accessor.ExecuteAsync<CrudAttachmentContentRequest, CrudAttachmentContentResponse>
-                    (It.IsAny<CrudAttachmentContentRequest>())).ReturnsAsync(null);
+                    (It.IsAny<CrudAttachmentContentRequest>())).ReturnsAsync(() => null);
 
                 try
                 {

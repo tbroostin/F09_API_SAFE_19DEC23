@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Threading.Tasks;
@@ -226,7 +226,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.BlanketPurchaseOrders>, int>> GetBlanketPurchaseOrdersAsync(int offset, int limit, Dtos.BlanketPurchaseOrders criteriaObj, bool bypassCache = false)
         {
-            CheckViewBlanketPurchaseOrdersPermission();
+       
 
             int totalRecords = 0;
             var orderNumber = (criteriaObj != null && !string.IsNullOrEmpty(criteriaObj.OrderNumber)) ? criteriaObj.OrderNumber : string.Empty;
@@ -294,8 +294,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 throw new ArgumentNullException("guid", "A GUID is required to obtain a Blanket Purchase Order.");
             }
-            CheckViewBlanketPurchaseOrdersPermission();
-
+            
             // Get the GL Configuration to get the name of the full GL account access role
             // and also provides the information to format the GL accounts
             var glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
@@ -365,13 +364,21 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw new ArgumentNullException("blanketPurchaseOrder", "Must provide a guid for blanketPurchaseOrder update");
 
             // get the person ID associated with the incoming guid
-            var blanketPurchaseOrderId = await blanketPurchaseOrderRepository.GetBlanketPurchaseOrdersIdFromGuidAsync(blanketPurchaseOrder.Id);
+            var blanketPurchaseOrderId = string.Empty;
+            try
+            {
+                blanketPurchaseOrderId = await blanketPurchaseOrderRepository.GetBlanketPurchaseOrdersIdFromGuidAsync(blanketPurchaseOrder.Id);
+            }
+            //catch and release keyNotFound exception to support Create via PUT
+            catch (KeyNotFoundException ex)
+            {
+            }
             List<Domain.ColleagueFinance.Entities.FundsAvailable> OverRideGLs = new List<Domain.ColleagueFinance.Entities.FundsAvailable>();
             // verify the GUID exists to perform an update.  If not, perform a create instead
             if (!string.IsNullOrEmpty(blanketPurchaseOrderId))
             {
                 // verify the user has the permission to create a PurchaseOrders
-                CheckUpdateBlanketPurchaseOrderPermission();
+                //CheckUpdateBlanketPurchaseOrderPermission();
                 var glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
 
                 blanketPurchaseOrderRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
@@ -397,9 +404,25 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             _projectReferenceIds = await blanketPurchaseOrderRepository.GetProjectIdsFromReferenceNo(projectRefNos.ToArray());
                         }
                     }
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex);
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message);
+                }
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+
+                try
+                {
                     // map the DTO to entities
                     var blanketPurchaseOrderEntity
-                    = await ConvertBlanketPurchaseOrdersDtoToEntityAsync(blanketPurchaseOrder.Id, blanketPurchaseOrder, glConfiguration.MajorComponents.Count);
+                        = await ConvertBlanketPurchaseOrdersDtoToEntityAsync(blanketPurchaseOrder.Id, blanketPurchaseOrder, glConfiguration.MajorComponents.Count);
 
                     if (blanketPurchaseOrder.PaymentSource == null)
                     {
@@ -488,7 +511,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             List<Domain.ColleagueFinance.Entities.FundsAvailable> OverRideGLs = new List<Domain.ColleagueFinance.Entities.FundsAvailable>();
 
             // verify the user has the permission to create a PurchaseOrders
-            CheckUpdateBlanketPurchaseOrderPermission();
+            //CheckUpdateBlanketPurchaseOrderPermission();
             var glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
 
             blanketPurchaseOrderRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
@@ -511,8 +534,29 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         _projectReferenceIds = await blanketPurchaseOrderRepository.GetProjectIdsFromReferenceNo(projectRefNos.ToArray());
                     }
                 }
+
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message);
+            }
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+
+            try
+            {
                 var blanketPurchaseOrderEntity
                          = await ConvertBlanketPurchaseOrdersDtoToEntityAsync(blanketPurchaseOrder.Id, blanketPurchaseOrder, glConfiguration.MajorComponents.Count);
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
 
                 // create a PurchaseOrder entity in the database
                 createdBlanketPurchaseOrder =
@@ -584,8 +628,20 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 docSubmittedById = CurrentUser.PersonId;
             var budgetOvrCheckTuple = new List<Tuple<string, bool>>();
 
+            List<string> requisitionIds = new List<string>();
             foreach (var detail in blanketPurchaseOrder.OrderDetails)
             {
+                if (detail.ReferenceRequisitions != null && detail.ReferenceRequisitions.Any())
+                {
+                    foreach (var req in detail.ReferenceRequisitions)
+                    {
+                        if (req.Requisition != null && !string.IsNullOrEmpty(req.Requisition.Id))
+                        {
+                            var reqId = await blanketPurchaseOrderRepository.GetRequisitionsIdFromGuidAsync(req.Requisition.Id);
+                            requisitionIds.Add(reqId);
+                        }
+                    }
+                }
                 int detailCount = 0;
                 lineCount++;
                 List<string> accountingStringList = new List<string>();
@@ -597,10 +653,22 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         var submittedBy = (blanketPurchaseOrder.SubmittedBy != null) ? blanketPurchaseOrder.SubmittedBy.Id : "";
                         var submittedById = (!string.IsNullOrEmpty(submittedBy)) ? await personRepository.GetPersonIdFromGuidAsync(submittedBy) : "";
 
-                        if (details.Allocation != null && details.Allocation.Allocated != null &&
-                                details.Allocation.Allocated.Amount != null && details.Allocation.Allocated.Amount.Value != null
-                                && details.Allocation.Allocated.Amount.Value.HasValue)
+                        decimal budgetCheckAmount = 0;
+                        if (details.Allocation.Allocated.Percentage.HasValue && detail.Amount.Value.HasValue)
                         {
+                            budgetCheckAmount = detail.Amount.Value.Value * details.Allocation.Allocated.Percentage.Value / 100;
+                        }
+                        else
+                        {
+                            if (details.Allocation != null && details.Allocation.Allocated != null &&
+                                    details.Allocation.Allocated.Amount != null && details.Allocation.Allocated.Amount.Value != null
+                                    && details.Allocation.Allocated.Amount.Value.HasValue)
+                            {
+                                budgetCheckAmount = details.Allocation.Allocated.Amount.Value.Value;
+                            }
+                        }
+                        if (budgetCheckAmount > 0)
+                        { 
                             string PosID = lineCount.ToString() + "." + detailCount.ToString();
                             var budgetCheckOverrideFlag = (details.BudgetCheck == PurchaseOrdersAccountBudgetCheck.Override) ? true : false;
                             budgetOvrCheckTuple.Add(new Tuple<string, bool>(details.AccountingString, budgetCheckOverrideFlag));
@@ -608,7 +676,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             {
                                 Sequence = PosID,
                                 SubmittedBy = submittedById,
-                                Amount = details.Allocation.Allocated.Amount.Value.Value,
+                                Amount = budgetCheckAmount,
                                 TransactionDate = blanketPurchaseOrder.OrderedOn
                             });
                         }
@@ -632,14 +700,19 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     PoId = "NEW";
                 }
 
-                var availableFunds = await accountFundAvailableRepository.CheckAvailableFundsAsync(fundsAvailable, PoId, "", "", docSubmittedById);
+                var availableFunds = await accountFundAvailableRepository.CheckAvailableFundsAsync(fundsAvailable, "", "", PoId, docSubmittedById, "",  requisitionIds);
                 if (availableFunds != null)
                 {
                     foreach (var availableFund in availableFunds)
                     {
                         if (availableFund.AvailableStatus == FundsAvailableStatus.NotAvailable)
                         {
-                            throw new ArgumentException("The accounting string '" + availableFund.AccountString + "' does not have funds available");
+                            IntegrationApiExceptionAddError("The accounting string '" + availableFund.AccountString + "' does not have funds available.", "Validation.Exception", blanketPurchaseOrder.Id, blanketPurchaseOrder.OrderNumber);
+                            if (!string.IsNullOrEmpty(availableFund.OverrideMessage))
+                            {
+                                IntegrationApiExceptionAddError(availableFund.OverrideMessage, "Validation.Exception", blanketPurchaseOrder.Id, blanketPurchaseOrder.OrderNumber);
+                            }
+                            //throw new ArgumentException(string.Format("The accounting string '" + availableFund.AccountString + "' does not have funds available. {0}", availableFund.OverrideMessage));
                         }
                         //if we get a override and if the budgetcheck flag is not set to override then thrown an exception
                         if (availableFund.AvailableStatus == FundsAvailableStatus.Override)
@@ -647,7 +720,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             var budOverCheck = budgetOvrCheckTuple.FirstOrDefault(acct => acct.Item1 == availableFund.AccountString);
                             if (budOverCheck != null && budOverCheck.Item2 == false)
                             {
-                                throw new ArgumentException("The accounting string '" + availableFund.AccountString + "' does not have funds available. BudgetCheck flag not set to override.");
+                                IntegrationApiExceptionAddError("The accounting string '" + availableFund.AccountString + "' does not have funds available. BudgetCheck flag not set to override.", "Validation.Exception", blanketPurchaseOrder.Id, blanketPurchaseOrder.OrderNumber);
+                                if (!string.IsNullOrEmpty(availableFund.OverrideMessage))
+                                {
+                                    IntegrationApiExceptionAddError(availableFund.OverrideMessage, "Validation.Exception", blanketPurchaseOrder.Id, blanketPurchaseOrder.OrderNumber);
+                                }
+                                //throw new ArgumentException("The accounting string '" + availableFund.AccountString + "' does not have funds available. BudgetCheck flag not set to override.");
                             }
                             else
                             {
@@ -656,8 +734,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         }
                     }
                 }
-            }
-
+            }           
             return overrideAvailable;
         }
 
@@ -703,7 +780,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
 
             var guid = blanketPurchaseOrderGuid;
-            var blanketPurchaseOrderId = await blanketPurchaseOrderRepository.GetBlanketPurchaseOrdersIdFromGuidAsync(guid);
+            var blanketPurchaseOrderId = string.Empty;
+            try
+            {
+                blanketPurchaseOrderId = await blanketPurchaseOrderRepository.GetBlanketPurchaseOrdersIdFromGuidAsync(guid);
+            }
+            catch (Exception ex)
+            { }
             var date = DateTime.Now.Date;
             string currency = null;
 
@@ -716,7 +799,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             var blanketPurchaseOrderEntity = new Domain.ColleagueFinance.Entities.BlanketPurchaseOrder(
                    blanketPurchaseOrderId, guid ?? new Guid().ToString(), blanketPurchaseOrder.OrderNumber, "test name", poStatus, date, blanketPurchaseOrder.OrderedOn);
-            
+
             if (blanketPurchaseOrder.SubmittedBy != null)
             {
                 var submittedById = await personRepository.GetPersonIdFromGuidAsync(blanketPurchaseOrder.SubmittedBy.Id);
@@ -735,7 +818,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (blanketPurchaseOrder.TransactionDate != default(DateTime))
                 blanketPurchaseOrderEntity.MaintenanceDate = blanketPurchaseOrder.TransactionDate;
-            
+
             blanketPurchaseOrderEntity.ExpirationDate = blanketPurchaseOrder.ExpireDate;
 
             if (blanketPurchaseOrder.Buyer != null)
@@ -860,9 +943,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     string vendorId = string.Empty;
                     try
                     {
-                        vendorId = await blanketPurchaseOrderRepository.GetBlanketPurchaseOrdersIdFromGuidAsync(blanketPurchaseOrder.Vendor.ExistingVendor.Vendor.Id);
+                        vendorId = await vendorsRepository.GetVendorIdFromGuidAsync(blanketPurchaseOrder.Vendor.ExistingVendor.Vendor.Id);
                     }
-                    catch (ArgumentException)
+                    catch (Exception ex)
                     {
                         IntegrationApiExceptionAddError(string.Format("Vendor information is invalid for blanket purchase order '{0}'", blanketPurchaseOrder.OrderNumber),
                             "blanketPurchaseOrder.vendor.existingVendor.id", guid, blanketPurchaseOrderEntity.Id);
@@ -881,20 +964,37 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         string vendorAddressId = string.Empty;
                         try
                         {
-                            vendorAddressId = await blanketPurchaseOrderRepository.GetBlanketPurchaseOrdersIdFromGuidAsync(blanketPurchaseOrder.Vendor.ExistingVendor.AlternativeVendorAddress.Id);
+                            var alternativeVendorAddress = await referenceDataRepository.GetGuidLookupResultFromGuidAsync(blanketPurchaseOrder.Vendor.ExistingVendor.AlternativeVendorAddress.Id);
+                            if (alternativeVendorAddress == null)
+                            {
+                                IntegrationApiExceptionAddError
+                               (string.Format("Address record not found for ExistingVendor.AlternativeVendorAddress '{0}'.", blanketPurchaseOrder.Vendor.ExistingVendor.AlternativeVendorAddress.Id), "Validation.Exception",
+                                 blanketPurchaseOrder.Id, blanketPurchaseOrderId != "NEW" ? blanketPurchaseOrderId : null);
+                            }
+                            else if ((alternativeVendorAddress != null) && (!string.Equals(alternativeVendorAddress.Entity, "ADDRESS", StringComparison.OrdinalIgnoreCase)))
+                            {
+                                IntegrationApiExceptionAddError
+                                 (string.Format("ExistingVendor.AlternativeVendorAddress GUID '{0}' has different entity '{1} than expected, ADDRESS.",
+                                 blanketPurchaseOrder.Vendor.ExistingVendor.AlternativeVendorAddress.Id, alternativeVendorAddress.Entity), "Validation.Exception",
+                                  blanketPurchaseOrder.Id, blanketPurchaseOrderId != "NEW" ? blanketPurchaseOrderId : null);
+                            }
+                            else if ((alternativeVendorAddress != null) && (string.IsNullOrEmpty(alternativeVendorAddress.PrimaryKey)))
+                            {
+                                IntegrationApiExceptionAddError
+                                (string.Format("Key not found on Address record for ExistingVendor.AlternativeVendorAddress '{0}'", blanketPurchaseOrder.Vendor.ExistingVendor.AlternativeVendorAddress.Id), "Validation.Exception",
+                                  blanketPurchaseOrder.Id, blanketPurchaseOrderId != "NEW" ? blanketPurchaseOrderId : null);
+                            }
+                            else
+                            {
+                                blanketPurchaseOrderEntity.VendorAddressId = alternativeVendorAddress.PrimaryKey;
+                            }
                         }
-                        catch (ArgumentException)
+                        catch (Exception)
                         {
                             IntegrationApiExceptionAddError(string.Format("Vendor alternative address information is invalid for blanket purchase order '{0}'", blanketPurchaseOrder.OrderNumber),
                                 "blanketPurchaseOrder.vendor.existingVendor.alternativeVendorAddress.id", guid, blanketPurchaseOrderEntity.Id);
                         }
-                        if (!string.IsNullOrEmpty(vendorAddressId))
-                            blanketPurchaseOrderEntity.VendorAddressId = vendorAddressId;
-                        else
-                        {
-                            IntegrationApiExceptionAddError(string.Format("Vendor alternative address information is invalid for blanket purchase order '{0}'", blanketPurchaseOrder.OrderNumber),
-                                "blanketPurchaseOrder.vendor.existingVendor.alternativeVendorAddress.id", guid, blanketPurchaseOrderEntity.Id);
-                        }
+                        
                     }
                 }
 
@@ -1050,7 +1150,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             }
                         }
                     }
-                    
+
                     if (orderDetail.Comments != null && orderDetail.Comments.Any())
                     {
                         foreach (var comment in orderDetail.Comments)
@@ -1076,20 +1176,39 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             string reqId = string.Empty;
                             try
                             {
-                                reqId = await blanketPurchaseOrderRepository.GetBlanketPurchaseOrdersIdFromGuidAsync(referenceRequisition.Requisition.Id);
+                                var requisitionGuidLookup = await referenceDataRepository.GetGuidLookupResultFromGuidAsync(referenceRequisition.Requisition.Id);
+
+                                if (requisitionGuidLookup == null)
+                                {
+                                    IntegrationApiExceptionAddError
+                                   (string.Format("Requisition record not found for Reference.Document.Requisition.Id '{0}'", referenceRequisition.Requisition.Id), "Validation.Exception",
+                                     blanketPurchaseOrder.Id, blanketPurchaseOrderId != "NEW" ? blanketPurchaseOrderId : null);
+                                }
+                                else if ((requisitionGuidLookup != null) && (!string.Equals(requisitionGuidLookup.Entity, "REQUISITIONS", StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    IntegrationApiExceptionAddError
+                                     (string.Format("Reference.Document.Requisition.Id '{0}' has different entity '{1} than expected, REQUISITIONS.",
+                                     referenceRequisition.Requisition.Id, requisitionGuidLookup.Entity), "Validation.Exception",
+                                      blanketPurchaseOrder.Id, blanketPurchaseOrderId != "NEW" ? blanketPurchaseOrderId : null);
+                                }
+                                else if ((requisitionGuidLookup != null) && (string.IsNullOrEmpty(requisitionGuidLookup.PrimaryKey)))
+                                {
+                                    IntegrationApiExceptionAddError
+                                    (string.Format("ID not found on Requisition record for Reference.Document.Requisition.Id '{0}'", referenceRequisition.Requisition.Id), "Validation.Exception",
+                                      blanketPurchaseOrder.Id, blanketPurchaseOrderId != "NEW" ? blanketPurchaseOrderId : null);
+                                }
+                                else
+                                {
+                                    blanketPurchaseOrderEntity.AddRequisition(requisitionGuidLookup.PrimaryKey);
+                                }
+
                             }
-                            catch (ArgumentException)
+                            catch (Exception)
                             {
                                 IntegrationApiExceptionAddError(string.Format("Reference requisition is invalid for blanket purchase order '{0}'", blanketPurchaseOrder.OrderNumber),
                                     "blanketPurchaseOrder.orderDetails.referenceRequisitions.requisition.id", guid, blanketPurchaseOrderEntity.Id);
                             }
-                            if (!string.IsNullOrEmpty(reqId))
-                                blanketPurchaseOrderEntity.AddRequisition(reqId);
-                            else
-                            {
-                                IntegrationApiExceptionAddError(string.Format("Reference requisition is invalid for blanket purchase order '{0}'", blanketPurchaseOrder.OrderNumber),
-                                    "blanketPurchaseOrder.orderDetails.referenceRequisitions.requisition.id", guid, blanketPurchaseOrderEntity.Id);
-                            }
+                            
                         }
                     }
 
@@ -1179,7 +1298,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 catch
                 {
                     IntegrationApiExceptionAddError(
-                        string.Concat("Missing Submitted By information for blanket purchase order: '",source.Number, "'"),
+                        string.Concat("Missing Submitted By information for blanket purchase order: '", source.Number, "'"),
                         "blanketPurchaseOrder.submittedBy", source.Guid, source.Id);
                 }
             }
@@ -1319,7 +1438,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     if (string.IsNullOrEmpty(vendorGuid))
                     {
                         IntegrationApiExceptionAddError(
-                            string.Concat("Missing Missing vendor GUID for blanket purchase order: '", source.Number, "'"),
+                            string.Concat("Missing vendor GUID for blanket purchase order: '", source.Number, "'"),
                             "blanketPurchaseOrder.vendor.existingVendor.vendor.id", source.Guid, source.Id);
                     }
 
@@ -1955,38 +2074,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
         }
 
-        /// <summary>
-        /// Permission code that allows a READ operation on a blanket purchase order.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckViewBlanketPurchaseOrdersPermission()
-        {
-            var hasPermission = HasPermission(ColleagueFinancePermissionCodes.ViewBlanketPurchaseOrders) || HasPermission(ColleagueFinancePermissionCodes.UpdateBlanketPurchaseOrders);
-
-            if (!hasPermission)
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view blanket-purchase-orders.");
-                IntegrationApiExceptionAddError("User '" + CurrentUser.UserId + "' does not have permission to view blanket purchase orders.", "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
-                throw IntegrationApiException;
-            }
-        }
-
-        /// <summary>
-        /// Permission code that allows a UPDATE/CREATE operation on a blanket purchase order.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckUpdateBlanketPurchaseOrderPermission()
-        {
-            var hasPermission = HasPermission(ColleagueFinancePermissionCodes.UpdateBlanketPurchaseOrders);
-
-            if (!hasPermission)
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to update blanket-purchase-orders.");
-                IntegrationApiExceptionAddError("User '" + CurrentUser.UserId + "' does not have permission to create or update blanket purchase orders.", "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
-                throw IntegrationApiException;
-            }
-        }
-
+     
         /// <summary>
         /// Permission code that allows bypass of approvals on a purchase order.
         /// </summary>

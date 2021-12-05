@@ -1,6 +1,7 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
+using Ellucian.Colleague.Data.Student.Repositories;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Planning.Entities;
@@ -233,6 +234,30 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
                                 catch (Exception ex)
                                 {
                                     logger.Error("Error occurred while trying to build advisor email: " + ex.Message);
+                                }
+                            }
+                        }
+
+                        string advisorAddressHierarchy = await GetAdvisorNameHierarchy();
+                        if (!string.IsNullOrEmpty(advisorAddressHierarchy))
+                        {
+                            // Calculate the person display name
+                            NameAddressHierarchy hierarchy = null;
+                            try
+                            {
+                                hierarchy = await GetCachedNameAddressHierarchyAsync(advisorAddressHierarchy);
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.Error(ex, "Unable to find name address hierarchy with ID " + advisorAddressHierarchy + ". Not calculating hierarchy name.");
+
+                            }
+                            if (hierarchy != null)
+                            {
+                                var personBaseEntity = await GetPersonBaseAsync(personRecord.Recordkey, true);
+                                if (personBaseEntity != null)
+                                {
+                                    advisor.PersonDisplayName = PersonNameService.GetHierarchyName(personBaseEntity, hierarchy);
                                 }
                             }
                         }
@@ -527,5 +552,31 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
             return advisorIds;
         }
 
+        /// <summary>
+        /// Get the Advisor Name Hierarchy
+        /// </summary>
+        /// <returns>The Name hierarchy value</returns>
+        private async Task<string> GetAdvisorNameHierarchy()
+        {
+            string result = string.Empty;
+            string configuration = await GetOrAddToCacheAsync<string>("AdvisorNameHierarchy",
+           async () =>
+           {
+               StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
+
+               if (stwebDefaults == null)
+               {
+                   var errorMessage = "Unable to access Advisor web defaults from ST.PARMS. STWEB.DEFAULTS.";
+                   logger.Info(errorMessage);
+                   stwebDefaults = new StwebDefaults();
+               }
+               else
+               {
+                   result = !string.IsNullOrEmpty(stwebDefaults.StwebFacAdvDispNameHier) ? stwebDefaults.StwebFacAdvDispNameHier : string.Empty;
+               }
+               return result;
+           });
+            return configuration;
+        }
     }
 }

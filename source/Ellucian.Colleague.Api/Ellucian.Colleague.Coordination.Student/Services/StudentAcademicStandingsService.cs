@@ -106,21 +106,31 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>List of <see cref="Dtos.StudentAcademicStandings">StudentAcademicStandings</see></returns>
         public async Task<Tuple<IEnumerable<Dtos.StudentAcademicStandings>, int>> GetStudentAcademicStandingsAsync(int offset, int limit, bool bypassCache = false)
         {
-            CheckViewStudentAcadStandingsPermission();
-
             var studentAcademicStandingsCollection = new List<Ellucian.Colleague.Dtos.StudentAcademicStandings>();
-
+            int totalRecords = 0;
             var studentAcademicStandingsEntities = await _studentStandingRepository.GetStudentStandingsAsync(offset, limit);
-            var totalRecords = studentAcademicStandingsEntities.Item2;
 
-            foreach (var studentAcademicStandingEntity in studentAcademicStandingsEntities.Item1)
+            if (studentAcademicStandingsEntities != null && studentAcademicStandingsEntities.Item1 != null && studentAcademicStandingsEntities.Item1.Any())
             {
-                if (studentAcademicStandingEntity.Guid != null)
+                totalRecords = studentAcademicStandingsEntities.Item2;
+                var personIds = studentAcademicStandingsEntities.Item1.Select(sas => sas.StudentId);
+                var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(personIds);
+
+                foreach (var studentAcademicStandingEntity in studentAcademicStandingsEntities.Item1)
                 {
-                    var studentAcademicStandingDto = await this.ConvertStudentAcademicStandingsEntityToDtoAsync(studentAcademicStandingEntity, bypassCache);
-                    studentAcademicStandingsCollection.Add(studentAcademicStandingDto);
+                    if (studentAcademicStandingEntity.Guid != null)
+                    {
+                        var studentAcademicStandingDto = await this.ConvertStudentAcademicStandingsEntityToDtoAsync(studentAcademicStandingEntity, personGuidCollection, bypassCache);
+                        studentAcademicStandingsCollection.Add(studentAcademicStandingDto);
+                    }
                 }
             }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+
             return new Tuple<IEnumerable<Dtos.StudentAcademicStandings>, int>(studentAcademicStandingsCollection, totalRecords);
         }
 
@@ -136,32 +146,47 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new ArgumentNullException("guid", "A GUID is required to obtain an Student Academic Standing.");
             }
-            CheckViewStudentAcadStandingsPermission();
 
+            StudentAcademicStandings studentAcademicStandingDto = new StudentAcademicStandings();
             try
             {
-                return await ConvertStudentAcademicStandingsEntityToDtoAsync(await _studentStandingRepository.GetStudentStandingByGuidAsync(guid));
+                var studentAcademicStandingEntity = await _studentStandingRepository.GetStudentStandingByGuidAsync(guid);
+                var personIds = new List<string>() { studentAcademicStandingEntity.StudentId };
+                var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(personIds);
+
+                studentAcademicStandingDto = await ConvertStudentAcademicStandingsEntityToDtoAsync(studentAcademicStandingEntity, personGuidCollection);
             }
-            catch (KeyNotFoundException ex)
+            catch (KeyNotFoundException)
             {
-                throw new KeyNotFoundException("No Student Academic Standings was found for guid  " + guid, ex);
+                IntegrationApiExceptionAddError("No Student Academic Standings was found for guid " + guid, "GUID.Not.Found", guid, "", System.Net.HttpStatusCode.NotFound);
+                //throw new KeyNotFoundException("No Student Academic Standings was found for guid  " + guid, ex);
             }
-            catch (InvalidOperationException ex)
+            catch (InvalidOperationException)
             {
-                throw new InvalidOperationException("No Student Academic Standings was found for guid  " + guid, ex);
+                IntegrationApiExceptionAddError("No Student Academic Standings was found for guid " + guid, "GUID.Not.Found", guid, "", System.Net.HttpStatusCode.NotFound);
+                //throw new InvalidOperationException("No Student Academic Standings was found for guid  " + guid, ex);
             }
             catch (RepositoryException ex)
             {
-                throw new RepositoryException("No Student Academic Standings was found for guid  " + guid, ex);
+                IntegrationApiExceptionAddError(ex);
+                //throw new RepositoryException("No Student Academic Standings was found for guid " + guid, ex);
             }
             catch (ArgumentException ex)
             {
                 throw new ArgumentException(ex.Message, ex);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                throw new Exception("No Student Academic Standings was found for guid  " + guid, ex);
+                IntegrationApiExceptionAddError("No Student Academic Standings was found for guid " + guid, "GUID.Not.Found", guid, "", System.Net.HttpStatusCode.NotFound);
+                //throw new Exception("No Student Academic Standings was found for guid  " + guid, ex);
             }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+
+            return studentAcademicStandingDto;
         }
 
         /// <summary>
@@ -169,7 +194,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="source">StudentAcademicStandings domain entity</param>
         /// <returns>StudentAcademicStandings DTO</returns>
-        private async Task<Ellucian.Colleague.Dtos.StudentAcademicStandings> ConvertStudentAcademicStandingsEntityToDtoAsync(StudentStanding source, bool bypassCache = false)
+        private async Task<Ellucian.Colleague.Dtos.StudentAcademicStandings> ConvertStudentAcademicStandingsEntityToDtoAsync(StudentStanding source, Dictionary<string, string> personGuidCollection, bool bypassCache = false)
         {
             var studentAcademicStandings = new Ellucian.Colleague.Dtos.StudentAcademicStandings();
 
@@ -180,9 +205,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (terms != null)
                 {
                     var term = terms.FirstOrDefault(t => t.Code == source.Term);
-                    if (term != null)
+                    if (term != null && !string.IsNullOrEmpty(term.RecordGuid))
                     {
                         studentAcademicStandings.AcademicPeriod = new GuidObject2(term.RecordGuid);
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the AcademicPeriod '{0}'", source.Term), "Bad.Data", source.Guid, source.Id);
                     }
                 }
             }
@@ -193,9 +222,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (academicLevels != null)
                 {
                     var academicLevel = academicLevels.FirstOrDefault(al => al.Code == source.Level);
-                    if (academicLevel != null)
+                    if (academicLevel != null && !string.IsNullOrEmpty(academicLevel.Guid))
                     {
                         studentAcademicStandings.Level = new GuidObject2(academicLevel.Guid);
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the AcademicLevel '{0}'", source.Level), "Bad.Data", source.Guid, source.Id);
                     }
                 }
             }
@@ -211,9 +244,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (academicPrograms != null)
                 {
                     var academicStanding = academicPrograms.FirstOrDefault(ap => ap.Code == source.Program);
-                    if (academicStanding != null)
+                    if (academicStanding != null && !string.IsNullOrEmpty(academicStanding.Guid))
                     {
                         studentAcademicStandings.Program = new GuidObject2(academicStanding.Guid);
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the AcademicProgram '{0}'", source.Program), "Bad.Data", source.Guid, source.Id);
                     }
                 }
             }
@@ -225,9 +262,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (academicStandings != null)
                 {
                     var academicStanding = academicStandings.FirstOrDefault(ast => ast.Code == overrideStanding);
-                    if (academicStanding != null)
+                    if (academicStanding != null && !string.IsNullOrEmpty(academicStanding.Guid))
                     {
                          studentAcademicStandings.OverrideStanding = new GuidObject2(academicStanding.Guid);
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the AcademicStanding '{0}'", overrideStanding), "Bad.Data", source.Guid, source.Id);
                     }
                 }
             }
@@ -239,19 +280,34 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (academicStandings != null)
                 {
                     var academicStanding = academicStandings.FirstOrDefault(ast => ast.Code == standing);
-                    if (academicStanding != null)
+                    if (academicStanding != null && !string.IsNullOrEmpty(academicStanding.Guid))
                     {
                         studentAcademicStandings.Standing = new GuidObject2(academicStanding.Guid);
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the AcademicStanding '{0}'", standing), "Bad.Data", source.Guid, source.Id);
                     }
                 }
             }
 
             if (!string.IsNullOrEmpty(source.StudentId))
             {
-                var personGuid = await _personRepository.GetPersonGuidFromIdAsync(source.StudentId);
-                if (!string.IsNullOrEmpty(personGuid))
+                try
                 {
-                    studentAcademicStandings.Student = new GuidObject2(personGuid);
+                    var personGuid = string.Empty;
+                    if (personGuidCollection.TryGetValue(source.StudentId, out personGuid))
+                    {
+                        studentAcademicStandings.Student = new GuidObject2(personGuid);
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the person '{0}'", source.StudentId), "Bad.Data", source.Guid, source.Id);
+                    }
+                }
+                catch (Exception)
+                {
+                    IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the person '{0}'", source.StudentId), "Bad.Data", source.Guid, source.Id);
                 }
             }
             studentAcademicStandings.Type = ConvertStudentStandingsTypeDomainEnumToStudentAcademicStandingsTypeDtoEnum(source.Type);
@@ -278,21 +334,5 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     return Dtos.EnumProperties.StudentAcademicStandingsType.Level;
             }
         }
-
-        /// <summary>
-        /// Permissions code that allows an external system to do a READ operation. 
-        /// This API will integrate information related to students that could be deemed personal.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckViewStudentAcadStandingsPermission()
-        {
-            var hasPermission = HasPermission(StudentPermissionCodes.ViewStudentAcadStandings);
-
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view Student Academic Standings.");
-            }
-        }
-
     }
 }

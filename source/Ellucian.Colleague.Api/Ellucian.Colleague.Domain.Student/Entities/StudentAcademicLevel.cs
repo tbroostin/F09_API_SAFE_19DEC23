@@ -42,6 +42,15 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// </summary>
         public List<StudentAcademicLevelCohort> StudentAcademicLevelCohorts { get; set; }
 
+        /// <summary>
+        /// Student's academic level start date
+        /// </summary>
+        public DateTime? StudentAcademicLevelStartDate { get; private set; }
+        /// <summary>
+        /// Student's academic level end date
+        /// </summary>
+        public DateTime? StudentAcademicLevelEndDate { get; private set; }
+
 
         public StudentAcademicLevel(string academicLevel, string admitStatus, string classLevel, string startTerm, IEnumerable<string> academicCredits, bool isActive)
         {
@@ -55,6 +64,17 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             this.StartTerm = !String.IsNullOrWhiteSpace(startTerm) ? startTerm : null;
             this.AcademicCredits = academicCredits != null ? academicCredits.ToList() : new List<String>();
             this.IsActive = isActive;
+        }
+
+        public StudentAcademicLevel(string academicLevel, string admitStatus, string classLevel, string startTerm, IEnumerable<string> academicCredits, bool isActive,
+            DateTime? studentAcadLevelStartDate, DateTime? studentAcadLevelEndDate):this(academicLevel, admitStatus,  classLevel,  startTerm,  academicCredits,  isActive)
+        {
+            if (string.IsNullOrEmpty(academicLevel))
+            {
+                throw new ArgumentNullException("academicLevel", "A Student Academic Level must have an academic level.");
+            }
+             this.StudentAcademicLevelStartDate = studentAcadLevelStartDate;
+            this.StudentAcademicLevelEndDate = studentAcadLevelEndDate;
         }
     }
 }

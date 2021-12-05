@@ -179,6 +179,11 @@ namespace Ellucian.Colleague.Domain.Finance.Entities.Configuration
         public string EcommerceProviderLink { get; set; }
 
         /// <summary>
+        /// Flag that controls whether to display due dates on Make A Payment
+        /// </summary>
+        public bool DisplayDueDates { get; set; }
+
+        /// <summary>
         /// Add a <see cref="PayableReceivableType"/> to the <see cref="FinanceConfiguration"/> object.
         /// </summary>
         /// <param name="prt">The <see cref="PayableReceivableType"/> to be added.</param>

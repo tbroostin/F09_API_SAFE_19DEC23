@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using AutoMapper;
 using Ellucian.Colleague.Api.Controllers;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -740,6 +740,147 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 var sections = await facultyController.GetFacultySections4Async(facultyId, getDate, getDate, false);
             }
         }
+
+        [TestClass]
+        public class FacultyController_GetFacultySections5Async : FacultyControllerTestSetup
+        {
+            string facultyId;
+            private Faculty facultyDto;
+
+            [TestInitialize]
+            public async void Initialize()
+            {
+                await InitializeFacultyController();
+
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                facultyId = "0000036";
+                var facultyEntity = allFaculty.Where(f => f.Id == facultyId).First();
+
+                facultyController = new FacultyController(facultyService, facultyRestrictionService, loggerMock.Object) { Request = new HttpRequestMessage() };
+                facultyController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+                facultyController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                Mapper.CreateMap<Ellucian.Colleague.Domain.Student.Entities.Faculty, Faculty>();
+                Mapper.CreateMap<Ellucian.Colleague.Domain.Student.Entities.Corequisite, Corequisite>();
+                facultyDto = Mapper.Map<Ellucian.Colleague.Domain.Student.Entities.Faculty, Faculty>(facultyEntity);
+                facultyServiceMock.Setup(x => x.GetAsync(It.IsAny<string>())).Returns(Task.FromResult(facultyDto));
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                facultyController = null;
+                facultyService = null;
+            }
+
+            [TestMethod]
+            public async Task FacultyController_GetFacultySections5Async_null_ID_returns_empty_list()
+            {
+                // Arrange
+                DateTime? getDate = DateTime.Now;
+                PrivacyWrapper<IEnumerable<Section4>> privacyWrapper = new Coordination.Base.PrivacyWrapper<IEnumerable<Section4>>(new List<Section4>()
+                    {
+                        new Section4() {Id = "1", CourseId = "12" },
+                        new Section4() {Id = "2", CourseId = "22" }
+                    }, false);
+                facultyServiceMock.Setup(svc => svc.GetFacultySections5Async(facultyId, getDate, getDate, false, It.IsAny<bool>())).ReturnsAsync(privacyWrapper);
+
+                // Set up an Http Context
+                HttpResponse response = new HttpResponse(new StringWriter());
+                HttpContext.Current = new HttpContext(new HttpRequest("", "http://doesntMatter.com", ""), response);
+
+                // Act
+                var sections = await facultyController.GetFacultySections5Async(null, getDate, getDate, false);
+                // Assert
+                CollectionAssert.AreEqual(new List<Section3>(), sections.ToList());
+            }
+
+            [TestMethod]
+            public async Task FacultyController_GetFacultySections5Async_Valid_Privacy_Restricted_Cache()
+            {
+                // Arrange
+                DateTime? getDate = DateTime.Now;
+                PrivacyWrapper<IEnumerable<Section4>> privacyWrapper = new Coordination.Base.PrivacyWrapper<IEnumerable<Section4>>(new List<Section4>()
+                    {
+                        new Section4() {Id = "1", CourseId = "12" },
+                        new Section4() {Id = "2", CourseId = "22" }
+                    }, true);
+                facultyServiceMock.Setup(svc => svc.GetFacultySections5Async(facultyId, getDate, getDate, false, true)).ReturnsAsync(privacyWrapper);
+
+                // Set up an Http Context
+                HttpResponse response = new HttpResponse(new StringWriter());
+                HttpContext.Current = new HttpContext(new HttpRequest("", "http://doesntMatter.com", ""), response);
+                facultyController.Request.Headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = false,
+                    Public = true
+                };
+
+                // Act
+                var sections = await facultyController.GetFacultySections5Async(facultyId, getDate, getDate, false);
+                // Assert
+                Assert.IsTrue(sections is IEnumerable<Section4>);
+                Assert.AreEqual(2, sections.Count());
+            }
+
+            [TestMethod]
+            public async Task FacultyController_GetFacultySections5Async_Valid_not_Privacy_Restricted_no_Cache()
+            {
+                // Arrange
+                DateTime? getDate = DateTime.Now;
+                PrivacyWrapper<IEnumerable<Section4>> privacyWrapper = new Coordination.Base.PrivacyWrapper<IEnumerable<Section4>>(new List<Section4>()
+                    {
+                        new Section4() {Id = "1", CourseId = "12" },
+                        new Section4() {Id = "2", CourseId = "22" }
+                    }, false);
+                facultyServiceMock.Setup(svc => svc.GetFacultySections5Async(facultyId, getDate, getDate, false, false)).ReturnsAsync(privacyWrapper);
+
+                // Set up an Http Context
+                HttpResponse response = new HttpResponse(new StringWriter());
+                HttpContext.Current = new HttpContext(new HttpRequest("", "http://doesntMatter.com", ""), response);
+                facultyController.Request.Headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = true,
+                    Public = true
+                };
+
+                // Act
+                var sections = await facultyController.GetFacultySections5Async(facultyId, getDate, getDate, false);
+                // Assert
+                Assert.IsTrue(sections is IEnumerable<Section4>);
+                Assert.AreEqual(2, sections.Count());
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task FacultyController_GetFacultySections5Async_handles_exceptions()
+            {
+                // Arrange
+                DateTime? getDate = DateTime.Now;
+                PrivacyWrapper<IEnumerable<Section4>> privacyWrapper = new Coordination.Base.PrivacyWrapper<IEnumerable<Section4>>(new List<Section4>()
+                    {
+                        new Section4() {Id = "1", CourseId = "12" },
+                        new Section4() {Id = "2", CourseId = "22" }
+                    }, false);
+                facultyServiceMock.Setup(svc => svc.GetFacultySections5Async(facultyId, getDate, getDate, false, It.IsAny<bool>())).ThrowsAsync(new ApplicationException("An error occurred."));
+
+                // Set up an Http Context
+                HttpResponse response = new HttpResponse(new StringWriter());
+                HttpContext.Current = new HttpContext(new HttpRequest("", "http://doesntMatter.com", ""), response);
+                facultyController.Request.Headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = true,
+                    Public = true
+                };
+
+
+                // Act
+                var sections = await facultyController.GetFacultySections5Async(facultyId, getDate, getDate, false);
+            }
+        }
+
 
         [TestClass]
         public class FacultyController_QueryFacultyByPost: FacultyControllerTestSetup

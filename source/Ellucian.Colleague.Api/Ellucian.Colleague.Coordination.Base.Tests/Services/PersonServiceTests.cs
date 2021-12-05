@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -706,7 +706,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             public async Task GetPersonIdFromGuidNullException()
             {
                 person = null;
-                personRepoMock.Setup(repo => repo.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                personRepoMock.Setup(repo => repo.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 var personDto = await personService.GetPerson2ByGuidNonCachedAsync(personGuid);
             }
 
@@ -716,7 +716,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             public async Task GetPersonIntegrationByGuidNullException()
             {
                 person = null;
-                personRepoMock.Setup(repo => repo.GetPersonIntegrationByGuidNonCachedAsync(personGuid)).ReturnsAsync(null);
+                personRepoMock.Setup(repo => repo.GetPersonIntegrationByGuidNonCachedAsync(personGuid)).ReturnsAsync(() => null);
                 var personDto = await personService.GetPerson2ByGuidNonCachedAsync(personGuid);
             }
 
@@ -980,7 +980,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 refRepoMock.Setup(x => x.GetInterestsAsync(It.IsAny<bool>())).ReturnsAsync(allInterests);
                 var personDto = await personService.GetPerson2ByGuidNonCachedAsync(personGuid);
 
-                Assert.AreEqual(0, personDto.Interests.Count());
+                Assert.AreEqual(null, personDto.Interests);
             }
 
         }
@@ -1463,15 +1463,15 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 await personService.GetPerson2ByGuidAsync(personGuid, false);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task GetPerson2ByGuid_PermissionsException()
-            {
-                // Mock permissions
-                personRole.RemovePermission(permissionViewAnyPerson);
-                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { personRole });
-                var personDto = await personService.GetPerson2ByGuidAsync(personGuid, false);
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(PermissionsException))]
+            //public async Task GetPerson2ByGuid_PermissionsException()
+            //{
+            //    // Mock permissions
+            //    personRole.RemovePermission(permissionViewAnyPerson);
+            //    roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { personRole });
+            //    var personDto = await personService.GetPerson2ByGuidAsync(personGuid, false);
+            //}
 
             [TestMethod]
             public async Task GetPerson2ByGuid_PrimaryNameNulls()
@@ -1695,7 +1695,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 refRepoMock.Setup(x => x.GetInterestsAsync(It.IsAny<bool>())).ReturnsAsync(allInterests);
                 var personDto = await personService.GetPerson2ByGuidAsync(personGuid, false);
 
-                Assert.AreEqual(0, personDto.Interests.Count());
+                Assert.AreEqual(null, personDto.Interests);
             }
 
         }
@@ -2191,15 +2191,15 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 await personService.GetPerson3ByGuidAsync(personGuid, false);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task GetPerson3ByGuid_PermissionsException()
-            {
-                // Mock permissions
-                personRole.RemovePermission(permissionViewAnyPerson);
-                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { personRole });
-                var personDto = await personService.GetPerson3ByGuidAsync(personGuid, false);
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(PermissionsException))]
+            //public async Task GetPerson3ByGuid_PermissionsException()
+            //{
+            //    // Mock permissions
+            //    personRole.RemovePermission(permissionViewAnyPerson);
+            //    roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { personRole });
+            //    var personDto = await personService.GetPerson3ByGuidAsync(personGuid, false);
+            //}
 
             [TestMethod]
             public async Task GetPerson3ByGuid_PrimaryNameNulls()
@@ -2426,7 +2426,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 refRepoMock.Setup(x => x.GetInterestsAsync(It.IsAny<bool>())).ReturnsAsync(allInterests);
                 var personDto = await personService.GetPerson3ByGuidAsync(personGuid, false);
 
-                Assert.AreEqual(0, personDto.Interests.Count());
+                Assert.AreEqual(null, personDto.Interests);
             }
 
             [TestMethod]
@@ -2529,15 +2529,15 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Assert.AreEqual(person.PersonAltIds.ElementAt(0).ToString(), personElevateCredential.Value);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task GetPersonPermissions2Exception()
-            {
-                // Mock permissions
-                personRole.RemovePermission(permissionViewAnyPerson);
-                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { personRole });
-                var personDto = await personService.GetPersonCredential2ByGuidAsync(personGuid);
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(PermissionsException))]
+            //public async Task GetPersonPermissions2Exception()
+            //{
+            //    // Mock permissions
+            //    personRole.RemovePermission(permissionViewAnyPerson);
+            //    roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { personRole });
+            //    var personDto = await personService.GetPersonCredential2ByGuidAsync(personGuid);
+            //}
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
@@ -2669,15 +2669,15 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Assert.AreEqual(person.PersonAltIds.ElementAt(0).ToString(), personElevateCredential.Value);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task GetPersonPermissions3Exception()
-            {
-                // Mock permissions
-                personRole.RemovePermission(permissionViewAnyPerson);
-                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { personRole });
-                var personDto = await personService.GetPersonCredential3ByGuidAsync(personGuid);
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(PermissionsException))]
+            //public async Task GetPersonPermissions3Exception()
+            //{
+            //    // Mock permissions
+            //    personRole.RemovePermission(permissionViewAnyPerson);
+            //    roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { personRole });
+            //    var personDto = await personService.GetPersonCredential3ByGuidAsync(personGuid);
+            //}
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
@@ -2853,7 +2853,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             public async Task GetAllPersonCredentials2_NoData()
             {
                 // Act--get person
-                personRepoMock.Setup(repo => repo.GetPersonGuidsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(null);
+                personRepoMock.Setup(repo => repo.GetPersonGuidsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 var actuals = await personService.GetAllPersonCredentials2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
                 // Assert
                 Assert.IsNotNull(actuals);
@@ -3031,9 +3031,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             public async Task GetAllPersonCredentials3_NoData()
             {
                 // Act--get person
-                //personRepoMock.Setup(repo => repo.GetPersonGuidsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(null);
+                //personRepoMock.Setup(repo => repo.GetPersonGuidsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 personRepoMock.Setup(repo => repo.GetFilteredPerson2GuidsAsync(It.IsAny<int>(), It.IsAny<int>(),
-                    It.IsAny<bool>(), null, null)).ReturnsAsync(null);
+                    It.IsAny<bool>(), null, null)).ReturnsAsync(() => null);
                 var personCredentials = new PersonCredential2();
                 var actuals = await personService.GetAllPersonCredentials3Async(It.IsAny<int>(), It.IsAny<int>(),
                     personCredentials, It.IsAny<bool>());
@@ -3301,7 +3301,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 HttpStatusCode statusCode = HttpStatusCode.NotFound;
 
-                personRepoMock.Setup( repo => repo.GetPersonCredentialByGuidNonCachedAsync( personGuid ) ).ReturnsAsync( null );
+                personRepoMock.Setup( repo => repo.GetPersonCredentialByGuidNonCachedAsync( personGuid ) ).ReturnsAsync(() => null);
                 try
                 {
                     var actuals = await personService.GetPersonCredential4ByGuidAsync( personGuid );
@@ -3523,7 +3523,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task GetProfile_UserNotSelf_PermissionValid2()
             {
-                proxyRepoMock.Setup(r => r.GetUserProxyPermissionsAsync(personId)).ReturnsAsync(new List<ProxyUser>()
+                proxyRepoMock.Setup(r => r.GetUserProxyPermissionsAsync(personId, false)).ReturnsAsync(new List<ProxyUser>()
                 {
                     new ProxyUser("0000009")
                 });
@@ -3549,7 +3549,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                         "0000009",
                         personId
                     });
-                proxyRepoMock.Setup(r => r.GetUserProxyPermissionsAsync(personId)).ReturnsAsync(new List<ProxyUser>()
+                proxyRepoMock.Setup(r => r.GetUserProxyPermissionsAsync(personId, false)).ReturnsAsync(new List<ProxyUser>()
                 {
                     new ProxyUser("0000009")
                 });
@@ -3642,7 +3642,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 profile.EmailAddressConfirmationDateTime = new DateTimeOffset(2002, 3, 4, 18, 19, 20, TimeSpan.FromHours(-3));
                 profile.PhoneConfirmationDateTime = new DateTimeOffset(2003, 5, 6, 21, 22, 23, TimeSpan.FromHours(-3));
                 profileRepoMock.Setup(repo => repo.GetProfileAsync(personId, It.IsAny<bool>())).ReturnsAsync(profile);
-                configEntity = new Domain.Base.Entities.ProxyConfiguration(true, "DISCLOSURE.ID", "EMAIL.ID", true, true) { DisclosureReleaseText = "Line 1" };
+                configEntity = new Domain.Base.Entities.ProxyConfiguration(true, "DISCLOSURE.ID", "EMAIL.ID", true, true, new List<ProxyAndUserPermissionsMap>()) { DisclosureReleaseText = "Line 1" };
 
 
                 // Mock PersonProxyDetails response from the person repo
@@ -3681,7 +3681,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task GetPersonProxyDetails_ExpectedEmail()
             {
-                proxyRepoMock.Setup(r => r.GetProxyConfigurationAsync()).ReturnsAsync(new ProxyConfiguration(true, "DISCLOSURE.ID", "EMAIL.ID", true, true)
+                proxyRepoMock.Setup(r => r.GetProxyConfigurationAsync()).ReturnsAsync(new ProxyConfiguration(true, "DISCLOSURE.ID", "EMAIL.ID", true, true, new List<ProxyAndUserPermissionsMap>())
                 {
                     ProxyEmailAddressHierarchy = "JPM2"
                 });
@@ -3698,7 +3698,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task GetPersonProxyDetails_NullPersonID()
             {
-                proxyRepoMock.Setup(r => r.GetProxyConfigurationAsync()).ReturnsAsync(new ProxyConfiguration(true, "DISCLOSURE.ID", "EMAIL.ID", true, true)
+                proxyRepoMock.Setup(r => r.GetProxyConfigurationAsync()).ReturnsAsync(new ProxyConfiguration(true, "DISCLOSURE.ID", "EMAIL.ID", true, true, new List<ProxyAndUserPermissionsMap>())
                 {
                     ProxyEmailAddressHierarchy = "JPM2"
                 });
@@ -3715,7 +3715,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task GetPersonProxyDetails_NullHierarchy()
             {
-                proxyRepoMock.Setup(r => r.GetProxyConfigurationAsync()).ReturnsAsync(new ProxyConfiguration(true, "DISCLOSURE.ID", "EMAIL.ID", true, true)
+                proxyRepoMock.Setup(r => r.GetProxyConfigurationAsync()).ReturnsAsync(new ProxyConfiguration(true, "DISCLOSURE.ID", "EMAIL.ID", true, true, new List<ProxyAndUserPermissionsMap>())
                 {
                     ProxyEmailAddressHierarchy = null
                 });
@@ -6228,23 +6228,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Assert.AreEqual(historyexpectedName.FullName, historyActualName.FullName);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(IntegrationApiException))]
-            public async Task CreatePerson5_PermissionException()
-            {
-                try
-                {
-                    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { });
-                    await personService.CreatePerson5Async(personDto);
-                }
-                catch (IntegrationApiException ex)
-                {
-                    Assert.IsNotNull(ex.Errors);
-                    Assert.AreEqual("Access.Denied", ex.Errors.First().Code);
-                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, ex.Errors.First().StatusCode);
-                    throw;
-                }
-            }
+       
 
             #region Birth Date
 
@@ -12311,24 +12295,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             #region Exceptions
-            
-            [TestMethod]
-            [ExpectedException(typeof(IntegrationApiException))]
-            public async Task UpdatePerson5_PermissionException()
-            {
-                try
-                {
-                    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { });
-                    await personService.CreatePerson5Async(personDto);
-                }
-                catch (IntegrationApiException ex)
-                {
-                    Assert.IsNotNull(ex.Errors);
-                    Assert.AreEqual("Access.Denied", ex.Errors.First().Code);
-                    Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, ex.Errors.First().StatusCode);
-                    throw;
-                }
-            }
 
             [TestMethod]
             [ExpectedException(typeof(IntegrationApiException))]
@@ -15405,23 +15371,23 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task GetPerson4ByGuid_PersonNotFound()
             {
-                personRepoMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                personRepoMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 await personService.GetPerson4ByGuidAsync(guid, true);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task GetPerson4ByGuid_PermissionException()
-            {
-                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { });
-                await personService.GetPerson4ByGuidAsync(guid, true);
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(PermissionsException))]
+            //public async Task GetPerson4ByGuid_PermissionException()
+            //{
+            //    roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { });
+            //    await personService.GetPerson4ByGuidAsync(guid, true);
+            //}
 
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task GetPerson4ByGuid_KeyNotFoundException_PersonNotFound()
             {
-                personRepoMock.Setup(p => p.GetPersonIntegration2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                personRepoMock.Setup(p => p.GetPersonIntegration2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 await personService.GetPerson4ByGuidAsync(guid, true);
             }
 
@@ -15460,13 +15426,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Assert.IsTrue(result is Dtos.Person4);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task GetPerson4NonCached_PermissionException()
-            {
-                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { });
-                await personService.GetPerson4NonCachedAsync(0, 10, true, null, "");
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(PermissionsException))]
+            //public async Task GetPerson4NonCached_PermissionException()
+            //{
+            //    roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { });
+            //    await personService.GetPerson4NonCachedAsync(0, 10, true, null, "");
+            //}
 
             [TestMethod]
             [ExpectedException(typeof(RepositoryException))]
@@ -15551,7 +15517,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     }
                 };
 
-                personRepoMock.Setup(r => r.GetMatchingPersonsAsync(It.IsAny<Colleague.Domain.Base.Entities.Person>())).ReturnsAsync(null);
+                personRepoMock.Setup(r => r.GetMatchingPersonsAsync(It.IsAny<Colleague.Domain.Base.Entities.Person>())).ReturnsAsync(() => null);
 
                 var result = await personService.QueryPerson4ByPostAsync(personDto, false);
                 Assert.AreEqual(0, result.Count());
@@ -16060,7 +16026,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task GetPerson5ByGuid_KeyNotFoundException_PersonNotFound()
             {
-                personRepoMock.Setup(p => p.GetPersonIntegration3ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                personRepoMock.Setup(p => p.GetPersonIntegration3ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 await personService.GetPerson5ByGuidAsync(guid, true);
             }
 
@@ -16255,22 +16221,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Assert.IsTrue(result is Dtos.Person5);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(IntegrationApiException))]
-            public async Task GetPerson5NonCached_PermissionException()
-            {
-                try
-                {
-                    roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { });
-                    await personService.GetPerson5NonCachedAsync(0, 10, true, null, "");
-                }
-                catch (IntegrationApiException ex)
-                {
-                    Assert.IsNotNull(ex.Errors);
-                    Assert.AreEqual(ex.Errors[0].StatusCode, System.Net.HttpStatusCode.Forbidden);
-                    throw;
-                }
-            }
 
             [TestMethod]
             [ExpectedException(typeof(RepositoryException))]
@@ -16359,7 +16309,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     }
                 };
 
-                personRepoMock.Setup(r => r.GetMatchingPersonsAsync(It.IsAny<Colleague.Domain.Base.Entities.Person>())).ReturnsAsync(null);
+                personRepoMock.Setup(r => r.GetMatchingPersonsAsync(It.IsAny<Colleague.Domain.Base.Entities.Person>())).ReturnsAsync(() => null);
 
                 var result = await personService.QueryPerson5ByPostAsync(personDto, false);
                 Assert.AreEqual(0, result.Count());
@@ -16497,7 +16447,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task QueryPersonMatchResultsByPostAsync_NullResults()
             {
-                personRepoMock.Setup(repo => repo.GetMatchingPersonResultsAsync(It.IsAny<PersonMatchCriteria>())).ReturnsAsync(null);
+                personRepoMock.Setup(repo => repo.GetMatchingPersonResultsAsync(It.IsAny<PersonMatchCriteria>())).ReturnsAsync(() => null);
                 personService = new PersonService(adapterRegistry, personRepo, personBaseRepo, refRepo, null, null, null, null, currentUserFactory, roleRepo, logger);
 
                 var results = await personService.QueryPersonMatchResultsByPostAsync(criteria);
@@ -16674,19 +16624,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
 
             #region Exceptions
-
-
-            [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task PersonService_CreateOrganization_PermissionsException()
-            {
-                //setup role
-                createPersonRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Base.BasePermissionCodes.CreatePerson));
-                _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPersonRole });
-
-                var actual = await _personService.CreateOrganizationAsync(_organizationDto);
-
-            }
 
 
             [TestMethod]

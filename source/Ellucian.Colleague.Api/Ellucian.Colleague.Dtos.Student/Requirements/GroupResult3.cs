@@ -49,6 +49,10 @@ namespace Ellucian.Colleague.Dtos.Student.Requirements
         /// </summary>
         public List<CreditResult> RelatedAcademicCredits { get; set; }
         /// <summary>
+        /// Collection of student's planned credits that are not applied but are related to this group.
+        /// </summary>
+        public List<PlannedCredit> RelatedPlannedCredits { get; set; }
+        /// <summary>
         /// Further explanations related to the group result
         /// </summary>
         public List<GroupExplanation> Explanations {get; set;}

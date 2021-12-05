@@ -2258,6 +2258,38 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
+        /// Get all student shopping sheets for award years on student's file
+        /// </summary>
+        /// <param name="studentId">student id</param>
+        /// <returns>A list of Shopping sheets for the specified studentId</returns>
+        public async Task<IEnumerable<ShoppingSheet3>> GetStudentShoppingSheets3Async(string studentId, bool getActiveYearsOnly = false)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Student ID cannot be null or empty");
+            }
+
+            try
+            {
+                string queryString = UrlUtility.BuildEncodedQueryString("getActiveYearsOnly", getActiveYearsOnly.ToString());
+                string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _studentShoppingSheetsPath);
+                var combinedUrl = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
+                var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<ShoppingSheet3>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get student shopping sheets");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Gets all of a student's awards across all active years for which the student has award data.
         /// </summary>
         /// <param name="studentId">The Colleague studentId for which to get awards</param>
@@ -3438,6 +3470,37 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception e)
             {
                 logger.Error(e, string.Format("Unable to retrieve financial aid explanations data."));
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets a parent's Profile information
+        /// </summary>
+        /// <param name="parentId">Id of the parent</param>
+        /// <param name="studentId">Id of the student</param>
+        /// <param name="useCache">Defaults to true: If true, cached repository data will be returned when possible, otherwise fresh data is returned.</param>
+        /// <returns>A Profile dto for the parent ID</returns>
+        /// <exception cref="ResourceNotFoundException">Unable to return profile</exception>
+        public async Task<Profile> GetFaProfileAsync(string parentId, string studentId, bool useCache = true)
+        {
+            if (string.IsNullOrEmpty(parentId))
+            {
+                throw new ArgumentNullException("parentId", "You must provide the person ID to return profile information.");
+            }
+            try
+            {
+                // Build url path
+                string urlPath = UrlUtility.CombineUrlPath(_studentsPath, parentId, studentId, _financialAidChecklistPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers, useCache: useCache);
+                return JsonConvert.DeserializeObject<Profile>(await response.Content.ReadAsStringAsync());
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get Profile for this person");
                 throw;
             }
         }

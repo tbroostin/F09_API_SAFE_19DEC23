@@ -18,6 +18,11 @@ using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Exceptions;
+using System.Web.Http.Routing;
+using Ellucian.Web.Http.Filters;
+using System.Web.Http.Controllers;
+using System.Collections;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -178,6 +183,176 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             await studentTranscriptGradesController.DeleteStudentTranscriptGradesAsync(studentTranscriptGradesCollection.FirstOrDefault().Id);
         }
 
+        //GET by id v1.0.0
+        //Successful
+        //GetStudentTranscriptGradesByGuidAsync
+        [TestMethod]
+        public async Task StudentTranscriptGradesController_GetStudentTranscriptGradesByGuidAsync_Permissions()
+        {
+            var studentTranscriptGrade = studentTranscriptGradesCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentTranscriptGrades" },
+                    { "action", "GetStudentTranscriptGradesByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-transcript-grades", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentTranscriptGradesController.Request.SetRouteData(data);
+            studentTranscriptGradesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentTranscriptGrades, StudentPermissionCodes.UpdateStudentTranscriptGradesAdjustments });
+
+            var controllerContext = studentTranscriptGradesController.ControllerContext;
+            var actionDescriptor = studentTranscriptGradesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            studentTranscriptGradesServiceMock.Setup(x => x.GetStudentTranscriptGradesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(studentTranscriptGrade);
+            studentTranscriptGradesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            await studentTranscriptGradesController.GetStudentTranscriptGradesByGuidAsync(expectedGuid);
+
+            Object filterObject;
+            studentTranscriptGradesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentTranscriptGrades));
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.UpdateStudentTranscriptGradesAdjustments));
+
+
+        }
+
+        //GET by id v1.0.0
+        //Exception
+        //GetStudentTranscriptGradesByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentTranscriptGradesController_GetStudentTranscriptGradesByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentTranscriptGrades" },
+                    { "action", "GetStudentTranscriptGradesByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-transcript-grades", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentTranscriptGradesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = studentTranscriptGradesController.ControllerContext;
+            var actionDescriptor = studentTranscriptGradesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                studentTranscriptGradesServiceMock.Setup(x => x.GetStudentTranscriptGradesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                studentTranscriptGradesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view student-transcript-grades."));
+                await studentTranscriptGradesController.GetStudentTranscriptGradesByGuidAsync(expectedGuid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET v1.0.0
+        //Successful
+        //GetStudentTranscriptGradesAsync
+        [TestMethod]
+        public async Task StudentTranscriptGradesController_GetStudentTranscriptGradesAsync_Permissions()
+        {
+            var studentTranscriptGrade = studentTranscriptGradesCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentTranscriptGrades" },
+                    { "action", "GetStudentTranscriptGradesAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-transcript-grades", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentTranscriptGradesController.Request.SetRouteData(data);
+            studentTranscriptGradesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentTranscriptGrades, StudentPermissionCodes.UpdateStudentTranscriptGradesAdjustments });
+
+            var controllerContext = studentTranscriptGradesController.ControllerContext;
+            var actionDescriptor = studentTranscriptGradesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            studentTranscriptGradesServiceMock.Setup(x => x.GetStudentTranscriptGradesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(studentTranscriptGrade);
+            studentTranscriptGradesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            await studentTranscriptGradesController.GetStudentTranscriptGradesByGuidAsync(expectedGuid);
+
+            Object filterObject;
+            studentTranscriptGradesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentTranscriptGrades));
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.UpdateStudentTranscriptGradesAdjustments));
+
+
+        }
+
+        //GET v1.0.0
+        //Exception
+        //GetStudentTranscriptGradesAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentTranscriptGradesController_GetStudentTranscriptGradesAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentTranscriptGrades" },
+                    { "action", "GetStudentTranscriptGradesAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-transcript-grades", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentTranscriptGradesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = studentTranscriptGradesController.ControllerContext;
+            var actionDescriptor = studentTranscriptGradesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                studentTranscriptGradesServiceMock.Setup(x => x.GetStudentTranscriptGradesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                studentTranscriptGradesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view student-transcript-grades."));
+                await studentTranscriptGradesController.GetStudentTranscriptGradesByGuidAsync(expectedGuid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
         #endregion
 
         #region student-transcript-grades-adjustments
@@ -213,6 +388,93 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 .Throws<Exception>();
             var sourceContext = studentTranscriptGradesAdjustmentsCollection.FirstOrDefault();
             await studentTranscriptGradesController.PutStudentTranscriptGradesAdjustmentsAsync(sourceContext.Id, sourceContext);
+        }
+
+        //PUT v1.0.0
+        //Successful
+        //PutStudentTranscriptGradesAdjustmentsAsync
+        [TestMethod]
+        public async Task StudentTranscriptGradesAdjustmentsController_PutStudentTranscriptGradesAdjustmentsAsync_Permissions()
+        {
+            var sourceContext = studentTranscriptGradesAdjustmentsCollection.FirstOrDefault();
+
+            var studentTranscriptGrade = studentTranscriptGradesCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentTranscriptGradesAdjustments" },
+                    { "action", "PutStudentTranscriptGradesAdjustmentsAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-transcript-grades-adjustments", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentTranscriptGradesController.Request.SetRouteData(data);
+            studentTranscriptGradesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.UpdateStudentTranscriptGradesAdjustments);
+
+            var controllerContext = studentTranscriptGradesController.ControllerContext;
+            var actionDescriptor = studentTranscriptGradesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            studentTranscriptGradesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            studentTranscriptGradesServiceMock.Setup(x => x.UpdateStudentTranscriptGradesAdjustmentsAsync(It.IsAny<Dtos.StudentTranscriptGradesAdjustments>(), It.IsAny<bool>())).ReturnsAsync(studentTranscriptGrade);
+            //var studentGradePointAverages = await studentTranscriptGradesController.PutStudentTranscriptGradesAdjustmentsAsync(It.IsAny<string>(), It.IsAny<Dtos.StudentTranscriptGradesAdjustments>());
+            await studentTranscriptGradesController.PutStudentTranscriptGradesAdjustmentsAsync(sourceContext.Id, sourceContext);
+
+            Object filterObject;
+            studentTranscriptGradesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.UpdateStudentTranscriptGradesAdjustments));
+
+
+        }
+
+        //PUT v1.0.0
+        //Exception
+        //PutStudentTranscriptGradesAdjustmentsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentTranscriptGradesAdjustmentsController_PutStudentTranscriptGradesAdjustmentsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentTranscriptGradesAdjustments" },
+                    { "action", "PutStudentTranscriptGradesAdjustmentsAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-transcript-grades-adjustments", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentTranscriptGradesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = studentTranscriptGradesController.ControllerContext;
+            var actionDescriptor = studentTranscriptGradesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                studentTranscriptGradesServiceMock.Setup(x => x.UpdateStudentTranscriptGradesAdjustmentsAsync(studentTranscriptGradesAdjustmentsCollection.FirstOrDefault(), It.IsAny<bool>())).Throws<PermissionsException>();
+                studentTranscriptGradesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to update student-transcript-grades-adjustments."));
+                await studentTranscriptGradesController.PutStudentTranscriptGradesAdjustmentsAsync(expectedGuid, studentTranscriptGradesAdjustmentsCollection.FirstOrDefault());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
         }
 
         #endregion

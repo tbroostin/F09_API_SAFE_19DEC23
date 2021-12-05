@@ -87,7 +87,9 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                 return notAppliedPlannedCredits;
             }
         }
-
+        /// <summary>
+        /// These are the list of academic credits Ids which were not not applied to any requirements
+        /// </summary>
         public List<string> OtherAcademicCredits
         {
             get
@@ -113,6 +115,35 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                 return notAppliedAcademicCreditIds;
             }
         }
+        /// <summary>
+        /// List of Academic Credits that are not applied to program evaluation to any requirements. 
+        /// though it is same as OtherAcademicCredits property but has detail information about Academic Credits including up-to-date Replaced/Replacement Status updated after the evaluation
+        /// </summary>
+        public List<AcademicCredit> NotAppliedOtherAcademicCredits
+        {
+            get
+            {
+                var notAppliedAcademicCredits = new List<AcademicCredit>();
+                if (AllCredit == null)
+                {
+                    return notAppliedAcademicCredits;
+                }
+                if (RequirementResults != null && RequirementResults.Count() > 0)
+                {
+                    // Create a list of academic credits that were not applied to any group
+                    List<string> allAppliedAcademicCreditIds = RequirementResults.SelectMany(r => r.SubRequirementResults.SelectMany(s => s.GroupResults.SelectMany(g => g.GetApplied()).Select(acadResult => acadResult.GetAcadCredId()))).ToList();
+                    foreach (var acadCredit in AllCredit)
+                    {
+                        var appliedAcadCredId = allAppliedAcademicCreditIds.Where(aaci => aaci == acadCredit.Id).FirstOrDefault();
+                        if (appliedAcadCredId == null)
+                        {
+                            notAppliedAcademicCredits.Add(acadCredit);
+                        }
+                    }
+                }
+                return notAppliedAcademicCredits;
+            }
+        }
 
         // Constructor
         public ProgramEvaluation(List<AcademicCredit> academiccredit, string programcode = null, string catalogcode = null)
@@ -135,6 +166,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
 
         /// <summary>
         /// Returns the sum of in-progress credits from academic credit available to this program
+        /// Note: Excluding all the in progress courses those were not applied because those were marked as Possible replace in progress.
         /// </summary>
         public decimal GetInProgressCredits()
         {
@@ -147,7 +179,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         }
 
         /// <summary>
-        /// Returns the sum of adjusted completed credits from academic credit available to this program
+        /// Returns the sum of completed adjusted  credits from academic credit available to this program
+        /// Note: AdjustedCredits become 0 for replaced or possible replace in progress completed courses.
         /// </summary>
         public decimal GetCredits()
         {
@@ -159,7 +192,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         }
 
         /// <summary>
-        /// Returns the sum of adjusted completed credits from institutional academic credit available to this program
+        /// Returns the sum of completed adjusted  credits from institutional academic credit available to this program
+        /// Note: AdjustedCredits become 0 for replaced or possible replace in progress completed courses.
         /// </summary>
         public decimal GetInstCredits()
         {

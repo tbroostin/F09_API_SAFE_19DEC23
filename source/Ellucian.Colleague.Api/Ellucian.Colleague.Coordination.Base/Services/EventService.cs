@@ -1,19 +1,17 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using DDay.iCal;
-using DDay.iCal.Serialization;
+using Ical.Net;
+using Ical.Net.DataTypes;
 using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Colleague.Domain.Base.Entities;
-using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using slf4net;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
 using System.Threading.Tasks;
+using Ical.Net.Serialization;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
@@ -21,7 +19,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
     /// Representation of an event service
     /// </summary>
     [RegisterType]
-    public class EventService : BaseCoordinationService, IEventService 
+    public class EventService : BaseCoordinationService, IEventService
     {
         private readonly IEventRepository eventRepository;
 
@@ -34,10 +32,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             ICurrentUserFactory currentUserFactory,
             IRoleRepository roleRepository,
             IAdapterRegistry adapterRegistry,
-            ILogger logger) 
+            ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger)
         {
-            
+
             this.eventRepository = eventRepository;
         }
 
@@ -63,38 +61,38 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="startDate">The start date.</param>
         /// <param name="endDate">The end date.</param>
         /// <returns></returns>
-        public Ellucian.Colleague.Dtos.Base.EventsICal GetFacultyEvents(IEnumerable<string> facultyIds, DateTime? startDate, DateTime? endDate)
+        public Dtos.Base.EventsICal GetFacultyEvents(IEnumerable<string> facultyIds, DateTime? startDate, DateTime? endDate)
         {
             var events = eventRepository.Get("FI", facultyIds, startDate, endDate);
-            Ellucian.Colleague.Domain.Base.Entities.EventsICal eventsICalEntity = EventListToEventsICal(events);
-            Ellucian.Colleague.Dtos.Base.EventsICal eventsICalDto = new Dtos.Base.EventsICal(eventsICalEntity.iCal);
+            Domain.Base.Entities.EventsICal eventsICalEntity = EventListToEventsICal(events);
+            Dtos.Base.EventsICal eventsICalDto = new Dtos.Base.EventsICal(eventsICalEntity.iCal);
             return eventsICalDto;
         }
 
-        private Ellucian.Colleague.Domain.Base.Entities.EventsICal EventListToEventsICal(IEnumerable<Ellucian.Colleague.Domain.Base.Entities.Event> events) {
-            var iCal = new iCalendar();
-            foreach (var anEvent in events) {
-                DDay.iCal.Event evt = iCal.Create<DDay.iCal.Event>();
-                evt.Name = "VEVENT";
-                evt.Summary = anEvent.Description;
-                evt.Categories = new List<string>() { anEvent.Type };
-                evt.Location = anEvent.Location;
-                evt.DTStart = new iCalDateTime(anEvent.StartTime.UtcDateTime);
-                evt.DTStart.IsUniversalTime = true;
-                evt.DTEnd = new iCalDateTime(anEvent.EndTime.UtcDateTime);
-                evt.DTEnd.IsUniversalTime = true;
-                //Retain the time component of DTStart and DTEnd. Fix bug in iCal which considers midnight UTC as all-day event and drops the time portion
-                evt.DTStart.HasTime = true;
-                evt.DTEnd.HasTime = true;
+        private Domain.Base.Entities.EventsICal EventListToEventsICal(IEnumerable<Ellucian.Colleague.Domain.Base.Entities.Event> events)
+        {
+            var ICalendar = new Calendar();
+            foreach (var anEvent in events)
+            {
+                ICalendar.Events.Add(new Ical.Net.CalendarComponents.CalendarEvent
+                {
+                    Name = "VEVENT",
+                    Summary = anEvent.Description,
+                    Categories = new List<string>() { anEvent.Type },
+                    Location = anEvent.Location,
+                    DtStart = new CalDateTime(anEvent.StartTime.UtcDateTime, DateTimeKind.Utc.ToString()) { HasTime = true },
+                    DtEnd = new CalDateTime(anEvent.EndTime.UtcDateTime, DateTimeKind.Utc.ToString()) { HasTime = true }
+                });
             }
             string result = null;
             var ctx = new SerializationContext();
-            var factory = new DDay.iCal.Serialization.iCalendar.SerializerFactory();
-            var serializer = factory.Build(iCal.GetType(), ctx) as IStringSerializer;
-            if (serializer != null) {
-                result = serializer.SerializeToString(iCal);
+            var factory = new SerializerFactory();
+            var serializer = factory.Build(ICalendar.GetType(), ctx) as IStringSerializer;
+            if (serializer != null)
+            {
+                result = serializer.SerializeToString(ICalendar);
             }
-            return new Ellucian.Colleague.Domain.Base.Entities.EventsICal(result);
+            return new Domain.Base.Entities.EventsICal(result);
         }
 
         public async Task<IEnumerable<Dtos.Base.CampusCalendar>> GetCampusCalendarsAsync()

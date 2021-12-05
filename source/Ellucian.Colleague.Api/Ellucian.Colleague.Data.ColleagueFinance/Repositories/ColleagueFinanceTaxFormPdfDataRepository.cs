@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -750,7 +750,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             catch (Exception e)
             {
-                logger.Error(e.Message, e);
+                logger.Error(e.Message);
                 throw;
             }
         }
@@ -1036,7 +1036,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             catch (Exception e)
             {
-                logger.Error(e.Message, e);
+                logger.Error(e.Message);
                 throw;
             }
             return domainEntity1099Mi;
@@ -1196,7 +1196,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 // Get the details from TFNER, if it is an M record, else get the certify level parameters.
 
                 string recipientName = null, recipientSecondName = null, recipientAddress1 = null, recipientAddress2 = null,
-                    recipientAddress3 = null, recipientPhone = null, recipientIdentificationNumber = null;
+                    recipientAddress3 = null, recipientPhone = null, recipientIdentificationNumber = null, directResale = null;
 
                 if (currentNecDetailRecord.TnedtlrRefId == "M")
                 {
@@ -1206,6 +1206,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     recipientAddress2 = necReposContract.TfnerAddressLine2 + " " + necReposContract.TfnerAddressLine3;
                     recipientAddress3 = necReposContract.TfnerCity + ", " + necReposContract.TfnerState + " " + necReposContract.TfnerZip;
                     recipientIdentificationNumber = necReposContract.TfnerTin;
+                    directResale = necReposContract.TfnerDirectResale;
                 }
                 else
                 {
@@ -1216,6 +1217,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     recipientAddress2 = (necReposContract.TfnerCertifyAddressLine2.FirstOrDefault() ?? "") + " " + (necReposContract.TfnerCertifyAddressLine3.FirstOrDefault() ?? "");
                     recipientAddress3 = (necReposContract.TfnerCertifyCity.FirstOrDefault() ?? "") + ", " + (necReposContract.TfnerCertifyState.FirstOrDefault() ?? "") + " " + (necReposContract.TfnerCertifyZip.FirstOrDefault() ?? "");
                     recipientIdentificationNumber = necReposContract.TfnerCertifyTin.FirstOrDefault() ?? "";
+                    directResale = necReposContract.TfnerCertifyDirectResale.FirstOrDefault() ?? "";
                 }
 
                 // Assign the State-Payer EIN.
@@ -1234,6 +1236,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 string taxYear = currentNecDetailRecord.TnedtlrYear.ToString();
                 domainEntity1099Nec = new Form1099NecPdfData(taxYear, transmitterName);
                 domainEntity1099Nec.IsCorrected = currentNecDetailRecord.TnedtlrStatus == "G" || currentNecDetailRecord.TnedtlrStatus == "C";
+                domainEntity1099Nec.IsDirectResale = directResale == "Y" ? true : false;
 
                 // Payer's EIN.
                 domainEntity1099Nec.PayersEin = necReposContract.TfnerEin;
@@ -1326,7 +1329,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             catch (Exception e)
             {
-                logger.Error(e.Message, e);
+                logger.Error(e.Message);
                 throw;
             }
             return domainEntity1099Nec;

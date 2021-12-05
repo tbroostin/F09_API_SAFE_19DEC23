@@ -138,6 +138,8 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             public string Status { get; set; }
             public string CreateDate { get; set; }
             public DateTime? ExpirationDate { get; set; }
+            public string CodmNonstuCodPersonId { get; set; }
+            public string CodmStuCodPersonId { get; set; }
         }
 
         public List<MpnRecord> StudentMpns = new List<MpnRecord>()

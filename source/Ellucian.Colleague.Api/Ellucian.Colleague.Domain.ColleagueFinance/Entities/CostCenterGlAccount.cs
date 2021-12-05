@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -29,6 +29,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         public decimal ActualAmount { get; set; }
 
         /// <summary>
+        /// Justification Notes for this GL Account.
+        /// </summary>
+        public string JustificationNotes { get; set; }
+
+        /// <summary>
         /// Returns the list of transactions associated to this line item.
         /// </summary>
         public ReadOnlyCollection<GlTransaction> Transactions { get; private set; }
@@ -50,6 +55,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         {
             this.poolType = poolType;
             this.Transactions = transactions.AsReadOnly();
+            JustificationNotes = string.Empty;
         }
 
         /// <summary>

@@ -295,6 +295,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 programEvaluation.AllCredit = null;
                 Assert.IsNotNull(programEvaluation.OtherAcademicCredits);
                 Assert.IsFalse(programEvaluation.OtherAcademicCredits.Any());
+                Assert.IsNotNull(programEvaluation.NotAppliedOtherAcademicCredits);
+                Assert.IsFalse(programEvaluation.NotAppliedOtherAcademicCredits.Any());
             }
 
             [TestMethod]
@@ -305,6 +307,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
 
                 Assert.IsNotNull(programEvaluation.OtherAcademicCredits);
                 Assert.IsFalse(programEvaluation.OtherAcademicCredits.Any());
+                Assert.IsNotNull(programEvaluation.NotAppliedOtherAcademicCredits);
+                Assert.IsFalse(programEvaluation.NotAppliedOtherAcademicCredits.Any());
             }
 
             [TestMethod]
@@ -315,6 +319,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
 
                 Assert.IsNotNull(programEvaluation.OtherAcademicCredits);
                 Assert.IsFalse(programEvaluation.OtherAcademicCredits.Any());
+                Assert.IsNotNull(programEvaluation.NotAppliedOtherAcademicCredits);
+                Assert.IsFalse(programEvaluation.NotAppliedOtherAcademicCredits.Any());
             }
 
             [TestMethod]
@@ -335,6 +341,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 };
                 Assert.IsNotNull(programEvaluation.OtherAcademicCredits);
                 Assert.AreEqual(1, programEvaluation.OtherAcademicCredits.Count);
+                Assert.IsNotNull(programEvaluation.NotAppliedOtherAcademicCredits);
+                Assert.AreEqual(1, programEvaluation.NotAppliedOtherAcademicCredits.Count);
             }
 
             [TestMethod]
@@ -354,6 +362,9 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
 
                 Assert.IsNotNull(programEvaluation.OtherAcademicCredits);
                 Assert.IsFalse(programEvaluation.OtherAcademicCredits.Any());
+                Assert.IsNotNull(programEvaluation.NotAppliedOtherAcademicCredits);
+                Assert.IsFalse(programEvaluation.NotAppliedOtherAcademicCredits.Any());
+
             }
         }
 

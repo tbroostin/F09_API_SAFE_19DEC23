@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using slf4net;
 using Ellucian.Web.Adapters;
@@ -24,6 +24,7 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
             degreePlanDto.LastReviewedDate = Source.LastReviewedDate;
             degreePlanDto.ReviewRequestedDate = Source.ReviewRequestedDate;
             degreePlanDto.ReviewRequestedTime = Source.ReviewRequestedTime;
+            degreePlanDto.ArchiveNotificationDate = Source.ArchiveNotificationDate;
 
             degreePlanDto.Terms = new List<Dtos.Student.DegreePlans.DegreePlanTerm4>();
             degreePlanDto.NonTermPlannedCourses = new List<Dtos.Student.DegreePlans.PlannedCourse4>();
@@ -87,7 +88,8 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
                             SectionWaitlistStatus = waitStatus, 
                             AddedBy = plannedcourse.AddedBy,
                             AddedOn = plannedcourse.AddedOn,
-                            IsProtected = plannedcourse.IsProtected.HasValue ? plannedcourse.IsProtected.Value : false
+                            IsProtected = plannedcourse.IsProtected.HasValue ? plannedcourse.IsProtected.Value : false,
+                            CoursePlaceholderId = plannedcourse.CoursePlaceholderId
                         };
                         plannedCourseDto.Warnings = new List<Dtos.Student.DegreePlans.PlannedCourseWarning2>();
                         foreach (var warning in plannedcourse.Warnings)
@@ -147,7 +149,8 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
                     SectionWaitlistStatus = waitStatus, 
                     AddedBy = pc.AddedBy, 
                     AddedOn = pc.AddedOn,
-                    IsProtected = pc.IsProtected.HasValue ? pc.IsProtected.Value : false
+                    IsProtected = pc.IsProtected.HasValue ? pc.IsProtected.Value : false,
+                    CoursePlaceholderId = pc.CoursePlaceholderId
                 };
                 // Add empty warning list
                 plannedCourseDto.Warnings = new List<Dtos.Student.DegreePlans.PlannedCourseWarning2>();

@@ -70,6 +70,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private GeneralLedgerCurrentUser.UserFactory currentUserFactory = new GeneralLedgerCurrentUser.UserFactory();
         private GeneralLedgerCurrentUser.UserFactoryNone noPermissionUser = new GeneralLedgerCurrentUser.UserFactoryNone();
 
+        private Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria filterCriteria;
+        private ProcurementDocumentFilterCriteria filterCriteriaDomainEntity;
+
         [TestInitialize]
         public void Initialize()
         {
@@ -506,7 +509,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             //GeneralLedgerClassConfiguration glClassConfiguration = new GeneralLedgerClassConfiguration("glClassName", new List<string>() { "12" }, new List<string>() { "12" }, new List<string>() { "12" }, new List<string>() { "12" }, new List<string>() { "12" });
             mockGlConfigurationRepository.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(GlAccountStructure);
             mockGlConfigurationRepository.Setup(acctStructure => acctStructure.GetClassConfigurationAsync()).Returns(Task.FromResult(glClassConfiguration));
-            mockGeneralLedgerUserRepository.Setup(glUser => glUser.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string[]>())).ReturnsAsync(null);
+            mockGeneralLedgerUserRepository.Setup(glUser => glUser.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string[]>())).ReturnsAsync(() => null);
 
             await service2.GetPurchaseOrderAsync("1");
         }
@@ -520,7 +523,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             GeneralLedgerClassConfiguration glClassConfiguration = new GeneralLedgerClassConfiguration("glClassName", new List<string>() { "12" }, new List<string>() { "12" }, new List<string>() { "12" }, new List<string>() { "12" }, new List<string>() { "12" });
             mockGlConfigurationRepository.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(GlAccountStructure);
             mockGlConfigurationRepository.Setup(acctStructure => acctStructure.GetClassConfigurationAsync()).Returns(Task.FromResult(glClassConfiguration));
-            mockGeneralLedgerUserRepository.Setup(glUser => glUser.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string[]>())).ReturnsAsync(null);
+            mockGeneralLedgerUserRepository.Setup(glUser => glUser.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string[]>())).ReturnsAsync(() => null);
             await service2.GetPurchaseOrderAsync("1");
         }
 
@@ -600,6 +603,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             adapterRegistry.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.PurchaseOrderCreateUpdateResponse, Dtos.ColleagueFinance.PurchaseOrderCreateUpdateResponse>()).Returns(purchaseOrderCreateUpdateDtoAdapter);
             var purchaseOrderVoidResponseAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.PurchaseOrderVoidResponse, Dtos.ColleagueFinance.PurchaseOrderVoidResponse>(adapterRegistry.Object, loggerObject);
             adapterRegistry.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.PurchaseOrderVoidResponse, Dtos.ColleagueFinance.PurchaseOrderVoidResponse>()).Returns(purchaseOrderVoidResponseAdapter);
+            var procurementCriteria_Adapter = new AutoMapperAdapter<Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria, Domain.ColleagueFinance.Entities.ProcurementDocumentFilterCriteria>(adapterRegistry.Object, loggerObject);
+            adapterRegistry.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria, Domain.ColleagueFinance.Entities.ProcurementDocumentFilterCriteria>()).Returns(procurementCriteria_Adapter);
             // Set up the services
             service = new PurchaseOrderService(testPurchaseOrderRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository,
                 colleagueFinanceReferenceDataRepository, referenceDataRepo.Object, buyersDataRepo.Object, vendorsDataRepo.Object, baseConfigurationRepository, adapterRegistry.Object, currentUserFactory, mockAccountFundAvailableRepo.Object, mockPersonRepository.Object, roleRepository, staffRepositoryMock.Object, generalLedgerAccountRepositoryMock.Object, procurementsUtilityServiceMock.Object, loggerObject);
@@ -608,6 +613,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             // Build a service for a user that has no permissions.
             serviceForNoPermission = new PurchaseOrderService(testPurchaseOrderRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository,
                 colleagueFinanceReferenceDataRepository, referenceDataRepo.Object, buyersDataRepo.Object, vendorsDataRepo.Object, baseConfigurationRepository, adapterRegistry.Object, noPermissionUser, mockAccountFundAvailableRepo.Object, mockPersonRepository.Object, roleRepository, staffRepositoryMock.Object, generalLedgerAccountRepositoryMock.Object, procurementsUtilityServiceMock.Object, loggerObject);
+
+            filterCriteria = new Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria();
+            filterCriteria.PersonId = currentUserFactory.CurrentUser.PersonId;
+            filterCriteria.VendorIds = new List<string>() { "0001234" };
+
+            filterCriteriaDomainEntity = new ProcurementDocumentFilterCriteria();
+            filterCriteriaDomainEntity.PersonId = currentUserFactory.CurrentUser.PersonId;
+            filterCriteriaDomainEntity.VendorIds = new List<string>() { "0001234" };
         }
         #endregion
 
@@ -645,7 +658,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [TestMethod]
         public async Task GetPurchaseOrderSummaryByPersonIdAsync_SummaryDomainEntityNull()
         {
-            mockPurchaseOrderRepository.Setup(repo => repo.GetPurchaseOrderSummaryByPersonIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+            mockPurchaseOrderRepository.Setup(repo => repo.GetPurchaseOrderSummaryByPersonIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             var result = await service2.GetPurchaseOrderSummaryByPersonIdAsync(currentUserFactory.CurrentUser.PersonId);
             Assert.IsTrue(result.Count() == 0);
         }
@@ -790,7 +803,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             mockGlConfigurationRepository.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(GlAccountStructure);
             mockGlConfigurationRepository.Setup(acctStructure => acctStructure.GetClassConfigurationAsync()).Returns(Task.FromResult(glClassConfiguration));
             //generalLedgerUserRepository.GetGeneralLedgerUserAsync(CurrentUser.PersonId, glConfiguration.FullAccessRole, glClassConfiguration.ClassificationName, glClassConfiguration.ExpenseClassValues);
-            mockGeneralLedgerUserRepository.Setup(glUser => glUser.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string[]>())).ReturnsAsync(null);
+            mockGeneralLedgerUserRepository.Setup(glUser => glUser.GetGeneralLedgerUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string[]>())).ReturnsAsync(() => null);
             await service2.CreateUpdatePurchaseOrderAsync(request);
         }
 
@@ -1134,8 +1147,70 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Assert.AreEqual(0, voidPODtos.ErrorMessages.Count);
         }
 
-            #endregion
+        #endregion
+
+        #region QueryPurchaseOrderSummariesAsync
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task QueryPurchaseOrderSummariesAsync_EmptyCriteria_ArgumentNullException()
+        {
+            await service2.QueryPurchaseOrderSummariesAsync(new Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria());
         }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task QueryPurchaseOrderSummariesAsync_NullCriteria_ArgumentNullException()
+        {
+            await service2.QueryPurchaseOrderSummariesAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task QueryPurchaseOrderSummariesAsync_CurrentUserDifferentFromRequest()
+        {
+            filterCriteria = new Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria();
+            filterCriteria.PersonId = "0016357";
+
+            await service2.QueryPurchaseOrderSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task QueryPurchaseOrderSummariesAsync_MissingPermissionException()
+        {
+            await serviceForNoPermission.QueryPurchaseOrderSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task QueryPurchaseOrderSummariesAsync_StaffRecordMissingException()
+        {
+            Domain.Base.Entities.Staff nullStaff = null;
+            staffRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>())).Returns(Task.FromResult(nullStaff));
+            await service2.QueryPurchaseOrderSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        public async Task QueryPurchaseOrderSummariesAsync_SummaryDomainEntityNull()
+        {
+            mockPurchaseOrderRepository.Setup(repo => repo.QueryPurchaseOrderSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ReturnsAsync(() => null);
+            var result = await service2.QueryPurchaseOrderSummariesAsync(filterCriteria);
+            Assert.IsTrue(result.Count() == 0);
+        }
+
+        [TestMethod]
+        public async Task QueryPurchaseOrderSummariesAsync_Success()
+        {
+            List<PurchaseOrderSummary> summary = new List<PurchaseOrderSummary>() { new PurchaseOrderSummary("0000001", "P000001", "ABC Company", new DateTime()) };
+
+            mockPurchaseOrderRepository.Setup(repo => repo.QueryPurchaseOrderSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ReturnsAsync(summary);
+            var result = await service2.QueryPurchaseOrderSummariesAsync(filterCriteria);
+            Assert.IsNotNull(result);
+            Assert.IsTrue(result.Count() > 0);
+        }
+
+        #endregion
+    }
 
     #region EEDM Purchase order V11
 
@@ -1205,14 +1280,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         #endregion
 
         [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task PurchaseOrderEEDMServiceTests_GetPurchaseOrders2_NoPermissions()
-        {
-            mockPurchaseOrderRepository.Setup(repo => repo.GetPurchaseOrdersAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>())).ReturnsAsync(null);
-            await service.GetPurchaseOrdersAsync(1, 1, new Dtos.PurchaseOrders2());
-        }
-
-        [TestMethod]
         public async Task PurchaseOrderEEDMServiceTests_GetPurchaseOrder2_MinimumData()
         {
             var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();
@@ -1248,14 +1315,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task PurchaseOrderEEDMServiceTests_GetPurchaseOrdersByGuid_NoPermissions()
-        {
-            mockPurchaseOrderRepository.Setup(repo => repo.GetPurchaseOrdersByGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
-            await service.GetPurchaseOrdersByGuidAsync(guid);
-        }
-
-        [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public async Task PurchaseOrderEEDMServiceTests_GetPurchaseOrdersByGuid_Null()
         {
@@ -1277,7 +1336,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             viewPurchaseOrderRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.ColleagueFinance.ColleagueFinancePermissionCodes.ViewPurchaseOrders));
             roleRepository.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewPurchaseOrderRole });
 
-            mockPurchaseOrderRepository.Setup(repo => repo.GetPurchaseOrdersByGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            mockPurchaseOrderRepository.Setup(repo => repo.GetPurchaseOrdersByGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             await service.GetPurchaseOrdersByGuidAsync(guid);
         }
 
@@ -1331,7 +1390,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             vendorsDataRepo.Setup(repo => repo.GetVendorGuidFromIdAsync("0000010")).ReturnsAsync(vendorsGuid);
 
             var buyersGuid = Guid.NewGuid().ToString();
-            buyersDataRepo.Setup(repo => repo.GetBuyerGuidFromIdAsync("0000011")).ReturnsAsync(null);
+            buyersDataRepo.Setup(repo => repo.GetBuyerGuidFromIdAsync("0000011")).ReturnsAsync(() => null);
 
             await service.GetPurchaseOrdersByGuidAsync(guid);
         }
@@ -1372,7 +1431,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             vendorsDataRepo.Setup(repo => repo.GetVendorGuidFromIdAsync("0000010")).ReturnsAsync(vendorsGuid);
 
             var initiatorGuid = Guid.NewGuid().ToString();
-            mockPersonRepository.Setup(p => p.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+            mockPersonRepository.Setup(p => p.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             await service.GetPurchaseOrdersByGuidAsync(guid);
 
         }
@@ -1476,7 +1535,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var vendorsGuid = Guid.NewGuid().ToString();
             vendorsDataRepo.Setup(repo => repo.GetVendorGuidFromIdAsync("0000010")).ReturnsAsync(vendorsGuid);
 
-            mockPurchaseOrderRepository.Setup(repo => repo.GetGuidFromIdAsync("0000011", "ADDRESS")).ReturnsAsync(null);
+            mockPurchaseOrderRepository.Setup(repo => repo.GetGuidFromIdAsync("0000011", "ADDRESS")).ReturnsAsync(() => null);
             await service.GetPurchaseOrdersByGuidAsync(guid);
         }
 
@@ -1607,7 +1666,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             purchaseOrder.VendorId = "0000010";            
             mockPurchaseOrderRepository.Setup(repo => repo.GetPurchaseOrdersByGuidAsync(It.IsAny<string>())).ReturnsAsync(purchaseOrder);
             var vendorsGuid = Guid.NewGuid().ToString();
-            vendorsDataRepo.Setup(repo => repo.GetVendorGuidFromIdAsync("0000010")).ReturnsAsync(null);
+            vendorsDataRepo.Setup(repo => repo.GetVendorGuidFromIdAsync("0000010")).ReturnsAsync(() => null);
 
             await service.GetPurchaseOrdersByGuidAsync(guid);
         }
@@ -2439,10 +2498,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         private async void InitializeMock()
         {
-            mockAccountFundAvailableRepo.Setup(a => a.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            mockAccountFundAvailableRepo.Setup(a => a.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>()))
                                            .ReturnsAsync(accountFundsAvailable);
 
-            purchaseOrderRepositoryMock.Setup(r => r.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            purchaseOrderRepositoryMock.Setup(r => r.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
             personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
             personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("e6857066-13a2-4316-981f-308d1474eabf");
@@ -2528,14 +2587,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             await purchaseOrderService.PostPurchaseOrdersAsync(new Dtos.PurchaseOrders2() { });
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task PurchaseOrdersService_PostPurchaseOrdersAsync_PermissionsException()
-        {
-            await purchaseOrderService.PostPurchaseOrdersAsync(purchaseOrder);
-        }
-
-
+    
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
         public async Task PurchaseOrdersService_PostPurchaseOrdersAsync_Exception_AccountingString_NullOrEmpty()
@@ -2579,8 +2631,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
 
-            personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
-            buyerRepositoryMock.Setup(p => p.GetBuyerIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
+            buyerRepositoryMock.Setup(p => p.GetBuyerIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
             await purchaseOrderService.PostPurchaseOrdersAsync(purchaseOrder);
         }
@@ -2605,7 +2657,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             personRepositoryMock.SetupSequence(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>()))
                                 .Returns(Task.FromResult("1"))
                                 .Returns(Task.FromResult(""));
-            buyerRepositoryMock.Setup(p => p.GetBuyerIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            buyerRepositoryMock.Setup(p => p.GetBuyerIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
             await purchaseOrderService.PostPurchaseOrdersAsync(purchaseOrder);
         }
@@ -2632,7 +2684,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
 
-            personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             buyerRepositoryMock.SetupSequence(p => p.GetBuyerIdFromGuidAsync(It.IsAny<string>()))
                                .Returns(Task.FromResult("1"))
                                 .Returns(Task.FromResult("1"))
@@ -2665,7 +2717,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
 
-            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetShipToDestinationsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetShipToDestinationsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
             await purchaseOrderService.PostPurchaseOrdersAsync(purchaseOrder);
         }
@@ -2696,7 +2748,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
 
-            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetAccountsPayableSourcesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetAccountsPayableSourcesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
             await purchaseOrderService.PostPurchaseOrdersAsync(purchaseOrder);
         }
@@ -2726,7 +2778,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
 
-            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetVendorTermsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetVendorTermsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
             await purchaseOrderService.PostPurchaseOrdersAsync(purchaseOrder);
         }
@@ -2771,7 +2823,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
 
-            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetFreeOnBoardTypesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetFreeOnBoardTypesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
             await purchaseOrderService.PostPurchaseOrdersAsync(purchaseOrder);
         }
@@ -2818,7 +2870,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             var numberOfCalls = 0;
             purchaseOrderRepositoryMock.Setup(r => r.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>()))
-                                       .ReturnsAsync(null)
+                                       .ReturnsAsync(() => null)
                                        .Callback(() => { numberOfCalls++; if (numberOfCalls == 2) throw new ArgumentException(); });
 
             await purchaseOrderService.PostPurchaseOrdersAsync(purchaseOrder);
@@ -2849,7 +2901,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             var numberOfCalls = 0;
             purchaseOrderRepositoryMock.Setup(r => r.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>()))
-                                       .ReturnsAsync(null)
+                                       .ReturnsAsync(() => null)
                                        .Callback(() => { numberOfCalls++; if (numberOfCalls == 3) throw new ArgumentException(); });
 
             await purchaseOrderService.PostPurchaseOrdersAsync(purchaseOrder);
@@ -2877,7 +2929,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
-            mockAccountFundAvailableRepo.Setup(a => a.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            mockAccountFundAvailableRepo.Setup(a => a.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>()))
                                            .ReturnsAsync(accountFundsAvailable);
 
             purchaseOrderRepositoryMock.Setup(r => r.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
@@ -2916,7 +2968,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             purchaseOrderRepositoryMock.Setup(r => r.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
 
-            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
             await purchaseOrderService.PostPurchaseOrdersAsync(purchaseOrder);
         }
@@ -2950,7 +3002,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             purchaseOrderRepositoryMock.Setup(r => r.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
 
-            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
             await purchaseOrderService.PostPurchaseOrdersAsync(purchaseOrder);
         }
@@ -2984,7 +3036,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             purchaseOrderRepositoryMock.Setup(r => r.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
 
-            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
             await purchaseOrderService.PostPurchaseOrdersAsync(purchaseOrder);
         }
@@ -3088,7 +3140,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             purchaseOrderRepositoryMock.Setup(r => r.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
 
-            purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(null);
+            purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(() => null);
 
             referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
 
@@ -3109,7 +3161,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(domainPurchaseOrder);
 
-            personRepositoryMock.Setup(p => p.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+            personRepositoryMock.Setup(p => p.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
             await purchaseOrderService.PostPurchaseOrdersAsync(purchaseOrder);
         }
@@ -3298,7 +3350,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             buyerRepositoryMock.Setup(r => r.GetBuyerGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
 
-            vendorsRepositoryMock.Setup(r => r.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+            vendorsRepositoryMock.Setup(r => r.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
             await purchaseOrderService.PostPurchaseOrdersAsync(purchaseOrder);
         }
@@ -3454,9 +3506,125 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             vendorsRepositoryMock.Setup(r => r.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
 
-            referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
             await purchaseOrderService.PostPurchaseOrdersAsync(purchaseOrder);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task PurchaseOrdersService_PostPurchaseOrdersAsync_DtoValidation_IntegrationException_When_Negative_Lineitem_Quantity()
+        {
+            createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
+            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
+
+            purchaseOrder.LineItems.FirstOrDefault().Quantity = -1;
+
+            try
+            {
+                await purchaseOrderService.PostPurchaseOrdersAsync(purchaseOrder);
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                bool messageFound = false;
+                foreach (var error in ex.Errors)
+                {
+                    if (error.Message == "The Quantity must be greater than zero when submitting a line item." && error.Code == "Validation.Exception")
+                    {
+                        messageFound = true;
+                    }
+                }
+                Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task PurchaseOrdersService_PostPurchaseOrdersAsync_DtoValidation_IntegrationException_When_Negative_Lineitem_UnitPrice()
+        {
+            createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
+            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
+
+            purchaseOrder.LineItems.FirstOrDefault().UnitPrice.Value = -1;
+
+            try
+            {
+                await purchaseOrderService.PostPurchaseOrdersAsync(purchaseOrder);
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                bool messageFound = false;
+                foreach (var error in ex.Errors)
+                {
+                    if (error.Message == "The UnitPrice must be greater than or equal to zero when submitting a line item." && error.Code == "Validation.Exception")
+                    {
+                        messageFound = true;
+                    }
+                }
+                Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task PurchaseOrdersService_PostPurchaseOrdersAsync_DtoValidation_IntegrationException_When_Negative_Lineitem_Allocated_Quantity()
+        {
+            createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
+            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
+
+            purchaseOrder.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.Allocated.Quantity = -1;
+
+            try
+            {
+                await purchaseOrderService.PostPurchaseOrdersAsync(purchaseOrder);
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                bool messageFound = false;
+                foreach (var error in ex.Errors)
+                {
+                    if (error.Message == "The Quantity must be greater than zero when submitting a line item account detail allocation." && error.Code == "Validation.Exception")
+                    {
+                        messageFound = true;
+                    }
+                }
+                Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task PurchaseOrdersService_PostPurchaseOrdersAsync_DtoValidation_IntegrationException_When_Negative_Lineitem_Allocated_Percentage()
+        {
+            createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
+            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
+
+            purchaseOrder.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.Allocated.Percentage = -1;
+
+            try
+            {
+                await purchaseOrderService.PostPurchaseOrdersAsync(purchaseOrder);
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                bool messageFound = false;
+                foreach (var error in ex.Errors)
+                {
+                    if (error.Message == "The Percentage must be greater than zero when submitting a line item account detail allocation." && error.Code == "Validation.Exception")
+                    {
+                        messageFound = true;
+                    }
+                }
+                Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                throw ex;
+            }
         }
 
         [TestMethod]
@@ -3823,7 +3991,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         {
             purchaseOrderRepositoryMock.Setup(r => r.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
 
-            accountFundAvailableRepoMock.Setup(a => a.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            accountFundAvailableRepoMock.Setup(a => a.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>()))
                                            .ReturnsAsync(accountFundsAvailable);
 
             buyerRepositoryMock.Setup(p => p.GetBuyerIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
@@ -3912,12 +4080,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             await purchaseOrderService.PutPurchaseOrdersAsync(It.IsAny<string>(), new Dtos.PurchaseOrders2() { });
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task PurchaseOrdersService_PostPurchaseOrdersAsync_PermissionsException()
-        {
-            await purchaseOrderService.PutPurchaseOrdersAsync(purchaseOrder.Id, purchaseOrder);
-        }
+    
 
 
         [TestMethod]
@@ -4005,8 +4168,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
 
-            personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
-            buyerRepositoryMock.Setup(p => p.GetBuyerIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
+            buyerRepositoryMock.Setup(p => p.GetBuyerIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
             purchaseOrder.Status = Dtos.EnumProperties.PurchaseOrdersStatus.Notapproved;
             purchaseOrder.Type = Dtos.EnumProperties.PurchaseOrdersTypes.Procurement;
@@ -4024,7 +4187,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
 
-            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetShipToDestinationsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetShipToDestinationsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
             purchaseOrder.Status = Dtos.EnumProperties.PurchaseOrdersStatus.Reconciled;
 
@@ -4041,7 +4204,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
 
-            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetShippingMethodsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetShippingMethodsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
             purchaseOrder.Status = Dtos.EnumProperties.PurchaseOrdersStatus.Reconciled;
 
@@ -4091,7 +4254,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
 
-            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetFreeOnBoardTypesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetFreeOnBoardTypesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
             await purchaseOrderService.PutPurchaseOrdersAsync(purchaseOrder.Id, purchaseOrder);
         }
@@ -4254,7 +4417,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
 
-            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
             await purchaseOrderService.PutPurchaseOrdersAsync(purchaseOrder.Id, purchaseOrder);
         }
@@ -4269,7 +4432,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
 
-            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
             await purchaseOrderService.PutPurchaseOrdersAsync(purchaseOrder.Id, purchaseOrder);
         }
@@ -4284,7 +4447,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
             roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
 
-            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
             await purchaseOrderService.PutPurchaseOrdersAsync(purchaseOrder.Id, purchaseOrder);
         }
@@ -4365,7 +4528,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             purchaseOrder.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Status = Dtos.EnumProperties.LineItemStatus.Backordered;
             referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
-            purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(null);
+            purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(() => null);
 
             await purchaseOrderService.PutPurchaseOrdersAsync(purchaseOrder.Id, purchaseOrder);
         }
@@ -4384,7 +4547,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             purchaseOrderRepositoryMock.Setup(r => r.UpdatePurchaseOrdersAsync(It.IsAny<PurchaseOrder>())).ReturnsAsync(domainPurchaseOrder);
 
-            buyerRepositoryMock.Setup(r => r.GetBuyerGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+            buyerRepositoryMock.Setup(r => r.GetBuyerGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
             await purchaseOrderService.PutPurchaseOrdersAsync(purchaseOrder.Id, purchaseOrder);
         }
@@ -4579,7 +4742,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(taxCodes);
             buyerRepositoryMock.Setup(r => r.GetBuyerGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
 
-            vendorsRepositoryMock.Setup(r => r.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+            vendorsRepositoryMock.Setup(r => r.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
             await purchaseOrderService.PutPurchaseOrdersAsync(purchaseOrder.Id, purchaseOrder);
         }
@@ -4747,7 +4910,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             vendorsRepositoryMock.Setup(r => r.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
 
-            referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            referenceDataRepositoryMock.Setup(r => r.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
             await purchaseOrderService.PutPurchaseOrdersAsync(purchaseOrder.Id, purchaseOrder);
         }
@@ -4838,6 +5001,122 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var result = await purchaseOrderService.PutPurchaseOrdersAsync(purchaseOrder.Id, purchaseOrder);
 
             Assert.IsNotNull(result);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task PurchaseOrdersService_PutPurchaseOrdersAsync_DtoValidation_IntegrationException_When_Negative_Lineitem_Quantity()
+        {
+            createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
+            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
+
+            purchaseOrder.LineItems.FirstOrDefault().Quantity = -1;
+
+            try
+            {
+                await purchaseOrderService.PutPurchaseOrdersAsync(purchaseOrder.Id, purchaseOrder);
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                bool messageFound = false;
+                foreach (var error in ex.Errors)
+                {
+                    if (error.Message == "The Quantity must be greater than zero when submitting a line item." && error.Code == "Validation.Exception")
+                    {
+                        messageFound = true;
+                    }
+                }
+                Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task PurchaseOrdersService_PutPurchaseOrdersAsync_DtoValidation_IntegrationException_When_Negative_Lineitem_UnitPrice()
+        {
+            createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
+            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
+
+            purchaseOrder.LineItems.FirstOrDefault().UnitPrice.Value = -1;
+
+            try
+            {
+                await purchaseOrderService.PutPurchaseOrdersAsync(purchaseOrder.Id, purchaseOrder);
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                bool messageFound = false;
+                foreach (var error in ex.Errors)
+                {
+                    if (error.Message == "The UnitPrice must be greater than or equal to zero when submitting a line item." && error.Code == "Validation.Exception")
+                    {
+                        messageFound = true;
+                    }
+                }
+                Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task PurchaseOrdersService_PutPurchaseOrdersAsync_DtoValidation_IntegrationException_When_Negative_Lineitem_Allocated_Quantity()
+        {
+            createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
+            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
+
+            purchaseOrder.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.Allocated.Quantity = -1;
+
+            try
+            {
+                await purchaseOrderService.PutPurchaseOrdersAsync(purchaseOrder.Id, purchaseOrder);
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                bool messageFound = false;
+                foreach (var error in ex.Errors)
+                {
+                    if (error.Message == "The Quantity must be greater than zero when submitting a line item account detail allocation." && error.Code == "Validation.Exception")
+                    {
+                        messageFound = true;
+                    }
+                }
+                Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task PurchaseOrdersService_PutPurchaseOrdersAsync_DtoValidation_IntegrationException_When_Negative_Lineitem_Allocated_Percentage()
+        {
+            createPurchaseOrder.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
+            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createPurchaseOrder });
+
+            purchaseOrder.LineItems.FirstOrDefault().AccountDetail.FirstOrDefault().Allocation.Allocated.Percentage = -1;
+
+            try
+            {
+                await purchaseOrderService.PutPurchaseOrdersAsync(purchaseOrder.Id, purchaseOrder);
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                bool messageFound = false;
+                foreach (var error in ex.Errors)
+                {
+                    if (error.Message == "The Percentage must be greater than zero when submitting a line item account detail allocation." && error.Code == "Validation.Exception")
+                    {
+                        messageFound = true;
+                    }
+                }
+                Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                throw ex;
+            }
         }
 
         [TestMethod]

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -408,7 +408,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 _allAcademicPeriodsDto.Add(target);
             }
             _academicPeriodServiceMock.Setup(s => s.GetAcademicPeriods4Async(It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), 
-                It.IsAny<DateTime?>(), It.IsAny<DateTime?>(), It.IsAny<Dictionary<string, string>>()))
+                It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<Dictionary<string, string>>()))
                 .ReturnsAsync(_allAcademicPeriodsDto);
         }
 

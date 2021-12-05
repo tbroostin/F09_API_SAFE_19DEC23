@@ -612,7 +612,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             };
 
             instantEnrollmentRepositoryMock.Setup(repo => repo.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(It.IsAny<Domain.Student.Entities.InstantEnrollment.InstantEnrollmentPaymentAcknowledgementParagraphRequest>())).
-                ReturnsAsync(null);
+                ReturnsAsync(() => null);
             var text = await service.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
         }
 
@@ -686,7 +686,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task QueryPersonMatchResultsInstantEnrollmentByPostAsync_NullResults()
             {
-                instantEnrollmentRepositoryMock.Setup(repo => repo.GetMatchingPersonResultsInstantEnrollmentAsync(It.IsAny<Domain.Student.Entities.InstantEnrollment.PersonMatchCriteriaInstantEnrollment>())).ReturnsAsync(null);
+                instantEnrollmentRepositoryMock.Setup(repo => repo.GetMatchingPersonResultsInstantEnrollmentAsync(It.IsAny<Domain.Student.Entities.InstantEnrollment.PersonMatchCriteriaInstantEnrollment>())).ReturnsAsync(() => null);
                 service = new InstantEnrollmentService(adapterRegistry, instantEnrollmentRepository, sectionRepo, studentProgramRepo, currentUserFactory, roleRepository, logger);
 
                 var results = await service.QueryPersonMatchResultsInstantEnrollmentByPostAsync(criteria);

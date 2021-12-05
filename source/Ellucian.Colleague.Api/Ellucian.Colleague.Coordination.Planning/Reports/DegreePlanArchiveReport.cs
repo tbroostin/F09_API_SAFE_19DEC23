@@ -218,7 +218,14 @@ namespace Ellucian.Colleague.Coordination.Planning.Reports
             if (!string.IsNullOrEmpty(degreePlanArchive.ReviewedBy))
             {
                 Ellucian.Colleague.Domain.Planning.Entities.Advisor reviewedBy = advisors.Where(a => a.Id == degreePlanArchive.ReviewedBy).FirstOrDefault();
-                ReviewedBy = GetAdvisorStaffName(degreePlanArchive.ReviewedBy, reviewedBy);
+                if (reviewedBy != null && reviewedBy.PersonDisplayName != null && !string.IsNullOrEmpty(reviewedBy.PersonDisplayName.FullName))
+                {
+                    ReviewedBy = reviewedBy.PersonDisplayName.FullName;
+                }
+                else
+                {
+                    ReviewedBy = GetAdvisorStaffName(degreePlanArchive.ReviewedBy, reviewedBy);
+                }
             }
 
             if (degreePlanArchive.ReviewedDate.HasValue)
@@ -230,7 +237,14 @@ namespace Ellucian.Colleague.Coordination.Planning.Reports
             if (!string.IsNullOrEmpty(degreePlanArchive.CreatedBy))
             {
                 Ellucian.Colleague.Domain.Planning.Entities.Advisor createdBy = advisors.Where(a => a.Id == degreePlanArchive.CreatedBy).FirstOrDefault();
-                ArchivedBy = GetAdvisorStaffName(degreePlanArchive.CreatedBy, createdBy);
+                if (createdBy != null && createdBy.PersonDisplayName != null && !string.IsNullOrEmpty(createdBy.PersonDisplayName.FullName))
+                {
+                    ArchivedBy = createdBy.PersonDisplayName.FullName;
+                }
+                else
+                {
+                    ArchivedBy = GetAdvisorStaffName(degreePlanArchive.CreatedBy, createdBy);
+                }
             }
 
             if (degreePlanArchive.CreatedDate.HasValue)
@@ -306,7 +320,15 @@ namespace Ellucian.Colleague.Coordination.Planning.Reports
                 {
                     // The archive course has IDs, not advisor names, so translate them
                     Ellucian.Colleague.Domain.Planning.Entities.Advisor approvedBy = advisors.Where(a => a.Id == archivedCourse.ApprovedBy).FirstOrDefault();
-                    archivedCourseModel.ApprovedBy = GetAdvisorStaffName(archivedCourse.ApprovedBy, approvedBy, "Initial");
+
+                    if (approvedBy != null && approvedBy.PersonDisplayName != null && !string.IsNullOrEmpty(approvedBy.PersonDisplayName.FullName))
+                    {
+                        archivedCourseModel.ApprovedBy = approvedBy.PersonDisplayName.FullName;
+                    }
+                    else
+                    {
+                        archivedCourseModel.ApprovedBy = GetAdvisorStaffName(archivedCourse.ApprovedBy, approvedBy, "Initial");
+                    }
 
                     // Format the approval timestamp
                     archivedCourseModel.ApprovalDate = archivedCourse.ApprovalDate.HasValue ?
@@ -325,7 +347,15 @@ namespace Ellucian.Colleague.Coordination.Planning.Reports
                     else
                     {
                         Ellucian.Colleague.Domain.Planning.Entities.Advisor addedBy = advisors.Where(a => a.Id == archivedCourse.AddedBy).FirstOrDefault();
-                        archivedCourseModel.AddedBy = GetAdvisorStaffName(archivedCourse.AddedBy, addedBy, "Initial");
+
+                        if (addedBy != null && addedBy.PersonDisplayName !=null && !string.IsNullOrEmpty(addedBy.PersonDisplayName.FullName))
+                        {
+                            archivedCourseModel.AddedBy = addedBy.PersonDisplayName.FullName;
+                        }
+                        else
+                        {
+                            archivedCourseModel.AddedBy = GetAdvisorStaffName(archivedCourse.AddedBy, addedBy, "Initial");
+                        }                       
                     }
                     // Format the approval timestamp
                     archivedCourseModel.AddedDate = archivedCourse.AddedOn.HasValue ?
@@ -358,7 +388,15 @@ namespace Ellucian.Colleague.Coordination.Planning.Reports
                     else
                     {
                         Ellucian.Colleague.Domain.Planning.Entities.Advisor noteWriter = advisors.Where(a => a.Id == note.PersonId).FirstOrDefault();
-                        archivedNoteDto.PersonName = GetAdvisorStaffName(note.PersonId, noteWriter, "Initial");
+
+                        if (noteWriter !=null && noteWriter.PersonDisplayName != null && !string.IsNullOrEmpty(noteWriter.PersonDisplayName.FullName))
+                        {
+                            archivedNoteDto.PersonName = noteWriter.PersonDisplayName.FullName;
+                        }
+                        else
+                        {
+                            archivedNoteDto.PersonName = GetAdvisorStaffName(note.PersonId, noteWriter, "Initial");
+                        }
                     }
                 }
                 // Format the note timestamp

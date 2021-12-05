@@ -32,8 +32,9 @@ namespace Ellucian.Colleague.Coordination.Finance
         /// Get a privacy-restricted accountholder by ID
         /// </summary>
         /// <param name="id">Accountholder ID</param>
+        /// <param name="bypassCache">Bypass Cache</param>
         /// <returns>The accountholder</returns>
-        PrivacyWrapper<AccountHolder> GetAccountHolder2(string id);
+        Task<PrivacyWrapper<AccountHolder>> GetAccountHolder2Async(string id, bool bypassCache);
 
         /// <summary>
         /// Retrieves the information for a single accountholder if an id is provided,

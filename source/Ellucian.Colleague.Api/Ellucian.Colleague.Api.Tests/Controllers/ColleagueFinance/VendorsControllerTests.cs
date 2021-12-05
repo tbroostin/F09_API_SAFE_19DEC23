@@ -1,21 +1,26 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using Ellucian.Colleague.Api.Controllers.ColleagueFinance;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Dtos.Filters;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -358,6 +363,142 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             await _vendorsController.GetVendorsAsync(paging, criteriaFilter);
         }
 
+        //GET v8
+        //Successful
+        //GetVendorsAsync
+        [TestMethod]
+        public async Task VendorsController_GetVendorsAsync_Permissions()
+        {
+            var expected = _vendorsCollection.FirstOrDefault(x => x.Id.Equals(Vendors1Guid, StringComparison.OrdinalIgnoreCase));
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Vendors" },
+                    { "action", "GetVendorsAsync" }
+                };
+            HttpRoute route = new HttpRoute("vendors", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.ViewVendors);
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var tuple = new Tuple<IEnumerable<Dtos.Vendors>, int>(_vendorsCollection, 1);
+
+            _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _vendorsServiceMock
+                .Setup(x => x.GetVendorsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorFilter>(), It.IsAny<bool>()))
+                .ReturnsAsync(tuple);
+            var vendors = await _vendorsController.GetVendorsAsync(new Paging(10, 0), criteriaFilter);
+
+            Object filterObject;
+            _vendorsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewVendors));
+
+
+        }
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorsAsync_UpdatePermissions()
+        {
+            var expected = _vendorsCollection.FirstOrDefault(x => x.Id.Equals(Vendors1Guid, StringComparison.OrdinalIgnoreCase));
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Vendors" },
+                    { "action", "GetVendorsAsync" }
+                };
+            HttpRoute route = new HttpRoute("vendors", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.UpdateVendors);
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var tuple = new Tuple<IEnumerable<Dtos.Vendors>, int>(_vendorsCollection, 1);
+
+            _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _vendorsServiceMock
+                .Setup(x => x.GetVendorsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorFilter>(), It.IsAny<bool>()))
+                .ReturnsAsync(tuple);
+            var vendors = await _vendorsController.GetVendorsAsync(new Paging(10, 0), criteriaFilter);
+
+            Object filterObject;
+            _vendorsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.UpdateVendors));
+
+
+        }
+
+        //GET v8
+        //Exception
+        //GetVendorsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorsAsync_Invalid_Permissions()
+        {
+            var paging = new Paging(100, 0);
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Vendors" },
+                    { "action", "GetVendorsAsync" }
+                };
+            HttpRoute route = new HttpRoute("vendors", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _vendorsServiceMock.Setup(x => x.GetVendorsAsync(It.IsAny<int>(), It.IsAny<int>(), null, It.IsAny<bool>()))
+                .Throws<PermissionsException>();
+                _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view vendors."));
+                await _vendorsController.GetVendorsAsync(paging, criteriaFilter);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion GetVendors
 
         #region GetVendorsByGuid
@@ -459,6 +600,135 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 .Throws<Exception>();
             await _vendorsController.GetVendorsByGuidAsync(Vendors1Guid);
         }
+
+        //GET by id v8
+        //Successful
+        //GetVendorsByGuidAsync
+        [TestMethod]
+        public async Task VendorsController_GetVendorsByGuidAsync_Permissions()
+        {
+            var expected = _vendorsCollection.FirstOrDefault(x => x.Id.Equals(Vendors1Guid, StringComparison.OrdinalIgnoreCase));
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Vendors" },
+                    { "action", "GetVendorsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("vendors", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.ViewVendors);
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _vendorsServiceMock.Setup(x => x.GetVendorsByGuidAsync(It.IsAny<string>())).ReturnsAsync(expected);
+            var actual = await _vendorsController.GetVendorsByGuidAsync(Vendors1Guid);
+
+            Object filterObject;
+            _vendorsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewVendors));
+
+
+        }
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorsByGuidAsync_UpdatePermissions()
+        {
+            var expected = _vendorsCollection.FirstOrDefault(x => x.Id.Equals(Vendors1Guid, StringComparison.OrdinalIgnoreCase));
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Vendors" },
+                    { "action", "GetVendorsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("vendors", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.UpdateVendors);
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _vendorsServiceMock.Setup(x => x.GetVendorsByGuidAsync(It.IsAny<string>())).ReturnsAsync(expected);
+            var actual = await _vendorsController.GetVendorsByGuidAsync(Vendors1Guid);
+
+            Object filterObject;
+            _vendorsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.UpdateVendors));
+
+
+        }
+
+        //GET by id v8
+        //Exception
+        //GetVendorsByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorsByGuidAsync_Invalid_Permissions()
+        {
+            var paging = new Paging(100, 0);
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Vendors" },
+                    { "action", "GetVendorsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("vendors", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _vendorsServiceMock.Setup(x => x.GetVendorsByGuidAsync(It.IsAny<string>())).Throws<PermissionsException>();
+                _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view vendors."));
+                await _vendorsController.GetVendorsByGuidAsync(Vendors1Guid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
 
         #endregion GetVendorByGuid
 
@@ -761,6 +1031,177 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             var expected = _vendorsCollection.FirstOrDefault();
             await _vendorsController.PutVendorsAsync(expected.Id, expected);
         }
+
+        //PUT v8
+        //Successful
+        //PutVendorsAsync
+        [TestMethod]
+        public async Task VendorsController_PutVendorsAsync_Permissions()
+        {
+            var expected = _vendorsCollection.FirstOrDefault(x => x.Id.Equals(Vendors1Guid, StringComparison.OrdinalIgnoreCase));
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Vendors" },
+                    { "action", "PutVendorsAsync" }
+                };
+            HttpRoute route = new HttpRoute("vendors", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.UpdateVendors);
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _vendorsServiceMock.Setup(i => i.PutVendorAsync(Vendors1Guid, It.IsAny<Vendors>())).ReturnsAsync(_vendorDto);
+            var result = await _vendorsController.PutVendorsAsync(Vendors1Guid, _vendorDto);
+
+            Object filterObject;
+            _vendorsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.UpdateVendors));
+
+
+        }
+
+        //PUT v8
+        //Exception
+        //PutVendorsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_PutVendorsAsync_Invalid_Permissions()
+        {
+            var paging = new Paging(100, 0);
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Vendors" },
+                    { "action", "PutVendorsAsync" }
+                };
+            HttpRoute route = new HttpRoute("vendors", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _vendorsServiceMock.Setup(i => i.PutVendorAsync(Vendors1Guid, _vendorDto)).ThrowsAsync(new PermissionsException());
+                _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to update vendors."));
+                var result = await _vendorsController.PutVendorsAsync(Vendors1Guid, _vendorDto);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //POST v8
+        //Successful
+        //PostVendorsAsync
+        [TestMethod]
+        public async Task VendorsController_PostVendorsAsync_Permissions()
+        {
+            _vendorDto.Id = string.Empty;
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Vendors" },
+                    { "action", "PostVendorsAsync" }
+                };
+            HttpRoute route = new HttpRoute("vendors", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.UpdateVendors);
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _vendorsServiceMock.Setup(i => i.PostVendorAsync(_vendorDto)).ReturnsAsync(_vendorDto);
+            var result = await _vendorsController.PostVendorsAsync(_vendorDto);
+
+            Object filterObject;
+            _vendorsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.UpdateVendors));
+
+
+        }
+
+        //POST v8
+        //Exception
+        //PostVendorsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_PostVendorsAsync_Invalid_Permissions()
+        {
+            _vendorDto.Id = string.Empty;
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Vendors" },
+                    { "action", "PostVendorsAsync" }
+                };
+            HttpRoute route = new HttpRoute("vendors", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _vendorsServiceMock.Setup(i => i.PostVendorAsync(_vendorDto)).ThrowsAsync(new PermissionsException());
+                _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to create vendors."));
+                var result = await _vendorsController.PostVendorsAsync(_vendorDto);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
 
         #endregion
 
@@ -1565,6 +2006,145 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             await _vendorsController.GetVendorsAsync2(paging, criteriaFilter, vendorDetailFilter);
         }
 
+        //GET v11.1.0 v11
+        //Successful
+        //GetVendorsAsync2
+        [TestMethod]
+        public async Task VendorsController_GetVendorsAsync2_Permissions()
+        {
+            var expected = _vendorsCollection.FirstOrDefault(x => x.Id.Equals(Vendors1Guid, StringComparison.OrdinalIgnoreCase));
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Vendors" },
+                    { "action", "GetVendorsAsync2" }
+                };
+            HttpRoute route = new HttpRoute("vendors", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.ViewVendors);
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var tuple = new Tuple<IEnumerable<Dtos.Vendors2>, int>(_vendorsCollection, 1);
+
+            _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _vendorsServiceMock
+                            .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                            It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
+                            .ReturnsAsync(tuple); 
+            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            Object filterObject;
+            _vendorsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewVendors));
+
+
+        }
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorsAsync2_UpdatePermissions()
+        {
+            var expected = _vendorsCollection.FirstOrDefault(x => x.Id.Equals(Vendors1Guid, StringComparison.OrdinalIgnoreCase));
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Vendors" },
+                    { "action", "GetVendorsAsync2" }
+                };
+            HttpRoute route = new HttpRoute("vendors", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.UpdateVendors);
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var tuple = new Tuple<IEnumerable<Dtos.Vendors2>, int>(_vendorsCollection, 1);
+
+            _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _vendorsServiceMock
+                            .Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                            It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
+                            .ReturnsAsync(tuple);
+            var vendors = await _vendorsController.GetVendorsAsync2(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            Object filterObject;
+            _vendorsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.UpdateVendors));
+
+
+        }
+
+        //GET v11.1.0 v11
+        //Exception
+        //GetVendorsAsync2
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorsAsync2_Invalid_Permissions()
+        {
+            var paging = new Paging(100, 0);
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Vendors" },
+                    { "action", "GetVendorsAsync2" }
+                };
+            HttpRoute route = new HttpRoute("vendors", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _vendorsServiceMock.Setup(x => x.GetVendorsAsync2(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(),
+                    It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<bool>()))
+                    .Throws<PermissionsException>();
+                _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view vendors."));
+                await _vendorsController.GetVendorsAsync2(paging, criteriaFilter, vendorDetailFilter);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion GetVendors
 
         #region GetVendorsByGuid
@@ -1646,6 +2226,134 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 .Throws<Exception>();
             await _vendorsController.GetVendorsByGuidAsync2(Vendors1Guid);
         }
+
+        //GET by id v11.1.0 v11
+        //Successful
+        //GetVendorsByGuidAsync2
+        [TestMethod]
+        public async Task VendorsController_GetVendorsByGuidAsync2_Permissions()
+        {
+            var expected = _vendorsCollection.FirstOrDefault(x => x.Id.Equals(Vendors1Guid, StringComparison.OrdinalIgnoreCase));
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Vendors" },
+                    { "action", "GetVendorsByGuidAsync2" }
+                };
+            HttpRoute route = new HttpRoute("vendors", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.ViewVendors);
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _vendorsServiceMock.Setup(x => x.GetVendorsByGuidAsync2(It.IsAny<string>())).ReturnsAsync(expected);
+            var actual = await _vendorsController.GetVendorsByGuidAsync2(Vendors1Guid);
+
+            Object filterObject;
+            _vendorsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewVendors));
+
+
+        }
+
+        [TestMethod]
+        public async Task VendorsController_GetVendorsByGuidAsync2_UpdatePermissions()
+        {
+            var expected = _vendorsCollection.FirstOrDefault(x => x.Id.Equals(Vendors1Guid, StringComparison.OrdinalIgnoreCase));
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Vendors" },
+                    { "action", "GetVendorsByGuidAsync2" }
+                };
+            HttpRoute route = new HttpRoute("vendors", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.ViewVendors);
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _vendorsServiceMock.Setup(x => x.GetVendorsByGuidAsync2(It.IsAny<string>())).ReturnsAsync(expected);
+            var actual = await _vendorsController.GetVendorsByGuidAsync2(Vendors1Guid);
+
+            Object filterObject;
+            _vendorsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewVendors));
+
+
+        }
+        //GET by id v11.1.0 v11
+        //Exception
+        //GetVendorsByGuidAsync2
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_GetVendorsByGuidAsync2_Invalid_Permissions()
+        {
+            var paging = new Paging(100, 0);
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Vendors" },
+                    { "action", "GetVendorsByGuidAsync2" }
+                };
+            HttpRoute route = new HttpRoute("vendors", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                
+                _vendorsServiceMock.Setup(x => x.GetVendorsByGuidAsync2(It.IsAny<string>())).Throws<PermissionsException>();
+                _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view vendors."));
+                await _vendorsController.GetVendorsByGuidAsync2(Vendors1Guid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
 
         #endregion GetVendorByGuid
 
@@ -1834,6 +2542,176 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             _vendorsServiceMock.Setup(i => i.PutVendorAsync2(Vendors1Guid, _vendorDto)).ThrowsAsync(new ArgumentException());
             var result = await _vendorsController.PutVendorsAsync2(Vendors1Guid, _vendorDto);
         }
+
+        //PUT v11.1.0 v11
+        //Successful
+        //PutVendorsAsync2
+        [TestMethod]
+        public async Task VendorsController_PutVendorsAsync2_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Vendors" },
+                    { "action", "PutVendorsAsync2" }
+                };
+            HttpRoute route = new HttpRoute("vendors", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.UpdateVendors);
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _vendorsServiceMock.Setup(i => i.PutVendorAsync2(Vendors1Guid, It.IsAny<Vendors2>())).ReturnsAsync(_vendorDto);
+            var result = await _vendorsController.PutVendorsAsync2(Vendors1Guid, _vendorDto);
+
+            Object filterObject;
+            _vendorsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.UpdateVendors));
+
+
+        }
+
+        //PUT v11.1.0 v11
+        //Exception
+        //PutVendorsAsync2
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_PutVendorsAsync2_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Vendors" },
+                    { "action", "PutVendorsAsync2" }
+                };
+            HttpRoute route = new HttpRoute("vendors", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _vendorsServiceMock.Setup(i => i.PutVendorAsync2(Vendors1Guid, _vendorDto)).ThrowsAsync(new PermissionsException());
+                _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to update vendors."));
+                var result = await _vendorsController.PutVendorsAsync2(Vendors1Guid, _vendorDto);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //POST v11.1.0 v11
+        //Successful
+        //PostVendorsAsync2
+        [TestMethod]
+        public async Task VendorsController_PostVendorsAsync2_Permissions()
+        {
+            _vendorDto.Id = string.Empty;
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Vendors" },
+                    { "action", "PostVendorsAsync2" }
+                };
+            HttpRoute route = new HttpRoute("vendors", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.UpdateVendors);
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _vendorsServiceMock.Setup(i => i.PostVendorAsync2(_vendorDto)).ReturnsAsync(_vendorDto);
+            var result = await _vendorsController.PostVendorsAsync2(_vendorDto);
+
+            Object filterObject;
+            _vendorsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.UpdateVendors));
+
+
+        }
+
+        //POST v11.1.0 v11
+        //Exception
+        //PostVendorsAsync2
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsController_PostVendorsAsync2_Invalid_Permissions()
+        {
+            _vendorDto.Id = string.Empty;
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Vendors" },
+                    { "action", "PostVendorsAsync2" }
+                };
+            HttpRoute route = new HttpRoute("vendors", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _vendorsServiceMock.Setup(i => i.PostVendorAsync2(_vendorDto)).ThrowsAsync(new PermissionsException());
+                _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to create vendors."));
+                var result = await _vendorsController.PostVendorsAsync2(_vendorDto);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion
 
         #region Post
@@ -2469,6 +3347,176 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 .Throws<Exception>();
             await _vendorsController.GetVendorsMaximumByGuidAsync(Vendors1Guid);
         }
+
+        //GET by id v1.0.0
+        //Successful
+        //GetVendorsMaximumByGuidAsync
+        [TestMethod]
+        public async Task VVendorsMaximumController_GetVendorsMaximumByGuidAsync_Permissions()
+        {
+            var expected = _vendorsCollection.FirstOrDefault(x => x.Id.Equals(Vendors1Guid, StringComparison.OrdinalIgnoreCase));
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "VendorsMaximum" },
+                    { "action", "GetVendorsMaximumByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("vendors-maximum", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.ViewVendors);
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _vendorsServiceMock.Setup(x => x.GetVendorsMaximumByGuidAsync(It.IsAny<string>())).ReturnsAsync(expected);
+            var actual = await _vendorsController.GetVendorsMaximumByGuidAsync(Vendors1Guid);
+
+            Object filterObject;
+            _vendorsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewVendors));
+
+
+        }
+
+        //GET by id v1.0.0
+        //Exception
+        //GetVendorsMaximumByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsMaximumController_GetVendorsMaximumByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "VendorsMaximum" },
+                    { "action", "GetVendorsMaximumByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("vendors-maximum", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _vendorsServiceMock.Setup(x => x.GetVendorsMaximumByGuidAsync(It.IsAny<string>())).Throws<PermissionsException>();
+                _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view vendors-maximum."));
+                await _vendorsController.GetVendorsMaximumByGuidAsync(Vendors1Guid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET v1.0.0
+        //Successful
+        //GetVendorsMaximumAsync
+        [TestMethod]
+        public async Task VVendorsMaximumController_GetVendorsMaximumAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "VendorsMaximum" },
+                    { "action", "GetVendorsMaximumAsync" }
+                };
+            HttpRoute route = new HttpRoute("vendors-maximum", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+            _vendorsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.ViewVendors);
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var tuple = new Tuple<IEnumerable<Dtos.VendorsMaximum>, int>(_vendorsCollection, 1);
+
+            _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _vendorsServiceMock.Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            var vendors = await _vendorsController.GetVendorsMaximumAsync(new Paging(10, 0), criteriaFilter, vendorDetailFilter);
+
+            Object filterObject;
+            _vendorsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewVendors));
+
+
+        }
+
+        //GET v1.0.0
+        //Exception
+        //GetVendorsMaximumAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorsMaximumController_GetVendorsMaximumAsync_Invalid_Permissions()
+        {
+            var paging = new Paging(100, 0);
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "VendorsMaximum" },
+                    { "action", "GetVendorsMaximumAsync" }
+                };
+            HttpRoute route = new HttpRoute("vendors-maximum", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _vendorsController.ControllerContext;
+            var actionDescriptor = _vendorsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _vendorsServiceMock.Setup(x => x.GetVendorsMaximumAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorsMaximum>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                _vendorsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view vendors-maximum."));
+                await _vendorsController.GetVendorsMaximumAsync(paging, criteriaFilter, vendorDetailFilter);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
 
         #endregion GetVendorsMaximumByGuidAsync
     }

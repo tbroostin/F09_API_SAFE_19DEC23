@@ -20,7 +20,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         Task<Dtos.Addresses> PutAddressesAsync(string id, Dtos.Addresses addressDto);
         Task<Dtos.Addresses> PutAddresses2Async(string id, Dtos.Addresses addressDto);
 
-        Task<Dtos.Addresses> PostAddressesAsync(Dtos.Addresses address);
+        //Task<Dtos.Addresses> PostAddressesAsync(Dtos.Addresses address);
 
         Task DeleteAddressesAsync(string id);
 

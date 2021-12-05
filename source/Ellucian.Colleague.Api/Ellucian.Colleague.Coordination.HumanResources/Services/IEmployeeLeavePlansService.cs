@@ -36,5 +36,11 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns></returns>
         Task<IEnumerable<EmployeeLeavePlan>> GetEmployeeLeavePlansV2Async(string effectivePersonId = null, bool bypassCache = false);
 
+        /// <summary>
+        /// Gets 
+        /// </summary>
+        /// <param name="criteria"></param>
+        /// <returns>Collection of <see cref="EmployeeLeavePlan">employeeLeavePlans</see></returns>
+        Task<IEnumerable<Dtos.HumanResources.EmployeeLeavePlan>> QueryEmployeeLeavePlanAsync(EmployeeLeavePlanQueryCriteria criteria);
     }
 }

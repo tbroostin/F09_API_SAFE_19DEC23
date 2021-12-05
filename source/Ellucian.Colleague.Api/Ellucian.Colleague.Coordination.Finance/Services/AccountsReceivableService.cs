@@ -98,7 +98,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
         {
             CheckAccountPermission(id);
 
-            var accountHolderEntity = _arRepository.GetAccountHolder(id);
+            var accountHolderEntity = Task.Run(async() => await _arRepository.GetAccountHolderAsync(id)).GetAwaiter().GetResult();
             var adapter = _adapterRegistry.GetAdapter<Domain.Finance.Entities.AccountHolder, Dtos.Finance.AccountHolder>();
             var accountHolderDto = adapter.MapToType(accountHolderEntity);
 
@@ -110,11 +110,11 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
         /// </summary>
         /// <param name="id">Accountholder ID</param>
         /// <returns>The AccountHolder DTO</returns>
-        public PrivacyWrapper<Dtos.Finance.AccountHolder> GetAccountHolder2(string id)
+        public async Task<PrivacyWrapper<Dtos.Finance.AccountHolder>> GetAccountHolder2Async(string id, bool bypassCache)
         {
             CheckAccountPermission(id);
 
-            var accountHolderEntity = _arRepository.GetAccountHolder(id);
+            var accountHolderEntity = await _arRepository.GetAccountHolderAsync(id, bypassCache);
             var privacyWrapperWithList = BuildAccountHolderDtos(new List<AccountHolder>() { accountHolderEntity });
             var accountHolderDto = privacyWrapperWithList.Dto.FirstOrDefault();
             var privacyWrapper = new PrivacyWrapper<Dtos.Finance.AccountHolder>(accountHolderDto, privacyWrapperWithList.HasPrivacyRestrictions);
@@ -149,7 +149,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
 
             if (!HasPermission(FinancePermissionCodes.ViewStudentAccountActivity))
             {
-                logger.Info(CurrentUser + " does not have permission code " + FinancePermissionCodes.ViewStudentAccountActivity);
+                logger.Error(CurrentUser.PersonId + " does not have permission code " + FinancePermissionCodes.ViewStudentAccountActivity);
                 throw new PermissionsException();
             }
 
@@ -162,7 +162,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
             {
                 logger.Error(ex.Message);
                 logger.Error(ex.StackTrace);
-                throw new ArgumentException("Error searching accountholders with criteria " + criteria);
+                throw new ArgumentException("Error searching for accountholders");
             }
 
             List<Dtos.Finance.AccountHolder> dtos = new List<Dtos.Finance.AccountHolder>();
@@ -203,7 +203,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
             }
             if (!HasPermission(FinancePermissionCodes.ViewStudentAccountActivity))
             {
-                logger.Info(CurrentUser + " does not have permission code " + FinancePermissionCodes.ViewStudentAccountActivity);
+                logger.Error(CurrentUser.PersonId + " does not have permission code " + FinancePermissionCodes.ViewStudentAccountActivity);
                 throw new PermissionsException();
             }
 
@@ -216,7 +216,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
             {
                 logger.Error(ex.Message);
                 logger.Error(ex.StackTrace);
-                throw new ArgumentException("Error searching accountholders by keyword " + criteria);
+                throw new ArgumentException("Error searching accountholders by keyword ");
             }
           
             return BuildAccountHolderDtos(entities);
@@ -257,7 +257,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
 
             if (!HasPermission(FinancePermissionCodes.ViewStudentAccountActivity))
             {
-                logger.Info(CurrentUser + " does not have permission code " + FinancePermissionCodes.ViewStudentAccountActivity);
+                logger.Error(CurrentUser.PersonId + " does not have permission code " + FinancePermissionCodes.ViewStudentAccountActivity);
                 throw new PermissionsException();
             }
 
@@ -285,7 +285,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                 {
                     logger.Error(ex.Message);
                     logger.Error(ex.StackTrace);
-                    throw new ArgumentException("Error searching accountholders by keyword " + criteria.QueryKeyword);
+                    throw new ArgumentException("Error searching accountholders by keyword");
                 }
             }
             return BuildAccountHolderDtos(entities);

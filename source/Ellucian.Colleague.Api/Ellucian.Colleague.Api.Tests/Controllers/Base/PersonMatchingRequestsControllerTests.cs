@@ -2,21 +2,26 @@
 using Ellucian.Colleague.Api.Controllers.Base;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 {
@@ -392,6 +397,261 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             Assert.AreEqual(expected.Outcomes[0].Date, actual.Outcomes[0].Date);
             Assert.AreEqual(expected.Outcomes[1].Date, actual.Outcomes[1].Date);
         }
+
+        //Get by id v1.0.0
+        //Successful
+        //GetPersonMatchingRequestsByGuidAsync
+        [TestMethod]
+        public async Task PersonMatchingRequestsController_GetPersonMatchingRequestsByGuidAsync_Permissions()
+        {
+            var expected = personMatchingRequestsCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonMatchingRequests" },
+                    { "action", "GetPersonMatchingRequestsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-matching-requests", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personMatchingRequestsController.Request.SetRouteData(data);
+            personMatchingRequestsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BasePermissionCodes.ViewPersonMatchRequest, BasePermissionCodes.CreatePersonMatchRequestProspects });
+
+            var controllerContext = personMatchingRequestsController.ControllerContext;
+            var actionDescriptor = personMatchingRequestsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            personMatchingRequestsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personMatchingRequestsServiceMock.Setup(x => x.GetPersonMatchingRequestsByGuidAsync(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
+            var actual = await personMatchingRequestsController.GetPersonMatchingRequestsByGuidAsync(expected.Id);
+
+            Object filterObject;
+            personMatchingRequestsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewPersonMatchRequest));
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.CreatePersonMatchRequestProspects));
+
+
+        }
+
+        //Get by id v1.0.0
+        //Exception
+        //GetPersonMatchingRequestsByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonMatchingRequestsController_GetPersonMatchingRequestsByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonMatchingRequests" },
+                    { "action", "GetPersonMatchingRequestsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-matching-requests", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personMatchingRequestsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personMatchingRequestsController.ControllerContext;
+            var actionDescriptor = personMatchingRequestsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                personMatchingRequestsServiceMock.Setup(x => x.GetPersonMatchingRequestsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                personMatchingRequestsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                .Throws(new PermissionsException("User 'npuser' does not have permission to view person-matching-requests."));
+                await personMatchingRequestsController.GetPersonMatchingRequestsByGuidAsync(expectedGuid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //Get v1.0.0
+        //Successful
+        //GetPersonMatchingRequestsAsync
+        [TestMethod]
+        public async Task PersonMatchingRequestsController_GetPersonMatchingRequestsAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonMatchingRequests" },
+                    { "action", "GetPersonMatchingRequestsAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-matching-requests", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personMatchingRequestsController.Request.SetRouteData(data);
+            personMatchingRequestsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BasePermissionCodes.ViewPersonMatchRequest, BasePermissionCodes.CreatePersonMatchRequestProspects });
+
+            var controllerContext = personMatchingRequestsController.ControllerContext;
+            var actionDescriptor = personMatchingRequestsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var tuple = new Tuple<IEnumerable<Dtos.PersonMatchingRequests>, int>(personMatchingRequestsCollection, 2);
+
+            personMatchingRequestsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personMatchingRequestsServiceMock.Setup(x => x.GetPersonMatchingRequestsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<PersonMatchingRequests>(), person, It.IsAny<bool>())).ReturnsAsync(tuple);
+            var personMatchingRequests = await personMatchingRequestsController.GetPersonMatchingRequestsAsync(new Paging(limit, offset), criteriaFilter, personFilter);
+
+            Object filterObject;
+            personMatchingRequestsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewPersonMatchRequest));
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.CreatePersonMatchRequestProspects));
+
+
+        }
+
+        //Get v1.0.0
+        //Exception
+        //GetPersonMatchingRequestsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonMatchingRequestsController_GetPersonMatchingRequestsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonMatchingRequests" },
+                    { "action", "GetPersonMatchingRequestsAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-matching-requests", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personMatchingRequestsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personMatchingRequestsController.ControllerContext;
+            var actionDescriptor = personMatchingRequestsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                personMatchingRequestsServiceMock.Setup(x => x.GetPersonMatchingRequestsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<PersonMatchingRequests>(), person, It.IsAny<bool>())).Throws<PermissionsException>();
+                personMatchingRequestsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                .Throws(new PermissionsException("User 'npuser' does not have permission to view person-matching-requests."));
+                var personMatchingRequests = await personMatchingRequestsController.GetPersonMatchingRequestsAsync(new Paging(limit, offset), criteriaFilter, personFilter);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //POST v1.0.0
+        //Successful
+        //PostPersonMatchingRequestsInitiationsProspectsAsync
+        [TestMethod]
+        public async Task PersonMatchingRequestsController_PostPersonMatchingRequestsInitiationsProspectsAsync_Permissions()
+        {
+            var expected = personMatchingRequestsCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonMatchingRequests" },
+                    { "action", "PostPersonMatchingRequestsInitiationsProspectsAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-matching-requests", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personMatchingRequestsController.Request.SetRouteData(data);
+            personMatchingRequestsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(BasePermissionCodes.CreatePersonMatchRequestProspects);
+
+            var controllerContext = personMatchingRequestsController.ControllerContext;
+            var actionDescriptor = personMatchingRequestsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            personMatchingRequestsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personMatchingRequestsServiceMock.Setup(x => x.CreatePersonMatchingRequestsInitiationsProspectsAsync(It.IsAny<Dtos.PersonMatchingRequestsInitiationsProspects>())).ReturnsAsync(expected);
+            var actual = await personMatchingRequestsController.PostPersonMatchingRequestsInitiationsProspectsAsync(personMatchingRequestsInitiationsProspectsCollection.FirstOrDefault());
+
+            Object filterObject;
+            personMatchingRequestsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.CreatePersonMatchRequestProspects));
+
+
+        }
+
+        //POST v1.0.0
+        //Exception
+        //PostPersonMatchingRequestsInitiationsProspectsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonMatchingRequestsController_PostPersonMatchingRequestsInitiationsProspectsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonMatchingRequests" },
+                    { "action", "PostPersonMatchingRequestsInitiationsProspectsAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-matching-requests", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personMatchingRequestsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personMatchingRequestsController.ControllerContext;
+            var actionDescriptor = personMatchingRequestsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                personMatchingRequestsServiceMock.Setup(x => x.CreatePersonMatchingRequestsInitiationsProspectsAsync(It.IsAny<Dtos.PersonMatchingRequestsInitiationsProspects>())).Throws<PermissionsException>();
+                personMatchingRequestsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                .Throws(new PermissionsException("User 'npuser' does not have permission to create person-matching-requests."));
+                var actual = await personMatchingRequestsController.PostPersonMatchingRequestsInitiationsProspectsAsync(personMatchingRequestsInitiationsProspectsCollection.FirstOrDefault());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
 
         #endregion
     }

@@ -1,6 +1,7 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
+using System.Collections.Generic;
 
 namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
 {
@@ -34,7 +35,22 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// Default Tax form state / location.
         /// </summary>
         public string TaxFormState { get; set; }
-        
+
+        /// <summary>
+        /// Withholding flag for 1099-NEC.
+        /// </summary>
+        public bool TaxForm1099NecWithholding { get; set; }
+
+        /// <summary>
+        /// Withholding flag for 1099-MISC.
+        /// </summary>
+        public bool TaxForm1099MiscWithholding { get; set; }
+
+        /// <summary>
+        /// Vendor AP Types
+        /// </summary>
+        public List<string> VendorApTypes { get; set; }
+
 
         public VendorDefaultTaxFormInfo(string vendorId)
         {

@@ -11,5 +11,9 @@ namespace Ellucian.Colleague.Dtos.Finance
         /// Amount of paid on the invoice
         /// </summary>
         public decimal AmountPaid { get; set; }
+        /// <summary>
+        /// Amount of balance remaining to be paid. This balance is adjusted after applying all the adjusted invoices. 
+        /// </summary>
+        public decimal BalanceAmount { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
@@ -72,6 +72,34 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
             }
             return configurationDto;
+        }
+
+        /// <summary>
+        /// Retrieves the configuration information needed to render a new graduation application asynchronously.
+        /// </summary>
+        /// <returns>The <see cref="GraduationConfiguration2">Graduation Configuration2</see></returns>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. NotFound if the required setup is not complete or available.</exception>
+        /// <accessComments>Any authenticated user can get this resource.</accessComments>
+        public async Task<GraduationConfiguration2> GetGraduationConfiguration2Async()
+        {
+            GraduationConfiguration2 configuration2Dto = null;
+            try
+            {
+                Ellucian.Colleague.Domain.Student.Entities.GraduationConfiguration configuration = await _configurationRepository.GetGraduationConfigurationAsync();
+                var graduationConfiguration2DtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.GraduationConfiguration, Ellucian.Colleague.Dtos.Student.GraduationConfiguration2>();
+                configuration2Dto = graduationConfiguration2DtoAdapter.MapToType(configuration);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.NotFound);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+            }
+            return configuration2Dto;
         }
 
         /// <summary>
@@ -244,6 +272,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns>The <see cref="CourseCatalogConfiguration3">Course Catalog Configuration</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. </exception>
         /// <accessComments>Any authenticated user can get this resource.</accessComments>
+        [Obsolete("Obsolete as of API version 1.32, use version 4 of this API")]
         public async Task<CourseCatalogConfiguration3> GetCourseCatalogConfiguration3Async()
         {
             try
@@ -256,5 +285,118 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 throw CreateHttpResponseException("Unable to get the course catalog configuration information.", HttpStatusCode.BadRequest);
             }
         }
+
+        /// <summary>
+        /// Retrieves the configuration information needed for course catalog searches asynchronously.
+        /// </summary>
+        /// <returns>The <see cref="CourseCatalogConfiguration4">Course Catalog Configuration</see></returns>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. </exception>
+        /// <accessComments>Any authenticated user can get this resource.</accessComments>
+        public async Task<CourseCatalogConfiguration4> GetCourseCatalogConfiguration4Async()
+        {
+            try
+            {
+                return await _configurationService.GetCourseCatalogConfiguration4Async();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Unable to get the course catalog configuration information.");
+                throw CreateHttpResponseException("Unable to get the course catalog configuration information.", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the configuration information needed for My Progress evaluation asynchronously.
+        /// </summary>
+        /// <returns>The <see cref="MyProgressConfiguration">MyProgress Configuration</see></returns>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. NotFound if the required setup is not complete or available.</exception>
+        /// <accessComments>Any authenticated user can get this resource.</accessComments>
+        public async Task<MyProgressConfiguration> GetMyProgressConfigurationAsync()
+        {
+            MyProgressConfiguration configurationDto = null;
+            try
+            {
+                Ellucian.Colleague.Domain.Student.Entities.MyProgressConfiguration configuration = await _configurationRepository.GetMyProgressConfigurationAsync();
+                var myProgressConfigurationDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.MyProgressConfiguration, Ellucian.Colleague.Dtos.Student.MyProgressConfiguration>();
+                configurationDto = myProgressConfigurationDtoAdapter.MapToType(configuration);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.NotFound);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+            }
+            return configurationDto;
+        }
+
+        /// <summary>
+        /// Retrieves the section census configuration information needed for Colleague Self-Service
+        /// </summary>
+        /// <returns>The <see cref="SectionCensusConfiguration"/></returns>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. </exception>
+        /// <accessComments>Any authenticated user can get this resource.</accessComments>
+        public async Task<SectionCensusConfiguration> GetSectionCensusConfigurationAsync()
+        {
+            SectionCensusConfiguration configurationDto = null;
+            try
+            {
+                Domain.Student.Entities.SectionCensusConfiguration configuration = await _configurationRepository.GetSectionCensusConfigurationAsync();
+                var sectionCensusConfigurationDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.SectionCensusConfiguration, SectionCensusConfiguration>();
+                configurationDto = sectionCensusConfigurationDtoAdapter.MapToType(configuration);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException("Could not retrieve Colleague Self-Service section census configuration data.", HttpStatusCode.BadRequest);
+            }
+            return configurationDto;
+        }
+
+        /// <summary>
+        /// Returns course delimiter defined on CDEF
+        /// </summary>
+        /// <returns>The Course Delimiter string</returns>
+        /// <accessComments>Any authenticated user can get this resource.</accessComments>
+        /// <returns></returns>
+        public async Task<string> GetCourseDelimiterConfigurationAsync()
+        {
+            string defaultCourseDelimiter = "-";//default course delimiter
+            string courseDelimiter = string.Empty; 
+            try
+            {
+                courseDelimiter = await _configurationRepository.GetCourseDelimiterAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not retrieve CDEF course delimiter configuration data, uses a default hyphen.");
+                courseDelimiter = defaultCourseDelimiter;
+            }
+            return courseDelimiter;
+        }
+
+        /// <summary>
+        /// Retrieves the academic record configuration information needed for Colleague Self-Service
+        /// </summary>
+        /// <returns>The <see cref="AcademicRecordConfiguration"/></returns>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="System.Net.Http.HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. </exception>
+        /// <accessComments>Any authenticated user can get this resource.</accessComments>
+        public async Task<AcademicRecordConfiguration> GetAcademicRecordConfigurationAsync()
+        {
+            try
+            {
+                var configuration = await _configurationService.GetAcademicRecordConfigurationAsync();
+                return configuration;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Unable to get the academic record configuration information.");
+                throw CreateHttpResponseException("Unable to get the academic record configuration information.", HttpStatusCode.BadRequest);
+            }
+        }
+
     }
 }

@@ -1,27 +1,23 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using DDay.iCal;
-using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
-using Ellucian.Colleague.Domain.Student.Services;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
-using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Base.Repositories;
 
+
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
     [RegisterType]
-    public class GradeService: StudentCoordinationService, IGradeService
+    public class GradeService : StudentCoordinationService, IGradeService
     {
         private readonly IGradeRepository _gradeRepository;
         private readonly IAcademicCreditRepository _academicCreditRepository;
@@ -30,7 +26,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private const string _dataOrigin = "Colleague";
         private IEnumerable<Domain.Student.Entities.GradeScheme> gradeSchemes = null;
         private readonly IConfigurationRepository _configurationRepository;
-        
+        private readonly IStudentConfigurationRepository _studentConfigurationRepository;
+        private readonly ISectionRepository _sectionRepository;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="FacilitiesService"/> class.
         /// </summary>
@@ -41,15 +39,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="currentUserFactory">The current user factory.</param>
         /// <param name="roleRepository">The role repository.</param>
         /// <param name="logger">The logger.</param>
-        public GradeService(IGradeRepository gradeRepository, IStudentReferenceDataRepository referenceDataRepository, IAdapterRegistry adapterRegistry, 
-            ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger, IStudentRepository studentRepository, IAcademicCreditRepository academicCreditRepository,
-            IConfigurationRepository configurationRepository)
+        /// <param name="studentConfigurationRepository">The student configuration repository.</param>
+        public GradeService(IGradeRepository gradeRepository, IStudentReferenceDataRepository referenceDataRepository, IAdapterRegistry adapterRegistry,
+            ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger, IStudentRepository studentRepository,
+            IAcademicCreditRepository academicCreditRepository, IConfigurationRepository configurationRepository,
+            IStudentConfigurationRepository studentConfigurationRepository, ISectionRepository sectionRepository)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, studentRepository, configurationRepository)
         {
             _configurationRepository = configurationRepository;
             _gradeRepository = gradeRepository;
             _academicCreditRepository = academicCreditRepository;
             studentReferenceDataRepository = referenceDataRepository;
+
+            _studentConfigurationRepository = studentConfigurationRepository;
+            _sectionRepository = sectionRepository;
+
             this.repoLogger = logger;
         }
 
@@ -59,7 +63,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Returns GradeScheme object</returns>
         private async Task<IEnumerable<Domain.Student.Entities.GradeScheme>> GradeSchemesAsync()
         {
-            if(gradeSchemes == null)
+            if (gradeSchemes == null)
             {
                 gradeSchemes = await studentReferenceDataRepository.GetGradeSchemesAsync();
             }
@@ -76,9 +80,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var gradeCollection = new List<Ellucian.Colleague.Dtos.Grade>();
 
             var gradeEntities = await _gradeRepository.GetHedmAsync(bypassCache);
-            if(gradeEntities != null && gradeEntities.Count() > 0)
+            if (gradeEntities != null && gradeEntities.Count() > 0)
             {
-                foreach(var grade in gradeEntities)
+                foreach (var grade in gradeEntities)
                 {
                     gradeCollection.Add(await ConvertGradeEntityToGradeDtoAsync(grade));
                 }
@@ -235,7 +239,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             else
             {
                 throw new PermissionsException("User does not have permissions to access these student grades.");
-            }            
+            }
         }
 
         /// <summary>
@@ -296,7 +300,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
         }
 
-
         /// <summary>
         /// Convert Grade entity to Grade DTO
         /// </summary>
@@ -340,7 +343,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             var gradeDefinitionsMaximum = new Dtos.GradeDefinitionsMaximum();
             var gradeSchemeProperty = new Dtos.GradeSchemeProperty();
-            var gradeScheme = (await GradeSchemesAsync()).FirstOrDefault(x=> x.Code == response.GradeSchemeCode);
+            var gradeScheme = (await GradeSchemesAsync()).FirstOrDefault(x => x.Code == response.GradeSchemeCode);
             if (gradeScheme == null)
             {
                 throw new ArgumentNullException("Bad.Data", string.Format("The GradeScheme '{0}' is missing or invalid.  Referenced in grade record '{1}'. ", response.GradeSchemeCode, response.Id));
@@ -366,7 +369,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         acadLevelProperty.Code = acadLevel.Code;
                         acadLevelProperty.Title = acadLevel.Description;
                         acadLevelProperty.Detail = new Dtos.GuidObject2() { Id = acadLevel.Guid };
-                        gradeSchemeProperty.AcademicLevel = acadLevelProperty;          
+                        gradeSchemeProperty.AcademicLevel = acadLevelProperty;
                     }
                 }
                 gradeDefinitionsMaximum.Id = response.Guid;
@@ -387,9 +390,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private Dtos.GradeCmplCreditType ConvertGradeCmplCode(string gradeSchemeCode)
         {
             var gradeCmplType = Dtos.GradeCmplCreditType.None;
-            if(!string.IsNullOrEmpty(gradeSchemeCode))
+            if (!string.IsNullOrEmpty(gradeSchemeCode))
             {
-                switch(gradeSchemeCode.ToUpper())
+                switch (gradeSchemeCode.ToUpper())
                 {
                     case "Y":
                         gradeCmplType = Dtos.GradeCmplCreditType.Full;
@@ -401,5 +404,91 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             return gradeCmplType;
         }
+
+        public async Task<IEnumerable<Dtos.Student.StudentAnonymousGrading>> QueryAnonymousGradingIdsAsync(Dtos.Student.AnonymousGradingQueryCriteria criteria)
+        {
+            //student id is required
+            if (criteria == null || string.IsNullOrWhiteSpace(criteria.StudentId))
+            {
+                throw new ArgumentNullException("studentId", "A student id is required in order to retrieve grading ids for a student.");
+            }
+
+            if ((criteria.TermIds != null && criteria.TermIds.Any()) && (criteria.SectionIds != null && criteria.SectionIds.Any()))
+            {
+                throw new ArgumentException("Either term ids or course section ids may be provided but not both.");
+            }
+
+            //an authenticated use can only access their own grade ids
+            if (!CurrentUser.IsPerson(criteria.StudentId))
+                throw new PermissionsException("User does not have permissions to access these student grading ids.");
+
+            var studentAnonymousGradingIds = new List<Dtos.Student.StudentAnonymousGrading>();
+
+            //get type of Anonymous Grading
+            var academicRecordDefaults = await _studentConfigurationRepository.GetAcademicRecordConfigurationAsync();
+
+            if (academicRecordDefaults == null || academicRecordDefaults.AnonymousGradingType == AnonymousGradingType.None)
+            {
+                logger.Info("Anonymous Grading Type configuration has not been configured and is null or empty");
+                return studentAnonymousGradingIds;
+            }
+
+            var filterSectionIds = new List<string>();
+
+            //validate section are valid
+            if (criteria.SectionIds != null && criteria.SectionIds.Any())
+            {
+                var sections = (await _sectionRepository.GetCachedSectionsAsync(criteria.SectionIds.ToList())).ToList(); 
+                
+                //verify sections in criteria
+                foreach (var sectionId in criteria.SectionIds)
+                {
+                    //Verify course section exists
+                    var section = sections.Where(s => s.Id == sectionId).FirstOrDefault();
+                    if (section == null)
+                    {
+                        studentAnonymousGradingIds.Add(new Dtos.Student.StudentAnonymousGrading()
+                        {
+                            AnonymousGradingId = string.Empty,
+                            SectionId = sectionId,
+                            TermId = string.Empty,
+                            Message = "Course section " + sectionId + " is not a valid course section."
+                        });
+                        continue;
+                    }
+
+                    //Verify course section is configured for anonymous grading
+                    if (academicRecordDefaults.AnonymousGradingType == AnonymousGradingType.Section && !section.GradeByRandomId)
+                    {
+                        studentAnonymousGradingIds.Add(new Dtos.Student.StudentAnonymousGrading()
+                        {
+                            AnonymousGradingId = string.Empty,
+                            SectionId = sectionId,
+                            TermId = string.Empty,
+                            Message = "Course section " + sectionId + " is not configured for anonymous grading."
+                        });
+                        continue;
+                    }
+
+                    //valid section
+                    filterSectionIds.Add(sectionId);
+                }
+            }
+
+            var filterTermsIds = criteria.TermIds == null ? new List<string>() : criteria.TermIds.ToList();
+
+            var results = await _academicCreditRepository.GetAnonymousGradingIdsAsync(academicRecordDefaults.AnonymousGradingType, 
+                criteria.StudentId, filterTermsIds, filterSectionIds);
+
+            // Get the right adapter for the type mapping and map entity to DTO
+            var studentAnonymousGradingDtoAdapter = _adapterRegistry.GetAdapter<StudentAnonymousGrading, Dtos.Student.StudentAnonymousGrading>();
+            foreach (var result in results)
+            {
+                studentAnonymousGradingIds.Add(studentAnonymousGradingDtoAdapter.MapToType(result));
+            }
+            return studentAnonymousGradingIds;
+        }
+
     }
+
 }

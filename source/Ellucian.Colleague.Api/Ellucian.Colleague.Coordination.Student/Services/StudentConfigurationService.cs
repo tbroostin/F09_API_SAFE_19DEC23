@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Web.Adapters;
@@ -45,6 +45,32 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             Ellucian.Colleague.Domain.Student.Entities.CourseCatalogConfiguration configuration = await _configurationRepository.GetCourseCatalogConfiguration3Async();
             var catalogConfigurationDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.CourseCatalogConfiguration, Ellucian.Colleague.Dtos.Student.CourseCatalogConfiguration3>();
             configurationDto = catalogConfigurationDtoAdapter.MapToType(configuration);
+            return configurationDto;
+        }
+
+        /// <summary>
+        /// Gets Course Catalog Configurations
+        /// </summary>
+        /// <returns>CourseCatalogConfiguration3 object</returns>
+        public async Task<Dtos.Student.CourseCatalogConfiguration4> GetCourseCatalogConfiguration4Async()
+        {
+            Dtos.Student.CourseCatalogConfiguration4 configurationDto = new Dtos.Student.CourseCatalogConfiguration4();
+            Ellucian.Colleague.Domain.Student.Entities.CourseCatalogConfiguration configuration = await _configurationRepository.GetCourseCatalogConfiguration4Async();
+            var catalogConfigurationDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.CourseCatalogConfiguration, Ellucian.Colleague.Dtos.Student.CourseCatalogConfiguration4>();
+            configurationDto = catalogConfigurationDtoAdapter.MapToType(configuration);
+            return configurationDto;
+        }
+
+        /// <summary>
+        /// Get Academic Record configuration information
+        /// </summary>
+        /// <returns>The AcademicRecordConfiguration object</returns>
+        public async Task<Dtos.Student.AcademicRecordConfiguration> GetAcademicRecordConfigurationAsync()
+        {
+            var configurationDto = new Dtos.Student.AcademicRecordConfiguration();
+            var configuration = await _configurationRepository.GetAcademicRecordConfigurationAsync();
+            var academicRecordConfigurationDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.AcademicRecordConfiguration, Dtos.Student.AcademicRecordConfiguration>();
+            configurationDto = academicRecordConfigurationDtoAdapter.MapToType(configuration);
             return configurationDto;
         }
     }

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Planning.Reports;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -49,6 +49,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
         private readonly IAcademicHistoryService _academicHistoryService;
         private readonly IStudentDegreePlanService _studentDegreePlanService;
         private readonly IConfigurationRepository _configurationRepository;
+        private readonly IProgramEvaluationService _programEvaluationService;
 
         public DegreePlanService(IAdapterRegistry adapterRegistry, IDegreePlanRepository degreePlanRepository, ITermRepository termRepository, IStudentRepository studentRepository, IPlanningStudentRepository planningStudentRepository,
             IStudentProgramRepository studentProgramRepository, ICourseRepository courseRepository, ISectionRepository sectionRepository, IProgramRepository programRepository,
@@ -56,7 +57,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             ISampleDegreePlanRepository curriculumTrackRepository, IPlanningConfigurationRepository planningConfigurationRepository, ICatalogRepository catalogRepository,
             IDegreePlanArchiveRepository degreePlanArchiveRepository, IAdvisorRepository advisorRepository, IGradeRepository gradeRepository, IAcademicHistoryService academicHistoryService,
             IStudentDegreePlanRepository studentDegreePlanRepository, IStudentDegreePlanService studentDegreePlanService,
-            ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger,IConfigurationRepository configurationRepository)
+            ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger, IConfigurationRepository configurationRepository, IProgramEvaluationService programEvaluationService)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, studentRepository, configurationRepository)
         {
             _configurationRepository = configurationRepository;
@@ -81,6 +82,69 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             _gradeRepository = gradeRepository;
             _academicHistoryService = academicHistoryService;
             _studentDegreePlanService = studentDegreePlanService;
+            _configurationRepository = configurationRepository;
+            _programEvaluationService = programEvaluationService;
+        }
+
+        /// <summary>
+        /// Retrieve all curriculum track codes available for a student for a given academic program code.
+        /// </summary>
+        /// <param name="criteria">A <see cref="CurriculumTrackQueryCriteria">curriculum tracks</see> used to retrieve Curriculum Tracks.</param>
+        /// <returns>A collection of <see cref="CurriculumTrack">curriculum tracks</see> for student and a given program code.</returns>
+        public async Task<IEnumerable<CurriculumTrack>> QueryCurriculumTracksForStudentByProgramAsync(CurriculumTrackQueryCriteria criteria)
+        {
+            // Make sure user has permissions - If not, an PermissionsException will be thrown.
+            await CheckViewPlanPermissionsAsync(criteria.StudentId);
+
+            var curriculumTracks = new List<CurriculumTrack>();
+            try
+            {
+                // Determine the catalog year to use to get the sample degree plan.
+                string catalogCode = null;
+
+                // get all active programs for the student
+                var studentPrograms = await _studentProgramRepository.GetStudentProgramsByIdsAsync(studentIds: new List<string>() { criteria.StudentId }, includeInactivePrograms: false);
+                if (studentPrograms == null || studentPrograms.Count() == 0)
+                {
+                    throw new KeyNotFoundException("No Student Programs were not found for student " + criteria.StudentId);
+                }
+
+                // See if the program is one of the active student's programs - if so use catalog code from that.
+                Domain.Student.Entities.StudentProgram studentProgram = studentPrograms.Where(sp => sp != null && sp.ProgramCode == criteria.ProgramCode).FirstOrDefault();
+
+                if (studentProgram == null)
+                {
+                    // If student is not currently enrolled in the program, find the best-match catalog for the student
+                    var planProgram = await _programRepository.GetAsync(criteria.ProgramCode);
+
+                    // Determine the program catalog year to use.
+                    Domain.Planning.Entities.PlanningConfiguration planningConfiguration = await _planningConfigurationRepository.GetPlanningConfigurationAsync();
+                    ICollection<Catalog> catalogs = await _catalogRepository.GetAsync();
+                    catalogCode = ProgramCatalogService.DeriveDefaultCatalog(planProgram, studentPrograms, catalogs, planningConfiguration.DefaultCatalogPolicy, logger);
+                }
+                else
+                {
+                    catalogCode = studentProgram.CatalogCode;
+                }
+
+                var curriculumTracksEntity = await _curriculumTrackRepository.GetProgramCatalogCurriculumTracksAsync(criteria.ProgramCode, catalogCode);
+                if (curriculumTracksEntity != null && curriculumTracksEntity.Any())
+                {
+                    var curriculumTrackDtoAdapter = _adapterRegistry.GetAdapter<Domain.Planning.Entities.CurriculumTrack, Dtos.Planning.CurriculumTrack>();
+                    foreach (var track in curriculumTracksEntity)
+                    {
+                        curriculumTracks.Add(curriculumTrackDtoAdapter.MapToType(track));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // If no sample plan can be found, or if it couldn't overlay this plan on the student's plan for any reason then...
+                logger.Error(ex.Message);
+                throw new InvalidOperationException("There is no sample degree plan available.");
+            }
+
+            return curriculumTracks;
         }
 
         //TODO
@@ -123,7 +187,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             string pgmCurrTrackCode = null;
             try
             {
-                pgmCurrTrackCode =( await _programRequirementsRepository.GetAsync(programCode, catalog)).CurriculumTrackCode;
+                pgmCurrTrackCode = (await _programRequirementsRepository.GetAsync(programCode, catalog)).CurriculumTrackCode;
                 sampleDegreePlan = await _curriculumTrackRepository.GetAsync(pgmCurrTrackCode);
             }
             catch { }
@@ -144,7 +208,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             string currTrackCode = null;
             try
             {
-                currTrackCode = (await _planningConfigurationRepository.GetPlanningConfigurationAsync()).DefaultCurriculumTrack; 
+                currTrackCode = (await _planningConfigurationRepository.GetPlanningConfigurationAsync()).DefaultCurriculumTrack;
                 sampleDegreePlan = await _curriculumTrackRepository.GetAsync(currTrackCode);
             }
             catch
@@ -199,7 +263,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             // Get student
             Domain.Student.Entities.Student student = await _studentRepository.GetAsync(degreePlan.PersonId);
 
-            var studentAcademicCredits =  await _academicCreditRepository.GetAsync(student.AcademicCreditIds);
+            var studentAcademicCredits = await _academicCreditRepository.GetAsync(student.AcademicCreditIds);
             IEnumerable<Domain.Student.Entities.Term> planningTerms = (await _termRepository.GetAsync()).Where(t => t.ForPlanning == true);
             try
             {
@@ -259,7 +323,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
 
             // Get the student's academic credits
             var studentAcademicCredits = new List<AcademicCredit>();
-            var creditsByStudentDict =  await _academicCreditRepository.GetAcademicCreditByStudentIdsAsync(new List<string>() { degreePlan.PersonId });
+            var creditsByStudentDict = await _academicCreditRepository.GetAcademicCreditByStudentIdsAsync(new List<string>() { degreePlan.PersonId });
             if (creditsByStudentDict.ContainsKey(degreePlan.PersonId))
             {
                 studentAcademicCredits = creditsByStudentDict[degreePlan.PersonId];
@@ -341,7 +405,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 var degreePlanPreviewDto = degreePlanPreviewDtoAdapter.MapToType(degreePlanPreview);
 
                 // Take Student and Academic credits we already have and build the academic history object and add to each DegreePlan3 item
-                var academicHistoryDto =await _academicHistoryService.ConvertAcademicCreditsToAcademicHistoryDtoAsync(degreePlan.PersonId, studentAcademicCredits); //TODO
+                var academicHistoryDto = await _academicHistoryService.ConvertAcademicCreditsToAcademicHistoryDtoAsync(degreePlan.PersonId, studentAcademicCredits); //TODO
                 degreePlanPreviewDto.AcademicHistory = academicHistoryDto;
 
                 return degreePlanPreviewDto;
@@ -410,7 +474,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 var degreePlanPreviewDto = degreePlanPreviewDtoAdapter.MapToType(degreePlanPreview);
 
                 // Take Student and Academic credits we already have and build the academic history object and add to each DegreePlan4 item
-                var academicHistoryDto =await _academicHistoryService.ConvertAcademicCreditsToAcademicHistoryDto2Async(degreePlan.PersonId, studentAcademicCredits); 
+                var academicHistoryDto = await _academicHistoryService.ConvertAcademicCreditsToAcademicHistoryDto2Async(degreePlan.PersonId, studentAcademicCredits);
                 degreePlanPreviewDto.AcademicHistory = academicHistoryDto;
 
                 return degreePlanPreviewDto;
@@ -423,13 +487,14 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
         }
 
         /// <summary>
-        /// CURRENT VERSION: Provides a temporary version of the student's plan, overlaid with the sample plan from the program provided.
+        /// Provides a temporary version of the student's plan, overlaid with the sample plan from the program provided.
         /// The catalog year used to obtain the sample plan is determined from a parameter in Colleague.
         /// The changes to the plan are not saved.
         /// </summary>
         /// <param name="degreePlanId">Id of the degree plan</param>
         /// <param name="programCode">Program code from which the sample plan should be obtained</param>
         /// <returns>The updated Degree Plan DTO</returns>
+        [Obsolete("Obsolete as of API 1.32. Use PreviewSampleDegreePlan7")]
         public async Task<Dtos.Planning.DegreePlanPreview6> PreviewSampleDegreePlan6Async(int degreePlanId, string programCode, string firstTermCode)
         {
             if (string.IsNullOrEmpty(programCode))
@@ -486,11 +551,210 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             catch (Exception ex)
             {
                 // If no sample plan can be found, or if it couldn't overlay this plan on the student's plan for any reason then...
+                logger.Error(ex, "An error occurred while trying to retrieve Sample Degree Plan for DegreePlanID = " + degreePlanId);
                 throw new Exception(ex.Message);
             }
         }
 
-        //TODO: needs converting to async
+        /// <summary>
+        /// Provides a temporary version of the student's plan, overlaid with the sample plan from the program provided.
+        /// The catalog year used to obtain the sample plan is determined from a parameter in Colleague.
+        /// The changes to the plan are not saved.
+        /// </summary>
+        /// <param name="degreePlanId">Id of the degree plan</param>
+        /// <param name="curriculumTrackCode">Curriculum track code from which the sample plan will be obtained</param>
+        /// <returns>The updated Degree Plan DTO</returns>
+        [Obsolete("Obsolete on version 1.33 of the Api. Use PreviewSampleDegreePlan8Async going forward.")]
+        public async Task<Dtos.Planning.DegreePlanPreview6> PreviewSampleDegreePlan7Async(int degreePlanId, string curriculumTrackCode, string firstTermCode)
+        {
+            if (string.IsNullOrEmpty(curriculumTrackCode))
+            {
+                throw new ArgumentNullException("curriculumTrackCode", "Curriculum track code must be provided.");
+            }
+            if (degreePlanId <= 0)
+            {
+                throw new ArgumentNullException("degreePlan", "Degree plan id is required.");
+            }
+            Domain.Student.Entities.DegreePlans.DegreePlan degreePlan = null;
+            try
+            {
+                degreePlan = await _studentDegreePlanRepository.GetAsync(degreePlanId);
+                if (degreePlan == null)
+                {
+                    throw new KeyNotFoundException("Degree plan id " + degreePlanId + " not found.");
+                }
+            }
+            catch
+            {
+                throw new KeyNotFoundException("Degree plan id " + degreePlanId + " not found.");
+            }
+
+            // Make sure user has permissions to view this degree plan. 
+            // If not, an PermissionsException will be thrown.
+            await CheckViewPlanPermissionsAsync(degreePlan.PersonId);
+
+            // Get the student's academic credits
+            var studentAcademicCredits = new List<AcademicCredit>();
+            var creditsByStudentDict = await _academicCreditRepository.GetAcademicCreditByStudentIdsAsync(new List<string>() { degreePlan.PersonId });
+            if (creditsByStudentDict.ContainsKey(degreePlan.PersonId))
+            {
+                studentAcademicCredits = creditsByStudentDict[degreePlan.PersonId];
+            }
+
+            IEnumerable<Domain.Student.Entities.Term> allTerms = (await _termRepository.GetAsync());
+            try
+            {
+                // Get the sample degree plan to use for this student and program. Student is used to figure out the catalog year.
+                Domain.Planning.Entities.SampleDegreePlan sampleDegreePlan = await GetSampleDegreePlan2Async(curriculumTrackCode);
+
+                // Build the the degree plan for the student with the sample degree plan applied.
+                Domain.Planning.Entities.DegreePlanPreview degreePlanPreview = new Domain.Planning.Entities.DegreePlanPreview();
+                degreePlanPreview.LoadDegreePlanPreviewWithAllTerms(degreePlan, sampleDegreePlan, studentAcademicCredits, allTerms, firstTermCode,logger,  CurrentUser.PersonId);
+
+                // Convert the fully merged degree plan to a degree plan DTO
+                var degreePlanPreviewDtoAdapter = _adapterRegistry.GetAdapter<Domain.Planning.Entities.DegreePlanPreview, Dtos.Planning.DegreePlanPreview6>();
+                var degreePlanPreviewDto = degreePlanPreviewDtoAdapter.MapToType(degreePlanPreview);
+
+                // Take Student and Academic credits we already have and build the academic history object and add to each DegreePlan4 item
+                var academicHistoryDto = await _academicHistoryService.ConvertAcademicCreditsToAcademicHistoryDto4Async(degreePlan.PersonId, studentAcademicCredits);
+                degreePlanPreviewDto.AcademicHistory = academicHistoryDto;
+                
+                return degreePlanPreviewDto;
+            }
+            catch (Exception ex)
+            {
+                // If no sample plan can be found, or if it couldn't overlay this plan on the student's plan for any reason then...
+                logger.Error(ex, "An error occurred while trying to retrieve Sample Degree Plan for DegreePlanID = " + degreePlanId);
+                throw new Exception(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// CURRENT VERSION: Provides a temporary version of the student's plan, overlaid with the sample plan from the program provided.
+        /// The catalog year used to obtain the sample plan is determined from a parameter in Colleague.
+        /// The changes to the plan are not saved.
+        /// </summary>
+        /// <remarks>This method considers equated courses when deciding whether or not to add planned courses to terms; if the student is currently
+        /// taking or previously completed a given course or one of its equated courses, that course will not be added to the degree plan preview.
+        /// This method examines the student's academic history and considers which academic credits, if any, would be applied to the provided 
+        /// academic program and catalog</remarks>
+        /// <param name="degreePlanId">Id of the degree plan</param>
+        /// <param name="curriculumTrackCode">Curriculum track code from which the sample plan will be obtained</param>
+        /// <param name="firstTermCode">First academic term to which sample course plan will be applied</param>
+        /// <param name="programCode">Academic program for which student's academic history will be considered</param>
+        /// <returns>Sample course plan</returns>
+        public async Task<Dtos.Planning.DegreePlanPreview7> PreviewSampleDegreePlan8Async(int degreePlanId, string curriculumTrackCode, string firstTermCode, string programCode)
+        {
+            if (string.IsNullOrEmpty(curriculumTrackCode))
+            {
+                throw new ArgumentNullException("curriculumTrackCode", "Curriculum track code must be provided.");
+            }
+            if (degreePlanId <= 0)
+            {
+                throw new ArgumentNullException("degreePlan", "Degree plan id is required.");
+            }
+
+            Domain.Student.Entities.DegreePlans.DegreePlan degreePlan = null;
+            try
+            {
+                degreePlan = await _studentDegreePlanRepository.GetAsync(degreePlanId);
+                if (degreePlan == null)
+                {
+                    throw new KeyNotFoundException("Degree plan id " + degreePlanId + " not found.");
+                }
+            }
+            catch
+            {
+                throw new KeyNotFoundException("Degree plan id " + degreePlanId + " not found.");
+            }
+
+            // Make sure user has permissions to view this degree plan. 
+            // If not, an PermissionsException will be thrown.
+            await CheckViewPlanPermissionsAsync(degreePlan.PersonId);
+
+            // Determine catalog year to use
+            // See if the sample plans's program is one of the student's programs - if so use catalog code from that.
+            Domain.Student.Entities.StudentProgram studentProgram = await _studentProgramRepository.GetAsync(degreePlan.PersonId, programCode);
+            string catalogYear = string.Empty;
+            if (studentProgram == null)
+            {
+                // If student is not currently enrolled in the sample plan's program, find the best-match catalog for the student
+                var studentPrograms = await _studentProgramRepository.GetAsync(degreePlan.PersonId);
+                if (studentPrograms == null || studentPrograms.Count() == 0)
+                {
+                    throw new KeyNotFoundException("StudentPrograms");
+                }
+                var planProgram = await _programRepository.GetAsync(programCode);
+                // Determine the program catalog year to use.
+                Domain.Planning.Entities.PlanningConfiguration planningConfiguration = await _planningConfigurationRepository.GetPlanningConfigurationAsync();
+                ICollection<Catalog> catalogs = await _catalogRepository.GetAsync();
+                catalogYear = ProgramCatalogService.DeriveDefaultCatalog(planProgram, studentPrograms, catalogs, planningConfiguration.DefaultCatalogPolicy, logger);
+            }
+            else
+            {
+                catalogYear = studentProgram.CatalogCode;
+            }
+            var catalogYearMessage = string.Format("Student {0}: Catalog year for sample course plan retrieval is {1} based on current Catalog Year Default Policy.",
+                degreePlan.PersonId,
+                catalogYear);
+            logger.Debug(catalogYearMessage);
+
+            Domain.Student.Entities.ProgramEvaluation programEvaluationEntity = null;
+            try
+            {
+                programEvaluationEntity = (await _programEvaluationService.EvaluateAsync(degreePlan.PersonId, new List<string>() { programCode }, catalogYear)).First();
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Exception occurred while retrieving program evaluation for load sample plan");
+                throw ex;
+            }
+            if (programEvaluationEntity == null)
+            {
+                var message = string.Format("Program evaluation for student {0}, program {1}, and catalog {2} did not return a program evaluation.",
+                    degreePlan.PersonId,
+                    programCode,
+                    catalogYear);
+                logger.Error(message);
+                throw new ApplicationException(message);
+            }
+
+            // Get the student's academic credits
+            var studentAcademicCredits = new List<AcademicCredit>();
+            var creditsByStudentDict = await _academicCreditRepository.GetAcademicCreditByStudentIdsAsync(new List<string>() { degreePlan.PersonId });
+            if (creditsByStudentDict.ContainsKey(degreePlan.PersonId))
+            {
+                studentAcademicCredits = creditsByStudentDict[degreePlan.PersonId];
+            }
+
+            IEnumerable<Domain.Student.Entities.Term> allTerms = (await _termRepository.GetAsync());
+            IEnumerable<Domain.Student.Entities.Course> allCourses = (await _courseRepository.GetAsync());
+
+            try
+            {
+                // Get the sample degree plan to use for this student and program. Student is used to figure out the catalog year.
+                Domain.Planning.Entities.SampleDegreePlan sampleDegreePlan = await GetSampleDegreePlan2Async(curriculumTrackCode);
+
+                // Build the the degree plan for the student with the sample degree plan applied.
+                Domain.Planning.Entities.DegreePlanPreview degreePlanPreview = new Domain.Planning.Entities.DegreePlanPreview();
+                degreePlanPreview.LoadDegreePlanPreviewWithAllTermsAndAppliedCreditsFromEvaluation(degreePlan, sampleDegreePlan,
+                    studentAcademicCredits, programEvaluationEntity, allCourses, allTerms, firstTermCode, logger, CurrentUser.PersonId);
+
+                // Convert the fully merged degree plan to a degree plan DTO
+                var degreePlanPreviewDtoAdapter = _adapterRegistry.GetAdapter<Domain.Planning.Entities.DegreePlanPreview, Dtos.Planning.DegreePlanPreview7>();
+                var degreePlanPreviewDto = degreePlanPreviewDtoAdapter.MapToType(degreePlanPreview);
+
+                return degreePlanPreviewDto;
+            }
+            catch (Exception ex)
+            {
+                // If no sample plan can be found, or if it couldn't overlay this plan on the student's plan for any reason then...
+                logger.Error(ex, "An error occurred while trying to retrieve Sample Degree Plan for DegreePlanID = " + degreePlanId);
+                throw new Exception(ex.Message);
+            }
+        }
+
+
         /// <summary>
         /// Given a student and a program, determine the best sample plan to use
         /// </summary>
@@ -512,7 +776,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             string catalogCode = null;
 
             // See if the sample plans's program is one of the student's programs - if so use catalog code from that.
-            Domain.Student.Entities.StudentProgram studentProgram =await  _studentProgramRepository.GetAsync(studentId, programCode); //TODO
+            Domain.Student.Entities.StudentProgram studentProgram = await _studentProgramRepository.GetAsync(studentId, programCode); //TODO
             if (studentProgram == null)
             {
                 // If student is not currently enrolled in the sample plan's program, find the best-match catalog for the student
@@ -524,8 +788,8 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 var planProgram = await _programRepository.GetAsync(programCode);
                 // Determine the program catalog year to use.
                 Domain.Planning.Entities.PlanningConfiguration planningConfiguration = await _planningConfigurationRepository.GetPlanningConfigurationAsync();
-                ICollection<Catalog> catalogs =await _catalogRepository.GetAsync();
-                catalogCode = ProgramCatalogService.DeriveDefaultCatalog(planProgram, studentPrograms, catalogs, planningConfiguration.DefaultCatalogPolicy);
+                ICollection<Catalog> catalogs = await _catalogRepository.GetAsync();
+                catalogCode = ProgramCatalogService.DeriveDefaultCatalog(planProgram, studentPrograms, catalogs, planningConfiguration.DefaultCatalogPolicy, logger);
             }
             else
             {
@@ -544,6 +808,36 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             return sampleDegreePlan;
         }
 
+        /// <summary>
+        /// Given a curriculum track code, determine the best sample plan to use
+        /// </summary>
+        /// <param name="programCode">program from which to pull the sample degree plan</param>
+        /// <returns></returns>
+        private async Task<Domain.Planning.Entities.SampleDegreePlan> GetSampleDegreePlan2Async(string curriculumTrackCode)
+        {
+            if (string.IsNullOrEmpty(curriculumTrackCode))
+            {
+                throw new ArgumentNullException("curriculumTrackCode", "Curriculum track code must be provided.");
+            }
+
+            Domain.Planning.Entities.SampleDegreePlan sampleDegreePlan = null;
+            try
+            {
+                sampleDegreePlan = await _curriculumTrackRepository.GetAsync(curriculumTrackCode);
+            }
+            catch(Exception ex)
+            {
+                logger.Error("Exception occured while retrieving the sample degree plan for curriculumTrackCode: " + curriculumTrackCode);
+                logger.Error(ex, ex.Message);
+            }
+
+            if (sampleDegreePlan == null)
+            {
+                throw new ArgumentOutOfRangeException("There is no sample degree plan available.");
+            }
+            return sampleDegreePlan;
+        }
+
         //TODO
         /// <summary>
         /// Obsolete routine that is just temporarily needed for the now obsolete ApplySampleDegreePlan method.
@@ -555,7 +849,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             // Access is Ok if the current user is this student
             if (UserIsSelf(student.Id)) { return; }
 
-            bool userIsAssignedAdvisor =await UserIsAssignedAdvisorAsync(student.Id, student.ConvertToStudentAccess()); //TODO
+            bool userIsAssignedAdvisor = await UserIsAssignedAdvisorAsync(student.Id, student.ConvertToStudentAccess()); //TODO
             // Get user permissions
             IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
 
@@ -735,7 +1029,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 var sectionsToAdd = term.PlannedCourses.Where(c => !string.IsNullOrEmpty(c.SectionId)).Select(p => p.SectionId).ToList();
                 sectionsOnPlan.AddRange(sectionsToAdd);
             }
-            var degreePlanSections =  await _sectionRepository.GetCachedSectionsAsync(sectionsOnPlan);
+            var degreePlanSections = await _sectionRepository.GetCachedSectionsAsync(sectionsOnPlan);
             var academicCredits = await _academicCreditRepository.GetAsync(student.AcademicCreditIds, true);
             var grades = await _gradeRepository.GetAsync();
             var newDegreePlanArchive = Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlanToArchive, CurrentUser.PersonId, studentPrograms, courses, degreePlanSections, academicCredits, grades);
@@ -836,6 +1130,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             var studentPrograms = await _studentProgramRepository.GetAsync(degreePlan.PersonId);
             var courses = await _courseRepository.GetAsync();
             var registrationTerms = await _termRepository.GetRegistrationTermsAsync();
+
             // Get all sections on the degree plan - used to get section titles and numbers for the archive
             List<string> sectionsOnPlan = degreePlan.NonTermPlannedCourses.Where(c => !string.IsNullOrEmpty(c.SectionId)).Select(s => s.SectionId).ToList();
             foreach (var term in degreePlan.Terms)
@@ -850,6 +1145,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             {
                 studentAcademicCredits = academicCreditsDict[student.Id];
             }
+
             //var academicCredits = await _academicCreditRepository.GetAsync(student.AcademicCreditIds, true);
             var grades = await _gradeRepository.GetAsync();
             var newDegreePlanArchive = Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(degreePlanToArchive, CurrentUser.PersonId, studentPrograms, courses, degreePlanSections, studentAcademicCredits, grades);
@@ -1070,7 +1366,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
         /// <returns>DegreePlanReviewRequest collection</returns>
         public async Task<IEnumerable<DegreePlanReviewRequest>> GetReviewRequestedDegreePlans(DegreePlansSearchCriteria criteria, int pageSize = int.MaxValue, int pageIndex = 1)
         {
-            if(criteria == null)
+            if (criteria == null)
             {
                 throw new ArgumentNullException("criteria", "Criteria cannot be empty/null for degree plan review request query.");
             }
@@ -1080,7 +1376,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 watch = new Stopwatch();
                 watch.Start();
             }
-           
+
             if (pageSize < 1) pageSize = int.MaxValue;
             if (pageIndex < 1) pageIndex = 1;
 
@@ -1094,11 +1390,11 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             {
                 degreePlans = degreePlans.Where(dp => dp.AssignedReviewer == null);
             }
-            else if(criteria.DegreePlanRetrievalType == DegreePlanRetrievalType.AssignedToOthers)
+            else if (criteria.DegreePlanRetrievalType == DegreePlanRetrievalType.AssignedToOthers)
             {
                 degreePlans = degreePlans.Where(dp => dp.AssignedReviewer != null && dp.AssignedReviewer != CurrentUser.PersonId);
             }
-            else if(criteria.DegreePlanRetrievalType == DegreePlanRetrievalType.MyAssignedAdvisees)
+            else if (criteria.DegreePlanRetrievalType == DegreePlanRetrievalType.MyAssignedAdvisees)
             {
                 degreePlans = degreePlans.Where(dp => dp.AssignedReviewer != null && dp.AssignedReviewer.Equals(CurrentUser.PersonId));
             }
@@ -1237,15 +1533,16 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             }
 
             var filteredResults = (from dp in degreePlans
-                                         join student in students
-                                         on dp.PersonId equals student.Id                                        
-                                         select new DegreePlanReviewRequest(){
-                                             Id = dp.Id,
-                                             AssignedReviewer = dp.AssignedReviewer,
-                                             PersonId=dp.PersonId,
-                                             ReviewRequestedDate = dp.ReviewRequestedDate                                           
-                                       }).ToList();
-           
+                                   join student in students
+                                   on dp.PersonId equals student.Id
+                                   select new DegreePlanReviewRequest()
+                                   {
+                                       Id = dp.Id,
+                                       AssignedReviewer = dp.AssignedReviewer,
+                                       PersonId = dp.PersonId,
+                                       ReviewRequestedDate = dp.ReviewRequestedDate
+                                   }).ToList();
+
             if (criteria.DegreePlanRetrievalType == DegreePlanRetrievalType.UnAssignedAdvisees)
             {
                 filteredResults = (from student in students
@@ -1275,11 +1572,11 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             var totalPages = (int)Math.Ceiling((decimal)totalItems / pageSize);
             filteredResults = filteredResults.Skip(pageSize * (pageIndex - 1)).Take(pageSize).ToList();
 
-            degreePlans =filteredResults.Select(x => new Domain.Planning.Entities.DegreePlanReviewRequest { Id = x.Id, ReviewRequestedDate = x.ReviewRequestedDate, AssignedReviewer = x.AssignedReviewer, PersonId = x.PersonId });
-           
+            degreePlans = filteredResults.Select(x => new Domain.Planning.Entities.DegreePlanReviewRequest { Id = x.Id, ReviewRequestedDate = x.ReviewRequestedDate, AssignedReviewer = x.AssignedReviewer, PersonId = x.PersonId });
+
             System.Collections.ObjectModel.Collection<DegreePlanReviewRequest> degreePlansad = new System.Collections.ObjectModel.Collection<DegreePlanReviewRequest>();
             var degreePlanDtoAdapter = _adapterRegistry.GetAdapter<Domain.Planning.Entities.DegreePlanReviewRequest, DegreePlanReviewRequest>();
-           
+
             foreach (var degreePlan in degreePlans)
             {
                 var dpRwAssignDto = degreePlanDtoAdapter.MapToType(degreePlan);
@@ -1478,7 +1775,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
 
             try
             {
-                var degreePlanDtoAdapter = _adapterRegistry.GetAdapter<DegreePlanReviewRequest, Domain.Planning.Entities.DegreePlanReviewRequest >();
+                var degreePlanDtoAdapter = _adapterRegistry.GetAdapter<DegreePlanReviewRequest, Domain.Planning.Entities.DegreePlanReviewRequest>();
                 var dpRwAssignDto = degreePlanDtoAdapter.MapToType(degreePlanReviewRequest);
 
                 var degreePlanReviewRequestResponse = await _degreePlanRepository.UpdateAdvisorAssignment(dpRwAssignDto);
@@ -1505,7 +1802,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             if (userPermissions.Contains(PlanningPermissionCodes.AllAccessAnyAdvisee) ||
                 userPermissions.Contains(PlanningPermissionCodes.UpdateAnyAdvisee) ||
                 userPermissions.Contains(PlanningPermissionCodes.ReviewAnyAdvisee) ||
-                userPermissions.Contains(PlanningPermissionCodes.ViewAnyAdvisee)  ||
+                userPermissions.Contains(PlanningPermissionCodes.ViewAnyAdvisee) ||
                 userPermissions.Contains(PlanningPermissionCodes.UpdateAdvisorAssignments))
             {
                 return;

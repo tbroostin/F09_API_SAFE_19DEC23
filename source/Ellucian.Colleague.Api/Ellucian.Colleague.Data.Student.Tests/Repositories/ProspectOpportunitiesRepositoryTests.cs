@@ -61,7 +61,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         [TestMethod]
         public async Task GetProspectOpportunitiesAsync_CriteriaObj_WithProspectIds()
         {
-            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Applicants>(It.IsAny<string>(), true)).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Applicants>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
             criteriaObj = new ProspectOpportunity()
             {
                 ProspectId = "3c083c69-7f58-42b0-ac38-3effec7fc7bd"
@@ -199,7 +199,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new string[] { "PR", "HP" });
             dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new string[] { "1" });
-            dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(() => null);
             var result = await _prospectOpportunitiesRepository.GetProspectOpportunitiesAsync(0, 100, It.IsAny<ProspectOpportunity>(), null, It.IsAny<bool>());
         }
 
@@ -230,7 +230,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task GetProspectOpportunityByIdAsync_KeyNotFoundException()
         {
-            dataReaderMock.Setup(repo => repo.ReadRecordAsync<LdmGuid>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<LdmGuid>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
             await _prospectOpportunitiesRepository.GetProspectOpportunityByIdAsync("1c083c69-7f58-42b0-ac38-3effec7fc7bc");
         }
 
@@ -332,7 +332,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Applications applications = new Applications() { ApplIntgKeyIdx = "1", ApplStatus = new List<string>() { "PR" } };
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<LdmGuid>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(ldmGuid);
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<Applications>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(applications);
-            dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(() => null);
 
             await _prospectOpportunitiesRepository.GetProspectOpportunityByIdAsync("1c083c69-7f58-42b0-ac38-3effec7fc7bc");
         }
@@ -605,7 +605,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task GetProspectOpportunitiesSubmissionByIdAsync_KeyNotFoundException()
             {
-                dataReaderMock.Setup(d => d.ReadRecordAsync<LdmGuid>("LDM.GUID", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.ReadRecordAsync<LdmGuid>("LDM.GUID", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 var actual = await prospectOpportunitiesRepository.GetProspectOpportunitiesSubmissionsByGuidAsync("1234", It.IsAny<bool>());
             }
 
@@ -613,7 +613,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task GetProspectOpportunitiesSubmissionByIdAsync_StatusNUll_KeyNotFoundException()
             {
-                dataReaderMock.Setup(d => d.SelectAsync("APPLICATION.STATUSES", It.IsAny<string>())).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.SelectAsync("APPLICATION.STATUSES", It.IsAny<string>())).ReturnsAsync(() => null);
                 var actual = await prospectOpportunitiesRepository.GetProspectOpportunitiesSubmissionsByGuidAsync("1234", It.IsAny<bool>());
             }
             #endregion

@@ -1,4 +1,5 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Api.Controllers.HumanResources;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
@@ -22,6 +23,11 @@ using Ellucian.Colleague.Domain.HumanResources.Entities;
 using System.Net.Http.Headers;
 using Ellucian.Colleague.Dtos;
 using System.Threading;
+using System.Web.Http.Routing;
+using System.Web.Http.Controllers;
+using System.Collections;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Colleague.Domain.HumanResources;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 {
@@ -76,8 +82,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             _allContributionPayrollDeductionsEntities = new List<PayrollDeduction>()
             {
-                new PayrollDeduction(contributionPayrollDeductionsGuid, "123", "456", arrangementGuid, new DateTime(2017, 01, 01), "USD", 52  ),
-                new PayrollDeduction("905c69ff-280b-4ed3-9474-662a43616a8a", "123", "456", "605c69ff-280b-4ed3-9474-662a43616a8a", new DateTime(2017, 01, 01), "USD", 60  )
+                new PayrollDeduction(contributionPayrollDeductionsGuid, "123", "456", new DateTime(2017, 01, 01), "USD", 52  ),
+                new PayrollDeduction("905c69ff-280b-4ed3-9474-662a43616a8a", "123", "456", new DateTime(2017, 01, 01), "USD", 60  )
             };
             _contributionPayrollDeductionsList = new List<Dtos.ContributionPayrollDeductions>();
 
@@ -88,6 +94,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             foreach (var contributionPayrollDeductions in _allContributionPayrollDeductionsEntities)
             {
                 Dtos.ContributionPayrollDeductions target = ConvertContributionPayrollDeductionsEntityToDto(contributionPayrollDeductions);
+                target.Arrangement = new GuidObject2(arrangementGuid);
                 _contributionPayrollDeductionsList.Add(target);
             }
         }
@@ -431,6 +438,182 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             await _contributionPayrollDeductionsController.DeleteContributionPayrollDeductionsAsync("9ae3a175-1dfd-4937-b97b-3c9ad596e023");
         }
 
+        //Permissions Tests
+
+        //Success
+        //Get 8
+        //GetContributionPayrollDeductionsAsync
+        [TestMethod]
+        public async Task ContributionPayrollDeductionsController_GetContributionPayrollDeductionsAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "ContributionPayrollDeductions" },
+                { "action", "GetContributionPayrollDeductionsAsync" }
+            };
+            HttpRoute route = new HttpRoute("contribution-payroll-deductions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _contributionPayrollDeductionsController.Request.SetRouteData(data);
+            _contributionPayrollDeductionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.ViewContributionPayrollDeductions);
+
+            var controllerContext = _contributionPayrollDeductionsController.ControllerContext;
+            var actionDescriptor = _contributionPayrollDeductionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.ContributionPayrollDeductions>, int>(_contributionPayrollDeductionsList, 5);
+
+            _contributionPayrollDeductionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            var contributionPayrollDeductions = await _contributionPayrollDeductionsController.GetContributionPayrollDeductionsAsync(new Paging(10, 0), It.IsAny<QueryStringFilter>());
+
+            Object filterObject;
+            _contributionPayrollDeductionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewContributionPayrollDeductions));
+
+        }
+
+        //Exception
+        //Get 8
+        //GetContributionPayrollDeductionsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ContributionPayrollDeductionsController_GetContributionPayrollDeductionsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "ContributionPayrollDeductions" },
+                { "action", "GetContributionPayrollDeductionsAsync" }
+            };
+            HttpRoute route = new HttpRoute("contribution-payroll-deductions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _contributionPayrollDeductionsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _contributionPayrollDeductionsController.ControllerContext;
+            var actionDescriptor = _contributionPayrollDeductionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.ContributionPayrollDeductions>, int>(_contributionPayrollDeductionsList, 5);
+
+                _contributionPayrollDeductionsServiceMock.Setup(s => s.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                _contributionPayrollDeductionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view contribution-payroll-deductions."));
+                await _contributionPayrollDeductionsController.GetContributionPayrollDeductionsAsync(new Paging(100, 0), It.IsAny<QueryStringFilter>());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
+        //Success
+        //Get By Id 8
+        //GetContributionPayrollDeductionsByIdAsync
+        [TestMethod]
+        public async Task ContributionPayrollDeductionsController_GetContributionPayrollDeductionsByIdAsync_Permissions()
+        {
+            var thisContributionPayrollDeductions = _contributionPayrollDeductionsList.Where(m => m.Id == "625c69ff-280b-4ed3-9474-662a43616a8a").FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "ContributionPayrollDeductions" },
+                { "action", "GetContributionPayrollDeductionsByIdAsync" }
+            };
+            HttpRoute route = new HttpRoute("contribution-payroll-deductions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _contributionPayrollDeductionsController.Request.SetRouteData(data);
+            _contributionPayrollDeductionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.ViewContributionPayrollDeductions);
+
+            var controllerContext = _contributionPayrollDeductionsController.ControllerContext;
+            var actionDescriptor = _contributionPayrollDeductionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.ContributionPayrollDeductions>, int>(_contributionPayrollDeductionsList, 5);
+            _contributionPayrollDeductionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _contributionPayrollDeductionsServiceMock.Setup(x => x.GetContributionPayrollDeductionsByGuidAsync(It.IsAny<string>())).ReturnsAsync(thisContributionPayrollDeductions);
+            var contributionPayrollDeductions = await _contributionPayrollDeductionsController.GetContributionPayrollDeductionsByIdAsync("625c69ff-280b-4ed3-9474-662a43616a8a");
+
+
+            Object filterObject;
+            _contributionPayrollDeductionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewContributionPayrollDeductions));
+
+        }
+
+
+        //Exception
+        //Get By Id 8
+        //GetContributionPayrollDeductionsByIdAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ContributionPayrollDeductionsController_GetContributionPayrollDeductionsByIdAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "ContributionPayrollDeductions" },
+                { "action", "GetContributionPayrollDeductionsByIdAsync" }
+            };
+            HttpRoute route = new HttpRoute("contribution-payroll-deductions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _contributionPayrollDeductionsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _contributionPayrollDeductionsController.ControllerContext;
+            var actionDescriptor = _contributionPayrollDeductionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.ContributionPayrollDeductions>, int>(_contributionPayrollDeductionsList, 5);
+
+                _contributionPayrollDeductionsServiceMock.Setup(gc => gc.GetContributionPayrollDeductionsByGuidAsync(It.IsAny<string>())).Throws<PermissionsException>();
+                _contributionPayrollDeductionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view contribution-payroll-deductions."));
+                await _contributionPayrollDeductionsController.GetContributionPayrollDeductionsByIdAsync(contributionPayrollDeductionsGuid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Converts a ContributionPayrollDeductions domain entity to its corresponding ContributionPayrollDeductions DTO
@@ -441,7 +624,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         {
             var contributionPayrollDeductions = new Ellucian.Colleague.Dtos.ContributionPayrollDeductions();
             contributionPayrollDeductions.Id = source.Guid;
-            contributionPayrollDeductions.Arrangement = new Dtos.GuidObject2(source.ArrangementGuid);
+            //contributionPayrollDeductions.Arrangement = new Dtos.GuidObject2(source.ArrangementGuid);
 
             return contributionPayrollDeductions;
         }

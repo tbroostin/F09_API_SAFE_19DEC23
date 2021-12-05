@@ -366,6 +366,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             return await Task.Run(() => dict);
         }
 
+        public Task<string> GetRequisitionsIdFromGuidAsync(string guid)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<string> GetGuidFromIdAsync(string id, string entity)
         {
             for (var i = 0; i < requisitionsArray.GetLength(0); i++)

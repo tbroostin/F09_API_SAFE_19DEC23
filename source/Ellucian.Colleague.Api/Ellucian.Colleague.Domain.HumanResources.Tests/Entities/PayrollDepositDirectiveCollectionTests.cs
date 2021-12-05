@@ -1,4 +1,5 @@
-﻿using Ellucian.Colleague.Domain.HumanResources.Entities;
+﻿using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -83,6 +84,20 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         {
             var directiveToAdd = new PayrollDepositDirective("inspector", "JAVER", "091000019", "whatever", Base.Entities.BankAccountType.Savings, "down", "south", false, 11, 99.4M, DateTime.Now, null, new Base.Entities.Timestamp(employeeId, DateTime.Now, employeeId, DateTime.Now));
             testCollection.Add(directiveToAdd);
+        }
+
+
+        [TestMethod]
+        public void DeletingFutureEntireBalanceDoesntThrowException()
+        {
+            var testFutureEntireBalanceCollection = new PayrollDepositDirectiveCollection(employeeId);
+            // Remainder account being reopened
+            var remainderAccountToReopen = new PayrollDepositDirective("1", employeeId, "091016647", "Remainder Bank 1", BankAccountType.Checking, "0001", "Test Acc 1", false, 999, null, new DateTime(2021, 4, 1), null, new Base.Entities.Timestamp(employeeId, DateTime.Now, employeeId, DateTime.Now)) { };
+            var futureEntireBalanceToClose = new PayrollDepositDirective("2", employeeId, "021000089", "Future Entire Balance Delete", BankAccountType.Checking, "0001", "Test Acc 1", false, 999, null, new DateTime(2021, 7, 1), new DateTime(2021, 1, 1), new Base.Entities.Timestamp(employeeId, DateTime.Now, employeeId, DateTime.Now)) { };
+            testFutureEntireBalanceCollection.Add(remainderAccountToReopen);
+            testFutureEntireBalanceCollection.Add(futureEntireBalanceToClose);
+            Assert.IsTrue(testFutureEntireBalanceCollection.Contains(remainderAccountToReopen));
+            Assert.IsTrue(testFutureEntireBalanceCollection.Contains(futureEntireBalanceToClose));
         }
     }
 }

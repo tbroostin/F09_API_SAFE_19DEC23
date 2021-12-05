@@ -135,6 +135,39 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
         }
 
         /// <summary>
+        /// Gets outside award entities for the specified award record id
+        /// </summary>
+        /// <param name="awardId">record id for the given award</param>
+        /// <returns>OutsideAward Object</returns>
+        public async Task<OutsideAward> GetOutsideAwardsByAwardIdAsync(string awardId)
+        {
+            if (string.IsNullOrEmpty(awardId))
+            {
+                throw new ArgumentNullException("studentId");
+            }
+
+            FaOutsideAwards outsideAwardRecord = await DataReader.ReadRecordAsync<FaOutsideAwards>(awardId);
+
+            if (outsideAwardRecord == null)
+            {
+                throw new KeyNotFoundException(string.Format("Outside award record {0} was not found", awardId));
+            }
+
+            try
+            {
+                return new OutsideAward(outsideAwardRecord.Recordkey, outsideAwardRecord.FoaStudentId,
+                    outsideAwardRecord.FoaYear, outsideAwardRecord.FoaAwardName, outsideAwardRecord.FoaAwardType,
+                    outsideAwardRecord.FoaAmount.Value, outsideAwardRecord.FoaFundingSource);
+            }
+            catch (Exception e)
+            {
+                string message = string.Format("Unable to retrieve outside award record for {0}", awardId);
+                logger.Error(e, message);
+                throw new ApplicationException(message, e);
+            }
+        }
+
+        /// <summary>
         /// Deletes the outside award record with the specified id
         /// </summary>
         /// <param name="outsideAwardId">outside award record id</param>

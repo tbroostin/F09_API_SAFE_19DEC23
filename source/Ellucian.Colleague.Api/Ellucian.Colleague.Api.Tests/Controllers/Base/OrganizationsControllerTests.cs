@@ -31,6 +31,11 @@ using CredentialType = Ellucian.Colleague.Dtos.EnumProperties.CredentialType;
 using SocialMediaTypeCategory = Ellucian.Colleague.Dtos.SocialMediaTypeCategory;
 using Ellucian.Web.Http.Models;
 using System.Data;
+using System.Web.Http.Routing;
+using Ellucian.Web.Http.Filters;
+using System.Web.Http.Controllers;
+using Ellucian.Colleague.Domain.Base;
+using System.Collections;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 {
@@ -481,6 +486,86 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         {
             await _organizationsController.GetOrganizationByGuid2Async("");
         }
+
+        [TestMethod]
+        public async Task OrganizationsController_GetOrganizations_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "OrganizationsController" },
+                { "action", "GetOrganizations2Async" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _organizationsController.Request.SetRouteData(data);
+            _organizationsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BasePermissionCodes.ViewOrganization });
+
+            var controllerContext = _organizationsController.ControllerContext;
+            var actionDescriptor = _organizationsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.Organization2>, int>(_allOrganization2Dtos, _allOrganization2Dtos.Count);
+           _personServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                   .Returns(true);
+            _personServiceMock.Setup(x => x.GetOrganizations2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(tuple);
+            var resp = await _organizationsController.GetOrganizations2Async(new Paging(10, 0));
+
+            Object filterObject;
+            _organizationsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewOrganization));
+
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task OrganizationsController_GetOrganizations_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "OrganizationsController" },
+                { "action", "GetOrganizations2Aync" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _organizationsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _organizationsController.ControllerContext;
+            var actionDescriptor = _organizationsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.Organization2>, int>(_allOrganization2Dtos, _allOrganization2Dtos.Count);
+
+                _personServiceMock.Setup(x => x.GetOrganizations2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(tuple);
+                _personServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                     .Throws(new PermissionsException("User is not authorized to view person-holds."));
+                var resp = await _organizationsController.GetOrganizations2Async(new Paging(10, 0));
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
     }
     #endregion
 
@@ -696,7 +781,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             {
                 statusCode = e.Response.StatusCode;
             }
-            Assert.AreEqual(HttpStatusCode.Unauthorized, statusCode);
+            Assert.AreEqual(HttpStatusCode.Forbidden, statusCode);
         }
 
         [TestMethod]
@@ -817,20 +902,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             _personServiceMock.Setup(s => s.GetOrganization2Async(org.Id)).ReturnsAsync(org);
             _personServiceMock.Setup(s => s.UpdateOrganizationAsync(It.IsAny<Organization2>())).Throws<KeyNotFoundException>();
             await _organizationsController.PutOrganizationAsync(PersonGuid, _allOrganization2Dtos[0]);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task OrganizationController_PutOrganization_EmptyTitle()
-        {
-            var org = _allOrganization2Dtos[0];
-            org.Title = string.Empty;
-            _organizationsController.Request.Properties.Remove("PartialInputJsonObject");
-            _organizationsController.Request.Properties.Add("PartialInputJsonObject", JObject.FromObject(org));
-            _personServiceMock.Setup(s => s.GetOrganization2Async(org.Id)).ReturnsAsync(org);
-            _personServiceMock.Setup(s => s.UpdateOrganizationAsync(It.IsAny<Organization2>())).ReturnsAsync(org);
-            await _organizationsController.PutOrganizationAsync(PersonGuid, org);
-        }
+        }        
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
@@ -1141,7 +1213,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             {
                 statusCode = e.Response.StatusCode;
             }
-            Assert.AreEqual(HttpStatusCode.Unauthorized, statusCode);
+            Assert.AreEqual(HttpStatusCode.Forbidden, statusCode);
         }
 
 

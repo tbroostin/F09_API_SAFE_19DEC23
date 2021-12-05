@@ -180,12 +180,13 @@ namespace Ellucian.Colleague.Domain.Planning.Entities
             List<string> academicCreditIdsUsed = new List<string>();
 
             // We have all "active" academic credits, but we don't want to include transfer or noncourse work in the archive
-            var academicCreditsToArchive = academicCredits.Where(a => a != null && !(a.Status==CreditStatus.TransferOrNonCourse));
+            var academicCreditsToArchive = academicCredits.Where(a => a != null && !(a.Status == CreditStatus.TransferOrNonCourse));
 
             foreach (var plannedCourse in degreePlan.NonTermPlannedCourses)
             {
                 var course = courses.Where(crs => crs.Id == plannedCourse.CourseId).FirstOrDefault();
                 var section = sections.Where(s => s.Id == plannedCourse.SectionId).FirstOrDefault();
+
                 // You cannot add a nonterm course - only a nonterm section. So in this case a section will be specified.
                 // However, an advisor can only approve "courses" on specific terms.  
                 var approval = degreePlan.Approvals.Where(a => a.CourseId == plannedCourse.CourseId && string.IsNullOrEmpty(a.TermCode)).OrderByDescending(a => a.Date).FirstOrDefault();
@@ -199,15 +200,19 @@ namespace Ellucian.Colleague.Domain.Planning.Entities
                 catch
                 {
                     // Something (probably course Id is missing. Just skip the course
-                } 
+                }
             }
+
             foreach (var termCode in degreePlan.TermIds)
             {
-                var plannedCourses = degreePlan.GetPlannedCourses(termCode);
+                // get all planned courses excluding course placeholders
+                var plannedCourses = degreePlan.GetPlannedCourses(termCode).Where(c => !string.IsNullOrEmpty(c.CourseId));
+
                 foreach (var plannedCourse in plannedCourses)
                 {
                     var course = courses.Where(crs => crs.Id == plannedCourse.CourseId).FirstOrDefault();
                     var section = sections.Where(s => s.Id == plannedCourse.SectionId).FirstOrDefault();
+
                     // Now, see if this course has been approved or denied for the specified term.
                     var approval = degreePlan.Approvals.Where(a => a.CourseId == plannedCourse.CourseId && a.TermCode == termCode).OrderByDescending(a => a.Date).FirstOrDefault();
                     // Find the academic credit that matches up with this course, if any
@@ -269,7 +274,7 @@ namespace Ellucian.Colleague.Domain.Planning.Entities
         /// <returns></returns>
         private static ArchivedCourse CreateArchiveCourse(PlannedCourse plannedCourse, string termCode, Course course, Section section, DegreePlanApproval approval, AcademicCredit academicCredit, IEnumerable<Grade> grades)
         {
-            if (plannedCourse == null && academicCredit == null)
+            if ((plannedCourse == null || string.IsNullOrEmpty(plannedCourse.CourseId)) && academicCredit == null)
             {
                 throw new ArgumentException("Either planned course or academic credit must be provided");
             }

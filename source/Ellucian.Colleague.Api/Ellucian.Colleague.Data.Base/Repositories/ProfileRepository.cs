@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -326,7 +326,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             if (profileUpdateResponse.AErrorOccurred == "3")
             {
-                logger.Info("No changes detected, no update made to person profile for " + profile.Id); //is profile.Id PII?
+                logger.Error("No changes detected, no update made to person profile for " + profile.Id); //is profile.Id PII?
             }
             else if (!string.IsNullOrEmpty(profileUpdateResponse.AErrorOccurred) && profileUpdateResponse.AErrorOccurred != "0")
             {
@@ -355,7 +355,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                 if (updateResponse.AErrorOccurred == "2")
                 {
-                    logger.Info("No changes detected, no update made to person confirmations for " + profile.Id);
+                    logger.Error("No changes detected, no update made to person confirmations for " + profile.Id);
                 }
                 else if (!string.IsNullOrEmpty(updateResponse.AErrorOccurred) && updateResponse.AErrorOccurred != "0")
                 {

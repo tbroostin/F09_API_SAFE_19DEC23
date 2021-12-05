@@ -108,5 +108,20 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Utilities
 
             return names;
         }
+
+        public static List<string> ConvertMultiLineTextToList(string source)
+        {
+            List<string> stringList = new List<string>();
+            if (!string.IsNullOrEmpty(source))
+            {
+                // We may have line break characters in the existing comments. Split them out and add each line separately
+                // to preserve any line-to-line formatting the user entered. Note that these characters could be
+                // \n or \r\n (two variations of a new line character) or \r (a carriage return). We will change
+                // any of the new line or carriage returns to the same thing, and then split the string on that.
+                stringList = source.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None).ToList();
+            }
+
+            return stringList;
+        }
     }
 }

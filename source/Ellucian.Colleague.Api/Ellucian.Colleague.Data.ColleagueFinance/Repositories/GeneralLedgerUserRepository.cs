@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
@@ -188,14 +188,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 if (staffContract == null)
                 {
                     // The general ledger user has no Staff record.
-                    logger.Info(string.Format("Person {0} has no Staff record.", id));
+                    logger.Error(string.Format("Person {0} has no Staff record.", id));
                 }
                 else
                 {
                     if (string.IsNullOrEmpty(staffContract.StaffLoginId))
                     {
                         // There is no login (operator ID) on the Staff record.
-                        logger.Info(string.Format("Person {0} has an incomplete Staff record.", id));
+                        logger.Error(string.Format("Person {0} has an incomplete Staff record.", id));
                     }
                     else
                     {
@@ -204,28 +204,28 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         if (glUsersContract == null)
                         {
                             // There is no GLUSERS record for the general ledger user.
-                            logger.Info(string.Format("Person {0} has no GL access definition.", id));
+                            logger.Error(string.Format("Person {0} has no GL access definition.", id));
                         }
                         else
                         {
                             if (!glUsersContract.GlusStartDate.HasValue)
                             {
                                 // GLUSERS record has no start date.
-                                logger.Info(string.Format("Person {0} has insuffient GL access definition.", id));
+                                logger.Error(string.Format("Person {0} has insuffient GL access definition.", id));
                             }
                             else
                             {
                                 if (DateTime.Today < glUsersContract.GlusStartDate)
                                 {
                                     // GLUSERS record is in the future.
-                                    logger.Info(string.Format("Person {0} has insuffient GL access definition.", id));
+                                    logger.Error(string.Format("Person {0} has insuffient GL access definition.", id));
                                 }
                                 else
                                 {
                                     if ((DateTime.Today >= glUsersContract.GlusEndDate) && glUsersContract.GlusEndDate.HasValue)
                                     {
                                         // GLUSERS record is expired.
-                                        logger.Info(string.Format("Person {0} has insuffient GL access definition.", id));
+                                        logger.Error(string.Format("Person {0} has insuffient GL access definition.", id));
                                     }
                                     else
                                     {
@@ -401,7 +401,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                                             if (generalLedgerUserEntity.GlAccessLevel == GlAccessLevel.No_Access)
                                             {
-                                                logger.Info(string.Format("Person {0} has insuffient GL access definition.", id));
+                                                logger.Error(string.Format("Person {0} has insuffient GL access definition.", id));
                                             }
                                         }
                                     }

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -17,6 +17,7 @@ using Ellucian.Colleague.Api.Utility;
 using Ellucian.Web.Security;
 using Ellucian.Web.Http.Filters;
 using System.Linq;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -50,7 +51,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns>All Source objects.</returns>
         /// 
         [HttpGet, EedmResponseFilter]
-        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.Source>> GetSourcesAsync()
         {
             bool bypassCache = false; 
@@ -84,6 +85,16 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
             }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -99,6 +110,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns>A <see cref="Ellucian.Colleague.Dtos.Source">Source.</see></returns>
         /// 
         [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Ellucian.Colleague.Dtos.Source> GetSourceByIdAsync(string id)
         {
             try
@@ -119,6 +131,16 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
             }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -133,6 +155,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="source"><see cref="Dtos.Source">Source</see> to create</param>
         /// <returns>Newly created <see cref="Dtos.Source">Source</see></returns>
         [HttpPost]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.Source> PostSourcesAsync([FromBody] Dtos.Source source)
         {
             //Create is not supported for Colleague but HEDM requires full crud support.
@@ -147,6 +170,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="source"><see cref="Dtos.Source">Source</see> to create</param>
         /// <returns>Updated <see cref="Dtos.Source">Source</see></returns>
         [HttpPut]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.Source> PutSourcesAsync([FromUri] string id, [FromBody] Dtos.Source source)
         {
             //Update is not supported for Colleague but HEDM requires full crud support.
@@ -159,6 +183,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="id">Id of the Source to delete</param>
         [HttpDelete]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task DeleteSourcesAsync([FromUri] string id)
         {
             //Delete is not supported for Colleague but HEDM requires full crud support.

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -87,7 +87,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                 currentUserFactory = new FacultyUserFactory();
                 planningStudentService = new PlanningStudentService(adapterRegistry, planningStudentRepo, currentUserFactory, roleRepository, logger, studentRepo, baseConfigurationRepository, staffRepo);
                 // Set up view assigned advisee permissions on advisor's role--so that advisor cannot access this student
-                facultyRole.AddPermission(new Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation));
+                facultyRole.AddPermission(new Domain.Entities.Permission(StudentPermissionCodes.ViewPersonInformation));
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { facultyRole });
                 var result = await planningStudentService.QueryPlanningStudentsAsync(planningStudents);
                 Assert.IsTrue(result.Dto is List<Dtos.Student.PlanningStudent>);

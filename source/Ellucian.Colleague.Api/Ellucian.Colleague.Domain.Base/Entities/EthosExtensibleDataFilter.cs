@@ -18,6 +18,11 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public string ColleagueColumnName { get; private set; }
 
         /// <summary>
+        /// The Database Usage Type for the Colleague Column Name
+        /// </summary>
+        public string DatabaseUsageType { get; set; }
+
+        /// <summary>
         /// File name from Colleague
         /// </summary>
         public string ColleagueFileName { get; private set; }
@@ -51,6 +56,11 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// The actual filter value to search for and respond with
         /// </summary>
         public List<string> FilterValue { get; private set; }
+
+        /// <summary>
+        /// The filter operator to use when searching ($eq, $ne, $lte, etc.)
+        /// </summary>
+        public string FilterOper { get; set; }
 
         /// <summary>
         /// Selection File Name for retrieval of records
@@ -131,6 +141,11 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// Enumeration table for translations
         /// </summary>
         public List<EthosApiEnumerations> Enumerations { get; set; }
+
+        /// <summary>
+        /// The valid filter operators available to use when searching ($eq, $ne, $lte, etc.)
+        /// </summary>
+        public List<string> ValidFilterOpers { get; set; }
 
         /// <summary>
         /// Named Query flag

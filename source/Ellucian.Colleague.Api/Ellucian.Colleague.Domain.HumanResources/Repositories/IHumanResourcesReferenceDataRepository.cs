@@ -1,4 +1,4 @@
-﻿//Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using System.Collections.Generic;
@@ -56,6 +56,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
         Task<IEnumerable<EmploymentDepartment>> GetEmploymentDepartmentsAsync(bool bypassCache);
 
         /// <summary>
+        /// Get guid for EmploymentFrequencies.
+        /// </summary>
+        /// <param name="code">EmploymentFrequencies code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetEmploymentFrequenciesGuidAsync(string code);
+
+        /// <summary>
         /// Get a collection of EmploymentFrequency
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
@@ -75,6 +82,14 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
         /// <param name="ignoreCache">Bypass cache flag</param>
         /// <returns>Collection of DeductionCategory</returns>
         Task<IEnumerable<DeductionCategory>> GetDeductionCategoriesAsync(bool ignoreCache);
+
+
+        /// <summary>
+        /// Get guid for DeductionTypes code
+        /// </summary>
+        /// <param name="code">DeductionTypes code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetDeductionTypesGuidAsync(string code);
 
         /// <summary>
         /// Get all deduction types
@@ -126,12 +141,12 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
         Task<string> GetEmploymentStatusEndingReasonsGuidAsync(string code);
 
 
-        ///// <summary>
-        ///// Get a collection of institution job supervisors
-        ///// </summary>
-        ///// <param name="ignoreCache">Bypass cache flag</param>
-        ///// <returns>Collection of institution job supervisors</returns>
-        //Task<IEnumerable<InstitutionJobSupervisor>> GetInstitutionJobSupervisorsAsync(bool ignoreCache);
+        /// <summary>
+        /// Get guid for leave type.
+        /// </summary>
+        /// <param name="code">LeaveType code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetLeaveTypesGuidAsync(string code);
 
         /// <summary>
         /// Get a collection of LeaveType
@@ -148,11 +163,27 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
         Task<IEnumerable<PayClass>> GetPayClassesAsync(bool ignoreCache);
 
         /// <summary>
+        /// Get guid for Payclass
+        /// </summary>
+        /// <param name="code">Payclass code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetPayClassesGuidAsync(string code);
+
+        /// <summary>
         /// Get a collection of PayCycles
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
         /// <returns>Collection of PayCycles</returns>
         Task<IEnumerable<PayCycle2>> GetPayCyclesAsync(bool ignoreCache);
+
+
+        /// <summary>
+        /// Get guid for PayrollDeductionArrangementChangeReasons
+        /// </summary>
+        /// <param name="code">ayrollDeductionArrangementChangeReasons code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetPayrollDeductionArrangementChangeReasonsGuidAsync(string code);
+
 
         /// <summary>
         /// Get all payroll deduction arrangement change reasons

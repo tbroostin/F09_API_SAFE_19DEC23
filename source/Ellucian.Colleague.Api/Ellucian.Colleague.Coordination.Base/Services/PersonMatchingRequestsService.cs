@@ -1,4 +1,4 @@
-// Copyright 2019 Ellucian Company L.P. and its affiliates.
+// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -139,14 +139,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             List<PersonMatchingRequests> dtos = new List<PersonMatchingRequests>();
 
             try
-            {
-                // access is ok if the current user has the view, or create, permission
-                if ((!await CheckViewPersonMatchingRequestsPermissionAsync()) && (!await CheckCreatePersonMatchingRequestsProspectsPermissionAsync()))
-                {
-                    logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view person-matching-requests.");
-                    throw new PermissionsException("User '" + CurrentUser.UserId + "' does not have permission to view person-matching-requests.");
-                }
-
+            {             
                 //convert criteria values.
                 if (criteria != null)
                 {
@@ -263,13 +256,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     throw new ArgumentNullException("guid");
                 }
 
-                // access is ok if the current user has the view, or create, permission
-                if ((!await CheckViewPersonMatchingRequestsPermissionAsync()) && (!await CheckCreatePersonMatchingRequestsProspectsPermissionAsync()))
-                {
-                    logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view person-matching-requests.");
-                    throw new PermissionsException("User '" + CurrentUser.UserId + "' does not have permission to view person-matching-requests.");
-                }
-
+            
                 var entity = await _personMatchingRequestsRepository.GetPersonMatchRequestsByIdAsync(guid);
 
                 Dictionary<string, string> personDict = await _personRepository.GetPersonGuidsCollectionAsync(new List<string>() { entity.PersonId });
@@ -309,14 +296,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             //Validate the request 
             ValidatePersonMatchingRequestsInitiationsProspects(personMatchingRequestsInitiationsProspects);
-
-            // verify the user has the permission to create a personMatchingRequestsInitiationsProspects
-            if (!await CheckCreatePersonMatchingRequestsProspectsPermissionAsync())
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to create person-matching-requests-initiations-prospects.");
-                throw new PermissionsException("User '" + CurrentUser.UserId + "' does not have permission to create person-matching-requests-initiations-prospects.");
-            }
-
+     
             _personMatchingRequestsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
             try
@@ -748,35 +728,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 throw IntegrationApiException;
             }
         }
-
-        /// <summary>
-        /// Permissions code that allows an external system to perform the READ operation.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private async Task<bool> CheckViewPersonMatchingRequestsPermissionAsync()
-        {
-            IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
-            if (userPermissions.Contains(BasePermissionCodes.ViewPersonMatchRequest))
-            {
-                return true;
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// Permissions code that allows an external system to perform the CREATE and READ operations.
-        /// </summary>
-        /// <returns></returns>
-        private async Task<bool> CheckCreatePersonMatchingRequestsProspectsPermissionAsync()
-        {
-            IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
-            if (userPermissions.Contains(BasePermissionCodes.CreatePersonMatchRequestProspects))
-            {
-                return true;
-            }
-            return false;
-        }
-
         #endregion
     }
 }

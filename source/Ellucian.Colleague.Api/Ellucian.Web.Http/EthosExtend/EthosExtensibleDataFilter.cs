@@ -17,6 +17,11 @@ namespace Ellucian.Web.Http.EthosExtend
         public string ColleagueColumnName { get; set; }
 
         /// <summary>
+        /// The Database Usage Type for the Colleague Column Name
+        /// </summary>
+        public string DatabaseUsageType { get; set; }
+
+        /// <summary>
         /// File name from Colleague
         /// </summary>
         public string ColleagueFileName { get; set; }
@@ -50,6 +55,11 @@ namespace Ellucian.Web.Http.EthosExtend
         /// The actual filter value to search for and respond with
         /// </summary>
         public List<string> FilterValue { get; set; }
+
+        /// <summary>
+        /// The filter operator to use when searching ($eq, $ne, $lte, etc.)
+        /// </summary>
+        public string FilterOper { get; set; }
 
         /// <summary>
         /// Selection File Name for retrieval of records
@@ -130,6 +140,16 @@ namespace Ellucian.Web.Http.EthosExtend
         /// Enumeration table for translations
         /// </summary>
         public List<EthosApiEnumerations> Enumerations { get; set; }
+
+        /// <summary>
+        /// The valid filter operators available to use when searching ($eq, $ne, $lte, etc.)
+        /// </summary>
+        public List<string> ValidFilterOpers { get; set; }
+
+        /// <summary>
+        /// Contains the named query name or "criteria" for validation in controller of the query string request
+        /// </summary>
+        public string QueryName { get; set; }
     }
 
     /// <summary>

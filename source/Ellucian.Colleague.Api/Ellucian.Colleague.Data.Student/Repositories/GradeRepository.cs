@@ -73,18 +73,20 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         grade.ExcludeFromFacultyGrading = !string.IsNullOrEmpty(grd.GrdExcludeFromFacFlag) && grd.GrdExcludeFromFacFlag.ToUpper() == "Y";
                         grade.RequireLastAttendanceDate = !string.IsNullOrEmpty(grd.GrdFinalRequireLda) && grd.GrdFinalRequireLda.ToUpper() == "Y";
 
-                        if (!string.IsNullOrEmpty(grd.GrdComparisonGrade)) {
+                        if (!string.IsNullOrEmpty(grd.GrdComparisonGrade))
+                        {
                             // Find the comparison grade scheme in the main list, or the comparisonGradeData list
                             Grades comparisonGrade;
                             comparisonGrade = gradeData.Where(g => (g != null) && (g.Recordkey == grd.GrdComparisonGrade)).FirstOrDefault();
-                            if (comparisonGrade == null) {
+                            if ((comparisonGrade == null) && (comparisonGradeData != null))
+                            { 
                                 comparisonGrade = comparisonGradeData.Where(g => (g != null) && (g.Recordkey == grd.GrdComparisonGrade)).FirstOrDefault();
                             }
-
                             if (comparisonGrade == null)
                             {
                                 logger.Error("Comparison Grade ID " + grd.GrdComparisonGrade + " is not a valid Grade entity");
-                            } else
+                            } 
+                            else
                             {
                                 // Colleague erroneously allows the user to specify a comparison grade for a grade that is already in the comparison
                                 // grade scheme. When this occurs, the EVAL Envision code ignores the comparison grade, so just don't populate the 
@@ -195,7 +197,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (codeCache == null)
             {
                 var allCodesNoCache = await GetHedmAsync(true);
-                if (allCodesCache == null)
+                if (allCodesNoCache == null)
                 {
                     throw new RepositoryException(string.Concat("No Guid found, Entity:'GRADES', Record ID:'", code, "'"));
                 }

@@ -10,6 +10,7 @@ using Ellucian.Colleague.Domain.ColleagueFinance.Tests;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -57,7 +58,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private GeneralLedgerCurrentUser.UserFactory currentUserFactory = new GeneralLedgerCurrentUser.UserFactory();
         private GeneralLedgerCurrentUser.UserFactoryNone noPermissionsUser = new GeneralLedgerCurrentUser.UserFactoryNone();
 
-
+        private Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria filterCriteria;
+        private ProcurementDocumentFilterCriteria filterCriteriaDomainEntity;
 
         [TestInitialize]
         public void Initialize()
@@ -608,6 +610,91 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         #endregion
 
+        #region Tests for QueryRequisitionSummariesAsync
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task QueryRequisitionSummariesAsync_NUllCriteria_ArgumentNullException()
+        {
+            await service2.QueryRequisitionSummariesAsync(null);
+        }
+
+        
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task QueryRequisitionSummariesAsync_EmptyCriteria_ArgumentNullException()
+        {
+            filterCriteria = new Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria();
+            await service2.QueryRequisitionSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task QueryRequisitionSummariesAsync_CurrentUserDifferentFromRequest()
+        {
+            filterCriteria = new Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria();
+            filterCriteria.PersonId = "0016357";            
+
+            await service2.QueryRequisitionSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task QueryRequisitionSummariesAsync_MissingPermissionException()
+        {
+            await serviceForNoPermission.QueryRequisitionSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task QueryRequisitionSummariesAsync_StaffRecordMissingException()
+        {
+            Domain.Base.Entities.Staff nullStaff = null;
+            staffRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>())).Returns(Task.FromResult(nullStaff));
+            await service2.QueryRequisitionSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        public async Task QueryRequisitionSummariesAsync()
+        {
+            var requisitionId = "1";
+            var personId = currentUserFactory.CurrentUser.PersonId;
+            var requisitionSummaryListDto = await service.QueryRequisitionSummariesAsync(filterCriteria);
+
+            filterCriteriaDomainEntity = new ProcurementDocumentFilterCriteria();
+            filterCriteriaDomainEntity.PersonId = currentUserFactory.CurrentUser.PersonId;
+            filterCriteriaDomainEntity.VendorIds = new List<string>() { "0009876" };
+
+            // Get the requisition domain entity from the test repository
+            var requisitionSummaryListDomainEntity = await testRequisitionRepository.QueryRequisitionSummariesAsync(filterCriteriaDomainEntity);
+
+            Assert.IsNotNull(requisitionSummaryListDto);
+            Assert.AreEqual(requisitionSummaryListDto.ToList().Count, requisitionSummaryListDomainEntity.ToList().Count);
+
+            var requisitionDto = requisitionSummaryListDto.Where(x => x.Id == requisitionId).FirstOrDefault();
+            var requisitionDomainEntity = requisitionSummaryListDomainEntity.Where(x => x.Id == requisitionId).FirstOrDefault();
+
+            // Confirm that the data in the DTO matches the domain entity
+            Assert.AreEqual(requisitionDto.Id, requisitionDomainEntity.Id);
+            Assert.AreEqual(requisitionDto.Number, requisitionDomainEntity.Number);
+            Assert.AreEqual(requisitionDto.Amount, requisitionDomainEntity.Amount);
+            Assert.AreEqual(requisitionDto.Date, requisitionDomainEntity.Date);
+            Assert.AreEqual(requisitionDto.InitiatorName, requisitionDomainEntity.InitiatorName);
+            Assert.AreEqual(requisitionDto.RequestorName, requisitionDomainEntity.RequestorName);
+            Assert.AreEqual(requisitionDto.Status.ToString(), requisitionDomainEntity.Status.ToString());
+            Assert.AreEqual(requisitionDto.StatusDate, requisitionDomainEntity.StatusDate);
+            Assert.AreEqual(requisitionDto.VendorId, requisitionDomainEntity.VendorId);
+            Assert.AreEqual(requisitionDto.VendorName, requisitionDomainEntity.VendorName);
+
+
+            // Confirm that the data in the list of purchase order DTOs matches the domain entity
+            for (int i = 0; i < requisitionDto.PurchaseOrders.Count(); i++)
+            {
+                Assert.AreEqual(requisitionDto.PurchaseOrders[i].Id, requisitionDomainEntity.PurchaseOrders[i].Id);
+                Assert.AreEqual(requisitionDto.PurchaseOrders[i].Number, requisitionDomainEntity.PurchaseOrders[i].Number);
+            }
+        }
+        #endregion
+
         #region Build service method
 
         /// <summary>
@@ -644,6 +731,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             adapterRegistry.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.RequisitionDeleteResponse, Dtos.ColleagueFinance.RequisitionDeleteResponse>()).Returns(requisitionDtoAdapter_Delete);
 
+            var procurementCriteria_Adapter = new AutoMapperAdapter<Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria, Domain.ColleagueFinance.Entities.ProcurementDocumentFilterCriteria>(adapterRegistry.Object, loggerObject);
+            adapterRegistry.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria, Domain.ColleagueFinance.Entities.ProcurementDocumentFilterCriteria>()).Returns(procurementCriteria_Adapter);
+
+
             // Set up the service objects
             service = new RequisitionService(testRequisitionRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository,
                 colleagueFinanceReferenceDataRepository, accountFundsAvailableRepo.Object, referenceDataRepo.Object, buyersDataRepo.Object, personDataRepo.Object,
@@ -656,6 +747,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             serviceForNoPermission = new RequisitionService(testRequisitionRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository,
                 colleagueFinanceReferenceDataRepository, accountFundsAvailableRepo.Object, referenceDataRepo.Object, buyersDataRepo.Object, personDataRepo.Object,
                 vendorsDataRepo.Object, addressDataRepo.Object, confDatRepo.Object, adapterRegistry.Object, noPermissionsUser, roleRepository, staffRepositoryMock.Object, generalLedgerAccountRepositoryMock.Object, procurementsUtilityServiceMock.Object, loggerObject);
+
+            filterCriteria = new Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria();
+            filterCriteria.PersonId = currentUserFactory.CurrentUser.PersonId;
+            filterCriteria.VendorIds = new List<string>() { "0009876" };
+
         }
         #endregion
     }
@@ -954,6 +1050,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 addressRepositoryMock.Setup(p => p.GetHostCountryAsync()).ReturnsAsync("USA");
                 var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();
                 generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
+            
+                var personGuidCollection = new Dictionary<string, string>();
+                personGuidCollection.Add("1", guid);
+                personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
+
+                var vendorGuidCollection = new Dictionary<string, string>();
+                vendorGuidCollection.Add("1", guid);
+                vendorsRepositoryMock.Setup(p => p.GetVendorGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
+
 
             }
 
@@ -968,18 +1073,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 await requisitionService.GetRequisitionsByGuidAsync(null);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task RequisitionService_GetRequisitionsByGuidAsync_PermissionsException()
-            {
-                roleRepositoryMock.Setup(r => r.Roles).Returns(new List<Domain.Entities.Role>());
-
-                await requisitionService.GetRequisitionsByGuidAsync(guid);
-            }
+            
 
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task RequisitionService_GetRequisitionsByGuidAsync_KeyNotFoundException_From_Repository()
+            public async Task RequisitionService_GetRequisitionsByGuidAsync_Exception_From_Repository()
             {
                 requisitionRepositoryMock.Setup(r => r.GetRequisitionsByGuidAsync(It.IsAny<String>())).ThrowsAsync(new KeyNotFoundException());
 
@@ -987,8 +1085,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
-            public async Task RequisitionService_GetRequisitionsByGuidAsync_InvalidOperationException_From_Repository()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task RequisitionService_GetRequisitionsByGuidAsync_Exception_From_Repository1()
             {
                 requisitionRepositoryMock.Setup(r => r.GetRequisitionsByGuidAsync(It.IsAny<String>())).ThrowsAsync(new InvalidOperationException());
 
@@ -996,26 +1094,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
-            public async Task RequisitionService_GetRequisitionsByGuidAsync_RepositoryException_From_Repository()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task RequisitionService_GetRequisitionsByGuidAsync_Exception_From_Repository2()
             {
                 requisitionRepositoryMock.Setup(r => r.GetRequisitionsByGuidAsync(It.IsAny<String>())).ThrowsAsync(new RepositoryException());
 
                 await requisitionService.GetRequisitionsByGuidAsync(guid);
             }
 
+           
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
-            public async Task RequisitionService_GetRequisitionsByGuidAsync_ArgumentException_From_Repository()
-            {
-                requisitionRepositoryMock.Setup(r => r.GetRequisitionsByGuidAsync(It.IsAny<String>())).ThrowsAsync(new ArgumentException());
-
-                await requisitionService.GetRequisitionsByGuidAsync(guid);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task RequisitionService_GetRequisitionsByGuidAsync_Exception_From_Repository()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task RequisitionService_GetRequisitionsByGuidAsync_Exception_From_Repository3()
             {
                 var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();
                 generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
@@ -1027,17 +1117,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task RequisitionService_GetRequisitionsByGuidAsync_ConvertRequisitionEntityToDtoAsync_ArgumentException_When_Requisition_Null()
+            public async Task RequisitionService_GetRequisitionsByGuidAsync_ConvertRequisitionEntityToDtoAsync_Exception_When_Requisition_Null()
             {
                 var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();
                 generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
                 requisition.IntgSubmittedBy = null;
-                requisitionRepositoryMock.Setup(r => r.GetRequisitionsByGuidAsync(It.IsAny<String>())).ReturnsAsync(null);
+                requisitionRepositoryMock.Setup(r => r.GetRequisitionsByGuidAsync(It.IsAny<String>())).ReturnsAsync(() => null);
                 await requisitionService.GetRequisitionsByGuidAsync(guid);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task RequisitionService_GetRequisitionsByGuidAsync_ConvertRequisitionEntityToDtoAsync_Exception_When_Invalid_SubmittedBy()
             {
                 // Make sure executing of setting default currency code when sending invalid currency code.
@@ -1048,12 +1138,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 requisitionRepositoryMock.Setup(r => r.GetRequisitionsByGuidAsync(It.IsAny<String>())).ReturnsAsync(requisition);
 
-                personRepositoryMock.Setup(p => p.GetPersonGuidFromIdAsync(It.IsAny<String>())).ReturnsAsync(null);
+                personRepositoryMock.Setup(p => p.GetPersonGuidFromIdAsync(It.IsAny<String>())).ReturnsAsync(() => null);
                 await requisitionService.GetRequisitionsByGuidAsync(guid);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task RequisitionService_GetRequisitionsByGuidAsync_ConvertRequisitionEntityToDtoAsync_Exception_When_Invalid_Buyer()
             {
                 // Setting the values to cover lines of GetCurrencyIsoCode
@@ -1064,13 +1154,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 requisitionRepositoryMock.Setup(r => r.GetRequisitionsByGuidAsync(It.IsAny<String>())).ReturnsAsync(requisition);
                 buyerRepositoryMock.Setup(b => b.GetBuyerIdFromGuidAsync(It.IsAny<String>())).ReturnsAsync("1");
-                buyerRepositoryMock.Setup(p => p.GetBuyerGuidFromIdAsync(It.IsAny<String>())).ReturnsAsync(null);
+                buyerRepositoryMock.Setup(p => p.GetBuyerGuidFromIdAsync(It.IsAny<String>())).ReturnsAsync(() => null);
                 await requisitionService.GetRequisitionsByGuidAsync(guid);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_KeyNotFoundException_When_Invalid_DefaultInitiator()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_Exception_When_Invalid_DefaultInitiator()
             {
                 requisition = getRequisition(RequisitionStatus.PoCreated);
                 requisition.IntgSubmittedBy = null;
@@ -1078,13 +1168,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 requisition.HostCountry = "USA";
 
                 requisitionRepositoryMock.Setup(r => r.GetRequisitionsByGuidAsync(It.IsAny<String>())).ReturnsAsync(requisition);
-                personRepositoryMock.Setup(p => p.GetPersonGuidFromIdAsync(It.IsAny<String>())).ReturnsAsync(null);
+                personRepositoryMock.Setup(p => p.GetPersonGuidFromIdAsync(It.IsAny<String>())).ReturnsAsync(() => null);
                 personRepositoryMock.Setup(b => b.GetPersonIdFromGuidAsync(It.IsAny<String>())).ReturnsAsync("1");
+                var personGuidCollection = new Dictionary<string, string>();
+                personGuidCollection.Add("99999", guid);
+                personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
+                
                 await requisitionService.GetRequisitionsByGuidAsync(guid);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_Exception_Unable_To_Retrieve_ShipToDestination()
             {
                 requisition.CurrencyCode = null;
@@ -1095,8 +1189,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
-            public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_KeyNotFoundException_When_Invalid_ShipToDestination()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_Exception_When_Invalid_ShipToDestination()
             {
                 requisition.ShipToCode = "2";
                 requisition.CurrencyCode = null;
@@ -1107,7 +1201,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_Exception_Unable_To_Retrieve_FreeOnBoardTypes()
             {
                 requisition.CurrencyCode = null;
@@ -1118,8 +1212,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
-            public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_KeyNotFoundException_When_Invalid_FreeOnBoardType()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_Exception_When_Invalid_FreeOnBoardType()
             {
                 requisition.Fob = "2";
                 requisition.IntgSubmittedBy = null;
@@ -1128,8 +1222,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task RequisitionService_BuildOverrideShippingDestinationDtoAsync_KeyNotFoundException_On_Invalid_IntgAltShipCountry()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task RequisitionService_BuildOverrideShippingDestinationDtoAsync_Exception_On_Invalid_IntgAltShipCountry()
             {
                 requisition.IntgSubmittedBy = null;
                 requisition.IntgAltShipCountry = "ASU";
@@ -1137,7 +1231,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task RequisitionService_BuildOverrideShippingDestinationDtoAsync_Exception_On_Invalid_Country_ISO3Code()
             {
                 requisition.IntgAltShipCountry = "ITL";
@@ -1145,7 +1239,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task RequisitionService_BuildOverrideShippingDestinationDtoAsync_ArgumentException_When_State_NotFound()
             {
                 requisition.AltShippingState = "AU";
@@ -1154,19 +1248,19 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task RequisitionService_GetRequisitionsByGuidAsync_ConvertRequisitionEntityToDtoAsync_Exception_When_Invalid_VendorId()
             {
                 requisition.IntgAltShipCountry = null;
                 requisition.MiscCountry = "CAN";
 
-                vendorsRepositoryMock.Setup(v => v.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+                vendorsRepositoryMock.Setup(v => v.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 await requisitionService.GetRequisitionsByGuidAsync(guid);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
-            public async Task RequisitionService_GetRequisitionsByGuidAsync_ConvertRequisitionEntityToDtoAsync_Exception_Unable_To_Retrieve_VendorTerms()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task RequisitionService_GetRequisitionsByGuidAsync_ConvertRequisitionEntityToDtoAsync_IntegrationApiException_Unable_To_Retrieve_VendorTerms()
             {
                 requisition.IntgAltShipCountry = null;
                 requisition.MiscCountry = null;
@@ -1177,8 +1271,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
-            public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_KeyNotFoundException_On_Invalid_VendorTerms()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_IntegrationApiException_On_Invalid_VendorTerms()
             {
                 requisition.IntgSubmittedBy = null;
                 requisition.IntgAltShipCountry = null;
@@ -1192,7 +1286,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_Exception_Unable_To_Retrieve_CommodityCode()
             {
                 requisition.IntgAltShipCountry = null;
@@ -1206,7 +1300,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_Exception_Unable_To_Retrieve_fxaflag()
             {
                 requisition.IntgAltShipCountry = null;
@@ -1220,8 +1314,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
-            public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_KeyNotFoundException_On_Invalid_CommodityCode()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_IntegrationApiException_On_Invalid_CommodityCode()
             {
 
                 requisition.IntgSubmittedBy = null;
@@ -1245,7 +1339,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_Exception_Unable_To_Retrieve_UnitOfIssues()
             {
                 requisition.IntgAltShipCountry = "BRA";
@@ -1254,8 +1348,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
-            public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_KeyNotFoundException_On_Invalid_UnitOfIssue()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_IntegrationApiException_On_Invalid_UnitOfIssue()
             {
                 requisition.IntgSubmittedBy = null;
                 requisition.IntgAltShipCountry = "MEX";
@@ -1265,7 +1359,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task RequisitionService_ConvertRequisitionEntityToDtoAsync_Exception_Unable_To_Retrieve_CommerceTaxCodes()
             {
                 requisition.IntgSubmittedBy = null;
@@ -1299,15 +1393,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             #region GETALL
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task RequisitionService_GetRequisitionsAsync_PermissionsException()
-            {
-                roleRepositoryMock.Setup(r => r.Roles).Returns(new List<Domain.Entities.Role>());
-                requisition.IntgSubmittedBy = null;
-                await requisitionService.GetRequisitionsAsync(0, 100);
-            }
-
-            [TestMethod]
             public async Task RequisitionService_GetRequisitionsAsync()
             {
                 var requisitions = new List<Requisition>() { requisition };
@@ -1317,9 +1402,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 requisitions.Add(new Requisition("2", Guid.NewGuid().ToString(), "2", "name", RequisitionStatus.PoCreated, DateTime.Now, DateTime.Now));
                 requisition.IntgSubmittedBy = null;
                 var tupleRequisitions = new Tuple<IEnumerable<Requisition>, int>(requisitions, 2);
-                requisitionRepositoryMock.Setup(r => r.GetRequisitionsAsync(0, 2)).ReturnsAsync(tupleRequisitions);
+                requisitionRepositoryMock.Setup(r => r.GetRequisitionsAsync(0, 2, It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(tupleRequisitions);
 
-                var result = await requisitionService.GetRequisitionsAsync(0, 2);
+                var result = await requisitionService.GetRequisitionsAsync(0, 2, new Dtos.Requisitions());
 
                 Assert.IsNotNull(result);
                 Assert.IsTrue(result.Item1.Count() == 2);
@@ -1337,19 +1422,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 await requisitionService.DeleteRequisitionAsync(null);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task RequisitionService_DeleteRequisitionAsync_PermissionsException()
-            {
-                roleRepositoryMock.Setup(r => r.Roles).Returns(new List<Domain.Entities.Role>());
-
-                await requisitionService.DeleteRequisitionAsync(guid);
-            }
-
+         
             [TestMethod]
             public async Task RequisitionService_DeleteRequisitionAsync()
             {
-                requisitionRepositoryMock.Setup(r => r.DeleteRequisitionAsync(It.IsAny<string>())).ReturnsAsync(null);
+                requisitionRepositoryMock.Setup(r => r.DeleteRequisitionAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 await requisitionService.DeleteRequisitionAsync(guid);
             }
 
@@ -1765,9 +1842,21 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 {
                     referenceDataRepositoryMock.Setup(f => f.GetCommerceTaxCodeGuidAsync(record.Code)).ReturnsAsync(record.Guid);
                 }
-                accountFundsAvailableRepo.Setup(a => a.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(fundsAvailable);
+                accountFundsAvailableRepo.Setup(a => a.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(fundsAvailable);
                 var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();
                 generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
+
+                var personGuidCollection = new Dictionary<string, string>();
+                personGuidCollection.Add("1", guid);
+                personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
+
+
+                var vendorGuidCollection = new Dictionary<string, string>();
+                vendorGuidCollection.Add("1", guid);
+                vendorsRepositoryMock.Setup(p => p.GetVendorGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
+
+
+
             }
 
             #endregion
@@ -1786,14 +1875,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 await requisitionService.CreateRequisitionsAsync(new Dtos.Requisitions() { Id = null });
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task RequisitionService_CreateRequisitionsAsync_PermissionException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                await requisitionService.CreateRequisitionsAsync(dtoPostRequistion);
-            }
-
+          
             [TestMethod]
             [ExpectedException(typeof(Exception))]
             public async Task RequisitionService_CreateRequisitionsAsync_LineItems_With_Same_GLNumber()
@@ -1888,7 +1970,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             [ExpectedException(typeof(Exception))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_ShipToDest_Null()
             {
-                colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetShipToDestinationsAsync(true)).ReturnsAsync(null);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetShipToDestinationsAsync(true)).ReturnsAsync(() => null);
                 await requisitionService.CreateRequisitionsAsync(dtoPostRequistion);
             }
 
@@ -1904,7 +1986,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             [ExpectedException(typeof(Exception))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_FreeOnBoard_Null()
             {
-                colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetFreeOnBoardTypesAsync(true)).ReturnsAsync(null);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetFreeOnBoardTypesAsync(true)).ReturnsAsync(() => null);
                 await requisitionService.CreateRequisitionsAsync(dtoPostRequistion);
             }
 
@@ -1945,7 +2027,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     }
                 };
 
-                requisitionRepositoryMock.Setup(r => r.GetRequisitionsIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                requisitionRepositoryMock.Setup(r => r.GetRequisitionsIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 await requisitionService.CreateRequisitionsAsync(dtoPostRequistion);
             }
 
@@ -1979,7 +2061,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     }
                 };
 
-                addressRepositoryMock.Setup(r => r.GetAddressFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                addressRepositoryMock.Setup(r => r.GetAddressFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 await requisitionService.CreateRequisitionsAsync(dtoPostRequistion);
             }
 
@@ -2017,7 +2099,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             [ExpectedException(typeof(Exception))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_CommodityCodes_Null()
             {
-                colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetCommodityCodesAsync(true)).ReturnsAsync(null);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetCommodityCodesAsync(true)).ReturnsAsync(() => null);
                 await requisitionService.CreateRequisitionsAsync(dtoPostRequistion);
             }
 
@@ -2025,7 +2107,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             [ExpectedException(typeof(Exception))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_FixedAssetDesignation_Null()
             {
-                colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetFxaTransferFlagsAsync(true)).ReturnsAsync(null);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetFxaTransferFlagsAsync(true)).ReturnsAsync(() => null);
                 await requisitionService.CreateRequisitionsAsync(dtoPostRequistion);
             }
 
@@ -2033,7 +2115,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             [ExpectedException(typeof(Exception))]
             public async Task RequisitionService_CreateRequisitionsAsync_DtoToEntity_CommodityUnitTypes_Null()
             {
-                colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetCommodityUnitTypesAsync(true)).ReturnsAsync(null);
+                colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetCommodityUnitTypesAsync(true)).ReturnsAsync(() => null);
                 await requisitionService.CreateRequisitionsAsync(dtoPostRequistion);
             }
 
@@ -2081,18 +2163,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_EntityToDto_Entity_Null()
             {
                 var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();
                 generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
                 requisition.IntgSubmittedBy = null;
-                requisitionRepositoryMock.Setup(r => r.CreateRequisitionAsync(It.IsAny<Requisition>())).ReturnsAsync(null);
+                requisitionRepositoryMock.Setup(r => r.CreateRequisitionAsync(It.IsAny<Requisition>())).ReturnsAsync(() => null);
                 await requisitionService.CreateRequisitionsAsync(dtoPostRequistion);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task RequisitionService_CreateRequisitionsAsync_EntityToDto_AccountPayableSources_Notfound()
             {
                 var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();

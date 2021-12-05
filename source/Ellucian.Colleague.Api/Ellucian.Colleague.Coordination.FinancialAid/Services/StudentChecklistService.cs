@@ -3,6 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Ellucian.Colleague.Domain.Base;
+using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.FinancialAid.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -12,7 +16,6 @@ using Ellucian.Web.Security;
 using slf4net;
 using Ellucian.Colleague.Domain.FinancialAid.Services;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.Base.Repositories;
 
 namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 {
@@ -21,6 +24,9 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
         private readonly IStudentChecklistRepository studentChecklistRepository;
         private readonly IFinancialAidReferenceDataRepository financialAidReferenceDataRepository;
         private readonly IConfigurationRepository configurationRepository;
+        private readonly IProfileRepository _profileRepository;
+        private readonly IRelationshipRepository _relationshipRepository;
+        private readonly IProxyRepository _proxyRepository;
 
         /// <summary>
         /// Constructor for StudentChecklistService
@@ -30,6 +36,10 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
         /// <param name="studentAwardYearRepository">StudentAwardYearRepository</param>
         /// <param name="financialAidOfficeRepository">FinancialAidOfficeRepository</param>
         /// <param name="financialAidReferenceDataRepository">FinancialAidReferenceDataRepository</param>
+        /// <param name="profileRepository">ProfileRepository</param>
+        /// <param name="proxyRepository">ProxyRepository</param>
+        /// <param name="relationshipRepository">RelationshipRepository</param>
+        /// <param name="configurationRepository">ConfigurationRepository</param>
         /// <param name="currentUserFactory">CurrentUserFactory</param>
         /// <param name="roleRepository">RoleRepository</param>
         /// <param name="logger">Logger</param>
@@ -39,6 +49,9 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             IStudentAwardYearRepository studentAwardYearRepository,
             IFinancialAidOfficeRepository financialAidOfficeRepository,
             IFinancialAidReferenceDataRepository financialAidReferenceDataRepository,
+            IProfileRepository profileRepository,
+            IProxyRepository proxyRepository,
+            IRelationshipRepository relationshipRepository,
             IConfigurationRepository configurationRepository,
             ICurrentUserFactory currentUserFactory,
             IRoleRepository roleRepository,
@@ -48,6 +61,10 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
             this.studentChecklistRepository = studentChecklistRepository;
             this.financialAidReferenceDataRepository = financialAidReferenceDataRepository;
             this.configurationRepository = configurationRepository;
+            _profileRepository = profileRepository;
+            _proxyRepository = proxyRepository;
+            _relationshipRepository = relationshipRepository;
+
         }
 
         /// <summary>
@@ -282,5 +299,102 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
 
         }
 
+        ///<summary>
+        ///Get a parent's profile for a PLUS MPN
+        /// </summary>
+        /// <param name="parentId">The ID for the parent whose profile is being retrieved</param>
+        /// <param name="studentId">The ID for the student whose parent's profile is being retrieved</param>
+        /// <param name="useCache">True/false flag to retrieve cached data</param>
+        /// <returns>A parent's demographic profile</returns>
+        public async Task<Dtos.Base.Profile> GetMpnProfileAsync(string parentId, string studentId, bool useCache = true)
+        {
+            if (string.IsNullOrEmpty(parentId))
+            {
+                throw new ArgumentNullException("parentId", "A person's id is required to retrieve profile information");
+            }
+
+            if (!await FAUserCanViewProfileForPerson(studentId, parentId))
+            {
+                string message = CurrentUser.PersonId + " cannot view profile for person " + parentId + " check PREL and proxy access. If this is an admin user, check for the VIEW.FINANCIAL.AID.INFORMATION permission code.";
+                logger.Info(message);
+                throw new PermissionsException(message);
+            }
+
+            Profile profileEntity = await _profileRepository.GetProfileAsync(parentId, useCache);
+            if (profileEntity == null)
+            {
+                throw new Exception("Profile information could not be retrieved for person " + parentId);
+            }
+
+            var profileDtoAdapter = _adapterRegistry.GetAdapter<Profile, Dtos.Base.Profile>();
+            Dtos.Base.Profile profileDto = profileDtoAdapter.MapToType(profileEntity);
+
+            return profileDto;
+        }
+
+        /// <summary>
+        /// Verifies if the user is permitted to view another person's profile
+        /// Profile information for the parentId can only be viewed when:
+        ///  The student (studentId) has an established relationship on PREL with the parentId
+        ///  AND
+        ///  (
+        ///  1. The CurrentUser is the studentID
+        ///  OR  
+        ///  2. The CurrentUser has the VIEW.FINANCIAL.AID.INFORMATION permission code on one of their roles
+        ///  OR
+        ///  3. The CurrentUser exists as a proxy for the studentId
+        ///  )
+        /// </summary>
+        /// <param name="studentId">The student ID to retrieve PREL relationships for </param>
+        /// <param name="parentId">The parent ID to attempt to evaluate if the current user can view and return a profile for </param>
+        private async Task<bool> FAUserCanViewProfileForPerson(string studentId, string parentId)
+        {
+            bool isFaAdmin = false;
+            bool parentIsLinkedToStudent = false;
+            var relationshipIds = await _relationshipRepository.GetRelatedPersonIdsAsync(studentId);
+            if (relationshipIds.Contains(parentId))
+            {
+                parentIsLinkedToStudent = true;
+            }
+            else return false;
+
+            if (CurrentUser.IsPerson(studentId) && parentIsLinkedToStudent)
+            {
+                return true;
+            }
+
+            if (!CurrentUser.IsPerson(studentId) && !CurrentUser.IsPerson(parentId))
+            {
+                //If the current user isn't the student or the parent, check if they have the VIEW.FINANCIAL.AID.INFORMATION permission code
+                isFaAdmin = IsUserFaAdmin();
+                if (isFaAdmin)
+                {
+                    return true;
+                }
+                
+                //If the current user is not the student, parent, or an FA admin, check if they have proxy access to the student
+                var proxyUsers = await _proxyRepository.GetUserProxyPermissionsAsync(studentId);
+                if (proxyUsers.Select(pu => pu.Id).Contains(CurrentUser.PersonId))
+                {
+                    return true;
+                }
+                return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Checks if the current user ID has the VIEW.FINANCIAL.AID.INFORMATION permissions code
+        /// If so, they are an admin and are able to view the parent ID's profile 
+        /// </summary>
+        /// <returns>TRUE if the ID has the permission code - otherwise returns FALSE</returns>
+        private bool IsUserFaAdmin()
+        {
+            if (HasPermission(Domain.Student.StudentPermissionCodes.ViewFinancialAidInformation))
+            {
+                return true;
+            }
+            else return false;
+        }
     }
 }

@@ -19,6 +19,7 @@ using Ellucian.Colleague.Dtos.EnumProperties;
 using slf4net;
 using Ellucian.Web.Security;
 using Role = Ellucian.Colleague.Domain.Entities.Role;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -49,6 +50,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
         private string id = "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d";
         private string personGuid = "b371fba4-797d-4c2c-8adc-bedd6d9db730";
+        private string personId = "0001585";
 
         protected Role viewStudentRole = new Role(1, "VIEW.STUDENT.INFORMATION");
 
@@ -98,7 +100,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             referenceDataRepository.Setup(i => i.GetAcademicStandings2Async(It.IsAny<bool>())).ReturnsAsync(allAcademicStandings);
 
             termRepositoryMock.Setup(t => t.GetAsync(It.IsAny<bool>())).ReturnsAsync(allTerms);
-            personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(personGuid);
+            Dictionary<string, string> personGuidCollection = new Dictionary<string, string>
+            {
+                { personId, personGuid }
+            };
+            personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(personGuidCollection);
 
             var studentStandingsTuple
                 = new Tuple<IEnumerable<StudentStanding>, int>(allStudentStandings, allStudentStandings.Count());
@@ -106,10 +112,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             studentStandingRepositoryMock.Setup(s => s.GetStudentStandingsAsync(It.IsAny<int>(), It.IsAny<int>()))
                 .ReturnsAsync(studentStandingsTuple);
 
-
             var actuals = await studentAcademicStandingsService.GetStudentAcademicStandingsAsync(allStudentStandings.Count(), 0, false);
 
             Assert.IsNotNull(actuals);
+            Assert.IsTrue(actuals.Item1.Count() > 0);
+            Assert.IsTrue(actuals.Item2 > 0);
 
             foreach (var actual in actuals.Item1)
             {
@@ -169,7 +176,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             referenceDataRepository.Setup(i => i.GetAcademicStandings2Async(It.IsAny<bool>())).ReturnsAsync(allAcademicStandings);
 
             termRepositoryMock.Setup(t => t.GetAsync(It.IsAny<bool>())).ReturnsAsync(allTerms);
-            personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(personGuid);
+            Dictionary<string, string> personGuidCollection = new Dictionary<string, string>
+            {
+                { personId, personGuid }
+            };
+            personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(personGuidCollection);
 
             var studentStandingsTuple
                 = new Tuple<IEnumerable<StudentStanding>, int>(allStudentStandings, allStudentStandings.Count());
@@ -238,7 +249,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             referenceDataRepository.Setup(i => i.GetAcademicStandings2Async(It.IsAny<bool>())).ReturnsAsync(allAcademicStandings);
 
             termRepositoryMock.Setup(t => t.GetAsync(It.IsAny<bool>())).ReturnsAsync(allTerms);
-            personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(personGuid);
+            Dictionary<string, string> personGuidCollection = new Dictionary<string, string>
+            {
+                { personId, personGuid }
+            };
+            personRepositoryMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(personGuidCollection);
             var expected = allStudentStandings.FirstOrDefault(i => i.Guid.Equals(id, StringComparison.OrdinalIgnoreCase));
 
             studentStandingRepositoryMock.Setup(s => s.GetStudentStandingByGuidAsync(id)).ReturnsAsync(expected);
@@ -292,10 +307,27 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
     
         [TestMethod]
-        [ExpectedException(typeof (Exception))]
+        [ExpectedException(typeof (IntegrationApiException))]
         public async Task StudentAcademicStandings_GetById_Exception()
         {
-           await studentAcademicStandingsService.GetStudentAcademicStandingsByGuidAsync("abc");
+            try
+            {
+                await studentAcademicStandingsService.GetStudentAcademicStandingsByGuidAsync("abc");
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                bool messageFound = false;
+                foreach (var error in ex.Errors)
+                {
+                    if (error.Message == "No Student Academic Standings was found for guid abc" && error.Code == "GUID.Not.Found")
+                    {
+                        messageFound = true;
+                    }
+                }
+                Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                throw ex;
+            }
         }
     
         [TestMethod]
@@ -306,30 +338,64 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task StudentAcademicStandings_GetById_KeyNotFoundException()
         {
             studentStandingRepositoryMock.Setup(s => s.GetStudentStandingByGuidAsync(id)).Throws<KeyNotFoundException>();
-            
-            await studentAcademicStandingsService.GetStudentAcademicStandingsByGuidAsync(id);
+
+            try
+            {
+                await studentAcademicStandingsService.GetStudentAcademicStandingsByGuidAsync(id);
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                bool messageFound = false;
+                foreach (var error in ex.Errors)
+                {
+                    if (error.Message == "No Student Academic Standings was found for guid " + id && error.Code == "GUID.Not.Found")
+                    {
+                        messageFound = true;
+                    }
+                }
+                Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                throw ex;
+            }
         }
 
       
         [TestMethod]
-        [ExpectedException(typeof(InvalidOperationException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task StudentAcademicStandings_GetById_InvalidOperationException()
         {
             studentStandingRepositoryMock.Setup(s => s.GetStudentStandingByGuidAsync(id)).Throws<InvalidOperationException>();
 
-            await studentAcademicStandingsService.GetStudentAcademicStandingsByGuidAsync(id);
+            try
+            {
+                await studentAcademicStandingsService.GetStudentAcademicStandingsByGuidAsync(id);
+            }
+            catch (IntegrationApiException ex)
+            {
+                Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                bool messageFound = false;
+                foreach (var error in ex.Errors)
+                {
+                    if (error.Message == "No Student Academic Standings was found for guid " + id && error.Code == "GUID.Not.Found")
+                    {
+                        messageFound = true;
+                    }
+                }
+                Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                throw ex;
+            }
         }
 
         [TestMethod]
-        [ExpectedException(typeof(RepositoryException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task StudentAcademicStandings_GetById_RepositoryException()
         {
             studentStandingRepositoryMock.Setup(s => s.GetStudentStandingByGuidAsync(id)).Throws<RepositoryException>();
-
+                
             await studentAcademicStandingsService.GetStudentAcademicStandingsByGuidAsync(id);
         }
 
@@ -358,7 +424,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     Level = "UG",
                     CalcStandingCode = "PROB",
                     Type = StudentStandingType.AcademicLevel,
-                    Term = "2000/FA"
+                    Term = "2001/FA"
                 },
                 new StudentStanding("2", "0001585", "PROB", DateTime.Now)
                 {

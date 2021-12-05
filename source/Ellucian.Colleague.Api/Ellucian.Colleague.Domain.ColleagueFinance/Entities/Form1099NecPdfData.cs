@@ -140,6 +140,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         public string StatePayerNumber { get; set; }
 
         /// <summary>
+        /// Direct Resale
+        /// </summary>
+        public bool IsDirectResale { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the 1099-NEC pdf form.
         /// </summary>
         /// <param name="taxYear">Tax year for the 1099-Nec pdf.</param>

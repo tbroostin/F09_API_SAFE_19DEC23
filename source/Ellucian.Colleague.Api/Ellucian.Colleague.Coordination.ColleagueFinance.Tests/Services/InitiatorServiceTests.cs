@@ -141,7 +141,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [TestMethod]
         public async Task InitiatorService_QueryInitiatorByKeywordAsync_NullResult()
         {
-            initiatorRepositoryMock.Setup(r => r.QueryInitiatorByKeywordAsync(It.IsAny<string>())).ReturnsAsync(null);
+            initiatorRepositoryMock.Setup(r => r.QueryInitiatorByKeywordAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             await initiatorService.QueryInitiatorByKeywordAsync(personId);
         }
 

@@ -1,8 +1,9 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.Planning;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Planning.Services;
 using Ellucian.Colleague.Dtos.Planning;
+using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;

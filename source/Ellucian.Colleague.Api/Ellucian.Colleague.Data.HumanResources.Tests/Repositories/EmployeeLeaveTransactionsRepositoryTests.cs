@@ -1,6 +1,8 @@
 ﻿using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Data.HumanResources.Repositories;
+using Ellucian.Colleague.Domain.Base.Transactions;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Data.Colleague;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -83,43 +85,50 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 dataReaderMock.Setup(r => r.SelectAsync("PERLVDTL", It.IsAny<string>())).ReturnsAsync(PerleaveDetailsKeys.ToArray());
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<Perlvdtl>(It.IsAny<string[]>(), false)).ReturnsAsync(empLeaveTrans);
                 dataReaderMock.Setup(r => r.ReadRecordAsync<Perlvdtl>("PERLVDTL", It.IsAny<string>(), true)).ReturnsAsync(perLeaveDetailsData);
+                //var empLeaveplanRecords = await DataReader.BulkReadRecordAsync<DataContracts.Perlvdtl>("PERLVDTL", subList);
+
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<Perlvdtl>("PERLVDTL", It.IsAny<string[]>(), true))
+                    .ReturnsAsync(empLeaveTrans);
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 100,
+                    CacheName = "AllAccountingStringComponentValues",
+                    Entity = "",
+                    Sublist = new List<string>() { "1" },
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+               {
+                   new KeyCacheInfo()
+                   {
+                       KeyCacheMax = 5905,
+                       KeyCacheMin = 1,
+                       KeyCachePart = "000",
+                       KeyCacheSize = 5905
+                   },
+                   new KeyCacheInfo()
+                   {
+                       KeyCacheMax = 7625,
+                       KeyCacheMin = 5906,
+                       KeyCachePart = "001",
+                       KeyCacheSize = 1720
+                   }
+               }
+                };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
             }
 
             #endregion
 
-            [TestMethod]
-            public async Task GetEmployeeLeaveTransactionsAsync_DataReader_Returns_Null()
-            {
-                dataReaderMock.Setup(r => r.SelectAsync("PERLVDTL", It.IsAny<string>())).ReturnsAsync(null);
-                var result = await empLeaveTransRepository.GetEmployeeLeaveTransactionsAsync(0, 1);
-
-                Assert.IsNotNull(result);
-                Assert.AreEqual(0, result.Item2);
-            }
-
-            [TestMethod]
-            public async Task GetEmployeeLeaveTransactionsAsync_DataReader_Returns_Empty()
-            {
-                dataReaderMock.Setup(r => r.SelectAsync("PERLVDTL", It.IsAny<string>())).ReturnsAsync(new string[] { });
-                var result = await empLeaveTransRepository.GetEmployeeLeaveTransactionsAsync(0, 1);
-
-                Assert.IsNotNull(result);
-                Assert.AreEqual(0, result.Item2);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task GetEmployeeLeaveTransactionsAsync_DataReader_SelectAsync_Exception()
-            {
-                dataReaderMock.Setup(r => r.SelectAsync("PERLVDTL", It.IsAny<string>())).ThrowsAsync(new Exception());
-                await empLeaveTransRepository.GetEmployeeLeaveTransactionsAsync(0, 1);
-            }
 
             [TestMethod]
             [ExpectedException(typeof(Exception))]
             public async Task GetEmployeeLeaveTransactionsAsync_DataReader_BulkReadRecord_Exception()
             {
-                dataReaderMock.Setup(r => r.BulkReadRecordAsync<Perlvdtl>(It.IsAny<string[]>(), false)).ThrowsAsync(new Exception());
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<Perlvdtl>("PERLVDTL", It.IsAny<string[]>(), true)).ThrowsAsync(new Exception());
                 await empLeaveTransRepository.GetEmployeeLeaveTransactionsAsync(0, 1);
             }
 
@@ -134,7 +143,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(RepositoryException))]
             public async Task GetEmployeeLeaveTransactionsByIdAsync_GetRecordInfoFromGuidAsync_Entity_Null()
             {
                 dicResult[guid].Entity = null;
@@ -142,7 +151,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(RepositoryException))]
             public async Task GetEmployeeLeaveTransactionsByIdAsync_GetRecordInfoFromGuidAsync_Invalid_Entity()
             {
                 dicResult[guid].Entity = "LEAVEPLAN";
@@ -161,7 +170,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task GetEmployeeLeaveTransactionsByIdAsync_ReadRecordAsync_Record_Null()
             {
-                dataReaderMock.Setup(r => r.ReadRecordAsync<Perlvdtl>("PERLVDTL", It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<Perlvdtl>("PERLVDTL", It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 await empLeaveTransRepository.GetEmployeeLeaveTransactionsByIdAsync(guid);
             }
 

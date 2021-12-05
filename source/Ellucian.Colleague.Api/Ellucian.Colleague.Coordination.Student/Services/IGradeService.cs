@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using System;
 using System.Collections.Generic;
@@ -44,5 +44,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="term">Optional term for filtering results.</param>
         /// <returns></returns>
         Task<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.PilotGrade>> GetPilotGrades2Async(IEnumerable<string> studentIds, string term);
+        /// <summary>
+        /// Gets anonymous grading ids for a student, optionally filtered by either academic terms or course sections.
+        /// </summary>
+        /// <param name="criteria"></param>
+        /// <returns>A collection of student anonymous grading ids</returns>
+        Task<IEnumerable<Dtos.Student.StudentAnonymousGrading>> QueryAnonymousGradingIdsAsync(Dtos.Student.AnonymousGradingQueryCriteria criteria);
     }
 }

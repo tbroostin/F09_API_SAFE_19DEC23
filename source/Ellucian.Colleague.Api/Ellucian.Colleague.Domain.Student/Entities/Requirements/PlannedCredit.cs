@@ -17,6 +17,16 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
 
         public decimal? Credits { get; set; }
 
+        /// <summary>
+        /// Status indicates whether credit is replaced or possibly replaced
+        /// </summary>
+        public ReplacedStatus ReplacedStatus { get; set; }
+
+        /// <summary>
+        /// Status indicates whether credit is a replacement or a possible replacement of another credit
+        /// </summary>
+        public ReplacementStatus ReplacementStatus { get; set; }
+
         public PlannedCredit(Course course, string termCode, string sectionId = null)
         {
             if (course == null)

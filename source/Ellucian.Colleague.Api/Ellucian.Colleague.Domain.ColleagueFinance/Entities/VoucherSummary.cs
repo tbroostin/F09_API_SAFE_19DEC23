@@ -14,14 +14,9 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
     public class VoucherSummary : AccountsPayablePurchasingDocument
     {
         /// <summary>
-        /// Private invoice number for public getter
-        /// </summary>
-        private readonly string invoiceNumber;
-
-        /// <summary>
         /// This is the voucher invoice number.
         /// </summary>
-        public string InvoiceNumber { get { return invoiceNumber; }}
+        public string InvoiceNumber { get; set; }
 
         /// <summary>
         /// This is the voucher invoice date.
@@ -62,14 +57,9 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// <param name="vendor name">Purchase order vendor name</param>        
         /// <param name="date">Purchase order date</param>
         /// <exception cref="ArgumentNullException">Thrown if any applicable parameters are null</exception>
-        public VoucherSummary(string id, string number, string vendorName, DateTime date)
+        public VoucherSummary(string id, string vendorName, DateTime date)
             : base(id, vendorName, date)
         {
-            if (string.IsNullOrEmpty(number))
-            {
-                throw new ArgumentNullException("number", "Number is a required field.");
-            }
-            this.invoiceNumber = number;
             PurchaseOrders = this.purchaseOrders.AsReadOnly();
         }
 

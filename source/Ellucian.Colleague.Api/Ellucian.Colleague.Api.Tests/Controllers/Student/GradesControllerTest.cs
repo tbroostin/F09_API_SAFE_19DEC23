@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -408,6 +408,112 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             {
                 var result = await gradeController.DeleteGradeDefinitionsMaximumByIdAsync("d874e05d-9d97-4fa3-8862-5044ef2384d0");
             }
+        }
+
+        [TestClass]
+        public class GradeControllerTests_QueryAnonymousGradingIdsAsync
+        {
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+
+            private ILogger logger;
+            private IGradeService gradeService;
+            private Mock<IGradeService> gradeServiceMock;
+            private IGradeRepository gradeRepo;
+            private Mock<IGradeRepository> gradeRepoMock;
+            private GradesController gradeController;
+            private List<Dtos.Student.StudentAnonymousGrading> studentAnonymousGradingIds;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                Mock<IAdapterRegistry> adapterRegistryMock = new Mock<IAdapterRegistry>();
+
+                logger = new Mock<ILogger>().Object;
+                gradeServiceMock = new Mock<IGradeService>();
+                gradeService = gradeServiceMock.Object;
+                gradeRepoMock = new Mock<IGradeRepository>();
+                gradeRepo = gradeRepoMock.Object;
+
+                gradeController = new GradesController(adapterRegistryMock.Object, gradeRepo, gradeService, logger);
+                gradeController.Request = new HttpRequestMessage();
+                gradeController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+
+                studentAnonymousGradingIds = new List<Dtos.Student.StudentAnonymousGrading>()
+                {
+                    new Dtos.Student.StudentAnonymousGrading()
+                    { AnonymousGradingId = "GradeId1", SectionId = "SectionIdA", TermId = "TermId1", Message = "Message for GradeId1" },
+                    new Dtos.Student.StudentAnonymousGrading()
+                    { AnonymousGradingId = "GradeId2", SectionId = "SectionIdB", TermId = "TermId2", Message = "Message for GradeId2" },
+
+                };
+        }
+
+        [TestCleanup]
+            public void Cleanup()
+            {
+                gradeRepo = null;
+                gradeService = null;
+                gradeController = null;
+            }
+
+            [TestMethod]
+            public async Task QueryAnonymousGradingIdsAsync_ReturnStudentAnonymousGradingDtos()
+            {
+                var criteria = new Dtos.Student.AnonymousGradingQueryCriteria() { StudentId = "1" };
+
+                // Mock the respository get
+                gradeServiceMock.Setup(svc => svc.QueryAnonymousGradingIdsAsync(criteria)).ReturnsAsync(studentAnonymousGradingIds);
+
+                // Take Action
+                var studentGradingIds = (await gradeController.QueryAnonymousGradingIdsAsync(criteria)).ToList();
+
+                // Test Result
+                Assert.AreEqual(studentGradingIds.Count, studentAnonymousGradingIds.Count);
+                for (int i = 0; i < studentGradingIds.Count(); i++)
+                {
+                    Assert.IsTrue(studentGradingIds[i] is Dtos.Student.StudentAnonymousGrading);
+                    Assert.AreEqual(studentGradingIds[i].AnonymousGradingId, studentAnonymousGradingIds[i].AnonymousGradingId);
+                    Assert.AreEqual(studentGradingIds[i].SectionId, studentAnonymousGradingIds[i].SectionId);
+                    Assert.AreEqual(studentGradingIds[i].TermId, studentAnonymousGradingIds[i].TermId);
+                    Assert.AreEqual(studentGradingIds[i].Message, studentAnonymousGradingIds[i].Message);
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task QueryAnonymousGradingIdsAsync_AnyException_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    gradeServiceMock.Setup(svc => svc.QueryAnonymousGradingIdsAsync(null)).Throws(new Exception());
+                    var studentGradingIds = await gradeController.QueryAnonymousGradingIdsAsync(null);
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+
         }
     }
 }

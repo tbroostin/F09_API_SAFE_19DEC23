@@ -266,7 +266,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         }
 
         [TestMethod]
-        public async Task CompoundConfigurationSettingsController_PutCompoundConfigurationSettingsAsync_Exception()
+        public async Task CompoundConfigurationSettingsController_PutCompoundConfigurationSettingsAsync()
         {
             var expected = compoundConfigurationSettingsCollection.FirstOrDefault();
             compoundConfigurationSettingsServiceMock.Setup(x => x.GetCompoundConfigurationSettingsByGuidAsync(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
@@ -274,10 +274,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             var sourceContext = compoundConfigurationSettingsCollection.FirstOrDefault();
             await compoundConfigurationSettingsController.PutCompoundConfigurationSettingsAsync(sourceContext.Id, sourceContext);
             Assert.AreEqual(expected.Id, sourceContext.Id);
-            Assert.AreEqual(expected.Title, sourceContext.Title);
-   
+            Assert.AreEqual(expected.Title, sourceContext.Title); 
         }
-
+    
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task CompoundConfigurationSettingsController_DeleteCompoundConfigurationSettingsAsync_Exception()

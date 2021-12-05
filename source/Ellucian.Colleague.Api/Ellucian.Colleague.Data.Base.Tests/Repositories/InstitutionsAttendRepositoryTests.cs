@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Linq;
@@ -108,7 +108,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         [ExpectedException(typeof(Exception))]
         public async Task InstitutionsAttendRepository_GetInstitutionTypesAsync_Exception()
         {
-            dataReaderMock.Setup(d => d.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "INST.TYPES", true)).ReturnsAsync(null);
+            dataReaderMock.Setup(d => d.ReadRecordAsync<ApplValcodes>("CORE.VALCODES", "INST.TYPES", true)).ReturnsAsync(() => null);
             await institutionsAttendRepository.GetInstitutionsAttendAsync(0, 10, personId: "1");
         }
 
@@ -164,7 +164,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task InstitutionsAttendRepository_GetInstitutionAttendByIdAsync_Record_Notfound()
         {
-            dataReaderMock.Setup(d => d.ReadRecordAsync<InstitutionsAttend>(It.IsAny<string>(), true)).ReturnsAsync(null);
+            dataReaderMock.Setup(d => d.ReadRecordAsync<InstitutionsAttend>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
             await institutionsAttendRepository.GetInstitutionAttendByIdAsync("1*1");
         }
 
@@ -242,7 +242,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         [ExpectedException(typeof(RepositoryException))]
         public async Task InstitutionsAttendRepository_GetInstitutionsAttendIdFromGuidAsync_KeyNotFoundException()
         {
-            dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+            dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
             await institutionsAttendRepository.GetInstitutionsAttendIdFromGuidAsync("1a49eed8-5fe7-4120-b1cf-f23266b9e874");
         }
 

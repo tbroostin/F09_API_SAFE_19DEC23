@@ -153,7 +153,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests
             throw new NotImplementedException();
         }
 
-        public AccountHolder GetAccountHolder(string personId)
+        public Task<AccountHolder> GetAccountHolderAsync(string personId, bool bypassCache)
         {
             throw new NotImplementedException();
         }

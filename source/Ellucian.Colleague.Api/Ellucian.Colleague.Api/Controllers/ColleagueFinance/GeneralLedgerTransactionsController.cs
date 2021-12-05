@@ -5,6 +5,7 @@ using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
@@ -84,12 +85,12 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
             catch (ArgumentNullException e)
             {
@@ -175,12 +176,12 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
             catch (ArgumentNullException e)
             {
@@ -234,7 +235,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="id">The requested general ledger transaction GUID</param>
         /// <returns>A GeneralLedgerTransaction DTO</returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(ColleagueFinancePermissionCodes.CreateGLPostings)]
         [EedmResponseFilter]
         public async Task<Dtos.GeneralLedgerTransaction3> GetById3Async([FromUri] string id)
         {
@@ -249,6 +250,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
             try
             {
+                generalLedgerTransactionService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(id))
                 {
                     throw new ArgumentNullException("id", "id is required.");
@@ -266,7 +268,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -346,18 +348,18 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                     await generalLedgerTransactionService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await generalLedgerTransactionService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                         generalLedgerTransactions.Select(i => i.Id).ToList()));
-              
+
                 return generalLedgerTransactions;
             }
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
             catch (ArgumentNullException e)
             {
@@ -438,12 +440,12 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
             catch (ArgumentNullException e)
             {
@@ -497,7 +499,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <returns>A Collection of GeneralLedgerTransactions</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet]
+        [HttpGet, PermissionsFilter(ColleagueFinancePermissionCodes.CreateGLPostings)]
         [EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Dtos.GeneralLedgerTransaction3>> Get3Async()
@@ -513,6 +515,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
             try
             {
+                generalLedgerTransactionService.ValidatePermissions(GetPermissionsMetaData());
                 var generalLedgerTransactions = await generalLedgerTransactionService.Get3Async(bypassCache);
 
                 AddEthosContextProperties(
@@ -525,12 +528,12 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
             catch (ArgumentNullException e)
             {
@@ -617,12 +620,12 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
             catch (ArgumentNullException e)
             {
@@ -709,12 +712,12 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
             catch (ArgumentNullException e)
             {
@@ -770,12 +773,13 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="generalLedgerDto">General Ledger DTO from Body of request</param>
         /// <returns>A single GeneralLedgerTransaction</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPut]
+        [HttpPut, PermissionsFilter(ColleagueFinancePermissionCodes.CreateGLPostings)]
         [EedmResponseFilter]
         public async Task<Dtos.GeneralLedgerTransaction3> Update3Async([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.GeneralLedgerTransaction3 generalLedgerDto)
         {
             try
             {
+                generalLedgerTransactionService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(id))
                 {
                     throw new ArgumentNullException("id", "id is a required for update");
@@ -806,12 +810,12 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
             catch (ArgumentNullException e)
             {
@@ -888,12 +892,12 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
             catch (ArgumentNullException e)
             {
@@ -970,12 +974,12 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
             catch (ArgumentNullException e)
             {
@@ -1030,11 +1034,12 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="generalLedgerDto">General Ledger DTO from Body of request</param>
         /// <returns>A single GeneralLedgerTransaction</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(ColleagueFinancePermissionCodes.CreateGLPostings)]
         public async Task<Dtos.GeneralLedgerTransaction3> Create3Async([ModelBinder(typeof(EedmModelBinder))] Dtos.GeneralLedgerTransaction3 generalLedgerDto)
         {
             try
             {
+                generalLedgerTransactionService.ValidatePermissions(GetPermissionsMetaData());
                 if (generalLedgerDto == null)
                 {
                     throw new ArgumentNullException("generalLedgerDto", "The request body is required.");
@@ -1057,12 +1062,12 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
             catch (ArgumentNullException e)
             {
@@ -1120,7 +1125,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         public async Task DeleteAsync([FromUri] string id)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
-            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));            
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
         }
     }
 }

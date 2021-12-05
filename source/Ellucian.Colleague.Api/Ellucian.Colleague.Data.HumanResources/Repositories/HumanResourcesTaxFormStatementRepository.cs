@@ -244,7 +244,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                                 if (statement.Wt4oOtherInfoFlags != null)
                                 {
                                     var numberOfBoxes = statement.Wt4oOtherInfoFlags.Where(x => x.ToUpper() == "Y").Count();
-                                    numberOfSlips = numberOfBoxes / 6;
+                                    numberOfSlips = (numberOfBoxes - 1) / 6;
 
                                     if (numberOfSlips > 0)
                                     {

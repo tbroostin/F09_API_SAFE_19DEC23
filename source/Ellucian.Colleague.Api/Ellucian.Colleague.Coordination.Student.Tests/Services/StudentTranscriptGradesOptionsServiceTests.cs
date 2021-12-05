@@ -1,4 +1,4 @@
-//Copyright 2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -150,7 +150,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [ExpectedException(typeof(IntegrationApiException))]
         public async Task StudentTranscriptGradesOptionsService_GetStudentTranscriptGradesOptions_GradeSchemes_Null()
         {
-            _studentReferenceRepositoryMock.Setup(repo => repo.GetGradeSchemesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            _studentReferenceRepositoryMock.Setup(repo => repo.GetGradeSchemesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
             await _studentTranscriptGradesOptionsService.GetStudentTranscriptGradesOptionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Filters.StudentFilter>(), It.IsAny<bool>());
         }
@@ -169,7 +169,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [ExpectedException(typeof(IntegrationApiException))]
         public async Task StudentTranscriptGradesOptionsService_GetStudentTranscriptGradesOptions_Grade_Null()
         {
-            _gradeRepositoryMock.Setup(repo => repo.GetHedmAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            _gradeRepositoryMock.Setup(repo => repo.GetHedmAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
             await _studentTranscriptGradesOptionsService.GetStudentTranscriptGradesOptionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Filters.StudentFilter>(), It.IsAny<bool>());
         }
@@ -188,7 +188,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public async Task StudentTranscriptGradesOptionsService_GetStudentTranscriptGradesOptions_StudentFilter_Null()
         {
             _personRepositoryMock.Setup(repo => repo.GetPersonIdFromGuidAsync(It.IsAny<string>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
             var studentFilter = new Dtos.Filters.StudentFilter() { Student = new Dtos.GuidObject2(Guid.NewGuid().ToString()) };
 
             var actual = await _studentTranscriptGradesOptionsService.GetStudentTranscriptGradesOptionsAsync(It.IsAny<int>(), It.IsAny<int>(), studentFilter, It.IsAny<bool>());

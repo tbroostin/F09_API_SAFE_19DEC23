@@ -70,6 +70,18 @@ namespace Ellucian.Colleague.Dtos.EnumProperties
         /// awaitingReceipt (Hold)
         /// </summary>
         [EnumMember(Value = "awaitingReceipt")]
-        AwaitingReceipt
+        AwaitingReceipt,
+
+        /// <summary>
+        /// outstanding
+        /// </summary>
+        [EnumMember(Value = "inProgress")]
+        InProgress,
+
+        /// <summary>
+        /// outstanding
+        /// </summary>
+        [EnumMember(Value = "notApproved")]
+        NotApproved
     }
 }

@@ -577,6 +577,13 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<IEnumerable<SectionRegistrationStatusItem>> GetStudentAcademicCreditStatusesAsync(bool ignoreCache);
 
         /// <summary>
+        /// Get guid for student academic credit statuses code
+        /// </summary>
+        /// <param name="code">student academic credit statuses code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetStudentAcademicCreditStatusesGuidAsync(string code);
+
+        /// <summary>
         /// Section status codes
         /// </summary>
         Task<IEnumerable<SectionStatusCode>> GetSectionStatusCodesAsync();

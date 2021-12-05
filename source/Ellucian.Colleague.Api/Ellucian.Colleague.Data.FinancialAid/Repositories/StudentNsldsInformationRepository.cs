@@ -49,12 +49,17 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 
             Transactions.GetPellLeuRequest request = new Transactions.GetPellLeuRequest();
             request.StudentId = studentId;
+            Transactions.GetPellLeuResponse response = new Transactions.GetPellLeuResponse();
 
-            Transactions.GetPellLeuResponse response = await transactionInvoker.ExecuteAsync<Transactions.GetPellLeuRequest, Transactions.GetPellLeuResponse>(request);
-
+            response = await transactionInvoker.ExecuteAsync<Transactions.GetPellLeuRequest, Transactions.GetPellLeuResponse>(request);
+    
+            if (!response.PellLeu.HasValue)
+            { 
+                logger.Error("FIN.AID record {0} is locked", studentId);
+            }
             StudentNsldsInformation nsldsInformation;
             nsldsInformation = new StudentNsldsInformation(studentId, response.PellLeu);
-           
+
             return nsldsInformation;
         }
     }

@@ -1194,7 +1194,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             [TestMethod]
             public async Task NoAwardLetterEntityReturned_InitializedDtoIsReturnedTest()
             {
-                awardLetterHistoryRepositoryMock.Setup(r => r.GetAwardLetterAsync(It.IsAny<string>(), It.IsAny<StudentAwardYear>(), It.IsAny<IEnumerable<Award>>(), It.IsAny<bool>())).ReturnsAsync(null);
+                awardLetterHistoryRepositoryMock.Setup(r => r.GetAwardLetterAsync(It.IsAny<string>(), It.IsAny<StudentAwardYear>(), It.IsAny<IEnumerable<Award>>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
                     awardLetterRepositoryMock.Object,
                     awardLetterHistoryRepositoryMock.Object,
@@ -3408,7 +3408,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             public async Task NoUpdatedAwardLetterEntityReceived_ExceptionThrownTest()
             {
                 awardLetterHistoryRepositoryMock.Setup(l => l.UpdateAwardLetterAsync(It.IsAny<string>(), It.IsAny<AwardLetter2>(), It.IsAny<StudentAwardYear>(), It.IsAny<IEnumerable<Award>>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 await awardLetterService.UpdateAwardLetter2Async(expectedAwardLetter);
             }
@@ -3417,7 +3417,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             public async Task NoUpdatedAwardLetterEntityReceived_ExpectedMessageIsLoggedTest()
             {
                 awardLetterHistoryRepositoryMock.Setup(l => l.UpdateAwardLetterAsync(It.IsAny<string>(), It.IsAny<AwardLetter2>(), It.IsAny<StudentAwardYear>(), It.IsAny<IEnumerable<Award>>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 try
                 {
@@ -3693,7 +3693,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             public async Task NoUpdatedAwardLetterEntityReceived_ExceptionThrownTest()
             {
                 awardLetterHistoryRepositoryMock.Setup(l => l.UpdateAwardLetter2Async(It.IsAny<string>(), It.IsAny<AwardLetter3>(), It.IsAny<StudentAwardYear>(), It.IsAny<IEnumerable<Award>>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 await awardLetterService.UpdateAwardLetter3Async(expectedAwardLetter);
             }
@@ -3702,7 +3702,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             public async Task NoUpdatedAwardLetterEntityReceived_ExpectedMessageIsLoggedTest()
             {
                 awardLetterHistoryRepositoryMock.Setup(l => l.UpdateAwardLetter2Async(It.IsAny<string>(), It.IsAny<AwardLetter3>(), It.IsAny<StudentAwardYear>(), It.IsAny<IEnumerable<Award>>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 try
                 {
@@ -4571,7 +4571,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             [TestMethod]
             public async Task NoAwardLetterEntityReturned_InitializedDtoIsReturnedTest()
             {
-                awardLetterHistoryRepositoryMock.Setup(r => r.GetAwardLetter2Async(It.IsAny<string>(), It.IsAny<StudentAwardYear>(), It.IsAny<IEnumerable<Award>>(), It.IsAny<bool>())).ReturnsAsync(null);
+                awardLetterHistoryRepositoryMock.Setup(r => r.GetAwardLetter2Async(It.IsAny<string>(), It.IsAny<StudentAwardYear>(), It.IsAny<IEnumerable<Award>>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 awardLetterService = new AwardLetterService(adapterRegistryMock.Object,
                     awardLetterRepositoryMock.Object,
                     awardLetterHistoryRepositoryMock.Object,

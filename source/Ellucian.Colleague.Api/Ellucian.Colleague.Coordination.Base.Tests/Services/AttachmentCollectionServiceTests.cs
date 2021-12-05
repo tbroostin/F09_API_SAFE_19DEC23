@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Adapters;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Base.Tests.UserFactories;
@@ -330,7 +330,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 }
 
                 // force no roles
-                roleRepositoryMock.Setup(r => r.GetRolesAsync()).ReturnsAsync(null);
+                roleRepositoryMock.Setup(r => r.GetRolesAsync()).ReturnsAsync(() => null);
                 BuildAttachmentCollectionService();
 
                 try
@@ -498,7 +498,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 }
 
                 // force no roles
-                roleRepositoryMock.Setup(r => r.GetRolesAsync()).ReturnsAsync(null);
+                roleRepositoryMock.Setup(r => r.GetRolesAsync()).ReturnsAsync(() => null);
                 BuildAttachmentCollectionService();
 
                 try

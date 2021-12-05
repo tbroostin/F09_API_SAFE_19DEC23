@@ -1,4 +1,4 @@
-//Copyright 2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Base.Tests.UserFactories;
@@ -212,7 +212,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         {
             _relationshipRepositoryMock.Setup(repo => repo.GetNonPersonRelationshipsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
 
             var results = await _nonpersonRelationshipsService.GetNonPersonRelationshipsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
@@ -350,7 +350,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         [ExpectedException(typeof(ArgumentException))]
         public async Task NonpersonRelationshipsService_GetNonpersonRelationshipsAsync_NoRelationTypes_ArgumentNullException()
         {
-            _referenceRepositoryMock.Setup(repo => repo.GetRelationTypesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            _referenceRepositoryMock.Setup(repo => repo.GetRelationTypesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
             var results = await _nonpersonRelationshipsService.GetNonPersonRelationshipsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<string>(), It.IsAny<bool>());
         }
@@ -359,7 +359,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         [ExpectedException(typeof(ArgumentException))]
         public async Task NonpersonRelationshipsService_GetNonpersonRelationshipsAsync_NoStatuses_ArgumentNullException()
         {
-            _referenceRepositoryMock.Setup(repo => repo.GetRelationshipStatusesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            _referenceRepositoryMock.Setup(repo => repo.GetRelationshipStatusesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
             var results = await _nonpersonRelationshipsService.GetNonPersonRelationshipsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<string>(), It.IsAny<bool>());
         }

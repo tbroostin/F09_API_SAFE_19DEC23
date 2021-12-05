@@ -1,4 +1,7 @@
-﻿// Copyright 2013-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2013-2021 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Dtos.Student;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 
 namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
@@ -9,6 +12,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
         private DateTimeOffset? _Date;
         private string _PersonId;
         private string _Text;
+        private PersonType _PersonType;
 
         /// <summary>
         /// A unique identifier. 0 if a new note.
@@ -49,6 +53,12 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
         public string Text {get {return _Text;}}
 
         /// <summary>
+        /// The person type of the person who is adding the notes
+        /// </summary>
+        [JsonConverter(typeof(StringEnumConverter))]
+        public PersonType PersonType { get { return _PersonType; } }
+
+        /// <summary>
         /// Base constructor for a degree plan note. Used only for new notes.
         /// User's personId and date/time determined by the database transaction.
         /// </summary>
@@ -61,6 +71,23 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
             }
             _Id = 0;
             _Text = text;
+        }
+
+        /// <summary>
+        /// constructor for a degree plan note. Used only for new notes.
+        /// User's personId and date/time determined by the database transaction.
+        /// Person type is advisor or student based on who is adding this new comment
+        /// </summary>
+        /// <param name="text"></param>
+        public DegreePlanNote(string text, PersonType personType)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                throw new ArgumentNullException("text", "Text is required for a degree plan note");
+            }
+            _Id = 0;
+            _Text = text;
+            _PersonType = personType;
         }
 
         /// <summary>

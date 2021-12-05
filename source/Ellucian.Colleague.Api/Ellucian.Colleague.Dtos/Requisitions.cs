@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -7,6 +7,7 @@ using Ellucian.Colleague.Dtos.Converters;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Newtonsoft.Json;
 using Ellucian.Colleague.Dtos.DtoProperties;
+using Ellucian.Colleague.Dtos.Attributes;
 
 namespace Ellucian.Colleague.Dtos
 {
@@ -20,12 +21,14 @@ namespace Ellucian.Colleague.Dtos
         /// The number associated with the requisition assigned by the finance system.
         /// </summary>
         [JsonProperty("requisitionNumber", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
         public string RequisitionNumber { get; set; }
 
         /// <summary>
         /// A reference number specified for the requisition by an external system.
         /// </summary>
         [JsonProperty("referenceNumber", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [FilterProperty("criteria")]
         public string ReferenceNumber { get; set; }
 
         /// <summary>

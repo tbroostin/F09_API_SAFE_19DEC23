@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.ComponentModel;
@@ -133,6 +133,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             // Determine which PDF template to use.
             switch (pdfData.TaxYear)
             {
+                case "2021":
+                    pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/Student/2021-" + pdfData.TaxFormName + ".rdlc");
+                    break;
                 case "2020":
                     pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/Student/2020-" + pdfData.TaxFormName + ".rdlc");
                     break;
@@ -201,22 +204,37 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             if (string.IsNullOrEmpty(recordId))
                 throw CreateHttpResponseException("Record ID must be specified.", HttpStatusCode.BadRequest);
 
-            var consents = await taxFormConsentService.Get2Async(personId, TaxFormTypes.FormT2202A);
-            consents = consents.OrderByDescending(c => c.TimeStamp);
-            var mostRecentConsent = consents.FirstOrDefault();
+            var config = await configurationService.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT2202A);
 
-            // ************* T4s and T2202As are special cases based on CRA regulations! *************
-            // Check if the person has explicitly withheld consent to receiving their T2202a online - if they opted out, throw exception
-            var canViewAsAdmin = await taxFormConsentService.CanViewTaxDataWithOrWithoutConsent2Async(TaxFormTypes.FormT2202A);
-            if ((mostRecentConsent != null && !mostRecentConsent.HasConsented) && !canViewAsAdmin)
+            // if consents are hidden, don't bother evaluating them
+            if (config == null || !config.HideConsent)
             {
-                throw CreateHttpResponseException("Consent is required to view this information.", HttpStatusCode.Unauthorized);
-            }
+                logger.Debug("Using consents for T2202 tax forms");
+                var consents = await taxFormConsentService.Get2Async(personId, TaxFormTypes.FormT2202A);
+                consents = consents.OrderByDescending(c => c.TimeStamp);
+                var mostRecentConsent = consents.FirstOrDefault();
 
+                // ************* T4s and T2202As are special cases based on CRA regulations! *************
+                // Check if the person has explicitly withheld consent to receiving their T2202a online - if they opted out, throw exception
+                var canViewAsAdmin = await taxFormConsentService.CanViewTaxDataWithOrWithoutConsent2Async(TaxFormTypes.FormT2202A);
+                if ((mostRecentConsent != null && !mostRecentConsent.HasConsented) && !canViewAsAdmin)
+                {
+                    logger.Debug("Consent is required to view T2202 information.");
+                    throw CreateHttpResponseException("Consent is required to view this information.", HttpStatusCode.Unauthorized);
+                }
+            }
             string pdfTemplatePath = string.Empty;
             try
             {
                 var pdfData = await taxFormPdfService.GetT2202aTaxFormData(personId, recordId);
+                if (pdfData != null && pdfData.TaxYear != null)
+                {
+                    logger.Debug("Retrieving T2202 PDF for tax year '" + pdfData.TaxYear + "'");
+                }
+                else
+                {
+                    logger.Debug("No PDF data and/or tax year found.");
+                }
 
                 // Determine which PDF template to use.
                 int taxYear;
@@ -239,6 +257,16 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                     {
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/Student/2020-T2202.rdlc");
                     }
+                    else if (taxYear == 2021)
+                    {
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/Student/2021-T2202.rdlc");
+                    }
+                    else
+                    {
+                        var message = string.Format("Unsupported Tax Year: {0}", pdfData.TaxYear);
+                        logger.Error(message);
+                        throw new ApplicationException(message);
+                    }
                 }
                 else
                 {
@@ -246,6 +274,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                     logger.Error(message);
                     throw new ApplicationException(message);
                 }
+                logger.Debug("Template found. Using '" + (pdfTemplatePath ?? string.Empty) + "'");
 
                 var pdfBytes = new byte[0];
                 pdfBytes = taxFormPdfService.PopulateT2202aReport(pdfData, pdfTemplatePath);

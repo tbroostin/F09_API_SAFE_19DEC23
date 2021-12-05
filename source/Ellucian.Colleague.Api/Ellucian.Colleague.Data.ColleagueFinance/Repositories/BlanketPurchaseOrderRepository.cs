@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates..
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates..
 
 using System;
 using System.Collections.Generic;
@@ -308,11 +308,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             }
                             catch (ArgumentNullException anex)
                             {
-                                LogDataError("BPO", bpo.Recordkey, glDist, anex, anex.Message);
+                                logger.Error(anex, "Could not create GL Distribution.");
                             }
                             catch (ApplicationException aex)
                             {
-                                LogDataError("BPO", bpo.Recordkey, glDist, aex, aex.Message);
+                                logger.Error(aex, "Could not create GL Distribution.");
                             }
                             
                         }
@@ -566,12 +566,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                 if (id == null || string.IsNullOrEmpty(id))
                 {
-                    throw new KeyNotFoundException(string.Format("blanket-purchase-orders not found for GUID '{0}'", guid));
+                    throw new KeyNotFoundException(string.Format("No blanket-purchase-order was found for GUID '{0}'", guid));
                 }
             }
             catch (Exception)
             {
-                throw new KeyNotFoundException(string.Format("blanket-purchase-orders not found for GUID '{0}'", guid));
+                throw new KeyNotFoundException(string.Format("No blanket-purchase-orders was found for GUID '{0}'", guid));
             }
 
             Person personContract = null;
@@ -579,7 +579,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var blanketPurchaseOrder = await DataReader.ReadRecordAsync<Bpo>(id);
             if (blanketPurchaseOrder == null)
             {
-                throw new KeyNotFoundException(string.Format("blanket-purchase-orders not found for GUID '{0}'", guid));
+                throw new KeyNotFoundException(string.Format("No blanket-purchase-orders was found for GUID '{0}'", guid));
             }
             if (!string.IsNullOrEmpty(blanketPurchaseOrder.BpoInitiator))
                 personContract = await DataReader.ReadRecordAsync<Base.DataContracts.Person>("PERSON", blanketPurchaseOrder.BpoInitiator);
@@ -588,12 +588,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             if (blanketPurchaseOrder != null && blanketPurchaseOrder.RecordGuid != null && blanketPurchaseOrder.RecordGuid != guid)
             {
-                throw new KeyNotFoundException(string.Format("blanket-purchase-orders not found for GUID '{0}'", guid));
+                throw new KeyNotFoundException(string.Format("No blanket-purchase-orders was found for GUID '{0}'", guid));
             }
 
             if (blanketPurchaseOrder != null && blanketPurchaseOrder.BpoItemsId != null && blanketPurchaseOrder.BpoItemsId.Any())
             {
-                throw new KeyNotFoundException(string.Format("blanket-purchase-orders not found for GUID '{0}'", guid));
+                throw new KeyNotFoundException(string.Format("No blanket-purchase-orders was found for GUID '{0}'", guid));
             }
 
             var blanketPurchaseOrderEntity = await BuildBlanketPurchaseOrderAsync(blanketPurchaseOrder, personContract, addressContract);
@@ -687,7 +687,34 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns>Key to Blanket Purchase Order</returns>
         public async Task<string> GetBlanketPurchaseOrdersIdFromGuidAsync(string guid)
         {
-            return await GetRecordKeyFromGuidAsync(guid);
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid");
+            }
+
+            var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
+            if (idDict == null || idDict.Count == 0)
+            {
+                throw new KeyNotFoundException("No blanket-purchase-orders was found for guid " + guid);
+            }
+
+            var foundEntry = idDict.FirstOrDefault();
+            if (foundEntry.Value == null)
+            {
+                throw new KeyNotFoundException("No blanket-purchase-orders was found for guid " + guid);
+            }
+
+            if (foundEntry.Value.Entity != "BPO")
+            {
+                exception.AddError(new RepositoryError("GUID.Wrong.Type", string.Format("GUID {0} has different entity, {1}, than expected, BPO", guid, foundEntry.Value.Entity))
+                {
+                    Id = guid
+                });
+                throw exception;
+
+            }
+
+            return foundEntry.Value.PrimaryKey;
         }
 
         /// <summary>
@@ -1108,7 +1135,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     }
                     catch (ArgumentNullException anex)
                     {
-                        LogDataError("BPO", bpo.Recordkey, glDist, anex, anex.Message);
+                        logger.Error(anex, "Could not create GL Distribution.");
                         exception.AddError(
                             new RepositoryError("blanketPurchaseOrder.orderDetails.accountDetails",
                                 anex.Message + " '" + bpo.BpoNo + "'")
@@ -1120,7 +1147,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     }
                     catch (ApplicationException aex)
                     {
-                        LogDataError("BPO", bpo.Recordkey, glDist, aex, aex.Message);
+                        logger.Error(aex, "Could not create GL Distribution.");
                         exception.AddError(
                             new RepositoryError("blanketPurchaseOrder.orderDetails.accountDetails",
                                 aex.Message + " '" + bpo.BpoNo + "'")
@@ -1172,6 +1199,38 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
             }
             return bpoDomainEntity;
+        }
+
+        /// <summary>
+        /// Get a requisition id by guid
+        /// </summary>
+        /// <param name="guid">guid</param>
+        /// <returns>id</returns>
+        public async Task<string> GetRequisitionsIdFromGuidAsync(string guid)
+        {
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid");
+            }
+
+            var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
+            if (idDict == null || idDict.Count == 0)
+            {
+                throw new KeyNotFoundException("No requisitions was found for GUID " + guid);
+            }
+
+            var foundEntry = idDict.FirstOrDefault();
+            if (foundEntry.Value == null)
+            {
+                throw new KeyNotFoundException("No requisitions was found for GUID " + guid);
+            }
+
+            if (foundEntry.Value.Entity != "REQUISITIONS")
+            {
+                throw new RepositoryException("GUID " + guid + " has different entity, " + foundEntry.Value.Entity + ", than expected, REQUISITIONS");
+            }
+
+            return foundEntry.Value.PrimaryKey;
         }
 
         /// <summary>

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Filters;
@@ -21,6 +21,7 @@ using System.Web.SessionState;
 using Ellucian.Web.Http.EthosExtend;
 using Ellucian.Web.Http.Routes;
 using Ellucian.Colleague.Dtos;
+using System.Collections;
 
 namespace Ellucian.Web.Http.Controllers
 {
@@ -40,6 +41,59 @@ namespace Ellucian.Web.Http.Controllers
         {
             var controllerType = this.GetType();
             System.ComponentModel.LicenseManager.Validate(controllerType);
+        }
+
+        /// <summary>
+        /// GetPermissionsMetaData associated with controller method.
+        /// </summary>
+        /// <returns>Tuple consisting of:
+        /// 1. string[]: array of valid permissions
+        /// 2. string: http method (ex: "GET")
+        /// 3. string: resource name (ex: 'person-holds')
+        /// </returns>
+        public Tuple<string[], string, string> GetPermissionsMetaData()
+        {
+            string[] permissionsCollection = null;
+            if (ActionContext == null || ActionContext.Request == null)
+            {
+                return null;
+            }
+
+            var routeTemplate = string.Empty;
+
+            var method = ActionContext.Request.Method == null
+                ? null : ActionContext.Request.Method.ToString();
+            var routeData = ActionContext.Request.GetRouteData();
+            if (routeData != null && routeData.Route != null)
+            {
+                routeTemplate = routeData.Route.RouteTemplate;
+                // remove {id},{guid},{qapi} from the template name
+                if (routeTemplate.Contains("/"))
+                {
+                    try
+                    {
+                        var aRouteTemplate = routeTemplate.Split('/');
+                        if ((routeTemplate.Contains("qapi")) && (aRouteTemplate.Length > 0))
+                            routeTemplate = aRouteTemplate[1];
+                        else
+                            routeTemplate = aRouteTemplate[0];
+                    }
+                    catch (Exception)
+                    {
+                        // do nothing.. and continue to use the existing routeTemplate name
+                    }
+                }
+            }
+
+            object filterObject;
+            ActionContext.Request.Properties.TryGetValue("PermissionsFilter", out filterObject);
+            if (filterObject != null)
+            {
+                permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+            }
+            return new Tuple<string[], string, string>(permissionsCollection, method, routeTemplate);
         }
 
         /// <summary>
@@ -129,6 +183,8 @@ namespace Ellucian.Web.Http.Controllers
         [System.Web.Http.HttpGet, System.Web.Http.HttpPut, System.Web.Http.HttpPost]
         public void NotAcceptableStatusException()
         {
+
+
             throw CreateHttpResponseException(new IntegrationApiException("",
                 new IntegrationApiError("Global.Internal.Error", "Unspecified Error on the system which prevented execution.", "The requested version is not supported.", HttpStatusCode.NotAcceptable)));
 
@@ -143,6 +199,16 @@ namespace Ellucian.Web.Http.Controllers
             throw CreateHttpResponseException(new IntegrationApiException("",
                 new IntegrationApiError("Global.Internal.Error", "Unspecified Error on the system which prevented execution.", "The requested media type is not supported.", HttpStatusCode.UnsupportedMediaType)));
 
+        }
+
+        /// <summary>
+        /// Throw MethodNotAllowed exception
+        /// </summary>
+        [System.Web.Http.HttpGet, System.Web.Http.HttpPut, System.Web.Http.HttpPost]
+        public void MethodNotAllowedException()
+        {
+            throw CreateHttpResponseException(new IntegrationApiException("",
+              new IntegrationApiError("Global.Internal.Error", "Unspecified Error on the system which prevented execution.", "The method is not supported by the resource.", HttpStatusCode.MethodNotAllowed)));
         }
 
         /// <summary>

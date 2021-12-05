@@ -1,4 +1,4 @@
-﻿//Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -16,8 +16,8 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Colleague.Domain.BudgetManagement.Repositories;
 using Ellucian.Colleague.Domain.BudgetManagement.Entities;
-using Ellucian.Colleague.Domain.BudgetManagement;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
 {
@@ -45,7 +45,6 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.BudgetPhaseLineItems>, int>> GetBudgetPhaseLineItemsAsync(int limit, int offset, string budgetPhaseGuid,
             List<string> accountingStringComponentValues, bool bypassCache = false)
         {
-            CheckViewBudgetPhaseLineItemsPermission();
             var budgetPhasesCollection = new List<Ellucian.Colleague.Dtos.BudgetPhases>();
             var budgetPhaseLineItemsCollection = new List<Ellucian.Colleague.Dtos.BudgetPhaseLineItems>();
             var budgetPhase = string.Empty;
@@ -56,7 +55,7 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
                 {
                     budgetPhase = await _budgetRepository.GetBudgetPhasesIdFromGuidAsync(budgetPhaseGuid);
                 }
-                catch (KeyNotFoundException)
+                catch (Exception)
                 {
                     return new Tuple<IEnumerable<Dtos.BudgetPhaseLineItems>, int>(new List<Dtos.BudgetPhaseLineItems>(), 0);
                 }
@@ -77,43 +76,98 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
                     }
                     accountingStringComponentValueId = accountingStringComponentValue.AccountNumber;
                 }
-                catch (KeyNotFoundException)
+                catch (Exception)
                 {
                     return new Tuple<IEnumerable<Dtos.BudgetPhaseLineItems>, int>(new List<Dtos.BudgetPhaseLineItems>(), 0);
                 }
             }
 
-            var budgetPhasesEntitiesTuple = await _budgetRepository.GetBudgetPhaseLineItemsAsync(limit, offset, 
-                budgetPhase, accountingStringComponentValueId,  bypassCache);
+            Tuple<IEnumerable<BudgetWork>, int> budgetPhasesEntitiesTuple = null;
 
-            var budgetWorkEntities = budgetPhasesEntitiesTuple.Item1;
-            var totalCount = budgetPhasesEntitiesTuple.Item2;
-
-            if (budgetWorkEntities != null)
+            try
             {
-                foreach (var budgetWork in budgetWorkEntities)
+                budgetPhasesEntitiesTuple = await _budgetRepository.GetBudgetPhaseLineItemsAsync(limit, offset,
+                budgetPhase, accountingStringComponentValueId, bypassCache);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+
+            if (budgetPhasesEntitiesTuple == null || budgetPhasesEntitiesTuple.Item1 == null)
+            {
+                return new Tuple<IEnumerable<Dtos.BudgetPhaseLineItems>, int>(new List<Dtos.BudgetPhaseLineItems>(), 0);
+            }
+
+            try
+            {
+                var glAcctIds = budgetPhasesEntitiesTuple.Item1
+                   .Where(x => (!string.IsNullOrEmpty(x.AccountingStringComponentValue)))
+                   .Select(x => x.AccountingStringComponentValue).Distinct().ToList();
+                var glAcctIdCollection = await _referenceDataRepository.GetGuidsForPooleeGLAcctsInFiscalYearsAsync(glAcctIds);
+              
+                var budgetPhaseIds = budgetPhasesEntitiesTuple.Item1
+                  .Where(x => (!string.IsNullOrEmpty(x.BudgetPhase)))
+                  .Select(x => x.BudgetPhase).Distinct().ToList();
+                var budgetPhaseIdCollection = await _budgetRepository.GetBudgetGuidCollectionAsync(budgetPhaseIds);
+
+                foreach (var budgetWork in budgetPhasesEntitiesTuple.Item1)
                 {
-                    budgetPhaseLineItemsCollection.Add(await ConvertBudgetWorkEntityToDtoAsync(budgetWork, bypassCache));
+                    budgetPhaseLineItemsCollection.Add(await ConvertBudgetWorkEntityToDtoAsync(budgetWork, glAcctIdCollection, budgetPhaseIdCollection, bypassCache)) ;
                 }
             }
-            return  new Tuple<IEnumerable<Dtos.BudgetPhaseLineItems>, int>(budgetPhaseLineItemsCollection, totalCount);
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Global.Internal.Error");               
+            }
+            
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            return  new Tuple<IEnumerable<Dtos.BudgetPhaseLineItems>, int>(budgetPhaseLineItemsCollection, budgetPhasesEntitiesTuple.Item2);
 
         }
 
         public async Task<BudgetPhaseLineItems> GetBudgetPhaseLineItemsByGuidAsync(string guid, bool bypassCache = true)
         {
+            BudgetWork budgetPhaseLineItemsByGuid = null;
+
             try
             {
-                CheckViewBudgetPhaseLineItemsPermission();
-                return await ConvertBudgetWorkEntityToDtoAsync(await _budgetRepository.GetBudgetPhaseLineItemsByGuidAsync(guid), bypassCache);
+               budgetPhaseLineItemsByGuid  = await _budgetRepository.GetBudgetPhaseLineItemsByGuidAsync(guid);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
             }
             catch (KeyNotFoundException ex)
             {
-                throw new KeyNotFoundException("No budget phase line item was found for guid " + guid, ex);
+                throw new KeyNotFoundException("No budget-phase-line-items was found for GUID '" + guid + "'", ex);
+            }
+
+            try
+            {
+                var glAcctIdCollection = await _referenceDataRepository.GetGuidsForPooleeGLAcctsInFiscalYearsAsync( new List<string> { budgetPhaseLineItemsByGuid .AccountingStringComponentValue} );
+                var budgetPhaseIdCollection = await _budgetRepository.GetBudgetGuidCollectionAsync(new List<string> { budgetPhaseLineItemsByGuid.BudgetPhase });
+
+
+                var retval = await ConvertBudgetWorkEntityToDtoAsync(budgetPhaseLineItemsByGuid, glAcctIdCollection, budgetPhaseIdCollection, bypassCache);
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+                return retval;
+            }
+            catch (KeyNotFoundException ex)
+            {
+                throw new KeyNotFoundException("No budget-phase-line-items was found for GUID '" + guid + "'", ex );
             }
             catch (InvalidOperationException ex)
             {
-                throw new KeyNotFoundException("No budget phase line item was found for guid " + guid, ex);
+                throw new KeyNotFoundException("No budget-phase-line-items was found for GUID '" + guid + "'", ex);
             }
             catch (ArgumentException ex)
             {
@@ -121,9 +175,6 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
             }
         }
 
-
-        private Dictionary<string, string>  budgetPhaseDict = new Dictionary<string, string>();
-        private Dictionary<string, string> accountingStringDict = new Dictionary<string, string>();
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Converts a BudWork domain entity to its corresponding BudgetPhaseLineItems DTO
@@ -131,46 +182,110 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
         /// <param name="source">Budget domain entity</param>
         /// <returns>BudgetPhases DTO</returns>
         private async Task<Ellucian.Colleague.Dtos.BudgetPhaseLineItems> ConvertBudgetWorkEntityToDtoAsync(BudgetWork source,
-            bool bypassCache = false)
+            IDictionary<string, string> glAccountIdCollection, IDictionary<string, string> budgetPhaseIdCollection,  bool bypassCache = false)
         {
             var budgetPhaseLineItem = new Ellucian.Colleague.Dtos.BudgetPhaseLineItems();
 
-            budgetPhaseLineItem.Id = source.RecordGuid;
+            if (source == null)
+            {
+                IntegrationApiExceptionAddError("Missing BudgetWork data to build response.", "Bad.Data");
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(source.RecordGuid))
+            {
+                IntegrationApiExceptionAddError("Unable to determine GUID for BudgetWork.",
+                               "GUID.Not.Found", source.RecordGuid, source.RecordKey);
+            }
+            else {
+
+                budgetPhaseLineItem.Id = source.RecordGuid;
+            }
+
+            //if (!string.IsNullOrEmpty(source.BudgetPhase))
+            //{
+            //    var budgetPhasesGuid = string.Empty;
+            //    if (!budgetPhaseDict.TryGetValue(source.BudgetPhase, out budgetPhasesGuid))
+            //    {
+                   // budgetPhasesGuid = await _budgetRepository.GetBudgetPhasesGuidFromIdAsync(source.BudgetPhase);
+            //        if (string.IsNullOrEmpty(budgetPhasesGuid))
+            //        {
+            //            IntegrationApiExceptionAddError(string.Concat("Unable to determine GUID for BudgetPhase: ", source.BudgetPhase), "GUID.Not.Found",
+            //                source.RecordGuid, source.RecordKey);
+            //        }
+            //        else
+            //        {
+            //            budgetPhaseDict.Add(source.BudgetPhase, budgetPhasesGuid);
+            //        }
+            //    }
+
+            //    budgetPhaseLineItem.BudgetPhase = new GuidObject2(budgetPhasesGuid);
+            //}
 
             if (!string.IsNullOrEmpty(source.BudgetPhase))
             {
-                var budgetPhasesGuid = string.Empty;
-                if (!budgetPhaseDict.TryGetValue(source.BudgetPhase, out budgetPhasesGuid))
+                if (budgetPhaseIdCollection == null)
                 {
-                    budgetPhasesGuid = await _budgetRepository.GetBudgetPhasesGuidFromIdAsync(source.BudgetPhase);
-                    if (string.IsNullOrEmpty(budgetPhasesGuid))
-                    {
-                        throw new ArgumentNullException("BudgetPhase.Id", string.Concat("Unable to determine guid for BudgetPhase: ", source.BudgetPhase));
-                    }
-                    budgetPhaseDict.Add(source.BudgetPhase, budgetPhasesGuid);
+                    IntegrationApiExceptionAddError(string.Concat("Unable to determine GUID for BudgetPhase: ", source.BudgetPhase), "GUID.Not.Found",
+                              source.RecordGuid, source.RecordKey);
                 }
-
-                budgetPhaseLineItem.BudgetPhase = new GuidObject2(budgetPhasesGuid);
+                else
+                {
+                    var budgetPhaseGuid = string.Empty;
+                    budgetPhaseIdCollection.TryGetValue(source.BudgetPhase, out budgetPhaseGuid);
+                    if (string.IsNullOrEmpty(budgetPhaseGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("Unable to determine GUID for BudgetPhase: ", source.BudgetPhase), "GUID.Not.Found",
+                             source.RecordGuid, source.RecordKey);
+                    }
+                    else
+                    {
+                        budgetPhaseLineItem.BudgetPhase = new GuidObject2(budgetPhaseGuid);
+                    }
+                }
             }
+    
+
+            //if (!string.IsNullOrEmpty(source.AccountingStringComponentValue))
+            //{
+            //    var accountingStringGuid = string.Empty;
+            //    if (!accountingStringDict.TryGetValue(source.AccountingStringComponentValue, out accountingStringGuid))
+            //    {
+            //        accountingStringGuid = await _referenceDataRepository.GetAccountingStringComponentValuesGuidFromIdAsync(source.AccountingStringComponentValue);
+            //        if (string.IsNullOrEmpty(accountingStringGuid))
+            //        {
+            //            IntegrationApiExceptionAddError(string.Concat("Unable to determine GUID for AccountingStringComponentValue: ", source.AccountingStringComponentValue),
+            //                "GUID.Not.Found", source.RecordGuid, source.RecordKey);
+            //        }
+            //        else
+            //        {
+            //            accountingStringDict.Add(source.AccountingStringComponentValue, accountingStringGuid);
+            //        }
+            //    }
+            //    budgetPhaseLineItem.AccountingStringComponentValues = new List<GuidObject2>() { new GuidObject2(accountingStringGuid) };
+            //}
 
             if (!string.IsNullOrEmpty(source.AccountingStringComponentValue))
             {
-                /*var id = await _referenceDataRepository.GetAccountingStringComponentValuesGuidFromIdAsync(source.AccountingStringComponentValue);
-                if (!string.IsNullOrEmpty(id))
+                if (glAccountIdCollection == null)
                 {
-                    budgetPhaseLineItem.AccountingStringComponentValues = new List<GuidObject2>() { new GuidObject2(id) };
-                }*/
-                var accountingStringGuid = string.Empty;
-                if (!accountingStringDict.TryGetValue(source.AccountingStringComponentValue, out accountingStringGuid))
-                {
-                    accountingStringGuid = await _referenceDataRepository.GetAccountingStringComponentValuesGuidFromIdAsync(source.AccountingStringComponentValue);
-                    if (string.IsNullOrEmpty(accountingStringGuid))
-                    {
-                        throw new ArgumentNullException("AccountingStringComponentValue.Id", string.Concat("Unable to determine guid for AccountingStringComponentValue: ", source.AccountingStringComponentValue));
-                    }
-                    accountingStringDict.Add(source.AccountingStringComponentValue, accountingStringGuid);
+                    IntegrationApiExceptionAddError(string.Concat("Unable to determine GUID for AccountingStringComponentValue: ", source.AccountingStringComponentValue),
+                        "GUID.Not.Found", source.RecordGuid, source.RecordKey);
                 }
-                budgetPhaseLineItem.AccountingStringComponentValues = new List<GuidObject2>() { new GuidObject2(accountingStringGuid) };
+                else
+                {
+                    var accountingStringComponentValueGuid = string.Empty;
+                    glAccountIdCollection.TryGetValue(source.AccountingStringComponentValue, out accountingStringComponentValueGuid);
+                    if (string.IsNullOrEmpty(accountingStringComponentValueGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("Unable to determine GUID for AccountingStringComponentValue: ", source.AccountingStringComponentValue),
+                       "GUID.Not.Found", source.RecordGuid, source.RecordKey);
+                    }
+                    else
+                    {
+                        budgetPhaseLineItem.AccountingStringComponentValues = new List<GuidObject2>() { new GuidObject2(accountingStringComponentValueGuid) };
+                    }
+                }
             }
 
             if (source.LineAmount != null && source.LineAmount.HasValue)
@@ -190,20 +305,6 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
             return budgetPhaseLineItem;
         }
 
-        /// <summary>
-        /// Permissions code that allows an external system to do a READ operation. This API will integrate information related to outgoing payments that 
-        /// could be deemed personal.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckViewBudgetPhaseLineItemsPermission()
-        {
-            var hasPermission = HasPermission(BudgetManagementPermissionCodes.ViewBudgetPhaseLineItems);
-
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view budget-phase-line-items.");
-            }
-        }
 
         /// <summary>
         /// Converts entity to amount.

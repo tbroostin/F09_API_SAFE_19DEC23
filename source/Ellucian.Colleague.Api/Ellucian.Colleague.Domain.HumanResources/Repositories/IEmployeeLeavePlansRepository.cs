@@ -1,9 +1,8 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
+
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Domain.HumanResources.Repositories
@@ -42,7 +41,22 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
         /// <param name="leavePlans"></param>
         /// <param name="leaveTypes"></param>
         /// <param name="earnTypes"></param>
+        /// <param name="includeLeavePlansWithNoEarningsTypes"></param>
         /// <returns>EmployeeLeavePlan Entities for Persion Id <see cref="EmployeeLeavePlan"./></returns>
-        Task<IEnumerable<EmployeeLeavePlan>> GetEmployeeLeavePlansByEmployeeIdsAsync(IEnumerable<string> employeeIds, IEnumerable<LeavePlan> leavePlans, IEnumerable<LeaveType> leaveTypes, IEnumerable<EarningType2> earnTypes);
+        Task<IEnumerable<EmployeeLeavePlan>> GetEmployeeLeavePlansByEmployeeIdsAsync(IEnumerable<string> employeeIds, 
+            IEnumerable<LeavePlan> leavePlans, 
+            IEnumerable<LeaveType> leaveTypes, 
+            IEnumerable<EarningType2> earnTypes,
+            bool includeLeavePlansWithNoEarningsTypes = false);
+
+        /// <summary>
+        /// Get Collection of PerLeave GUIDs and IDs
+        /// </summary>
+        /// <param name="perleaveIds">collection of PerLeave ids</param>
+        /// <returns>Dictionary consisting of a perLeaveId (key) and guid (value)</returns>
+        Task<Dictionary<string, string>> GetPerleaveGuidsCollectionAsync(IEnumerable<string> perleaveIds);
+
+
+
     }
 }

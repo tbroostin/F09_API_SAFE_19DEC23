@@ -45,6 +45,11 @@ namespace Ellucian.Colleague.Domain.Finance.Entities
         public DateTime DueDate { get { return _dueDate; } }
 
         /// <summary>
+        /// DueDate offset to timezone defined on CTZS
+        /// </summary>
+        public DateTimeOffset? DueDateOffsetCTZS { get; set; }
+
+        /// <summary>
         /// The term to which a deposit made would apply.
         /// </summary>
         public string TermId { get; set; }

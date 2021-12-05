@@ -26,6 +26,8 @@ using System.Web;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Ellucian.Colleague.Domain.Exceptions;
+using System.Net.Http;
+using System.Text.RegularExpressions;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -65,7 +67,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [PagingFilter(IgnorePaging = true), EedmResponseFilter]
         [FilteringFilter(IgnoreFiltering = true)]
-        public async Task<object> GetEthosApiBuilderAsync([FromUri] string resource, [FromUri] string id, Paging page, [FromBody] Dtos.EthosApiBuilder ethosApiBuilder)
+        public async Task<object> GetEthosApiBuilderAsync([FromUri] string resource, [FromUri] string id, Paging page, [ModelBinder(typeof(EedmModelBinder))] Dtos.EthosApiBuilder ethosApiBuilder)
         {
             var method = Request.Method.Method;
             if (string.IsNullOrEmpty(id))
@@ -87,7 +89,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                    case ("PUT"):
                         return await PutEthosApiBuilderAsync(resource, id, ethosApiBuilder);
                     case ("DELETE"):
-                        await DeleteEthosApiBuilderAsync(resource, id); break;
+                        await DeleteEthosApiBuilderAsync(resource, id);
+                        return new HttpResponseMessage(HttpStatusCode.NoContent);
                 }
             }
             return new Dtos.EthosApiBuilder();
@@ -103,7 +106,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         [HttpGet]
         [PagingFilter(IgnorePaging = true), EedmResponseFilter]
         [FilteringFilter(IgnoreFiltering = true)]
-        public async Task<IHttpActionResult> GetEthosApiBuilderAsync([FromUri] string resource, Paging page)
+        public async Task<IHttpActionResult> GetEthosApiBuilderAsync(string resource, Paging page)
         {
             bool bypassCache = false;
             if (Request.Headers.CacheControl != null)
@@ -126,8 +129,14 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 NotAcceptableStatusException();
             }
 
-            CustomMediaTypeAttributeFilter.SetCustomMediaType(string.Format("application/vnd.hedtech.integration.v{0}+json", extendedEthosVersion.ApiVersionNumber));
-
+            if (!string.IsNullOrEmpty(routeInfo.ParentName))
+            {
+                CustomMediaTypeAttributeFilter.SetCustomMediaType(string.Format("application/vnd.hedtech.integration.{0}.v{1}+json", routeInfo.ExtendedSchemaResourceId.ToLower(), extendedEthosVersion.ApiVersionNumber));
+            }
+            else
+            {
+                CustomMediaTypeAttributeFilter.SetCustomMediaType(string.Format("application/vnd.hedtech.integration.v{0}+json", extendedEthosVersion.ApiVersionNumber));
+            }
             try
             {
                 page = ConfigurePage(page, configuration);
@@ -146,6 +155,13 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                var exception = new IntegrationApiException();
+                exception.AddError(new IntegrationApiError("GUID.Not.Found", "An error occurred translating the GUID to an ID.", e.Message, HttpStatusCode.NotFound));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(exception));
             }
             catch (RepositoryException e)
             {
@@ -172,7 +188,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <returns>An extended data object.</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [EedmResponseFilter]
-        public async Task<Ellucian.Colleague.Dtos.EthosApiBuilder> GetEthosApiBuilderByIdAsync([FromUri] string resource, [FromUri] string id)
+        public async Task<Ellucian.Colleague.Dtos.EthosApiBuilder> GetEthosApiBuilderByIdAsync(string resource, string id)
         {
             bool bypassCache = false;
             if (Request.Headers.CacheControl != null)
@@ -194,9 +210,15 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 NotAcceptableStatusException();
             }
-
-            CustomMediaTypeAttributeFilter.SetCustomMediaType(string.Format("application/vnd.hedtech.integration.v{0}+json", extendedEthosVersion.ApiVersionNumber));
-
+            if (!string.IsNullOrEmpty(routeInfo.ParentName))
+            {
+                CustomMediaTypeAttributeFilter.SetCustomMediaType(string.Format("application/vnd.hedtech.integration.{0}.v{1}+json", routeInfo.ExtendedSchemaResourceId.ToLower(), extendedEthosVersion.ApiVersionNumber));
+            }
+            else
+            {
+                CustomMediaTypeAttributeFilter.SetCustomMediaType(string.Format("application/vnd.hedtech.integration.v{0}+json", extendedEthosVersion.ApiVersionNumber));
+            }
+           
             try
             {
                 if (string.IsNullOrEmpty(id))
@@ -204,7 +226,15 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                     throw new ArgumentNullException(string.Format("Must provide an id for '{0}'.", routeInfo.ResourceName));
                 }
 
-                var ethosApiBuilder = await _ethosApiBuilderService.GetEthosApiBuilderByIdAsync(id, configuration.ResourceName);
+                Dtos.EthosApiBuilder ethosApiBuilder = null;
+                if (string.IsNullOrEmpty(configuration.ApiType) || configuration.ApiType.Equals("A", StringComparison.OrdinalIgnoreCase))
+                {
+                    ethosApiBuilder = await _ethosApiBuilderService.GetEthosApiBuilderByIdAsync(id, configuration.ResourceName);
+                }
+                else
+                {
+                    ethosApiBuilder = new Dtos.EthosApiBuilder() { Id = id };
+                }
 
                 if (ethosApiBuilder != null)
                 {
@@ -252,7 +282,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <returns>Newly created <see cref="Dtos.EthosApiBuilder">EthosApiBuilder</see></returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPost, EedmResponseFilter]
-        public async Task<Dtos.EthosApiBuilder> PostEthosApiBuilderAsync([FromUri] string resource, [ModelBinder(typeof(EedmModelBinder))] Dtos.EthosApiBuilder ethosApiBuilder)
+        public async Task<Dtos.EthosApiBuilder> PostEthosApiBuilderAsync(string resource, [ModelBinder(typeof(EedmModelBinder))] Dtos.EthosApiBuilder ethosApiBuilder)
         {
             bool bypassCache = false;
             if (Request.Headers.CacheControl != null)
@@ -271,10 +301,97 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 NotAcceptableStatusException();
             }
 
-            CustomMediaTypeAttributeFilter.SetCustomMediaType(string.Format("application/vnd.hedtech.integration.v{0}+json", extendedEthosVersion.ApiVersionNumber));
+            if (!string.IsNullOrEmpty(routeInfo.ParentName))
+            {
+                CustomMediaTypeAttributeFilter.SetCustomMediaType(string.Format("application/vnd.hedtech.integration.{0}.v{1}+json", routeInfo.ExtendedSchemaResourceId.ToLower(), extendedEthosVersion.ApiVersionNumber));
+            }
+            else
+            {
+                CustomMediaTypeAttributeFilter.SetCustomMediaType(string.Format("application/vnd.hedtech.integration.v{0}+json", extendedEthosVersion.ApiVersionNumber));
+            }
 
-            //Creation of a new record is not supported for Colleague extended data but HeDM requires full crud support.
-            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+            try
+            {
+                if (ethosApiBuilder == null)
+                {
+                    throw new ArgumentNullException(string.Format("Must provide a request body for '{0}'.", routeInfo.ResourceName));
+                }
+                if (string.IsNullOrEmpty(ethosApiBuilder.Id) && !string.IsNullOrEmpty(configuration.PrimaryGuidSource))
+                {
+                    throw new ArgumentNullException(string.Format("Must provide a valid GUID for '{0}' POST in request body.", routeInfo.ResourceName));
+                }
+                if (ethosApiBuilder.Id != Guid.Empty.ToString() && !string.IsNullOrEmpty(configuration.PrimaryGuidSource))
+                {
+                    throw new ArgumentException(string.Format("The requested GUID cannot be consumed on a '{0}' POST request.", routeInfo.ResourceName));
+                }
+
+                if (!string.IsNullOrEmpty(configuration.PrimaryGuidSource) || !string.IsNullOrEmpty(configuration.PrimaryKeyName))
+                {
+                    if (!string.IsNullOrEmpty(configuration.PrimaryKeyName) && string.IsNullOrEmpty(ethosApiBuilder.Id))
+                    {
+                        ethosApiBuilder.Id = "$NEW";
+                    }
+                    Validate(ethosApiBuilder);
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(configuration.ProcessId))
+                    {
+                        ethosApiBuilder.Id = configuration.ProcessId;
+                    }
+                    else
+                    {
+                        ethosApiBuilder.Id = configuration.PrimaryEntity;
+                    }
+                }
+
+                //get Data Privacy List
+                var dpList = await _ethosApiBuilderService.GetDataPrivacyListByApi(routeInfo, true);
+
+                //call import extend method that needs the extracted extension data and the config
+                await _ethosApiBuilderService.ImportExtendedEthosData(await ExtractExtendedData(await _ethosApiBuilderService.GetExtendedEthosConfigurationByResource(routeInfo), _logger));
+
+                var ethosApiBuilderReturn = await _ethosApiBuilderService.PostEthosApiBuilderAsync(ethosApiBuilder, configuration.ResourceName);
+
+                AddEthosContextProperties(dpList,
+                    await _ethosApiBuilderService.GetExtendedEthosDataByResource(routeInfo, new List<string>() { ethosApiBuilderReturn.Id }));
+
+                // For Ethos Subroutine APIs, null out the ID property, which contains the Subroutine Name.
+                if (!string.IsNullOrEmpty(configuration.ApiType) && configuration.ApiType.Equals("S", StringComparison.OrdinalIgnoreCase) ||
+                    (string.IsNullOrEmpty(configuration.PrimaryGuidSource) && configuration.PrimaryEntity == ethosApiBuilderReturn.Id))
+                {
+                    ethosApiBuilderReturn.Id = null;
+                }
+
+                return ethosApiBuilderReturn;
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                var exception = new IntegrationApiException();
+                exception.AddError(new IntegrationApiError("GUID.Not.Found", "An error occurred translating the GUID to an ID.", e.Message, HttpStatusCode.NotFound));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(exception));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
         }
         #endregion
 
@@ -288,7 +405,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <returns>Updated <see cref="Dtos.EthosApiBuilder">Dtos.EthosApiBuilder</see></returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPut, EedmResponseFilter]
-        public async Task<Dtos.EthosApiBuilder> PutEthosApiBuilderAsync([FromUri] string resource, [FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.EthosApiBuilder ethosApiBuilder)
+        public async Task<Dtos.EthosApiBuilder> PutEthosApiBuilderAsync(string resource, string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.EthosApiBuilder ethosApiBuilder)
         {
             bool bypassCache = false;
             if (Request.Headers.CacheControl != null)
@@ -307,13 +424,30 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 NotAcceptableStatusException();
             }
 
-            CustomMediaTypeAttributeFilter.SetCustomMediaType(string.Format("application/vnd.hedtech.integration.v{0}+json", extendedEthosVersion.ApiVersionNumber));
+            if (!string.IsNullOrEmpty(routeInfo.ParentName))
+            {
+                CustomMediaTypeAttributeFilter.SetCustomMediaType(string.Format("application/vnd.hedtech.integration.{0}.v{1}+json", routeInfo.ExtendedSchemaResourceId.ToLower(), extendedEthosVersion.ApiVersionNumber));
+            }
+            else
+            {
+                CustomMediaTypeAttributeFilter.SetCustomMediaType(string.Format("application/vnd.hedtech.integration.v{0}+json", extendedEthosVersion.ApiVersionNumber));
+            }
 
             try
             {
                 if (string.IsNullOrEmpty(id))
                 {
                     throw new ArgumentNullException(string.Format("Must provide an id for '{0}'.", routeInfo.ResourceName));
+                }
+                
+                if (!string.IsNullOrWhiteSpace(id) && id.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new ArgumentException(string.Format("Nil GUID must not be used in {0} PUT operation.", routeInfo.ResourceName));
+                }
+
+                if (!string.IsNullOrWhiteSpace(ethosApiBuilder.Id) && ethosApiBuilder.Id.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new ArgumentException(string.Format("Nil GUID must not be used in {0} PUT operation.", routeInfo.ResourceName));
                 }
 
                 if (ethosApiBuilder == null)
@@ -337,14 +471,39 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 var dpList = await _ethosApiBuilderService.GetDataPrivacyListByApi(routeInfo, true);
 
                 //call import extend method that needs the extracted extension data and the config
-                await _ethosApiBuilderService.ImportExtendedEthosData(await ExtractExtendedData(await _ethosApiBuilderService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
+                await _ethosApiBuilderService.ImportExtendedEthosData(await ExtractExtendedData(await _ethosApiBuilderService.GetExtendedEthosConfigurationByResource(routeInfo), _logger));
 
-                var ethosApiBuilderReturn = await _ethosApiBuilderService.PutEthosApiBuilderAsync(id,
-                  await PerformPartialPayloadMerge(ethosApiBuilder, async () => await _ethosApiBuilderService.GetEthosApiBuilderByIdAsync(id, configuration.ResourceName),
-                  dpList, _logger), configuration.ResourceName);
+                Dtos.EthosApiBuilder ethosApiBuilderReturn = null;
+                bool performPostInstead = false;
+                try
+                {
+                    ethosApiBuilderReturn = await _ethosApiBuilderService.PutEthosApiBuilderAsync(id,
+                      await PerformPartialPayloadMerge(ethosApiBuilder, async () => await _ethosApiBuilderService.GetEthosApiBuilderByIdAsync(id, configuration.ResourceName),
+                      dpList, _logger), configuration.ResourceName);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    if (ex.Errors != null && ex.Errors.FirstOrDefault() != null && ex.Errors.FirstOrDefault().Code == "GUID.Not.Found")
+                    {
+                        performPostInstead = true;
+                    }
+                    else
+                    {
+                        throw ex;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw ex;
+                }
+
+                if (performPostInstead)
+                {
+                    ethosApiBuilderReturn = await _ethosApiBuilderService.PostEthosApiBuilderAsync(ethosApiBuilder, configuration.ResourceName);
+                }
 
                 AddEthosContextProperties(dpList,
-                    await _ethosApiBuilderService.GetExtendedEthosDataByResource(routeInfo, new List<string>() { id }));
+                    await _ethosApiBuilderService.GetExtendedEthosDataByResource(routeInfo, new List<string>() { ethosApiBuilderReturn.Id }));
 
                 return ethosApiBuilderReturn;
             }
@@ -352,6 +511,13 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                var exception = new IntegrationApiException();
+                exception.AddError(new IntegrationApiError("GUID.Not.Found", "An error occurred translating the GUID to an ID.", e.Message, HttpStatusCode.NotFound, id));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(exception));
             }
             catch (IntegrationApiException e)
             {
@@ -381,8 +547,189 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         [HttpDelete]
         public async Task DeleteEthosApiBuilderAsync([FromUri] string resource, [FromUri] string id)
         {
-            //Delete is not supported for Colleague but HeDM requires full crud support.
-            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+            bool bypassCache = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
+            var routeInfo = GetEthosResourceRouteInfo(resource);
+            var configuration = await GetApiConfiguration("DELETE", routeInfo, bypassCache);
+
+            if (!string.IsNullOrEmpty(routeInfo.ParentName))
+            {
+                NotAcceptableStatusException();
+            }
+            else
+            {
+                CustomMediaTypeAttributeFilter.SetCustomMediaType("application/json");
+            }
+            try
+            {
+                if (string.IsNullOrEmpty(id))
+                {
+                    throw new ArgumentNullException(string.Format("{0} id cannot be null or empty", resource));
+                }
+                await _ethosApiBuilderService.DeleteEthosApiBuilderAsync(id, configuration.ResourceName);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                var exception = new IntegrationApiException();
+                exception.AddError(new IntegrationApiError("GUID.Not.Found", "An error occurred translating the GUID to an ID.", e.Message, HttpStatusCode.NotFound, id));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(exception));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+        }
+        #endregion
+
+        #region routing
+
+        /// <summary>
+        /// Respond to route and execute the appropriate method.  This will only be hit if there are routes defined on the resource, therefore always return a 406 if an error occurs.
+        /// </summary>       
+        /// <param name="id"></param>
+        /// <param name="guid"></param>
+        /// <param name="resource"></param>
+        /// <param name="page"></param>
+        /// <param name="ethosApiBuilder"></param>
+        /// <returns></returns>
+        [HttpGet, HttpPost, HttpPut, HttpDelete]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [PagingFilter(IgnorePaging = true), EedmResponseFilter]
+        [FilteringFilter(IgnoreFiltering = true)]
+        public async Task<object> GetAlternativeRouteOrNotAcceptable([ModelBinder(typeof(EedmModelBinder))] Dtos.EthosApiBuilder ethosApiBuilder, [FromUri] string resource = null, [FromUri] string id = null, [FromUri] string guid = null, Paging page = null)
+        {
+            bool bypassCache = false;
+            bool methodSupported = false;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    bypassCache = true;
+                }
+            }
+
+            if (string.IsNullOrEmpty(id))
+            {
+                id = guid;
+            }
+            try
+            {
+                var actionRequestContext = ActionContext.Request;
+
+                if (actionRequestContext == null)
+                {
+                    NotAcceptableStatusException();
+                }
+
+                var routeData = actionRequestContext.GetRouteData();
+
+                if (routeData.Route == null)
+                {
+                    NotAcceptableStatusException();
+                }
+
+                if (string.IsNullOrEmpty(resource))
+                {
+                    resource = routeData.Route.RouteTemplate;
+                    if (resource.LastIndexOf("/") > 0)
+                    {
+                        resource = resource.Remove(resource.LastIndexOf("/"));
+                    }
+
+                    if (resource.StartsWith("{"))
+                    {
+                        resource = resource.Remove(1, 1);
+                    }
+                    if (resource.EndsWith("}"))
+                    {
+                        resource = resource.Remove(resource.Length - 1, 1);
+                    }
+                }
+
+
+                var routeInfo = GetEthosResourceRouteInfo(resource, true);
+
+                if (routeInfo == null)
+                {
+                    NotAcceptableStatusException();
+                }
+
+                var method = routeInfo.RequestMethod.ToString();
+                if (method == "PUT" && string.IsNullOrEmpty(id))
+                {
+                    NotAcceptableStatusException();
+                }
+                else
+                {
+                    if (method == "POST" && !string.IsNullOrEmpty(id))
+                    {
+                        NotAcceptableStatusException();
+                    }
+                }
+
+                var configuration = await _ethosApiBuilderService.GetEthosApiConfigurationByResource(routeInfo, bypassCache);
+                if (configuration == null || string.IsNullOrEmpty(configuration.ResourceName))
+                {
+                    NotAcceptableStatusException();
+                }
+                if (!string.IsNullOrEmpty(configuration.ParentResourceName) && !configuration.ParentResourceName.Equals(routeInfo.ResourceName, StringComparison.OrdinalIgnoreCase))
+                {
+                    NotAcceptableStatusException();
+                }
+
+                //  If this an Ethos Extension on an Ellucian delivered API, throw 406
+                if (configuration.HttpMethods == null || !configuration.HttpMethods.Any())
+                {
+                    NotAcceptableStatusException();
+                }
+
+               
+                foreach (var meth in configuration.HttpMethods)
+                {
+                    if (meth.Method == method)
+                    {
+                        methodSupported = true;
+                    }
+                }
+
+            }
+            catch (JsonException ex)
+            {
+                var message = string.Concat("'", "Invalid query parameter for filtering. ", ex.Message);
+                var exception = new IntegrationApiException();
+                exception.AddError(new IntegrationApiError("Global.Internal.Error", "Unspecified Error on the system which prevented execution.", message));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(exception));
+            }
+            catch (Exception)
+            {
+                NotAcceptableStatusException();
+            }
+        
+            if (!methodSupported)
+            {
+                MethodNotAllowedException();
+            }
+
+            return await GetEthosApiBuilderAsync(resource, id, page, ethosApiBuilder);
         }
         #endregion
 
@@ -403,7 +750,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Gets Ethos Resource information from route
         /// </summary>
         /// <returns>EthosResourceRouteInfo</returns>
-        public EthosResourceRouteInfo GetEthosResourceRouteInfo(string resource)
+        public EthosResourceRouteInfo GetEthosResourceRouteInfo(string resource, bool alternativeRepresenation = false)
         {
             var bypassCache = false;
             if (Request != null && Request.Headers != null && Request.Headers.CacheControl != null)
@@ -435,36 +782,27 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             ethosRouteInfo.EthosResourceIdentifier = contentType;
 
+            ethosRouteInfo.RequestMethod = Request.Method;
+
             ethosRouteInfo.ResourceName = resource;
-            string[] routeStrings = contentType.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-            if (routeStrings.Any())
+            if (!string.IsNullOrEmpty(contentType))
             {
-                ethosRouteInfo.ExtendedSchemaResourceId = resource.ToUpperInvariant();
-                try
+                string hedtechIntegrationMediaTypePrefix = "application/vnd.hedtech.integration.";
+                var alternativeRepresenationName = contentType.Replace(hedtechIntegrationMediaTypePrefix, "");
+
+                if (alternativeRepresenationName.LastIndexOf(".v") > 0)
                 {
-                    ethosRouteInfo.ResourceVersionNumber = int.Parse(routeStrings[3].Substring(1)).ToString();
+                    alternativeRepresenationName = alternativeRepresenationName.Remove(alternativeRepresenationName.LastIndexOf(".v"));
+                    if (!string.IsNullOrEmpty(alternativeRepresenationName))
+                    {
+                        ethosRouteInfo.ExtendedSchemaResourceId = alternativeRepresenationName;
+                        ethosRouteInfo.ParentName = resource;
+                    }
                 }
-                catch
-                {
-                    // Do not include in version number string.
-                }
-                try
-                {
-                    ethosRouteInfo.ResourceVersionNumber = string.Concat(ethosRouteInfo.ResourceVersionNumber, ".", int.Parse(routeStrings[4]));
-                }
-                catch
-                {
-                    // Do not include in version number string.
-                }
-                try
-                {
-                    ethosRouteInfo.ResourceVersionNumber = string.Concat(ethosRouteInfo.ResourceVersionNumber, ".", int.Parse(routeStrings[5]));
-                }
-                catch
-                {
-                    // Do not include in version number string.
-                }
+                
+                ethosRouteInfo.ResourceVersionNumber = ExtractVersionNumberOnly(contentType);
             }
+
             if (!string.IsNullOrEmpty(ethosRouteInfo.ResourceVersionNumber))
             {
                 var versionNumber = ethosRouteInfo.ResourceVersionNumber.Split('.');
@@ -491,14 +829,56 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             return ethosRouteInfo;
         }
 
+        private string ExtractVersionNumberOnly(string original)
+        {          
+            if (original.LastIndexOf(".v") > 0)
+            {
+                // remove the period and the leading 'v'
+                original = original.Remove(0, original.LastIndexOf(".v") + 2);                
+            }
+            
+
+            if (Regex.Matches(original, @"[a-zA-Z]", RegexOptions.Compiled).Count > 0)
+            {
+                throw CreateHttpResponseException(
+                    new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+            }
+
+            var regex = new Regex(@"(?:(\d+)\.)?(?:(\d+)\.)?(?:(\d+)\.\d+)|(?:(\d+))", RegexOptions.Compiled);
+            Match semanticVersion = regex.Match(original);
+            if (semanticVersion.Success)
+            {
+                return semanticVersion.Value;
+            }
+            else return string.Empty;
+        }
+
         private async Task<EthosApiConfiguration> GetApiConfiguration(string method, EthosResourceRouteInfo routeInfo, bool bypassCache)
         {
+            if (routeInfo == null)
+            {
+                throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+            }
             var configuration = await _ethosApiBuilderService.GetEthosApiConfigurationByResource(routeInfo, bypassCache);
+
             if (configuration == null || string.IsNullOrEmpty(configuration.ResourceName))
             {
                 throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
             }
 
+            //  If an spec is expected to have a parent, but no accept header is provided,
+            //  OR if a spec doesnt have a parent, but one is provided in the accept header, 
+            //  OR is a spec has a parent, but its different from what is provided, then throw a 406
+            //  OR is an Ethos Extension on an ellucian delivered API
+            if ((!string.IsNullOrEmpty(configuration.ParentResourceName) && string.IsNullOrEmpty(routeInfo.ParentName))
+                || (string.IsNullOrEmpty(configuration.ParentResourceName) && !string.IsNullOrEmpty(routeInfo.ParentName)) 
+                || (!string.IsNullOrEmpty(configuration.ParentResourceName) && !configuration.ParentResourceName.Equals(routeInfo.ParentName, StringComparison.OrdinalIgnoreCase)) 
+                || (configuration.HttpMethods == null || !configuration.HttpMethods.Any()) )
+            {
+                NotAcceptableStatusException();
+            }
+
+            // If no methods are defined, then throw a 405
             if (configuration.HttpMethods == null)
             {
                 throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
@@ -524,6 +904,13 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         {
             if (configuration.PageLimit == null || !configuration.PageLimit.HasValue || configuration.PageLimit.Value == 0)
             {
+                if (page != null && (page.Offset > 0 || page.Limit > 0))
+                {
+                    var message = string.Concat("Paging is disabled for the '", configuration.ResourceName, "' resource.");
+                    var exception = new IntegrationApiException();
+                    exception.AddError(new IntegrationApiError("Global.Internal.Error", "Unspecified Error on the system which prevented execution.", message));
+                    throw exception;
+                }
                 page = new Paging(0, 0)
                 {
                     DefaultLimit = null
@@ -554,9 +941,9 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             return page;
         }
 
-        private Dictionary<string, List<string>> GetEthosExtendedFilters()
+        private Dictionary<string, Tuple<List<string>, string>> GetEthosExtendedFilters()
         {
-            Dictionary<string, List<string>> extendedFilterDefinitions = new Dictionary<string, List<string>>();
+            Dictionary<string, Tuple<List<string>, string>> extendedFilterDefinitions = new Dictionary<string, Tuple<List<string>, string>>();
 
             var queryString = HttpUtility.ParseQueryString(Request.RequestUri.Query);
             foreach (var query in queryString.Keys)
@@ -587,6 +974,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                             if (jToken != null)
                             {
                                 List<string> values = new List<string>();
+                                var oper = string.Empty;
+
                                 if (jToken.Type == JTokenType.Array)
                                 {
                                     var children = jToken.Children();
@@ -605,6 +994,19 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                                                         if (string.IsNullOrEmpty(path))
                                                         {
                                                             path = ggToken.HasValues && ggToken.Last != null ? ggToken.Last.Path : ggToken.Path;
+                                                            var pathSplit = path.Split('.');
+                                                            path = string.Empty;
+                                                            foreach (var part in pathSplit)
+                                                            {
+                                                                if (part.StartsWith("$"))
+                                                                {
+                                                                    oper = part;
+                                                                }
+                                                                else
+                                                                {
+                                                                    path = string.Concat(path, ".", part).TrimStart('.');
+                                                                }
+                                                            }
                                                         }
                                                         var temp = ggToken.HasValues && ggToken.Last != null ? ggToken.Last.Values() : ggToken.Values();
                                                         if (temp != null && ggToken.HasValues)
@@ -625,6 +1027,19 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                                                     if (string.IsNullOrEmpty(path))
                                                     {
                                                         path = gToken.HasValues && gToken.Last != null ? gToken.Last.Path : gToken.Path;
+                                                        var pathSplit = path.Split('.');
+                                                        path = string.Empty;
+                                                        foreach (var part in pathSplit)
+                                                        {
+                                                            if (part.StartsWith("$"))
+                                                            {
+                                                                oper = part;
+                                                            }
+                                                            else
+                                                            {
+                                                                path = string.Concat(path, ".", part).TrimStart('.');
+                                                            }
+                                                        }
                                                     }
                                                     var temp = gToken.HasValues && gToken.Last != null ? gToken.Last.Values() : gToken.Values();
                                                     if (temp != null && gToken.HasValues)
@@ -646,6 +1061,19 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                                             if (string.IsNullOrEmpty(path))
                                             {
                                                 path = cToken.HasValues && cToken.Last != null ? cToken.Last.Path : cToken.Path;
+                                                var pathSplit = path.Split('.');
+                                                path = string.Empty;
+                                                foreach (var part in pathSplit)
+                                                {
+                                                    if (part.StartsWith("$"))
+                                                    {
+                                                        oper = part;
+                                                    }
+                                                    else
+                                                    {
+                                                        path = string.Concat(path, ".", part).TrimStart('.');
+                                                    }
+                                                }
                                             }
                                             var temp = cToken.HasValues && cToken.Last != null ? cToken.Last.Values() : cToken.Values();
                                             if (temp != null)
@@ -665,7 +1093,44 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                                 else
                                 {
                                     path = jToken.HasValues && jToken.Last != null ? jToken.Last.Path : jToken.Path;
+                                    if (jToken.HasValues && jToken.Last != null && jToken.Last.HasValues && jToken.Last.Last != null && jToken.Last.Last.HasValues)
+                                    {
+                                        path = jToken.Last.Last.Path;
+                                        if (jToken.Last.Last.Last != null && jToken.Last.Last.Last.HasValues)
+                                        {
+                                            path = jToken.Last.Last.Last.Path;
+                                            if (jToken.Last.Last.Last.Last != null && jToken.Last.Last.Last.Last.HasValues)
+                                            {
+                                                path = jToken.Last.Last.Last.Last.Path;
+                                            }
+                                        }
+                                    }
+                                    var pathSplit = path.Split('.');
+                                    path = string.Empty;
+                                    foreach (var part in pathSplit)
+                                    {
+                                        if (part.StartsWith("$"))
+                                        {
+                                            oper = part;
+                                        }
+                                        else
+                                        {
+                                            path = string.Concat(path, ".", part).TrimStart('.');
+                                        }
+                                    }
                                     var temp = jToken.HasValues && jToken.Last != null ? jToken.Last.Values() : jToken.Values();
+                                    if (jToken.HasValues && jToken.Last != null && jToken.Last.HasValues && jToken.Last.Last != null && jToken.Last.Last.HasValues)
+                                    {
+                                        temp = jToken.Last.Last.Values();
+                                        if (jToken.Last.Last.Last != null && jToken.Last.Last.Last.HasValues)
+                                        {
+                                            temp = jToken.Last.Last.Last.Values();
+                                            if (jToken.Last.Last.Last.Last != null && jToken.Last.Last.Last.Last.HasValues)
+                                            {
+                                                temp = jToken.Last.Last.Last.Last.Values();
+                                            }
+                                        }
+                                    }
                                     if (temp != null && jToken.HasValues)
                                     {
                                         foreach (var tokenValue in temp)
@@ -687,7 +1152,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                                 {
                                     if (!extendedFilterDefinitions.ContainsKey(path))
                                     {
-                                        extendedFilterDefinitions.Add(path, values);
+                                        extendedFilterDefinitions.Add(path, new Tuple<List<string>, string>(values, oper));
                                     }
                                 }
                                 else
@@ -698,6 +1163,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                             }
                         }
                     }
+                }
+                catch (JsonException ex)
+                {
+                    throw ex;
                 }
                 catch (Exception ex)
                 {
@@ -710,23 +1179,94 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             return extendedFilterDefinitions;
         }
 
-        private async Task<Dictionary<string, EthosExtensibleDataFilter>> ValidateFilterParameters(Dictionary<string, List<string>> filterDictionary, EthosExtensibleData extendedEthosVersion)
+        private async Task<Dictionary<string, EthosExtensibleDataFilter>> ValidateFilterParameters(Dictionary<string, Tuple<List<string>, string>> filterDictionary, EthosExtensibleData extendedEthosVersion)
         {
+            // Validate the query names
+            var queryString = HttpUtility.ParseQueryString(Request.RequestUri.Query);
+            List<string> queryNames = new List<string>();
+            foreach (var query in queryString.Keys)
+            {
+                if (!query.ToString().Equals("offset", StringComparison.OrdinalIgnoreCase) && !query.ToString().Equals("limit", StringComparison.OrdinalIgnoreCase))
+                {
+                    var matchingQueryName = extendedEthosVersion.ExtendedDataFilterList.FirstOrDefault(ed => ed.QueryName == query.ToString());
+                    if (matchingQueryName == null)
+                    {
+                        var message = string.Concat("'", query, "' is an invalid query parameter for filtering.");
+                        var exception = new IntegrationApiException();
+                        exception.AddError(new IntegrationApiError("Global.Internal.Error", "Unspecified Error on the system which prevented execution.", message));
+                        throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(exception));
+                    }
+                }
+                queryNames.Add(query.ToString());
+            }
+            
+            // Validate query string
             var returnDictionary = new Dictionary<string, EthosExtensibleDataFilter>();
             foreach (var filter in filterDictionary)
             {
                 var filterName = filter.Key;
-                var filterValues = filter.Value;
+                var filterValues = filter.Value.Item1;
+                var filterOper = filter.Value.Item2;
+
                 var matchingProperty = extendedEthosVersion.ExtendedDataFilterList.FirstOrDefault(ed => ed.FullJsonPath == filterName);
                 if (matchingProperty == null)
                 {
-                    var message = string.Concat("'", filterName, "' is an invalid query parameter for filtering. ");
+                    var message = string.Concat("'", filterName, "' is an invalid query parameter for filtering.");
                     var exception = new IntegrationApiException();
                     exception.AddError(new IntegrationApiError("Global.Internal.Error", "Unspecified Error on the system which prevented execution.", message));
                     throw exception;
                 }
                 else
                 {
+                    if (!queryNames.Contains(matchingProperty.QueryName))
+                    {
+                        var message = string.Concat("'", filterName, "' is an invalid query parameter for filtering. Expecting '", matchingProperty.QueryName, "='");
+                        var exception = new IntegrationApiException();
+                        exception.AddError(new IntegrationApiError("Global.Internal.Error", "Unspecified Error on the system which prevented execution.", message));
+                        throw exception;
+                    }
+
+                    // Validate Filter Operators
+                    bool validFilterOper = true;
+                    if (matchingProperty.ValidFilterOpers != null && matchingProperty.ValidFilterOpers.Any())
+                    {
+                        if (!string.IsNullOrEmpty(filterOper) && !matchingProperty.ValidFilterOpers.Contains(filterOper))
+                        {
+                            validFilterOper = false;
+                        }
+                    }
+                    else
+                    {
+                        if (!string.IsNullOrEmpty(filterOper))
+                        {
+                            switch (filterOper)
+                            {
+                                case "$lte":
+                                    break;
+                                case "$gte":
+                                    break;
+                                case "$lt":
+                                    break;
+                                case "$gt":
+                                    break;
+                                case "$ne":
+                                    break;
+                                case "$eq":
+                                    break;
+                                default:
+                                    validFilterOper = false;
+                                    break;
+                            }
+                        }
+                    }
+                    if (!validFilterOper)
+                    {
+                        var message = string.Concat("'", filterOper, "' is an invalid query parameter for filtering. ");
+                        var exception = new IntegrationApiException();
+                        exception.AddError(new IntegrationApiError("Global.Internal.Error", "Unspecified Error on the system which prevented execution.", message));
+                        throw exception;
+                    }
+
                     List<string> newValues = new List<string>();
                     foreach (var value in filterValues)
                     {
@@ -822,6 +1362,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                     if (!returnDictionary.ContainsKey(filterName))
                     {
                         matchingProperty.FilterValue = newValues;
+                        matchingProperty.FilterOper = filterOper;
                         returnDictionary.Add(filterName, matchingProperty);
                     }
                 }

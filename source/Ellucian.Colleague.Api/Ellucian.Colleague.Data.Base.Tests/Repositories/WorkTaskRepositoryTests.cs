@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Data.Colleague;
@@ -250,7 +250,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
                 // Mock response to worklist addr role select only
                 dataAccessorMock.Setup<Task<string[]>>(acc => acc.SelectAsync("WORKLIST.ADDR", "WITH WKLAD.ORG.ENTITY EQ ?", It.IsAny<string[]>(), "?", true, 425))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 var results = await workTaskRepo.GetAsync(personId, roleIds);
                 Assert.AreEqual(0, results.Count());

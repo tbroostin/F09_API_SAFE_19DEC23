@@ -20,6 +20,11 @@ using System.Net.Http;
 using System.Web.Http.Hosting;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Web.Http.Models;
+using System.Web.Http.Routing;
+using System.Web.Http.Controllers;
+using System.Collections;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 {
@@ -256,6 +261,34 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         {
             _accountingStringServiceMock.Setup(x => x.GetAccoutingStringByFilterCriteriaAsync("test", null)).ThrowsAsync(new Exception());
             await _accountingStringsController.GetAccountingStringByFilterAsync("test", null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountingStringsController_Post_AccountingStringsAsync_Exception()
+        {
+            await _accountingStringsController.PostAccountingStringsAsync(It.IsAny<AccountingString>());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountingStringsController_Put_AccountingStringsAsync_Exception()
+        {
+            await _accountingStringsController.PutAccountingStringsAsync(It.IsAny<string>(), It.IsAny<AccountingString>());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountingStringsController_Delete_AccountingStringsAsync_Exception()
+        {
+            await _accountingStringsController.DeleteAccountingStringsAsync(It.IsAny<string>());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountingStringsController_GetById_AccountingStringsAsync_Exception()
+        {
+            await _accountingStringsController.GetAccountingStringsByGuidAsync(It.IsAny<string>());
         }
 
         #endregion
@@ -1081,6 +1114,175 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             var accountingStringComponentValues = await _accountingStringsController.GetAccountingStringComponentValues2Async(new Paging(10, 0), It.IsAny<QueryStringFilter>());
         }
 
+        //GET by id v8
+        //Successful
+        //GetAccountingStringComponentValuesByGuidAsync
+        [TestMethod]
+        public async Task AccountingStringComponentValuesController_GetAccountingStringComponentValuesByGuidAsync_Permissions()
+        {
+            var expected = _accountingStringComponentValuesCollection.FirstOrDefault();
+
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AccountingStringComponentValues" },
+                    { "action", "GetAccountingStringComponentValuesByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("accounting-string-component-values", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _accountingStringsController.Request.SetRouteData(data);
+            _accountingStringsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.ViewAccountingStrings);
+
+            var controllerContext = _accountingStringsController.ControllerContext;
+            var actionDescriptor = _accountingStringsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _accountingStringServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _accountingStringServiceMock.Setup(x => x.GetAccountingStringComponentValuesByGuidAsync(expected.Id)).ReturnsAsync(expected);
+            var actual = await _accountingStringsController.GetAccountingStringComponentValuesByGuidAsync(expected.Id);
+
+            Object filterObject;
+            _accountingStringsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewAccountingStrings));
+
+
+        }
+
+        //GET by id v8
+        //Exception
+        //GetAccountingStringComponentValuesByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountingStringComponentValuesController_GetAccountingStringComponentValuesByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AccountingStringComponentValues" },
+                    { "action", "GetAccountingStringComponentValuesByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("accounting-string-component-values", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _accountingStringsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _accountingStringsController.ControllerContext;
+            var actionDescriptor = _accountingStringsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _accountingStringServiceMock.Setup(x => x.GetAccountingStringComponentValuesByGuidAsync(It.IsAny<string>())).Throws<PermissionsException>();
+                _accountingStringServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view accounting-string-component-values."));
+                await _accountingStringsController.GetAccountingStringComponentValuesByGuidAsync(_guid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET v8
+        //Successful
+        //GetAccountingStringComponentValuesAsync
+        [TestMethod]
+        public async Task AccountingStringComponentValuesController_GetAccountingStringComponentValuesAsync_Permissions()
+        {
+            var tuple = new Tuple<IEnumerable<Dtos.AccountingStringComponentValues>, int>(_accountingStringComponentValuesCollection, 1);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AccountingStringComponentValues" },
+                    { "action", "GetAccountingStringComponentValuesAsync" }
+                };
+            HttpRoute route = new HttpRoute("accounting-string-component-values", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _accountingStringsController.Request.SetRouteData(data);
+            _accountingStringsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.ViewAccountingStrings);
+
+            var controllerContext = _accountingStringsController.ControllerContext;
+            var actionDescriptor = _accountingStringsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            
+            _accountingStringServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _accountingStringServiceMock.Setup(x => x.GetAccountingStringComponentValuesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            var accountingStringComponentValues = await _accountingStringsController.GetAccountingStringComponentValuesAsync(new Paging(10, 0), criteriaFilter);
+
+            Object filterObject;
+            _accountingStringsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewAccountingStrings));
+
+
+        }
+
+        //GET v8
+        //Exception
+        //GetAccountingStringComponentValuesAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountingStringComponentValuesController_GetAccountingStringComponentValuesAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AccountingStringComponentValues" },
+                    { "action", "GetAccountingStringComponentValuesAsync" }
+                };
+            HttpRoute route = new HttpRoute("accounting-string-component-values", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _accountingStringsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _accountingStringsController.ControllerContext;
+            var actionDescriptor = _accountingStringsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _accountingStringServiceMock.Setup(x => x.GetAccountingStringComponentValuesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                _accountingStringServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view accounting-string-component-values."));
+                await _accountingStringsController.GetAccountingStringComponentValuesAsync(new Paging(10, 0), criteriaFilter);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
         //v15
 
         [TestMethod]
@@ -1238,6 +1440,175 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             await _accountingStringsController.GetAccountingStringComponentValues2ByGuidAsync("123");
         }
 
+        //GET by id v11
+        //Successful
+        //GetAccountingStringComponentValues2ByGuidAsync
+        [TestMethod]
+        public async Task AccountingStringComponentValuesController_GetAccountingStringComponentValues2ByGuidAsync_Permissions()
+        {
+            var expected = _accountingStringComponentValuesCollection2.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AccountingStringComponentValues" },
+                    { "action", "GetAccountingStringComponentValues2ByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("accounting-string-component-values", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _accountingStringsController.Request.SetRouteData(data);
+            _accountingStringsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.ViewAccountingStrings);
+
+            var controllerContext = _accountingStringsController.ControllerContext;
+            var actionDescriptor = _accountingStringsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _accountingStringServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _accountingStringServiceMock.Setup(x => x.GetAccountingStringComponentValues2ByGuidAsync(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
+            var actual = await _accountingStringsController.GetAccountingStringComponentValues2ByGuidAsync(expected.Id);
+
+            Object filterObject;
+            _accountingStringsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewAccountingStrings));
+
+
+        }
+
+        //GET by id v11
+        //Exception
+        //GetAccountingStringComponentValues2ByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountingStringComponentValuesController_GetAccountingStringComponentValues2ByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AccountingStringComponentValues" },
+                    { "action", "GetAccountingStringComponentValues2ByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("accounting-string-component-values", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _accountingStringsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _accountingStringsController.ControllerContext;
+            var actionDescriptor = _accountingStringsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _accountingStringServiceMock.Setup(x => x.GetAccountingStringComponentValues2ByGuidAsync("123", It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                _accountingStringServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view accounting-string-component-values."));
+                await _accountingStringsController.GetAccountingStringComponentValues2ByGuidAsync("123");
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET v11
+        //Successful
+        //GetAccountingStringComponentValues2Async
+        [TestMethod]
+        public async Task AccountingStringComponentValuesController_GetAccountingStringComponentValues2Async_Permissions()
+        {
+            var tuple = new Tuple<IEnumerable<Dtos.AccountingStringComponentValues2>, int>(_accountingStringComponentValuesCollection2, 1);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AccountingStringComponentValues" },
+                    { "action", "GetAccountingStringComponentValues2Async" }
+                };
+            HttpRoute route = new HttpRoute("accounting-string-component-values", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _accountingStringsController.Request.SetRouteData(data);
+            _accountingStringsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.ViewAccountingStrings);
+
+            var controllerContext = _accountingStringsController.ControllerContext;
+            var actionDescriptor = _accountingStringsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _accountingStringServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _accountingStringServiceMock.Setup(x => x.GetAccountingStringComponentValues2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            var accountingStringComponentValues = await _accountingStringsController.GetAccountingStringComponentValues2Async(new Paging(10, 0), criteriaFilter);
+
+            Object filterObject;
+            _accountingStringsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewAccountingStrings));
+
+
+        }
+
+        //GET v11
+        //Exception
+        //GetAccountingStringComponentValues2Async
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountingStringComponentValuesController_GetAccountingStringComponentValues2Async_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AccountingStringComponentValues" },
+                    { "action", "GetAccountingStringComponentValues2Async" }
+                };
+            HttpRoute route = new HttpRoute("accounting-string-component-values", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _accountingStringsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _accountingStringsController.ControllerContext;
+            var actionDescriptor = _accountingStringsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _accountingStringServiceMock.Setup(repo => repo.GetAccountingStringComponentValues2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                _accountingStringServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view accounting-string-component-values."));
+                var accountingStringComponentValues = await _accountingStringsController.GetAccountingStringComponentValues2Async(new Paging(10, 0), It.IsAny<QueryStringFilter>());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         //V15 get by guid
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
@@ -1321,6 +1692,176 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             Assert.IsNotNull(sourceContext);
             await _accountingStringsController.PutAccountingStringComponentValues2Async(It.IsAny<string>(), It.IsAny<Dtos.AccountingStringComponentValues2>());
         }
+
+        //GET by id v15
+        //Successful
+        //GetAccountingStringComponentValues3ByGuidAsync
+        [TestMethod]
+        public async Task AccountingStringComponentValuesController_GetAccountingStringComponentValues3ByGuidAsync_Permissions()
+        {
+            var expected = _accountingStringComponentValuesCollection3.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AccountingStringComponentValues" },
+                    { "action", "GetAccountingStringComponentValues3ByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("accounting-string-component-values", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _accountingStringsController.Request.SetRouteData(data);
+            _accountingStringsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.ViewAccountingStrings);
+
+            var controllerContext = _accountingStringsController.ControllerContext;
+            var actionDescriptor = _accountingStringsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _accountingStringServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _accountingStringServiceMock.Setup(x => x.GetAccountingStringComponentValues3ByGuidAsync(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
+            var actual = await _accountingStringsController.GetAccountingStringComponentValues3ByGuidAsync(expected.Id);
+
+            Object filterObject;
+            _accountingStringsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewAccountingStrings));
+
+
+        }
+
+        //GET by id v15
+        //Exception
+        //GetAccountingStringComponentValues3ByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountingStringComponentValuesController_GetAccountingStringComponentValues3ByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AccountingStringComponentValues" },
+                    { "action", "GetAccountingStringComponentValues3ByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("accounting-string-component-values", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _accountingStringsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _accountingStringsController.ControllerContext;
+            var actionDescriptor = _accountingStringsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _accountingStringServiceMock.Setup(x => x.GetAccountingStringComponentValues3ByGuidAsync("123", It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                _accountingStringServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view accounting-string-component-values."));
+                await _accountingStringsController.GetAccountingStringComponentValues3ByGuidAsync("123");
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET v15
+        //Successful
+        //GetAccountingStringComponentValues3Async
+        [TestMethod]
+        public async Task AccountingStringComponentValuesController_GetAccountingStringComponentValues3Async_Permissions()
+        {
+            var expected = _accountingStringComponentValuesCollection3.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AccountingStringComponentValues" },
+                    { "action", "GetAccountingStringComponentValues3Async" }
+                };
+            HttpRoute route = new HttpRoute("accounting-string-component-values", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _accountingStringsController.Request.SetRouteData(data);
+            _accountingStringsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.ViewAccountingStrings);
+
+            var controllerContext = _accountingStringsController.ControllerContext;
+            var actionDescriptor = _accountingStringsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var tuple = new Tuple<IEnumerable<Dtos.AccountingStringComponentValues3>, int>(_accountingStringComponentValuesCollection3, 2);
+
+            _accountingStringServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _accountingStringServiceMock.Setup(x => x.GetAccountingStringComponentValues3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.AccountingStringComponentValues3>(), default(DateTime?), It.IsAny<bool>())).ReturnsAsync(tuple);
+            var accountingStringComponentValues = await _accountingStringsController.GetAccountingStringComponentValues3Async(It.IsAny<Paging>(), effectiveOnFilter, criteriaFilter);
+
+            Object filterObject;
+            _accountingStringsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewAccountingStrings));
+
+
+        }
+
+        //GET v15
+        //Exception
+        //GetAccountingStringComponentValues3Async
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountingStringComponentValuesController_GetAccountingStringComponentValues3Async_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AccountingStringComponentValues" },
+                    { "action", "GetAccountingStringComponentValues3Async" }
+                };
+            HttpRoute route = new HttpRoute("accounting-string-component-values", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _accountingStringsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _accountingStringsController.ControllerContext;
+            var actionDescriptor = _accountingStringsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _accountingStringServiceMock.Setup(i => i.GetAccountingStringComponentValues3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.AccountingStringComponentValues3>(), default(DateTime?), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                _accountingStringServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view accounting-string-component-values."));
+                var accountingStringComponentValues = await _accountingStringsController.GetAccountingStringComponentValues3Async(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
 
         #endregion
     }

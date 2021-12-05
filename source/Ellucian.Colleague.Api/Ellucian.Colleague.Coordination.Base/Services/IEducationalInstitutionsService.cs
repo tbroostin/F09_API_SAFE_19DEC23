@@ -11,7 +11,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
     /// </summary>
     public interface IEducationalInstitutionsService : IBaseService
     {
-        Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.EducationalInstitution>, int>> GetEducationalInstitutionsByTypeAsync(int offset, int limit, Dtos.EnumProperties.EducationalInstitutionType? type, bool bypassCache = false);
+        Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.EducationalInstitution>, int>> GetEducationalInstitutionsByTypeAsync(int offset, int limit, Dtos.EducationalInstitution educationalInstitution, Dtos.EnumProperties.EducationalInstitutionType? type, bool bypassCache = false);
         Task<Ellucian.Colleague.Dtos.EducationalInstitution> GetEducationalInstitutionByGuidAsync(string id, bool bypassCache = false);
     }
 }

@@ -40,17 +40,26 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private Mock<IGeneralLedgerTransactionRepository>  _generalLedgerTransactionRepository;
         private Mock<IColleagueFinanceReferenceDataRepository> _referenceDataRepository;
         private Mock<IPersonRepository> _personRepositoryMock;
+        private Mock<IRoleRepository> roleRepositoryMock;
         private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+        protected Domain.Entities.Role createGeneralLedgerTransactionPostings = new Domain.Entities.Role(2, "CREATE.GL.POSTINGS");
+        protected Domain.Entities.Role createGeneralLedgerTransactionJournalEntries = new Domain.Entities.Role(3, "CREATE.JOURNAL.ENTRIES");
+        protected Domain.Entities.Role createGeneralLedgerTransactionBudgetEntries = new Domain.Entities.Role(4, "CREATE.BUDGET.ENTRIES");
+        protected Domain.Entities.Role createGeneralLedgerTransactionEncumbranceEntries = new Domain.Entities.Role(5, "CREATE.ENCUMBRANCE.ENTRIES");
 
 
         // Define user factories
-        private readonly UserFactoryAll _glUserFactoryAll = new GeneralLedgerCurrentUser.UserFactoryAll();
+        private readonly GeneralLedgerTransactionsUser _glUserFactoryAll = new GeneralLedgerTransactionsUser();
       
         [TestInitialize]
         public void Initialize()
         {
+            createGeneralLedgerTransactionPostings.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.ColleagueFinance.ColleagueFinancePermissionCodes.CreateGLPostings));
+            createGeneralLedgerTransactionBudgetEntries.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.ColleagueFinance.ColleagueFinancePermissionCodes.CreateBudgetEntries));
+            createGeneralLedgerTransactionEncumbranceEntries.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.ColleagueFinance.ColleagueFinancePermissionCodes.CreateEncumbranceEntries));
+            createGeneralLedgerTransactionJournalEntries.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.ColleagueFinance.ColleagueFinancePermissionCodes.CreateJournalEntries));
+            
             BuildValidGeneralLedgerTransactionService();
-
         }
 
         [TestCleanup]
@@ -268,7 +277,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             // Get the necessary configuration settings and build the GL user object.
             _testGlAccountStructure = await _testGlConfigurationRepository.GetAccountStructureAsync();
             _testGlClassConfiguration = await _testGlConfigurationRepository.GetClassConfigurationAsync();
-           var generalLedgerUser = await _testGeneralLedgerUserRepository.GetGeneralLedgerUserAsync(_glUserFactoryAll.CurrentUser.PersonId, _testGlAccountStructure.FullAccessRole, _testGlClassConfiguration.ClassificationName, _testGlClassConfiguration.ExpenseClassValues);
+            var generalLedgerUser = await _testGeneralLedgerUserRepository.GetGeneralLedgerUserAsync(_glUserFactoryAll.CurrentUser.PersonId, _testGlAccountStructure.FullAccessRole, _testGlClassConfiguration.ClassificationName, _testGlClassConfiguration.ExpenseClassValues);
 
            //var glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
 
@@ -798,8 +807,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private void BuildValidGeneralLedgerTransactionService()
         {
             #region Initialize mock objects
-         
-            var roleRepository = new Mock<IRoleRepository>().Object;
+
+            roleRepositoryMock = new Mock<IRoleRepository>();
+            var roleRepository = roleRepositoryMock.Object;
             var loggerObject = new Mock<ILogger>().Object;
 
             _generalLedgerTransactionRepository = new Mock<IGeneralLedgerTransactionRepository>();
@@ -817,8 +827,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var adapterRegistry = new Mock<IAdapterRegistry>();
 
             _personRepositoryMock = new Mock<IPersonRepository>();
-            
+
             #endregion
+            roleRepositoryMock.Setup(repo => repo.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>()
+            {
+                createGeneralLedgerTransactionPostings,
+                createGeneralLedgerTransactionBudgetEntries,
+                createGeneralLedgerTransactionEncumbranceEntries,
+                createGeneralLedgerTransactionJournalEntries
+            });
 
             #region Set up the service
 
@@ -1104,7 +1121,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             return generalLedgerTransactions;
         }
-           
+
         #endregion
 
        
@@ -1433,7 +1450,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task GeneralLedgerTransactionService_GetById3Async_Null_Entity()
             {
-                generalLedgerTransactionRepositoryMock.Setup(x => x.GetById2Async(It.IsAny<string>(),It.IsAny<string>(), It.IsAny<GlAccessLevel>())).ReturnsAsync(null);
+                generalLedgerTransactionRepositoryMock.Setup(x => x.GetById2Async(It.IsAny<string>(),It.IsAny<string>(), It.IsAny<GlAccessLevel>())).ReturnsAsync(() => null);
                 await generalLedgerTransactionService.GetById3Async(guid);
             }
 
@@ -1466,20 +1483,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 var result = await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task GeneralLedgerTransactionService_Create3Async_PermissionsException_NoCrateTransactionPostings()
-            {
-                roleRepositoryMock.Setup(repo => repo.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>()
-                {
-                    //createGeneralLedgerTransactionPostings,
-                    createGeneralLedgerTransactionBudgetEntries,
-                    createGeneralLedgerTransactionEncumbranceEntries,
-                    createGeneralLedgerTransactionJournalEntries
-                });
-                var result = await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
-            }
-
+ 
             [TestMethod]
             [ExpectedException(typeof(PermissionsException))]
             public async Task GeneralLedgerTransactionService_Create3Async_PermissionsException_ActualOpenBalance()
@@ -1682,6 +1686,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 }
             }
 
+            [Ignore]
             [TestMethod]
             [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ValidateGeneralLedgerDto3_Organization_NotNull()
@@ -1994,7 +1999,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             [ExpectedException(typeof(IntegrationApiException))]
             public async Task GeneralLedgerTransactionService_ConvertLedgerTransactionDtoToEntity3Async_SubmittedBy_Null()
             {
-                personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 try
                 {
                     await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
@@ -2013,7 +2018,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             public async Task GeneralLedgerTransactionService_ConvertLedgerTransactionDtoToEntity3Async_PersonId_Null()
             {
                 generalLedgerTransactionDto.SubmittedBy = null;
-                personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 try
                 {
                     await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
@@ -2034,7 +2039,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 generalLedgerTransactionDto.SubmittedBy = null;
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().Reference.Person = null;
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().Reference.Organization = new GuidObject2("0ca1a878-3555-4a3f-a17b-20d054d5e469");
-                personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 try
                 {
                     await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);
@@ -2075,7 +2080,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().Reference.Person = null;
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().Reference.Organization = null;
                 generalLedgerTransactionDto.Transactions.FirstOrDefault().TransactionDetailLines.FirstOrDefault().SubmittedBy = new GuidObject2("0ca1a878-3555-4a3f-a17b-20d054d5e469");
-                personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 try
                 {
                     await generalLedgerTransactionService.Create3Async(generalLedgerTransactionDto);

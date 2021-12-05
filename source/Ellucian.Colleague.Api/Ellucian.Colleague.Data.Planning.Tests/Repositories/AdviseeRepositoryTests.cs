@@ -649,7 +649,7 @@ namespace Ellucian.Colleague.Data.Planning.Tests.Repositories
             {
                 transManagerMock.Setup(manager => manager
                         .ExecuteAsync<GetPersonSearchKeyListRequest, GetPersonSearchKeyListResponse>(It.IsAny<GetPersonSearchKeyListRequest>()))
-                        .ReturnsAsync(null);
+                        .ReturnsAsync(() => null);
                 var lastName = "Gerbil";
                 var result = await adviseeRepository.SearchByNameForExactMatchAsync(lastName);
                 Assert.AreEqual(0, result.Count());
@@ -1072,7 +1072,7 @@ namespace Ellucian.Colleague.Data.Planning.Tests.Repositories
             {
                 transManagerMock.Setup(manager => manager
                     .ExecuteAsync<CreateStudentAdvisementRequest, CreateStudentAdvisementResponse>(It.IsAny<CreateStudentAdvisementRequest>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
                 adviseeRepository = BuildMockAdviseeRepository();
 
                 var planningStudent = await adviseeRepository.PostCompletedAdvisementAsync(knownStudentId1, DateTime.Today, DateTime.Now, knownStudentId2);

@@ -1,5 +1,6 @@
 ﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
+using Ellucian.Data.Colleague;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,5 +33,12 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
         /// <param name="key"></param>
         /// <returns></returns>
         Task<string> GetGuidFromID(string key, string entity);
+
+        /// <summary>
+        /// Get GUID information for a single GUID
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns>Guid Lookup Result</returns>
+        Task<GuidLookupResult> GetInfoFromGuidAsync(string id);
     }
 }

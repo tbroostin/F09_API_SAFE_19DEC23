@@ -35,6 +35,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         {
             Mock<IPersonBaseRepository> personBaseRepositoryMock;
             Mock<IStudentReferenceDataRepository> studentReferenceDataRepositoryMock;
+            Mock<IPersonRepository> personRepositoryMock;
             Mock<ICampusOrganizationRepository> campusOrganizationRepositoryMock;
             private ILogger logger;
             private IConfigurationRepository baseConfigurationRepository;
@@ -60,6 +61,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 personBaseRepositoryMock = new Mock<IPersonBaseRepository>();
                 studentReferenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
+                personRepositoryMock = new Mock<IPersonRepository>();
                 campusOrganizationRepositoryMock = new Mock<ICampusOrganizationRepository>();
                 baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
                 baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
@@ -74,7 +76,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 BuildData();
 
                 campusOrganizationService = new CampusOrganizationService(adapterRegistry, personBaseRepositoryMock.Object,
-                    campusOrganizationRepositoryMock.Object, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, logger);
+                    campusOrganizationRepositoryMock.Object, studentReferenceDataRepositoryMock.Object, personRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, logger);
             }
 
             [TestCleanup]
@@ -209,6 +211,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private Mock<IPersonBaseRepository> personBaseRepository;
             private Mock<ICampusOrganizationRepository> campusOrganizationRepositoryMock;
             private Mock<IStudentReferenceDataRepository> referenceRepositoryMock;
+            private Mock<IPersonRepository> personRepositoryMock;
             private IStudentReferenceDataRepository referenceRepository;
             private ILogger logger;
             private CampusOrganizationService campusOrganizationService;
@@ -228,6 +231,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 campusOrganizationRepositoryMock = new Mock<ICampusOrganizationRepository>();
                 referenceRepositoryMock = new Mock<IStudentReferenceDataRepository>();
                 referenceRepository = referenceRepositoryMock.Object;
+                personRepositoryMock = new Mock<IPersonRepository>();
                 baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
                 baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
                 logger = new Mock<ILogger>().Object;
@@ -245,7 +249,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 referenceRepositoryMock.Setup(repo => repo.GetCampusOrganizationTypesAsync(false)).ReturnsAsync(campusOrganizationTypeCollection);
 
                 campusOrganizationService = new CampusOrganizationService(adapterRegistry, personBaseRepository.Object,
-                    campusOrganizationRepositoryMock.Object, referenceRepository, baseConfigurationRepository, currentUserFactory, roleRepo, logger);
+                    campusOrganizationRepositoryMock.Object, referenceRepository, personRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, logger);
             }
 
             [TestCleanup]
@@ -327,6 +331,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         {
             Mock<ICampusOrganizationRepository> campusOrganizationRepositoryMock;
             Mock<IStudentReferenceDataRepository> studentReferenceDataRepositoryMock;
+            Mock<IPersonRepository> personRepositoryMock;
             Mock<IPersonBaseRepository> personBaseRepositoryMock;
             private ILogger logger;
             private IConfigurationRepository baseConfigurationRepository;
@@ -358,6 +363,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 campusOrganizationRepositoryMock = new Mock<ICampusOrganizationRepository>();
                 studentReferenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
+                personRepositoryMock = new Mock<IPersonRepository>();
                 personBaseRepositoryMock = new Mock<IPersonBaseRepository>();
                 baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
                 baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
@@ -378,7 +384,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     .Returns(Task.FromResult("bb6c261c-3818-4dc3-b693-eb3e64d70d8b"));
 
                 campusOrganizationService = new CampusOrganizationService(adapterRegistry, personBaseRepositoryMock.Object,
-                    campusOrganizationRepositoryMock.Object, studentReferenceDataRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, logger);
+                    campusOrganizationRepositoryMock.Object, studentReferenceDataRepositoryMock.Object, personRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, logger);
             }
 
             [TestCleanup]
@@ -568,6 +574,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private Mock<ICampusOrganizationRepository> campusOrganizationRepository;
             private Mock<IStudentReferenceDataRepository> referenceRepositoryMock;
             private IStudentReferenceDataRepository referenceRepository;
+            private Mock<IPersonRepository> personRepositoryMock;
             private ILogger logger;
             private CampusOrganizationService campusOrganizationService;
             private ICollection<Domain.Student.Entities.CampusInvRole> campusInvolvementRoleCollection = new List<Domain.Student.Entities.CampusInvRole>();
@@ -586,6 +593,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 campusOrganizationRepository = new Mock<ICampusOrganizationRepository>();
                 referenceRepositoryMock = new Mock<IStudentReferenceDataRepository>();
                 referenceRepository = referenceRepositoryMock.Object;
+                personRepositoryMock = new Mock<IPersonRepository>();
                 baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
                 baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
                 logger = new Mock<ILogger>().Object;
@@ -603,7 +611,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 referenceRepositoryMock.Setup(repo => repo.GetCampusInvolvementRolesAsync(false)).ReturnsAsync(campusInvolvementRoleCollection);
 
                 campusOrganizationService = new CampusOrganizationService(adapterRegistry, personBaseRepository.Object,
-                    campusOrganizationRepository.Object, referenceRepository, baseConfigurationRepository, currentUserFactory, roleRepo, logger);
+                    campusOrganizationRepository.Object, referenceRepository, personRepositoryMock.Object, baseConfigurationRepository, currentUserFactory, roleRepo, logger);
             }
 
             [TestCleanup]

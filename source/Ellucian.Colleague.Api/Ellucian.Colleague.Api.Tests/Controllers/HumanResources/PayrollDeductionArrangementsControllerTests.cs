@@ -1,18 +1,23 @@
-//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using Ellucian.Colleague.Api.Controllers.HumanResources;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -323,6 +328,190 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             payrollDeductionArrangementsServiceMock.Setup(x => x.GetPayrollDeductionArrangementsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<Exception>();
             await payrollDeductionArrangementsController.GetPayrollDeductionArrangementByIdAsync(expectedGuid);
         }
+
+        //Permissions
+
+        // Success
+        // Get 7
+        //GetPayrollDeductionArrangementsAsync
+        [TestMethod]
+        public async Task PayrollDeductionArrangementsController_GetPayrollDeductionArrangementsAsync_Permissions()
+        {
+            var payrollDeductionArrangementsTuple = new Tuple<IEnumerable<PayrollDeductionArrangements>, int>(payrollDeductionArrangementsCollection, payrollDeductionArrangementsCollection.Count);
+            Paging paging = new Paging(payrollDeductionArrangementsCollection.Count(), 0);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PayrollDeductionArrangements" },
+                { "action", "GetPayrollDeductionArrangementsAsync" }
+            };
+            HttpRoute route = new HttpRoute("payroll-deduction-arrangements", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            payrollDeductionArrangementsController.Request.SetRouteData(data);
+            payrollDeductionArrangementsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.CreatePayrollDeductionArrangements);
+
+            var controllerContext = payrollDeductionArrangementsController.ControllerContext;
+            var actionDescriptor = payrollDeductionArrangementsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.PayrollDeductionArrangements>, int>(payrollDeductionArrangementsCollection, 5);
+            payrollDeductionArrangementsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            payrollDeductionArrangementsServiceMock.Setup(x => x.GetPayrollDeductionArrangementsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(payrollDeductionArrangementsTuple);
+            var payrollDeductionArrangements = (await payrollDeductionArrangementsController.GetPayrollDeductionArrangementsAsync(paging));
+            
+            Object filterObject;
+            payrollDeductionArrangementsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.CreatePayrollDeductionArrangements));
+
+        }
+
+
+        // Exception
+        // Get 7
+        //GetPayrollDeductionArrangementsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PayrollDeductionArrangementsController_GetPayrollDeductionArrangementsAsync_Invalid_Permissions()
+        {
+            Paging paging = new Paging(payrollDeductionArrangementsCollection.Count(), 0);
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PayrollDeductionArrangements" },
+                { "action", "GetPayrollDeductionArrangementsAsync" }
+            };
+            HttpRoute route = new HttpRoute("payroll-deduction-arrangements", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            payrollDeductionArrangementsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = payrollDeductionArrangementsController.ControllerContext;
+            var actionDescriptor = payrollDeductionArrangementsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.PayrollDeductionArrangements>, int>(payrollDeductionArrangementsCollection, 5);
+
+                
+
+                payrollDeductionArrangementsServiceMock.Setup(x => x.GetPayrollDeductionArrangementsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Throws<PermissionsException>();
+                payrollDeductionArrangementsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view payroll-deduction-arrangements."));
+                var resp = await payrollDeductionArrangementsController.GetPayrollDeductionArrangementsAsync(paging);
+
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        // Success
+        // Get 7
+        //GetPayrollDeductionArrangementByIdAsync
+        [TestMethod]
+        public async Task PayrollDeductionArrangementsController_GetPayrollDeductionArrangementByIdAsync_Permissions()
+        {
+            var expected = payrollDeductionArrangementsCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PayrollDeductionArrangements" },
+                { "action", "GetPayrollDeductionArrangementByIdAsync" }
+            };
+            HttpRoute route = new HttpRoute("payroll-deduction-arrangements", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            payrollDeductionArrangementsController.Request.SetRouteData(data);
+            payrollDeductionArrangementsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.CreatePayrollDeductionArrangements);
+
+            var controllerContext = payrollDeductionArrangementsController.ControllerContext;
+            var actionDescriptor = payrollDeductionArrangementsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+
+
+            var tuple = new Tuple<IEnumerable<Dtos.PayrollDeductionArrangements>, int>(payrollDeductionArrangementsCollection, 5);
+            payrollDeductionArrangementsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            payrollDeductionArrangementsServiceMock.Setup(x => x.GetPayrollDeductionArrangementsByGuidAsync(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
+            var actual = await payrollDeductionArrangementsController.GetPayrollDeductionArrangementByIdAsync(expected.Id);
+
+            Object filterObject;
+            payrollDeductionArrangementsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.CreatePayrollDeductionArrangements));
+
+        }
+
+
+        // Exception
+        // Get 7
+        //GetPayrollDeductionArrangementByIdAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PayrollDeductionArrangementsController_GetPayrollDeductionArrangementByIdAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PayrollDeductionArrangements" },
+                { "action", "GetPayrollDeductionArrangementByIdAsync" }
+            };
+            HttpRoute route = new HttpRoute("payroll-deduction-arrangements", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            payrollDeductionArrangementsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = payrollDeductionArrangementsController.ControllerContext;
+            var actionDescriptor = payrollDeductionArrangementsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.PayrollDeductionArrangements>, int>(payrollDeductionArrangementsCollection, 5);
+
+
+                payrollDeductionArrangementsServiceMock.Setup(x => x.GetPayrollDeductionArrangementsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                payrollDeductionArrangementsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view payroll-deduction-arrangements."));
+                await payrollDeductionArrangementsController.GetPayrollDeductionArrangementByIdAsync(expectedGuid);
+
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
         #endregion
 
         #region PUT
@@ -370,12 +559,88 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         }
 
         [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task PayrollDeductionArrangementsController_PutPayrollDeductionArrangementAsync_Exception()
+        public async Task PayrollDeductionArrangementsController_PutPayrollDeductionArrangementAsync_Permissions()
         {
-            payrollDeductionArrangementsServiceMock.Setup(i => i.UpdatePayrollDeductionArrangementsAsync(It.IsAny<string>(), It.IsAny<Dtos.PayrollDeductionArrangements>())).ThrowsAsync(new Exception());
-            await payrollDeductionArrangementsController.PutPayrollDeductionArrangement2Async("id", payrollDeductionArrangementsCollection.FirstOrDefault());
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PayrollDeductionArrangements" },
+                { "action", "PutPayrollDeductionArrangementAsync" }
+            };
+            HttpRoute route = new HttpRoute("payroll-deduction-arrangements", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            payrollDeductionArrangementsController.Request.SetRouteData(data);
+            payrollDeductionArrangementsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.CreatePayrollDeductionArrangements);
+
+            var controllerContext = payrollDeductionArrangementsController.ControllerContext;
+            var actionDescriptor = payrollDeductionArrangementsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.PayrollDeductionArrangements>, int>(payrollDeductionArrangementsCollection, 5);
+            payrollDeductionArrangementsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            payrollDeductionArrangementsServiceMock.Setup(i => i.GetPayrollDeductionArrangementsByGuidAsync(payrollDeductionArrangementsCollection.FirstOrDefault().Id, It.IsAny<bool>())).ReturnsAsync(payrollDeductionArrangementsCollection.FirstOrDefault());
+            payrollDeductionArrangementsServiceMock.Setup(i => i.UpdatePayrollDeductionArrangementsAsync(payrollDeductionArrangementsCollection.FirstOrDefault().Id, payrollDeductionArrangementsCollection.FirstOrDefault())).ReturnsAsync(payrollDeductionArrangementsCollection.FirstOrDefault());
+            var result = await payrollDeductionArrangementsController.PutPayrollDeductionArrangementAsync(payrollDeductionArrangementsCollection.FirstOrDefault().Id, payrollDeductionArrangementsCollection.FirstOrDefault());
+
+            Object filterObject;
+            payrollDeductionArrangementsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.CreatePayrollDeductionArrangements));
+
         }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PayrollDeductionArrangementsController_PutPayrollDeductionArrangementAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PayrollDeductionArrangements" },
+                { "action", "PutPayrollDeductionArrangementAsync" }
+            };
+            HttpRoute route = new HttpRoute("payroll-deduction-arrangements", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            payrollDeductionArrangementsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = payrollDeductionArrangementsController.ControllerContext;
+            var actionDescriptor = payrollDeductionArrangementsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.PayrollDeductionArrangements>, int>(payrollDeductionArrangementsCollection, 5);
+
+
+
+                payrollDeductionArrangementsServiceMock.Setup(i => i.UpdatePayrollDeductionArrangementsAsync(It.IsAny<string>(), It.IsAny<Dtos.PayrollDeductionArrangements>())).Throws<PermissionsException>();
+                payrollDeductionArrangementsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to update payroll-deduction-arrangements."));
+                await payrollDeductionArrangementsController.PutPayrollDeductionArrangementAsync("id", payrollDeductionArrangementsCollection.FirstOrDefault());
+
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion
 
         #region POST
@@ -420,13 +685,47 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             payrollDeductionArrangementsServiceMock.Setup(i => i.CreatePayrollDeductionArrangementsAsync(It.IsAny<Dtos.PayrollDeductionArrangements>())).ThrowsAsync(new KeyNotFoundException());
             await payrollDeductionArrangementsController.PostPayrollDeductionArrangementAsync(payrollDeductionArrangementsCollection.FirstOrDefault());
         }
-
+       
         [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task PayrollDeductionArrangementsController_PostPayrollDeductionArrangementAsync_Exception()
+        public async Task PayrollDeductionArrangementsController_PostPayrollDeductionArrangementAsync_Permissions()
         {
-            payrollDeductionArrangementsServiceMock.Setup(i => i.CreatePayrollDeductionArrangementsAsync(It.IsAny<Dtos.PayrollDeductionArrangements>())).ThrowsAsync(new Exception());
-            await payrollDeductionArrangementsController.PostPayrollDeductionArrangementsAsync(payrollDeductionArrangementsCollection.FirstOrDefault());
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PayrollDeductionArrangements" },
+                { "action", "PostPayrollDeductionArrangementAsync" }
+            };
+            HttpRoute route = new HttpRoute("payroll-deduction-arrangements", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            payrollDeductionArrangementsController.Request.SetRouteData(data);
+            payrollDeductionArrangementsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.CreatePayrollDeductionArrangements);
+
+            var controllerContext = payrollDeductionArrangementsController.ControllerContext;
+            var actionDescriptor = payrollDeductionArrangementsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.PayrollDeductionArrangements>, int>(payrollDeductionArrangementsCollection, 5);
+            payrollDeductionArrangementsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            payrollDeductionArrangementsServiceMock.Setup(i => i.CreatePayrollDeductionArrangementsAsync(payrollDeductionArrangementsCollection.FirstOrDefault())).ReturnsAsync(payrollDeductionArrangementsCollection.FirstOrDefault());
+            var result = await payrollDeductionArrangementsController.PostPayrollDeductionArrangementAsync(payrollDeductionArrangementsCollection.FirstOrDefault());
+
+            Object filterObject;
+            payrollDeductionArrangementsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.CreatePayrollDeductionArrangements));
+
         }
         #endregion
 

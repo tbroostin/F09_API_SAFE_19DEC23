@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates
 
 using System;
 using System.Collections.Generic;
@@ -11,13 +11,11 @@ using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Tests;
 using Ellucian.Data.Colleague;
-using Ellucian.Web.Cache;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Domain.Exceptions;
-using System.Threading;
 using Ellucian.Colleague.Domain.Base.Transactions;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
@@ -36,6 +34,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private Collection<Opers> opersDataContracts;
         private ShipToCodes shipToCodesDataContract;
         private Collection<Items> itemsDataContracts;
+        private Collection<GlAccts> glAcctsDataContracts;
         private Collection<Projects> projectDataContracts;
         private Collection<PurchaseOrders> purchaseOrdersCollection;
         private Collection<ProjectsLineItems> projectLineItemDataContracts;
@@ -45,6 +44,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
         private string personId = "1";
         private string purchaseOrderIdForTransaction;
+        private ProcurementDocumentFilterCriteria filterCriteria;
 
         [TestInitialize]
         public void Initialize()
@@ -60,6 +60,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
             purchaseOrderIdForTransaction = "";
 
+            filterCriteria = new ProcurementDocumentFilterCriteria() { PersonId = personId };
+
             this.purchaseOrderRepository = BuildPurchaseOrderRepository();
         }
 
@@ -71,6 +73,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             shipToCodesDataContract = null;
             opersDataContracts = null;
             itemsDataContracts = null;
+            glAcctsDataContracts = null;
             projectDataContracts = null;
             projectLineItemDataContracts = null;
             testPurchaseOrderRepository = null;
@@ -263,7 +266,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task GetPurchaseOrdersByGuidAsync_ApplicationException_When_Status_Inprogress()
         {
             string purchaseOrderId = "1";
@@ -295,7 +298,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             // Mock ReadRecord to return a pre-defined, null purchase orders data contract
             var nullPurchaseOrderObject = new PurchaseOrders();
             nullPurchaseOrderObject = null;
-            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).Returns(Task.FromResult(nullPurchaseOrderObject));
+            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult(nullPurchaseOrderObject));
             var purchaseOrder = await this.purchaseOrderRepository.GetPurchaseOrderAsync("1", personId, GlAccessLevel.Full_Access, null);
         }
 
@@ -309,7 +312,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 Recordkey = "1",
                 PoStatus = null
             };
-            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).Returns(Task.FromResult(purchaseOrderObject));
+            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult(purchaseOrderObject));
             var purchaseOrder = await this.purchaseOrderRepository.GetPurchaseOrderAsync("1", personId, GlAccessLevel.Full_Access, null);
         }
 
@@ -323,7 +326,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 Recordkey = "1",
                 PoStatus = new List<string>() { null }
             };
-            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).Returns(Task.FromResult(purchaseOrderObject));
+            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult(purchaseOrderObject));
             var purchaseOrder = await this.purchaseOrderRepository.GetPurchaseOrderAsync("1", personId, GlAccessLevel.Full_Access, null);
         }
 
@@ -337,7 +340,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 Recordkey = "1",
                 PoStatus = new List<string>() { "" }
             };
-            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).Returns(Task.FromResult(purchaseOrderObject));
+            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult(purchaseOrderObject));
             var purchaseOrder = await this.purchaseOrderRepository.GetPurchaseOrderAsync("1", personId, GlAccessLevel.Full_Access, null);
         }
 
@@ -351,7 +354,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 Recordkey = "1",
                 PoStatus = new List<string>() { "Z" }
             };
-            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).Returns(Task.FromResult(purchaseOrderObject));
+            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult(purchaseOrderObject));
             var purchaseOrder = await this.purchaseOrderRepository.GetPurchaseOrderAsync("1", personId, GlAccessLevel.Full_Access, null);
         }
 
@@ -367,7 +370,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 PoMiscName = null,
                 PoVendor = null
             };
-            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).Returns(Task.FromResult(purchaseOrderObject));
+            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult(purchaseOrderObject));
             var purchaseOrder = await this.purchaseOrderRepository.GetPurchaseOrderAsync("1", personId, GlAccessLevel.Full_Access, null);
         }
 
@@ -383,7 +386,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 PoMiscName = new List<string>() { null },
                 PoVendor = null
             };
-            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).Returns(Task.FromResult(purchaseOrderObject));
+            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult(purchaseOrderObject));
             var purchaseOrder = await this.purchaseOrderRepository.GetPurchaseOrderAsync("1", personId, GlAccessLevel.Full_Access, null);
         }
 
@@ -399,7 +402,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 PoMiscName = new List<string>() { "" },
                 PoVendor = null
             };
-            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).Returns(Task.FromResult(purchaseOrderObject));
+            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult(purchaseOrderObject));
             var purchaseOrder = await this.purchaseOrderRepository.GetPurchaseOrderAsync("1", personId, GlAccessLevel.Full_Access, null);
         }
 
@@ -415,7 +418,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 PoMiscName = new List<string>() { "Susty Corp" },
                 PoStatusDate = null
             };
-            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).Returns(Task.FromResult(purchaseOrderObject));
+            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult(purchaseOrderObject));
             var purchaseOrder = await this.purchaseOrderRepository.GetPurchaseOrderAsync("1", personId, GlAccessLevel.Full_Access, null);
         }
 
@@ -430,7 +433,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 PoStatus = new List<string>() { "O" },
                 PoStatusDate = new List<DateTime?>() { null }
             };
-            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).Returns(Task.FromResult(purchaseOrderObject));
+            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult(purchaseOrderObject));
             var purchaseOrder = await this.purchaseOrderRepository.GetPurchaseOrderAsync("1", personId, GlAccessLevel.Full_Access, null);
         }
 
@@ -2142,6 +2145,320 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
         #endregion
 
+        #region QueryPurchaseOrderSummariesAsync
+
+        [TestMethod]
+        public async Task QueryPurchaseOrderSummariesAsync_Base()
+        {
+            string purchaseOrderId = "1";
+            InitDataForPurchaseOrderSummary();
+            this.purchaseOrderDomainEntity = await testPurchaseOrderRepository.GetPurchaseOrderAsync(purchaseOrderId, personId, GlAccessLevel.Full_Access, null);
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+
+            Collection<DataContracts.PurchaseOrders> purchaseOrderDataContractList = new Collection<DataContracts.PurchaseOrders>();
+            purchaseOrderDataContractList.Add(this.purchaseOrderDataContract);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(new Collection<Requisitions>());
+            var expectedPurchaseOrderSummaryList = await testPurchaseOrderRepository.QueryPurchaseOrderSummariesAsync(filterCriteria);
+            var actual = await purchaseOrderRepository.QueryPurchaseOrderSummariesAsync(filterCriteria);
+            Assert.IsNotNull(actual);
+            Assert.IsTrue(actual.ToList().Count == 1);
+
+            var expectedPurchaseOrderSummary = expectedPurchaseOrderSummaryList.Where(x => x.Id == purchaseOrderId).FirstOrDefault();
+            var actualPurchaseOrderSummary = actual.FirstOrDefault();
+
+            //assert on entity properties
+            Assert.AreEqual(expectedPurchaseOrderSummary.Id, actualPurchaseOrderSummary.Id);
+            Assert.AreEqual(expectedPurchaseOrderSummary.Number, actualPurchaseOrderSummary.Number);
+            Assert.AreEqual(expectedPurchaseOrderSummary.Date, actualPurchaseOrderSummary.Date);
+            Assert.AreEqual(expectedPurchaseOrderSummary.Status, actualPurchaseOrderSummary.Status);
+            Assert.AreEqual(expectedPurchaseOrderSummary.InitiatorName, actualPurchaseOrderSummary.InitiatorName);
+            Assert.AreEqual(expectedPurchaseOrderSummary.RequestorName, actualPurchaseOrderSummary.RequestorName);
+            Assert.AreEqual(expectedPurchaseOrderSummary.VendorId, actualPurchaseOrderSummary.VendorId);
+            Assert.AreEqual(expectedPurchaseOrderSummary.VendorName, actualPurchaseOrderSummary.VendorName);
+            Assert.AreEqual(expectedPurchaseOrderSummary.Amount, actualPurchaseOrderSummary.Amount);
+
+            Assert.AreEqual(expectedPurchaseOrderSummary.Approvers.Count, actualPurchaseOrderSummary.Approvers.Count);
+            Assert.AreEqual(expectedPurchaseOrderSummary.Approvers.Where(a => a.ApprovalDate == null).ToList().Count, actualPurchaseOrderSummary.Approvers.Where(a => a.ApprovalDate == null).ToList().Count);
+            Assert.AreEqual(expectedPurchaseOrderSummary.Approvers.Where(a => a.ApprovalDate != null).ToList().Count, actualPurchaseOrderSummary.Approvers.Where(a => a.ApprovalDate != null).ToList().Count);
+        }
+
+        [TestMethod]
+        public async Task QueryPurchaseOrderSummariesAsync_With_CfwebDefaults()
+        {
+            string purchaseOrderId = "1";
+
+            InitDataForPurchaseOrderSummary();
+            this.purchaseOrderDomainEntity = await testPurchaseOrderRepository.GetPurchaseOrderAsync(purchaseOrderId, personId, GlAccessLevel.Full_Access, null);
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+
+            dataReaderMock.Setup<Task<CfwebDefaults>>(d => d.ReadRecordAsync<CfwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(new CfwebDefaults() { CfwebPoStatuses = new List<string> { "0" } });
+            });
+
+            Collection<DataContracts.PurchaseOrders> purchaseOrderDataContractList = new Collection<DataContracts.PurchaseOrders>();
+            purchaseOrderDataContractList.Add(this.purchaseOrderDataContract);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
+
+            var purchaseOrderSummaryList = await testPurchaseOrderRepository.QueryPurchaseOrderSummariesAsync(filterCriteria);
+            var actual = await purchaseOrderRepository.QueryPurchaseOrderSummariesAsync(filterCriteria);
+            Assert.IsNotNull(actual);
+            Assert.IsTrue(actual.ToList().Count == 1);
+            //dataReaderMock.Verify(x => x.SelectAsync("PURCHASE.ORDERS", It.IsAny<string[]>(), It.IsAny<string>()), Times.Once);
+            dataReaderMock.Verify(x => x.SelectAsync("PURCHASE.ORDERS", It.IsAny<string>()), Times.Once);
+
+            var actualPurchaseOrderSummary = purchaseOrderSummaryList.Where(x => x.Id == purchaseOrderId).FirstOrDefault();
+            var purchaseOrderSummary = actual.FirstOrDefault();
+
+            //assert on entity properties
+            Assert.AreEqual(actualPurchaseOrderSummary.Id, purchaseOrderSummary.Id);
+            Assert.AreEqual(actualPurchaseOrderSummary.Number, purchaseOrderSummary.Number);
+            Assert.AreEqual(actualPurchaseOrderSummary.Date, purchaseOrderSummary.Date);
+            Assert.AreEqual(actualPurchaseOrderSummary.Status, purchaseOrderSummary.Status);
+            //Assert.AreEqual(actualRequisitionSummary.StatusDate, requisitionSummary.StatusDate);
+            Assert.AreEqual(actualPurchaseOrderSummary.InitiatorName, purchaseOrderSummary.InitiatorName);
+            Assert.AreEqual(actualPurchaseOrderSummary.RequestorName, purchaseOrderSummary.RequestorName);
+            Assert.AreEqual(actualPurchaseOrderSummary.VendorId, purchaseOrderSummary.VendorId);
+            Assert.AreEqual(actualPurchaseOrderSummary.VendorName, purchaseOrderSummary.VendorName);
+            Assert.AreEqual(actualPurchaseOrderSummary.Amount, purchaseOrderSummary.Amount);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task QueryPurchaseOrderSummariesAsync_EmptyCriteria_ExceptionTest()
+        {
+            var purchaseOrderSummaryList = await this.purchaseOrderRepository.QueryPurchaseOrderSummariesAsync(new ProcurementDocumentFilterCriteria());
+            Assert.IsNull(purchaseOrderSummaryList);
+        }
+
+        [TestMethod]
+        public async Task QueryPurchaseOrderSummariesAsync_CfwebDefaults_EmptyList()
+        {
+            string[] emptyArray = new string[0];
+            //mock SelectAsync to return empty array of string
+            dataReaderMock.Setup(dr => dr.SelectAsync("PURCHASE.ORDERS", It.IsAny<string>())).Returns(() =>
+            {
+                return Task.FromResult(emptyArray);
+            });
+            //mock SelectAsync to return empty array of string
+            dataReaderMock.Setup(dr => dr.SelectAsync("PURCHASE.ORDERS", It.IsAny<string[]>(), It.IsAny<string>())).Returns(() =>
+            {
+                return Task.FromResult(emptyArray);
+            });
+            dataReaderMock.Setup<Task<CfwebDefaults>>(d => d.ReadRecordAsync<CfwebDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).Returns(() =>
+            {
+                return Task.FromResult(new CfwebDefaults() { CfwebReqStatuses = new List<string> { "0" } });
+            });
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(new Collection<PurchaseOrders>());
+            var purchaseOrderSummaryList = await this.purchaseOrderRepository.QueryPurchaseOrderSummariesAsync(filterCriteria);
+            Assert.IsNull(purchaseOrderSummaryList);
+            dataReaderMock.Verify(x => x.SelectAsync("PURCHASE.ORDERS", It.IsAny<string>()), Times.Exactly(1));
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task QueryPurchaseOrderSummariesAsync_NullCriteria_ExceptionTest()
+        {
+            var purchaseOrderSummaryList = await this.purchaseOrderRepository.QueryPurchaseOrderSummariesAsync(null);
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task QueryPurchaseOrderSummariesAsync_NullStatus()
+        {
+            InitDataForPurchaseOrderSummary();
+
+            Collection<DataContracts.PurchaseOrders> purchaseOrderDataContractList = new Collection<DataContracts.PurchaseOrders>();
+
+            var purchaseOrderDataContract = new PurchaseOrders()
+            {
+                Recordkey = "10",
+                PoStatus = null,
+                PoReqIds = new List<string> { "1" },
+                PoDefaultInitiator = "ABC",
+                PoRequestor = "MlOwks",
+                PoVendor = "ABC Company",
+                PoMiscName = new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
+            };
+
+            purchaseOrderDataContractList.Add(purchaseOrderDataContract);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.Requisitions>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(new Collection<Requisitions>());
+            var requisition = await purchaseOrderRepository.QueryPurchaseOrderSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task QueryPurchaseOrderSummariesAsync_StatusListHasBlankValue()
+        {
+            InitDataForPurchaseOrderSummary();
+            Collection<DataContracts.PurchaseOrders> purchaseOrderDataContractList = new Collection<DataContracts.PurchaseOrders>();
+
+            var purchaseOrderDataContract = new PurchaseOrders()
+            {
+                Recordkey = "10",
+                PoStatus = new List<string>() { "" },
+                PoReqIds = new List<string> { "1" },
+                PoDefaultInitiator = "ABC",
+                PoRequestor = "MlOwks",
+                PoVendor = "ABC Company",
+                PoMiscName = new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
+            };
+
+            purchaseOrderDataContractList.Add(purchaseOrderDataContract);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
+            var requisition = await purchaseOrderRepository.QueryPurchaseOrderSummariesAsync(filterCriteria);
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task QueryPurchaseOrderSummariesAsync_StatusDateHasNullValue()
+        {
+            InitDataForPurchaseOrderSummary();
+            Collection<DataContracts.PurchaseOrders> purchaseOrderDataContractList = new Collection<DataContracts.PurchaseOrders>();
+
+            var purchaseOrderDataContract = new PurchaseOrders()
+            {
+                Recordkey = "10",
+                PoStatus = new List<string>() { "P" },
+                PoStatusDate = new List<DateTime?>() { null },
+                PoReqIds = new List<string> { "1" },
+                PoDefaultInitiator = "ABC",
+                PoRequestor = "MlOwks",
+                PoVendor = "ABC Company",
+                PoMiscName = new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
+            };
+
+            purchaseOrderDataContractList.Add(purchaseOrderDataContract);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
+            var purchaseOrderSummaryList = await purchaseOrderRepository.QueryPurchaseOrderSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task QueryPurchaseOrderSummariesAsync_InvalidPurchaseOrderStatus()
+        {
+            string PurchaseOrderId = "1";
+
+            InitDataForPurchaseOrderSummary();
+            this.purchaseOrderDomainEntity = await testPurchaseOrderRepository.GetPurchaseOrderAsync(PurchaseOrderId, personId, GlAccessLevel.Full_Access, null);
+            ConvertDomainEntitiesIntoDataContracts();
+            InitializeMockMethods();
+
+            Collection<DataContracts.PurchaseOrders> purchaseOrderDataContractList = new Collection<DataContracts.PurchaseOrders>();
+
+            // Mock ReadRecord to return a pre-defined, null requisition data contract
+            var purchaseOrderDataContract = new PurchaseOrders()
+            {
+                Recordkey = "1",
+                PoStatus = new List<string>() { "Z" },
+                PoReqIds = new List<string> { "1" },
+                PoDefaultInitiator = "ABC",
+                PoRequestor = "MlOwks",
+                PoVendor = "ABC Company",
+                PoMiscName = new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
+            };
+            purchaseOrderDataContractList.Add(purchaseOrderDataContract);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
+            var purchaseOrderSummaryList = await purchaseOrderRepository.QueryPurchaseOrderSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task QueryPurchaseOrderSummariesAsync_NullStatusDate()
+        {
+            InitDataForPurchaseOrderSummary();
+            Collection<DataContracts.PurchaseOrders> purchaseOrderDataContractList = new Collection<DataContracts.PurchaseOrders>();
+
+            var purchaseOrderDataContract = new PurchaseOrders()
+            {
+                Recordkey = "10",
+                PoStatus = new List<string>() { "P" },
+                PoStatusDate = null,
+                PoReqIds = new List<string> { "1" },
+                PoDefaultInitiator = "ABC",
+                PoRequestor = "MlOwks",
+                PoVendor = "ABC Company",
+                PoMiscName = new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
+            };
+
+            purchaseOrderDataContractList.Add(purchaseOrderDataContract);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
+            var purchaseOrderSummaryList = await purchaseOrderRepository.QueryPurchaseOrderSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task QueryPurchaseOrderSummariesAsync_StatusDateListHasNullValue()
+        {
+            InitDataForPurchaseOrderSummary();
+            Collection<DataContracts.PurchaseOrders> purchaseOrderDataContractList = new Collection<DataContracts.PurchaseOrders>();
+
+            var purchaseOrderDataContract = new PurchaseOrders()
+            {
+                Recordkey = "10",
+                PoStatus = new List<string>() { "P" },
+                PoStatusDate = new List<DateTime?>() { null },
+                PoReqIds = new List<string> { "1" },
+                PoDefaultInitiator = "ABC",
+                PoRequestor = "MlOwks",
+                PoVendor = "ABC Company",
+                PoMiscName = new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
+            };
+
+
+            purchaseOrderDataContractList.Add(purchaseOrderDataContract);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
+            var purchaseOrderSummaryList = await purchaseOrderRepository.QueryPurchaseOrderSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ApplicationException))]
+        public async Task QueryPurchaseOrderSummariesAsync_NullPODate()
+        {
+            InitDataForPurchaseOrderSummary();
+            Collection<DataContracts.PurchaseOrders> purchaseOrderDataContractList = new Collection<DataContracts.PurchaseOrders>();
+
+            var purchaseOrderDataContract = new PurchaseOrders()
+            {
+                Recordkey = "10",
+                PoStatus = new List<string>() { "P" },
+                PoStatusDate = new List<DateTime?>() { new DateTime(2015, 1, 1) },
+                PoDate = null,
+                PoReqIds = new List<string> { "1" },
+                PoDefaultInitiator = "ABC",
+                PoRequestor = "MlOwks",
+                PoVendor = "ABC Company",
+                PoMiscName = new List<string> { "ABC" },
+                PoAuthorizations = new List<string> { "0000001", "0000002" },
+                PoNextApprovalIds = new List<string> { "0000003" }
+            };
+
+
+            purchaseOrderDataContractList.Add(purchaseOrderDataContract);
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.PurchaseOrders>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(purchaseOrderDataContractList);
+            var purchaseOrderSummaryList = await purchaseOrderRepository.QueryPurchaseOrderSummariesAsync(filterCriteria);
+        }
+
+        #endregion
+
         #region Private methods
         private PurchaseOrderRepository BuildPurchaseOrderRepository()
         {
@@ -2277,7 +2594,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 .ReturnsAsync(resp);
 
             // Mock ReadRecord to return a pre-defined Purchase Orders data contract.
-            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).Returns(Task.FromResult(this.purchaseOrderDataContract));
+            dataReaderMock.Setup<Task<PurchaseOrders>>(acc => acc.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult(this.purchaseOrderDataContract));
 
             // Mock ReadRecord to return a pre-defined ShipTo data contract.
             dataReaderMock.Setup<Task<ShipToCodes>>(acc => acc.ReadRecordAsync<ShipToCodes>(It.IsAny<string>(), true)).Returns(Task.FromResult(this.shipToCodesDataContract));
@@ -2307,6 +2624,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 return Task.FromResult(opersResponse);
             });
 
+            dataReaderMock.Setup<Task<Collection<GlAccts>>>(acc => acc.BulkReadRecordAsync<GlAccts>(It.IsAny<string[]>(), true)).Returns(() =>
+            {
+                return Task.FromResult(glAcctsDataContracts);
+            });
 
             // Mock BulkReadRecord to return a list of Projects data contracts
 
@@ -2527,6 +2848,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         private void ConvertLineItemsIntoDataContracts()
         {
             this.itemsDataContracts = new Collection<Items>();
+            this.glAcctsDataContracts = new Collection<GlAccts>();
             this.projectDataContracts = new Collection<Projects>();
             this.projectLineItemDataContracts = new Collection<ProjectsLineItems>();
 
@@ -2627,6 +2949,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                         ItmPoPrjItemIdsAssocMember = glDistr.ProjectLineItemId,
                         ItmPoGlAmtAssocMember = localGlAmount,
                         ItmPoGlForeignAmtAssocMember = foreignGlAmount
+                    });
+
+                    this.glAcctsDataContracts.Add(new GlAccts()
+                    {
+                        Recordkey = glDistr.GlAccountNumber
                     });
 
                     this.projectDataContracts.Add(new Projects()
@@ -2826,7 +3153,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             {
                 transManagerMock.Setup(mgr => mgr.ExecuteAsync<UpdateCreatePoRequest, UpdateCreatePoResponse>(It.IsAny<UpdateCreatePoRequest>())).ReturnsAsync(response);
                 dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dicResult);
-                dataReaderMock.Setup(r => r.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).ReturnsAsync(purchaseOrders);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(purchaseOrders);
                 dataReaderMock.Setup(r => r.ReadRecordAsync<Base.DataContracts.Person>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(person);
                 dataReaderMock.Setup(d => d.ReadRecordAsync<Base.DataContracts.IntlParams>("INTL.PARAMS", "INTERNATIONAL", It.IsAny<bool>())).ReturnsAsync(intlParams);
                 dataReaderMock.Setup(d => d.ReadRecordAsync<PurDefaults>("CF.PARMS", "PUR.DEFAULTS", true)).ReturnsAsync(purDefaults);
@@ -2863,7 +3190,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task PurchaseOrdersService_CreatePurchaseOrdersAsync_Get_BuildPurchaseOrder_Exception_PurchaseOrder_Null()
             {
-                dataReaderMock.Setup(r => r.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
 
                 await purchaseOrderRepository.CreatePurchaseOrdersAsync(purchaseOrder);
             }
@@ -3058,7 +3385,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             {
                 transManagerMock.Setup(mgr => mgr.ExecuteAsync<UpdateCreatePoRequest, UpdateCreatePoResponse>(It.IsAny<UpdateCreatePoRequest>())).ReturnsAsync(response);
                 dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dicResult);
-                dataReaderMock.Setup(r => r.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).ReturnsAsync(purchaseOrders);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(purchaseOrders);
                 dataReaderMock.Setup(r => r.ReadRecordAsync<Base.DataContracts.Person>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(person);
                 dataReaderMock.Setup(d => d.ReadRecordAsync<Base.DataContracts.IntlParams>("INTL.PARAMS", "INTERNATIONAL", It.IsAny<bool>())).ReturnsAsync(intlParams);
                 dataReaderMock.Setup(d => d.ReadRecordAsync<PurDefaults>("CF.PARMS", "PUR.DEFAULTS", true)).ReturnsAsync(purDefaults);
@@ -3086,7 +3413,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task PurchaseOrdersService_UpdatePurchaseOrdersAsync_Get_BuildPurchaseOrder_Exception_PurchaseOrder_Null()
             {
-                dataReaderMock.Setup(r => r.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
 
                 await purchaseOrderRepository.UpdatePurchaseOrdersAsync(purchaseOrder);
             }

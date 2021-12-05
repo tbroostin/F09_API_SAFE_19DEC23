@@ -121,6 +121,26 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 var faculty = await repository.GetAsync(id);
                 loggerMock.Verify(l => l.Info("Unable to retrieve faculty information for ID 1234567."));
             }
+
+            [TestMethod]
+            public async Task FacultyRepository_GetAsync_PersonDisplayName_Null()
+            {
+                var emptyStwebDefault = new StwebDefaults();
+                dataReaderMock.Setup(r => r.ReadRecordAsync<StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS", true)).ReturnsAsync(emptyStwebDefault);
+                Domain.Student.Entities.Faculty faculty = await repository.GetAsync("1234567");
+                Assert.IsNull(faculty.PersonDisplayName);
+            }
+
+            [TestMethod]
+            public async Task FacultyRepository_GetAsync_PersonDisplayName()
+            {
+                Domain.Student.Entities.Faculty faculty = await repository.GetAsync("0000036");
+                Assert.IsNotNull(faculty.PersonDisplayName);
+                Assert.AreEqual("M. K. Smith", faculty.PersonDisplayName.FullName);
+                Assert.AreEqual("M.", faculty.PersonDisplayName.FirstName);
+                Assert.AreEqual("FACULTY", faculty.PersonDisplayName.HierarchyCode);
+                Assert.AreEqual("Smith", faculty.PersonDisplayName.LastName);
+            }
         }
 
         [TestClass]
@@ -359,6 +379,26 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
             // ADDRESS
             MockRecordsAsync<Base.DataContracts.Address>("ADDRESS", TestFacultyRepository.GetAllFacultyAddressRecords());
+
+            var stWebDflt = BuildStwebDefaults();
+            dataReaderMock.Setup(r => r.ReadRecordAsync<StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS", true)).ReturnsAsync(stWebDflt);
+
+            // mock data reader for getting the STUDENT Name Addr Hierarchy
+            dataReaderMock.Setup<Task<Ellucian.Colleague.Data.Base.DataContracts.NameAddrHierarchy>>(a =>
+                a.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.NameAddrHierarchy>("NAME.ADDR.HIERARCHY", "FACULTY", true))
+                .ReturnsAsync(new Ellucian.Colleague.Data.Base.DataContracts.NameAddrHierarchy()
+                {
+                    Recordkey = "FACULTY",
+                    NahNameHierarchy = new List<string>() { "Mr", "FAC", "PF" }
+                });
+        }
+
+        private static StwebDefaults BuildStwebDefaults()
+        {
+            StwebDefaults stwebDefaults = new StwebDefaults();
+            stwebDefaults.Recordkey = "STWEB.DEFAULTS";
+            stwebDefaults.StwebFacAdvDispNameHier = "FACULTY";
+            return stwebDefaults;
         }
     }
 }

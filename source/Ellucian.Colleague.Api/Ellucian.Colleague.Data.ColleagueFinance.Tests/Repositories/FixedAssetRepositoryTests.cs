@@ -3,7 +3,9 @@ using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Colleague.Domain.Base.Transactions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -145,12 +147,43 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 private void InitializeTestMock()
                 {
                     dataReaderMock.Setup(d => d.ReadRecordAsync<DataContracts.FixedAssets>(It.IsAny<string>(), true)).ReturnsAsync(fixedAssets.FirstOrDefault());
-                    dataReaderMock.Setup(d => d.SelectAsync("FIXED.ASSETS", It.IsAny<string>())).ReturnsAsync(new List<string>() { "CED", "CHP", "DIN" }.ToArray<string>());                    
+                    dataReaderMock.Setup(d => d.SelectAsync("FIXED.ASSETS", It.IsAny<string>())).ReturnsAsync(new List<string>() { "CED", "CHP", "DIN" }.ToArray<string>());
                     dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.FixedAssets>("FIXED.ASSETS", It.IsAny<string[]>(), true)).ReturnsAsync(fixedAssets);
                     dataReaderMock.Setup(d => d.BulkReadRecordAsync<Insurance>("INSURANCE", It.IsAny<string[]>(), true)).ReturnsAsync(insurances);
                     dataReaderMock.Setup(d => d.BulkReadRecordAsync<CalcMethods>("CALC.METHODS", string.Empty, true)).ReturnsAsync(calculationMethods);
-                    dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.GlAccts>("GL.ACCTS", It.IsAny<string[]>(), true)).ReturnsAsync(generalLedgerAccounts);                    
+                    dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.GlAccts>("GL.ACCTS", It.IsAny<string[]>(), true)).ReturnsAsync(generalLedgerAccounts);
                     dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(lookUpResult);
+
+                    var ids = fixedAssets.Select(x => x.Recordkey).ToList();
+
+                    GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                    {
+                        Offset = 0,
+                        Limit = 100,
+                        CacheName = "AllFixedAssets",
+                        Entity = "",
+                        Sublist = ids,
+                        TotalCount = ids.Count,
+                        KeyCacheInfo = new List<KeyCacheInfo>()
+                       {
+                           new KeyCacheInfo()
+                           {
+                               KeyCacheMax = 5905,
+                               KeyCacheMin = 1,
+                               KeyCachePart = "000",
+                               KeyCacheSize = 5905
+                           },
+                           new KeyCacheInfo()
+                           {
+                               KeyCacheMax = 7625,
+                               KeyCacheMin = 5906,
+                               KeyCachePart = "001",
+                               KeyCacheSize = 1720
+                           }
+                       }
+                    };
+                    transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                        .ReturnsAsync(resp);
                 }
 
                 #endregion
@@ -166,43 +199,72 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 }
 
                 [TestMethod]
-                [ExpectedException(typeof(KeyNotFoundException))]
+                [ExpectedException(typeof(RepositoryException))]
                 public async Task FixedAssetsRepository_GetFixedAssetstsAsync_KeyNotFound_Insurance()
                 {
-                    var insurances = new Collection<Insurance>()
+                    try
                     {
-                        new Insurance() { Recordkey = "2", InsAmtCoverage = 15000 }
-                    };
-                    dataReaderMock.Setup(d => d.BulkReadRecordAsync<Insurance>("INSURANCE", It.IsAny<string[]>(), true)).ReturnsAsync(insurances);
 
-                    var result = await fixedAssetsRepository.GetFixedAssetsAsync(0, 10, false);
+                        var insurances = new Collection<Insurance>()
+                        {
+                            new Insurance() { Recordkey = "99999", InsAmtCoverage = 15000 }
+                        };
+                        dataReaderMock.Setup(d => d.BulkReadRecordAsync<Insurance>("INSURANCE", It.IsAny<string[]>(), true)).ReturnsAsync(insurances);
+
+                        await fixedAssetsRepository.GetFixedAssetsAsync(0, 10, false);
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        Assert.IsNotNull(ex.Errors);
+                        Assert.AreEqual("Insurance record not found for key: 1", ex.Errors[0].Message);
+                        throw;
+                    }
+
                 }
 
                 [TestMethod]
-                [ExpectedException(typeof(KeyNotFoundException))]
+                [ExpectedException(typeof(RepositoryException))]
                 public async Task FixedAssetsRepository_GetFixedAssetstsAsync_KeyNotFound_CalculationMethod()
                 {
-                    calculationMethods = new Collection<CalcMethods>()
+                    try
                     {
-                        new CalcMethods() { Recordkey = "2", CalcDesc = "Calculation method 2" }
-                    };
-                    dataReaderMock.Setup(d => d.BulkReadRecordAsync<CalcMethods>("CALC.METHODS", string.Empty, true)).ReturnsAsync(calculationMethods);
 
-                    var result = await fixedAssetsRepository.GetFixedAssetsAsync(0, 10, false);
+                        calculationMethods = new Collection<CalcMethods>()
+                        {
+                            new CalcMethods() { Recordkey = "9999", CalcDesc = "Calculation method 2" }
+                        };
+                        dataReaderMock.Setup(d => d.BulkReadRecordAsync<CalcMethods>("CALC.METHODS", string.Empty, true)).ReturnsAsync(calculationMethods);
+
+                        await fixedAssetsRepository.GetFixedAssetsAsync(0, 10, false);
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        Assert.IsNotNull(ex.Errors);
+                        Assert.AreEqual("Calculation method not found for id: 1", ex.Errors[0].Message);
+                        throw;
+                    }
                 }
 
-
                 [TestMethod]
-                [ExpectedException(typeof(KeyNotFoundException))]
+                [ExpectedException(typeof(RepositoryException))]
                 public async Task FixedAssetsRepository_GetFixedAssetstsAsync_KeyNotFound_GeneralLedgerAccount()
                 {
-                    generalLedgerAccounts = new Collection<DataContracts.GlAccts>()
+                    try
                     {
-                        new DataContracts.GlAccts() { Recordkey = "22_00_01_00_00000_10110", RecordGuid = "9bd60526-a914-404d-bc49-9e4ca77b57c1" }
-                    };
-                    dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.GlAccts>("GL.ACCTS", It.IsAny<string[]>(), true)).ReturnsAsync(generalLedgerAccounts);
+                        generalLedgerAccounts = new Collection<DataContracts.GlAccts>()
+                        {
+                            new DataContracts.GlAccts() { Recordkey = "99999", RecordGuid = "9bd60526-a914-404d-bc49-9e4ca77b57c1" }
+                        };
+                        dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.GlAccts>("GL.ACCTS", It.IsAny<string[]>(), true)).ReturnsAsync(generalLedgerAccounts);
 
-                    var result = await fixedAssetsRepository.GetFixedAssetsAsync(0, 10, false);
+                        await fixedAssetsRepository.GetFixedAssetsAsync(0, 10, false);
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        Assert.IsNotNull(ex.Errors);
+                        Assert.AreEqual("Gl account not found for id: 11_00_01_00_00000_10110", ex.Errors[0].Message);
+                        throw;
+                    }
                 }
 
                 #endregion

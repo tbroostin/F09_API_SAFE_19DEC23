@@ -119,7 +119,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             [TestMethod]
             public async Task PayScalesService_GetPayScalesAsync_Repository_Returns_Null()
             {
-                payScalesRepositoryMock.Setup(p => p.GetPayScalesAsync(false)).ReturnsAsync(null);
+                payScalesRepositoryMock.Setup(p => p.GetPayScalesAsync(false)).ReturnsAsync(() => null);
 
                 var result = await payScalesService.GetPayScalesAsync();
 

@@ -135,7 +135,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 [TestMethod]
                 public async Task StudentFAAPSRepository_GetSapResultsAsync_PersonId_Null()
                 {
-                    dataReaderMock.Setup(x => x.ReadRecordAsync<FinAid>("FIN.AID", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                    dataReaderMock.Setup(x => x.ReadRecordAsync<FinAid>("FIN.AID", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                     var result = await studentFAAcademicProgressStatusesRepository.GetSapResultsAsync(0, 10, "1", "", "", false);
                     Assert.AreEqual(result.Item2, 0);
                 }
@@ -143,7 +143,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 [TestMethod]
                 public async Task StudentFAAPSRepository_GetSapResultsAsync_Result_Null()
                 {
-                    dataReaderMock.Setup(d => d.SelectAsync("SAP.RESULTS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(null);
+                    dataReaderMock.Setup(d => d.SelectAsync("SAP.RESULTS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(() => null);
                     var result = await studentFAAcademicProgressStatusesRepository.GetSapResultsAsync(0, 10, "", "", "", false);
                     Assert.AreEqual(result.Item2, 0);
                 }
@@ -199,7 +199,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 [ExpectedException(typeof(KeyNotFoundException))]
                 public async Task StudentFAAPSRepository_GetSapResultByGuidAsync_DataContractAsNull()
                 {
-                    dataReaderMock.Setup(d => d.ReadRecordAsync<SapResults>("SAP.RESULTS", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                    dataReaderMock.Setup(d => d.ReadRecordAsync<SapResults>("SAP.RESULTS", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                     await studentFAAcademicProgressStatusesRepository.GetSapResultByGuidAsync(guid);
                 }
 

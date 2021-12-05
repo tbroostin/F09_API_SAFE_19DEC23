@@ -88,7 +88,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             public async Task ClaimsRecordNotFoundTest()
             {
                 dataReaderMock.Setup(dr => dr.ReadRecordAsync<BankingAuthClaims>(It.IsAny<string>(), true))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 await repositoryUnderTest.Get(inputToken);
             }

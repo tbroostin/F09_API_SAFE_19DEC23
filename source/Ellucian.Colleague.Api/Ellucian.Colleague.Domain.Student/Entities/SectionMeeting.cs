@@ -11,7 +11,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
     /// A meeting time contains information that describes when a section is offered. 
     /// </summary>
     [Serializable]
-    public class SectionMeeting
+    public class SectionMeeting: IComparable<SectionMeeting>
     {
         /// <summary>
         /// Section meeting ID
@@ -289,6 +289,106 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                     AddFacultyId(id);
                 }
             }
+        }
+        /// <summary>
+        /// Compariosn method to compare section meetings so that sections can be sorted on meetings
+        /// </summary>
+        /// <param name="compareWith"></param>
+        /// <returns></returns>
+        public int CompareTo(SectionMeeting compareWith)
+        {
+            // Date, Instructional Method, Days, Time, Building, Room - in sequence comparison
+            //compare start date
+            if (this.StartDate.HasValue && compareWith.StartDate.HasValue)
+            {
+                if (this.StartDate.Value > compareWith.StartDate.Value)
+                {
+                    return 1;
+
+                }
+                else if (this.StartDate.Value < compareWith.StartDate.Value)
+                {
+                    return -1;
+                }
+            }
+
+            if (this.StartDate.HasValue && !compareWith.StartDate.HasValue)
+            {
+                return -1;
+            }
+            if (!this.StartDate.HasValue && compareWith.StartDate.HasValue)
+            {
+                return 1;
+            }
+
+            //compare insructional methods if dates match or are null
+            var instructionMethodCompare = this.InstructionalMethodCode.CompareTo(compareWith.InstructionalMethodCode);
+            if (instructionMethodCompare != 0)
+            {
+                return instructionMethodCompare;
+            }
+            //now compare days since instrictional methods and dates were same. Days are enum values, simple comparison of each item in Days collection will work
+            //We only need to compare the count of elements in both the collection, otherwise we assume days are equal.
+
+            
+            if((this.Days==null || this.Days.Count ==0) && (compareWith.Days!=null && compareWith.Days.Count>0))
+            {
+                return -1;
+            }
+            if ((this.Days != null && this.Days.Count > 0) && (compareWith.Days == null || compareWith.Days.Count == 0))
+            {
+                return 1;
+            }
+            int countOfDaysthis = 0;
+            int countOfDaysInFirstMeeting = 0;
+            int countOfDaysInOtherMeeting = 0;
+            if (this.Days != null)
+            {
+                countOfDaysInFirstMeeting = this.Days.Count;
+            }
+            if (compareWith.Days != null)
+            {
+                countOfDaysInOtherMeeting = compareWith.Days.Count;
+            }
+            if (countOfDaysInFirstMeeting < countOfDaysInOtherMeeting)
+            {
+                countOfDaysthis = countOfDaysInFirstMeeting;
+            }
+            else
+            {
+                countOfDaysthis = countOfDaysInOtherMeeting;
+            }
+            for (int i = 0; i < countOfDaysthis; i++)
+            {
+                if (this.Days[i] > compareWith.Days[i])
+                {
+                    return 1;
+                }
+                if (this.Days[i] < compareWith.Days[i])
+                {
+                    return -1;
+                }
+            }
+            //here days, instructional method, dates are same. Now check the start time 
+            if (this.StartTime > compareWith.StartTime)
+            {
+                return 1;
+            }
+            else if (this.StartTime < compareWith.StartTime)
+            {
+                return -1;
+            }
+            // //here start time,  days, instructional method, dates are same. Now check the bulidings and rooms (like BLDG*ROOM)
+            if (string.Compare(this.Room, compareWith.Room) > 0)
+            {
+                return 1;
+            }
+            else if (string.Compare(this.Room, compareWith.Room) < 0)
+            {
+                return -1;
+            }
+            //when reached here it means everythig matches therefore section meeting is same.
+            return 0;
         }
     }
 }

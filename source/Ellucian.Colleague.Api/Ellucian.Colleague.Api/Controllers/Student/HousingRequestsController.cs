@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -22,6 +22,7 @@ using System.Net;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.ModelBinding;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -39,7 +40,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <summary>
         /// Initializes a new instance of the HousingRequestsController class.
         /// </summary>
-        /// <param name="housingRequestService">Service of type <see cref="IHousingRequestsService">IHousingRequestsService</see></param>
+        /// <param name="housingRequestService">Service of type <see cref="IHousingRequestService">IHousingRequestsService</see></param>
         /// <param name="logger">Interface to logger</param>
         public HousingRequestsController(IHousingRequestService housingRequestService, ILogger logger)
         {
@@ -51,8 +52,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Return all housingRequests
         /// </summary>
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
-        /// <returns>List of HousingRequests <see cref="Dtos.HousingRequests"/> objects representing matching housingRequests</returns>
-        [HttpGet]
+        /// <returns>List of HousingRequests <see cref="Dtos.HousingRequest"/> objects representing matching housingRequests</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, PermissionsFilter(new string[]{StudentPermissionCodes.ViewHousingRequest, StudentPermissionCodes.CreateHousingRequest})]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetHousingRequestsAsync(Paging page)
@@ -67,6 +69,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _housingRequestService.ValidatePermissions(GetPermissionsMetaData());
+
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -88,7 +92,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException e)
             {
@@ -116,9 +120,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Read (GET) a housingRequests using a GUID
         /// </summary>
         /// <param name="guid">GUID to desired housingRequests</param>
-        /// <returns>A housingRequests object <see cref="Dtos.HousingRequest"/> in EEDM format</returns>
-        //[HttpGet]
-        [HttpGet, EedmResponseFilter]
+        /// <returns>A housingRequests object <see cref="Dtos.HousingRequest"/> in EEDM format</returns>       
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewHousingRequest, StudentPermissionCodes.CreateHousingRequest })]
         public async Task<Dtos.HousingRequest> GetHousingRequestByGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -128,6 +132,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _housingRequestService.ValidatePermissions(GetPermissionsMetaData());
+
                 var bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {
@@ -158,7 +164,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException e)
             {
@@ -187,7 +193,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="housingRequest">DTO of the new housingRequests</param>
         /// <returns>A housingRequests object <see cref="Dtos.HousingRequest"/> in EEDM format</returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(new string[]{StudentPermissionCodes.CreateHousingRequest})]
         public async Task<Dtos.HousingRequest> PostHousingRequestAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.HousingRequest housingRequest)
         {            
             if (housingRequest == null)
@@ -212,6 +218,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _housingRequestService.ValidatePermissions(GetPermissionsMetaData());
+
                 //call import extend method that needs the extracted extension data and the config
                 await _housingRequestService.ImportExtendedEthosData(await ExtractExtendedData(await _housingRequestService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
@@ -247,7 +255,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {
@@ -262,7 +270,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID of the housingRequests to update</param>
         /// <param name="housingRequest">DTO of the updated housingRequests</param>
         /// <returns>A housingRequests object <see cref="Dtos.HousingRequest"/> in EEDM format</returns>
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(new string[]{StudentPermissionCodes.CreateHousingRequest})]
         public async Task<Dtos.HousingRequest> PutHousingRequestAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.HousingRequest housingRequest)
         {
             //make sure id was specified on the URL
@@ -299,6 +307,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _housingRequestService.ValidatePermissions(GetPermissionsMetaData());
+
                 //get Data Privacy List
                 var dpList = await _housingRequestService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
@@ -339,7 +349,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {

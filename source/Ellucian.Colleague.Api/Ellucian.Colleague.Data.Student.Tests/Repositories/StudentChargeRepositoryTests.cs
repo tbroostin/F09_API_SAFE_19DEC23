@@ -269,7 +269,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(a => a.SelectAsync("AR.INV.ITEMS.INTG", It.IsAny<string>())).ReturnsAsync(studentChargeIds.ToArray());
 
                 dataReaderMock.Setup(a => a.BulkReadRecordAsync<ArInvItemsIntg>("AR.INV.ITEMS.INTG", It.IsAny<string[]>(), It.IsAny<bool>()))
-                   .ReturnsAsync(null);
+                   .ReturnsAsync(() => null);
 
                 var actuals = await studentChargeRepo.GetAsync(0, 5, false, "0000011", "2015/SP", "TUI", "tuition", "charge Type", "usage");
                 Assert.IsNotNull(actuals);
@@ -345,7 +345,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 GuidLookup[] lookup = new GuidLookup[] { new GuidLookup(guid) };
                 var lookUpResults = new Dictionary<string, GuidLookupResult>();
                 lookUpResults.Add("AR.INV.ITEMS.INTG", new GuidLookupResult() { Entity = "AR.INV.ITEMS.INTG", PrimaryKey = knownArInvItemsIntgId1, SecondaryKey = "Somekey" });
-                dataReaderMock.Setup(i => i.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+                dataReaderMock.Setup(i => i.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
 
                 dataReaderMock.Setup(i => i.ReadRecordAsync<ArInvItemsIntg>(It.IsAny<string>(), true)).ReturnsAsync(arInvItemsIntg.First());
 

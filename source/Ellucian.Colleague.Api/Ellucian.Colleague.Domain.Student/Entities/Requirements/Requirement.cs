@@ -49,12 +49,13 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
         
         public List<Subrequirement> SubRequirements { get; set; }
 
-        //Says whether a requirement satisfying one requirement type can be
-        //used in this requirement, and whether or not the exclusion only
-        //applies to the first occurrence of that type or to all.
-        public List<string> Exclusions { get; set; }
-
-
+        /// <summary>
+        /// This is the list of all the requirment exclusions.
+        ///Says whether a requirement satisfying one requirement type can be
+        ///used in this requirement, and whether or not the exclusion only
+        ///applies to the first occurrence of that type or to all.
+        /// </summary>
+        public List<RequirementBlockExclusion> RequirementExclusions { get; set; }
 
         public Requirement(string id, string requirementCode, string description, string gradeSchemeCode, RequirementType requirementType, ProgramRequirements programRequirements = null)
             :base(id, requirementCode)
@@ -65,12 +66,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
             GradeSchemeCode = gradeSchemeCode;
             RequirementType = requirementType;
             ProgramRequirements = programRequirements;
-
             SubRequirements = new List<Subrequirement>();
-            Exclusions = new List<string>();
+            RequirementExclusions = new List<RequirementBlockExclusion>();
                         
         }
-
 
         public RequirementResult Evaluate(List<SubrequirementResult> subrequirementresults)
         {

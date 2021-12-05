@@ -1052,7 +1052,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             {
                 dataReaderMock
                 .Setup<Task<Collection<TaAcyr>>>(reader => reader.BulkReadRecordAsync<TaAcyr>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
                 await actualStudentAwardRepository.GetStudentAwardAsync(studentId, studentAwardYear, awardCode, allAwards, allAwardStatuses);
             }
 
@@ -1061,7 +1061,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             {
                 dataReaderMock
                 .Setup<Task<SlAcyr>>(reader => reader.ReadRecordAsync<SlAcyr>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
                 await actualStudentAwardRepository.GetStudentAwardAsync(studentId, studentAwardYear, loanCode, allAwards, allAwardStatuses);
                 loggerMock.Verify(l => l.Info(string.Format("No loan disbursement data for {0} for student {1} {2} award year", loanCode, studentId, studentAwardYear.Code)));
             }

@@ -1613,18 +1613,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task AdmissionApplicationService_CreateAdmissionApplicationAsync_PermissionsException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() {  });
-                await admissionApplicationService.CreateAdmissionApplicationAsync(admissionDtosV11.FirstOrDefault());
-            }
-
-            [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task AdmissionApplicationService_CreateAdmissionApplicationAsync_ApplicantKey_Null()
             {
-                personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 await admissionApplicationService.CreateAdmissionApplicationAsync(admissionDtosV11.FirstOrDefault());
             }
 
@@ -1663,7 +1655,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     Source = new Dtos.GuidObject2("b90812ee-b573-4acb-88b0-6999a050be4f"),   
                 };
 
-                personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
                 await admissionApplicationService.CreateAdmissionApplicationAsync(admissionApplication);
             }
@@ -1748,7 +1740,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 admissionDtosV11.FirstOrDefault().Applicant = null;
                 admissionDtosV11.FirstOrDefault().Owner = null;
 
-                personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                personRepositoryMock.Setup(x => x.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
                 await admissionApplicationService.CreateAdmissionApplicationAsync(admissionDtosV11.FirstOrDefault());
             }
@@ -1920,7 +1912,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 admissionEntities.FirstOrDefault().ApplicationAttendedInstead = "1";
                 admissionEntities.FirstOrDefault().ApplicationWithdrawDate = null;
 
-                personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+                personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 admissionApplicationsRepositoryMock.Setup(x => x.CreateAdmissionApplicationAsync(It.IsAny<Domain.Student.Entities.AdmissionApplication>())).ReturnsAsync(admissionEntities.FirstOrDefault());
 
                 await admissionApplicationService.CreateAdmissionApplicationAsync(admissionDtosV11.FirstOrDefault());
@@ -1967,14 +1959,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task AdmissionApplicationService_UpdateAdmissionApplicationAsync_PermissionsException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
-                await admissionApplicationService.UpdateAdmissionApplicationAsync(guid,admissionDtosV11.FirstOrDefault());
-            }
-
-            [TestMethod]
             public async Task AdmissionApplicationService_UpdateAdmissionApplicationAsync()
             {
                 admissionApplicationsRepositoryMock.Setup(x => x.GetRecordKeyAsync(It.IsAny<string>())).ReturnsAsync(Guid.Empty.ToString());
@@ -1988,7 +1972,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task AdmissionApplicationService_UpdateAdmissionApplicationAsync_Create()
             {
-                admissionApplicationsRepositoryMock.Setup(x => x.GetRecordKeyAsync(It.IsAny<string>())).ReturnsAsync(null);
+                admissionApplicationsRepositoryMock.Setup(x => x.GetRecordKeyAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
                 var result = await admissionApplicationService.UpdateAdmissionApplicationAsync(guid, admissionDtosV11.FirstOrDefault());
 
@@ -2577,7 +2561,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task GetAdmissionApplicationsSubmissionsByGuidAsync_Null_AdmissionApplication_KeyNotFoundException()
             {
-                admissionApplicationsRepositoryMock.Setup(repo => repo.GetAdmissionApplicationSubmissionByIdAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                admissionApplicationsRepositoryMock.Setup(repo => repo.GetAdmissionApplicationSubmissionByIdAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 await admissionApplicationService.GetAdmissionApplicationsSubmissionsByGuidAsync("1234");
             }
 
@@ -2709,7 +2693,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(IntegrationApiException))]
             public async Task UpdateAdmissionApplicationsSubmissionAsync_Convert_Errors()
             {
-                personRepositoryMock.Setup(repo => repo.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                personRepositoryMock.Setup(repo => repo.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 var actual = await admissionApplicationService.UpdateAdmissionApplicationsSubmissionAsync(guid, admissionSubmissionConvertDto, It.IsAny<bool>());
             }
             

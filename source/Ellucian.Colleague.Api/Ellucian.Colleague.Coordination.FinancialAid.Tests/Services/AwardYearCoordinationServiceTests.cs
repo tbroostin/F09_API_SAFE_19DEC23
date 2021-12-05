@@ -132,7 +132,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
         public async Task GetActiveStudentAwardEntitiesAsync_ReturnsNullTest()
         {
             studentAwardYearRepositoryMock.Setup(r => r.GetStudentAwardYearsAsync(studentId, It.IsAny<CurrentOfficeService>(), true))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
             Assert.IsNull(await awardYearCoordinationService.getActiveStudentAwardYearEntitiesAsync(studentId));
         }
 
@@ -147,7 +147,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
         public async Task GetStudentAwardYearEntitiesAsync_ReturnsNullTest()
         {
             studentAwardYearRepositoryMock.Setup(r => r.GetStudentAwardYearsAsync(studentId, It.IsAny<CurrentOfficeService>(), It.IsAny<bool>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
             Assert.IsNull(await awardYearCoordinationService.getStudentAwardYearEntitiesAsync(studentId));
         }
 
@@ -169,7 +169,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
         public async Task GetStudentAwardYearEntityAsync_ReturnsNullTest()
         {
             studentAwardYearRepositoryMock.Setup(r => r.GetStudentAwardYearAsync(studentId, awardYearCode, It.IsAny<CurrentOfficeService>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
             Assert.IsNull(await awardYearCoordinationService.getStudentAwardYearEntityAsync(studentId, awardYearCode));
         }
         

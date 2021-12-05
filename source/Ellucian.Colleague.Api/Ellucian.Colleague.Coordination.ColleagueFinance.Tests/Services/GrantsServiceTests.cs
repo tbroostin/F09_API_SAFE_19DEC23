@@ -11,6 +11,7 @@ using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -152,24 +153,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 #endregion
 
                 #region GETALL
-
-                [TestMethod]
-                [ExpectedException(typeof(PermissionsException))]
-                public async Task GrantsService_GetGrantsAsync_PermissionsException()
-                {
-                    roles = new List<Domain.Entities.Role>()
-                    {
-                        new Domain.Entities.Role(1,"GRANTS")
-                    };
-                    roleRepositoryMock.Setup(r => r.GetRolesAsync()).ReturnsAsync(roles);
-                    await grantsService.GetGrantsAsync(0, 100,"","", false);
-                }
-
                 
                 [TestMethod]
                 public async Task GrantService_GetGrantAsync_When_There_Are_No_Project_Records()
                 {
-                    grantsRepositoryMock.Setup(i => i.GetGrantsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), false)).ReturnsAsync(null);
+                    grantsRepositoryMock.Setup(i => i.GetGrantsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), false)).ReturnsAsync(() => null);
                     var result = await grantsService.GetGrantsAsync(0, 100,"","", false);
                     Assert.IsNotNull(result);
                     Assert.AreEqual(result.Item2, 0);
@@ -184,12 +172,21 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 }
 
                 [TestMethod]
-                [ExpectedException(typeof(InvalidOperationException))]
+                [ExpectedException(typeof(IntegrationApiException))]
                 public async Task GrantsService_GetGrantsAsync_TitleAsNull()
                 {
                     projectTuple.Item1.FirstOrDefault().Title = null;
                     grantsRepositoryMock.Setup(g => g.GetGrantsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(projectTuple);
-                    await grantsService.GetGrantsAsync(0, 100, "", "", false);
+                    try
+                    {
+                        await grantsService.GetGrantsAsync(0, 100, "", "", false);
+                    }
+                    catch (IntegrationApiException ex)
+                    {
+                        Assert.IsTrue(ex.Errors != null && ex.Errors.Any(), "Errors are present with exception.");
+                        Assert.AreEqual(string.Format("Title is required. Id: {0}", projectTuple.Item1.FirstOrDefault().RecordGuid), ex.Errors.FirstOrDefault().Message);
+                        throw ex;
+                    }
                 }
 
                 [TestMethod]
@@ -220,39 +217,75 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 }
 
                 [TestMethod]
-                [ExpectedException(typeof(KeyNotFoundException))]
+                [ExpectedException(typeof(IntegrationApiException))]
                 public async Task GrantsService_GetGrantsAsync_InvallidProjectType()
                 {
                     grantsRepositoryMock.Setup(i => i.GetHostCountryAsync()).ReturnsAsync("CANADA");
                     projectTuple.Item1.FirstOrDefault().ProjectType = "Proj_0001";
                     grantsRepositoryMock.Setup(g => g.GetGrantsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(projectTuple);
-                    await grantsService.GetGrantsAsync(0, 100, "", "", false);
+                    try
+                    {
+                        await grantsService.GetGrantsAsync(0, 100, "", "", false);
+                    }
+                    catch (IntegrationApiException ex)
+                    {
+                        Assert.IsTrue(ex.Errors != null && ex.Errors.Any(), "Errors are present with exception.");
+                        Assert.AreEqual(string.Format("Project type not found for code {0}.", projectTuple.Item1.FirstOrDefault().ProjectType), ex.Errors.FirstOrDefault().Message);
+                        throw ex;
+                    }
                 }
 
                 [TestMethod]
-                [ExpectedException(typeof(ArgumentException))]
+                [ExpectedException(typeof(IntegrationApiException))]
                 public async Task GrantsService_GetGrantsAsync_ReportingPeriodStartDateAsNull()
                 {
                     projectTuple.Item1.FirstOrDefault().ReportingPeriods.FirstOrDefault().StartDate = null;
                     grantsRepositoryMock.Setup(g => g.GetGrantsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(projectTuple);
-                    await grantsService.GetGrantsAsync(0, 100, "", "", false);
+                    try
+                    {
+                        await grantsService.GetGrantsAsync(0, 100, "", "", false);
+                    }
+                    catch (IntegrationApiException ex)
+                    {
+                        Assert.IsTrue(ex.Errors != null && ex.Errors.Any(), "Errors are present with exception.");
+                        Assert.AreEqual(string.Format("Start date is required for reporting period. Guid: {0}", projectTuple.Item1.FirstOrDefault().RecordGuid), ex.Errors.FirstOrDefault().Message);
+                        throw ex;
+                    }
                 }
 
                 [TestMethod]
-                [ExpectedException(typeof(ArgumentException))]
+                [ExpectedException(typeof(IntegrationApiException))]
                 public async Task GrantsService_GetGrantsAsync_ReportingPeriodEndDateAsNull()
                 {
                     projectTuple.Item1.FirstOrDefault().ReportingPeriods.FirstOrDefault().EndDate = null;
                     grantsRepositoryMock.Setup(g => g.GetGrantsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(projectTuple);
-                    await grantsService.GetGrantsAsync(0, 100, "", "", false);
+                    try
+                    {
+                        await grantsService.GetGrantsAsync(0, 100, "", "", false);
+                    }
+                    catch (IntegrationApiException ex)
+                    {
+                        Assert.IsTrue(ex.Errors != null && ex.Errors.Any(), "Errors are present with exception.");
+                        Assert.AreEqual(string.Format("End date is required for reporting period. Guid: {0}", projectTuple.Item1.FirstOrDefault().RecordGuid), ex.Errors.FirstOrDefault().Message);
+                        throw ex;
+                    }
                 }
 
                 [TestMethod]
-                [ExpectedException(typeof(KeyNotFoundException))]
+                [ExpectedException(typeof(IntegrationApiException))]
                 public async Task GrantsService_GetGrantsAsync_PersonAsNull()
                 {
-                    personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(null);
-                    await grantsService.GetGrantsAsync(0, 100, "", "", false);
+                    personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
+                    try
+                    {
+                        await grantsService.GetGrantsAsync(0, 100, "", "", false);
+                    }
+                    catch (IntegrationApiException ex)
+                    {
+                        Assert.IsTrue(ex.Errors != null && ex.Errors.Any(), "Errors are present with exception.");
+                        Assert.AreEqual(string.Format("No GUID found for person ID {0}.", projectTuple.Item1.FirstOrDefault().ProjectContactPerson.FirstOrDefault()), ex.Errors.FirstOrDefault().Message);
+                        throw ex;
+                    }
                 }
 
                 #endregion
@@ -260,24 +293,21 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 #region GETBYID
 
                 [TestMethod]
-                [ExpectedException(typeof(PermissionsException))]
-                public async Task GrantsService_GetGrantsByGuidAsync_PermissionsException()
-                {
-                    roles = new List<Domain.Entities.Role>()
-                    {
-                        new Domain.Entities.Role(1,"GRANTS")
-                    };
-                    roleRepositoryMock.Setup(r => r.GetRolesAsync()).ReturnsAsync(roles);
-                    await grantsService.GetGrantsByGuidAsync(guid);
-                }
-
-                [TestMethod]
                 [ExpectedException(typeof(KeyNotFoundException))]
                 public async Task GrantsService_GetGrantsByGuidAsync_KeyNotFoundException()
                 {
 
                     grantsRepositoryMock.Setup(i => i.GetProjectsAsync(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
-                    await grantsService.GetGrantsByGuidAsync(guid);
+                    try
+                    {
+                        await grantsService.GetGrantsByGuidAsync(guid);
+                    }
+                    catch (KeyNotFoundException ex)
+                    {
+                        Assert.IsTrue(ex.Message != null, "Errors are present with exception.");
+                        Assert.AreEqual(string.Format("Grants record not found for GUID {0}", projectTuple.Item1.FirstOrDefault().RecordGuid), ex.Message);
+                        throw ex;
+                    }
                 }
 
                 [TestMethod]

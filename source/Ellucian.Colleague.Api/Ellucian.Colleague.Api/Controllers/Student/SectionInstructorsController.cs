@@ -24,6 +24,7 @@ using Newtonsoft.Json;
 using System.Net.Http;
 using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -56,7 +57,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="criteria">Filter Criteria including section, instructor, and instructionalEvent.</param>
         /// <returns>List of SectionInstructors <see cref="Dtos.SectionInstructors"/> objects representing matching sectionInstructors</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewSectionInstructors, StudentPermissionCodes.CreateSectionInstructors })]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.SectionInstructors))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
@@ -93,6 +94,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _sectionInstructorsService.ValidatePermissions(GetPermissionsMetaData());
                 var pageOfItems = await _sectionInstructorsService.GetSectionInstructorsAsync(page.Offset, page.Limit, section, instructor, instructionalEvents, bypassCache);
 
                 AddEthosContextProperties(await _sectionInstructorsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -140,11 +142,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID to desired sectionInstructors</param>
         /// <returns>A sectionInstructors object <see cref="Dtos.SectionInstructors"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewSectionInstructors, StudentPermissionCodes.CreateSectionInstructors })]
         public async Task<Dtos.SectionInstructors> GetSectionInstructorsByGuidAsync(string guid)
         {
             try
             {
+                _sectionInstructorsService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(guid))
                 {
                     throw new ArgumentNullException("Id is a required property.");
@@ -215,11 +218,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="sectionInstructors">DTO of the new sectionInstructors</param>
         /// <returns>A sectionInstructors object <see cref="Dtos.SectionInstructors"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateSectionInstructors)]
         public async Task<Dtos.SectionInstructors> PostSectionInstructorsAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.SectionInstructors sectionInstructors)
         {
             try
             {
+                _sectionInstructorsService.ValidatePermissions(GetPermissionsMetaData());
                 if (sectionInstructors == null)
                 {
                     throw new ArgumentNullException("The request body is required.");
@@ -285,11 +289,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="sectionInstructors">DTO of the updated sectionInstructors</param>
         /// <returns>A sectionInstructors object <see cref="Dtos.SectionInstructors"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateSectionInstructors)]
         public async Task<Dtos.SectionInstructors> PutSectionInstructorsAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.SectionInstructors sectionInstructors)
         {
             try
             {
+                _sectionInstructorsService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(guid))
                 {
                     throw new ArgumentNullException("The GUID must be specified in the request URL.");
@@ -368,11 +373,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Delete (DELETE) a sectionInstructors
         /// </summary>
         /// <param name="guid">GUID to desired sectionInstructors</param>
-        [HttpDelete]
+        [HttpDelete, PermissionsFilter(StudentPermissionCodes.DeleteSectionInstructors)]
         public async Task DeleteSectionInstructorsAsync(string guid)
         {
             try
             {
+                _sectionInstructorsService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(guid))
                 {
                     throw new ArgumentNullException("section-instructor guid cannot be null or empty");

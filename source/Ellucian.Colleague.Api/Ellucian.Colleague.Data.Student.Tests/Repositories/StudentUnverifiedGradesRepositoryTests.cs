@@ -475,7 +475,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 var studentUnverifiedGrade = allStudentUnverifiedGrades.FirstOrDefault(x => x.Guid == StudentUnverifiedGradesGuid);
 
                 var studentCourseSec = recordStudentCourseSecs.FirstOrDefault(scs => scs.Recordkey == studentUnverifiedGrade.StudentCourseSecId);
-                dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.StudentCourseSec>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.StudentCourseSec>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
 
                 var studentAcadCred = recordStudentAcadCreds.FirstOrDefault(scs => scs.Recordkey == studentUnverifiedGrade.StudentAcadaCredId);
                 dataReaderMock.Setup(acc => acc.ReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(studentAcadCred);
@@ -495,7 +495,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(acc => acc.ReadRecordAsync<DataContracts.StudentCourseSec>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(studentCourseSec);
 
                 var studentAcadCred = recordStudentAcadCreds.FirstOrDefault(scs => scs.Recordkey == studentUnverifiedGrade.StudentAcadaCredId);
-                dataReaderMock.Setup(acc => acc.ReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(acc => acc.ReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
 
                 var updateResponse = new ImportGrades2Response() { Guid = StudentUnverifiedGradesGuid };
                 transManagerMock.Setup(i => i.ExecuteAsync<ImportGrades2Request, ImportGrades2Response>(It.IsAny<ImportGrades2Request>())).ReturnsAsync(updateResponse);

@@ -63,7 +63,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests.Entities
             public void NumberOfStudentLoanSummaryPropertiesTest()
             {
                 var studentLoanSummaryProperties = typeof(StudentLoanSummary).GetProperties(BindingFlags.Public | BindingFlags.Instance);
-                Assert.AreEqual(8, studentLoanSummaryProperties.Count());
+                Assert.AreEqual(12, studentLoanSummaryProperties.Count());
             }
 
             /// <summary>

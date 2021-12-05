@@ -16,6 +16,8 @@ using System.Xml.Schema;
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Dtos.DtoProperties;
+using System.Data;
+using Ellucian.Colleague.Domain.Entities;
 
 namespace Ellucian.Colleague.Data.HumanResources.Repositories
 {
@@ -42,7 +44,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         }
 
         private Ellucian.Data.Colleague.DataContracts.IntlParams _internationalParameters;
-
+        RepositoryException exception = null;
         /// <summary>
         /// Get the record key from a GUID
         /// </summary>
@@ -50,7 +52,34 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <returns>The person ID</returns>
         public async Task<string> GetKeyFromGuidAsync(string guid)
         {
-            return await GetRecordKeyFromGuidAsync(guid);
+            // return await GetRecordKeyFromGuidAsync(guid);
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid");
+            }
+
+            var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
+            if (idDict == null || idDict.Count == 0)
+            {
+                throw new KeyNotFoundException(string.Concat("contribution-payroll-deduction GUID ", guid, " not found."));
+            }
+
+            var foundEntry = idDict.FirstOrDefault();
+            if (foundEntry.Value == null)
+            {
+                throw new KeyNotFoundException(string.Concat("contribution-payroll-deduction GUID ", guid, " not found."));
+            }
+
+            if (foundEntry.Value.Entity != "PAYTODAT")
+            {
+                if (exception == null)
+                    exception = new RepositoryException();
+
+                exception.AddError(new RepositoryError("GUID.Wrong.Type", "GUID '" + guid + "' has different entity, '" + foundEntry.Value.Entity + "', than expected, 'PAYTODAT'"));
+                throw exception;
+            }
+
+            return foundEntry.Value.PrimaryKey;
         }
 
 
@@ -85,19 +114,19 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             var perbenIds = await DataReader.SelectAsync("PERBEN", criteria.ToString());
 
             if (perbenIds == null)
-                throw new KeyNotFoundException("No qualifying records selected from PERBEN in Colleague.");
+                throw new RepositoryException("No qualifying records selected from PERBEN in Colleague.");
 
 
             var payToDatIds = await DataReader.SelectAsync("PAYTODAT", "WITH PTD.PERBEN.ID EQ ? ",
                 perbenIds.Select(id => string.Format("\"{0}\"", id)).ToArray());
 
             var payToDatRecords = await DataReader.BulkReadRecordAsync<Paytodat>("PAYTODAT", payToDatIds);
+
+            if (payToDatRecords == null)
             {
-                if (payToDatRecords == null)
-                {
-                    throw new KeyNotFoundException("No qualifying records selected from PAYTODAT in Colleague.");
-                }
+                throw new RepositoryException("No qualifying records selected from PAYTODAT in Colleague.");
             }
+            
 
             var payToDatCollection = new List<Paytodat>(payToDatRecords);
             foreach (var payToDatRecord in payToDatRecords)
@@ -111,11 +140,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         payToDat.PtdPerbenId.Remove(perbenId);
                     }
                 }
-            }       
+            }
 
             var keys = new List<string>();
             foreach (var payToDatRecord in payToDatCollection)
-            {      
+            {
                 keys.AddRange(payToDatRecord.PtdPerbenId.Select(perbenId => string.Concat(payToDatRecord.Recordkey, "|", perbenId)));
             }
 
@@ -130,11 +159,26 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
                 foreach (var key in keysSubList)
                 {
-                   
+
                     var payToDatKey = key.Split('|');
                     var payToDat = payToDatCollection.FirstOrDefault(x => x.Recordkey == payToDatKey[0] && x.PtdPerbenId.Contains(payToDatKey[1]));     //( perbn => perbn == payToDatKey[1]);
-                    payrollDeductionEntities.Add(await BuildPayrollDeductionsAsync(payToDat, perbens, payToDatKey[1])); 
+                    try
+                    {
+                        payrollDeductionEntities.Add(await BuildPayrollDeductionsAsync(payToDat, perbens, payToDatKey[1]));
+                    }
+                    catch (Exception ex)
+                    {
+                        if (exception == null)
+                            exception = new RepositoryException();
+
+                        exception.AddError(new RepositoryError("Bad.Data", ex.Message));
+                    }
+
                 }
+            }
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
             }
             return new Tuple<IEnumerable<PayrollDeduction>, int>(payrollDeductionEntities, totalCount);
 
@@ -145,128 +189,199 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// </summary>
         /// <param name="guid">Guids</param>
         /// <returns>Positions entity objects</returns>
-        public async Task<PayrollDeduction> GetContributionPayrollDeductionByGuidAsync(string guid)
+        public async Task<PayrollDeduction> GetContributionPayrollDeductionByGuidAsync(string payToDatGuid)
         {
-            PayrollDeduction payrollDeduction = null;
+            //PayrollDeduction payrollDeduction = null;
             var payToDatId = string.Empty;
-            var payToDatGuid = string.Empty;
+            //var payToDatGuid = string.Empty;
             var arrangementId = string.Empty;
-            var arrangementGuid = string.Empty;
+            // var arrangementGuid = string.Empty;
             DateTime deductionDate = default(DateTime);
             Decimal amountValue = default(decimal);
             string amountCurrency = string.Empty;
 
-            if (!string.IsNullOrEmpty(guid))
+            if (string.IsNullOrEmpty(payToDatGuid))
             {
-                //get paytodat guid info
-                var payToDatGuidInfo = await GetRecordInfoFromGuidAsync(guid);
-                //if it is null there is not contribution-payroll-deduction for this guid
-                if (payToDatGuidInfo == null)
-                {
-                    throw new KeyNotFoundException(string.Concat("contribution-payroll-deduction GUID ", guid, " not found."));
-                }
+                throw new RepositoryException("Guid is a required field.");
+            }
 
+            //get paytodat guid info
+            var payToDatGuidInfo = await GetRecordInfoFromGuidAsync(payToDatGuid);
+           
+            //if it is null there is not contribution-payroll-deduction for this guid
+            if (payToDatGuidInfo == null)
+            {
+                throw new KeyNotFoundException(string.Concat("contribution-payroll-deduction GUID ", payToDatGuid, " not found."));
+
+            }
+
+
+            if (string.IsNullOrEmpty(payToDatGuidInfo.PrimaryKey))
+            {
+                if (exception == null)
+                    exception = new RepositoryException();
+
+                exception.AddError(new RepositoryError("Bad.Data", "contribution-payroll-deduction GUID '", payToDatGuid, "' primary colleague key was not found on ldm_guid record..")
+                {
+                    Id = payToDatGuid,
+                    SourceId = payToDatId
+                });
+            }
+            else if (payToDatGuidInfo.Entity != "PAYTODAT")
+            {
+                if (exception == null)
+                    exception = new RepositoryException();
+
+                exception.AddError(new RepositoryError("GUID.Wrong.Type", "GUID '" + payToDatGuid + "' has different entity, '" + payToDatGuidInfo.Entity + "', than expected, 'PAYTODAT'"));
+                throw exception;
+            }
+            else
+            { 
                 payToDatId = payToDatGuidInfo.PrimaryKey;
-                payToDatGuid = guid;
+            }
 
+            var payToDatCollRecord = await DataReader.ReadRecordAsync<Paytodat>("PAYTODAT", payToDatGuidInfo.PrimaryKey);
 
-                if (string.IsNullOrEmpty(payToDatGuidInfo.PrimaryKey))
+            if (payToDatCollRecord == null)
+            {
+                throw new KeyNotFoundException(string.Concat("contribution-payroll-deduction GUID '", payToDatGuid, "' not found."));
+            }
+
+            //deduction date comes from either CheckDate or AdviceDate, only one can have a value
+            if (payToDatCollRecord.PtdCheckDate.HasValue)
+            {
+                deductionDate = payToDatCollRecord.PtdCheckDate.Value;
+            }
+            if (payToDatCollRecord.PtdAdviceDate.HasValue)
+            {
+                deductionDate = payToDatCollRecord.PtdAdviceDate.Value;
+            }
+
+            //now we have to get the actual Ptdbnded record the guid is associated to, this lets us get everything else correctly
+            int indexForPtdbnded = -1;
+            if (payToDatCollRecord.PtdbndedEntityAssociation != null && payToDatCollRecord.PtdbndedEntityAssociation.Any())
+            {
+                indexForPtdbnded = payToDatCollRecord.PtdbndedEntityAssociation.FindIndex(
+                    i => i.PtdBdCodesAssocMember == payToDatGuidInfo.SecondaryKey);
+                //nothing was found, not a valid record
+                if (indexForPtdbnded == -1)
                 {
-                    throw new KeyNotFoundException(string.Concat("contribution-payroll-deduction GUID ", guid, " primary colleague key was not found on ldm_guid record."));
-                }
+                   if (exception == null)
+                        exception = new RepositoryException();
 
-                Paytodat payToDatCollRecord = await DataReader.ReadRecordAsync<Paytodat>("PAYTODAT", payToDatGuidInfo.PrimaryKey);
-
-
-                //deduction date comes from either CheckDate or AdviceDate, only one can have a value
-                if (payToDatCollRecord.PtdCheckDate.HasValue)
-                {
-                    deductionDate = payToDatCollRecord.PtdCheckDate.Value;
-                }
-                if (payToDatCollRecord.PtdAdviceDate.HasValue)
-                {
-                    deductionDate = payToDatCollRecord.PtdAdviceDate.Value;
-                }
-
-                //now we have to get the actual Ptdbnded record the guid is associated to, this lets us get everything else correctly
-                int indexForPtdbnded = -1;
-                if (payToDatCollRecord.PtdbndedEntityAssociation != null && payToDatCollRecord.PtdbndedEntityAssociation.Any())
-                {
-                    indexForPtdbnded = payToDatCollRecord.PtdbndedEntityAssociation.FindIndex(
-                        i => i.PtdBdCodesAssocMember == payToDatGuidInfo.SecondaryKey);
-                    //nothing was found, not a valid record
-                    if (indexForPtdbnded == -1)
+                    exception.AddError(new RepositoryError("Bad.Data", "There are no matching Ptdbnded associations.")
                     {
-                        throw new RepositoryException(string.Concat("There are no matching Ptdbnded associations, record", guid, " is not valid"));
-                    }
-
-                    arrangementId = payToDatCollRecord.PtdbndedEntityAssociation[indexForPtdbnded].PtdPerbenIdAssocMember;
+                        Id = payToDatGuid,
+                        SourceId = payToDatId
+                    });
                 }
-                else
+
+                arrangementId = payToDatCollRecord.PtdbndedEntityAssociation[indexForPtdbnded].PtdPerbenIdAssocMember;
+            }
+            else
+            {
+                if (exception == null)
+                    exception = new RepositoryException();
+
+                exception.AddError(new RepositoryError("Bad.Data", "There are no matching Ptdbnded associations.")
                 {
-                    throw new RepositoryException(string.Concat("There are no Ptdbnded associations, record", guid, " is not valid"));
-                }
+                    Id = payToDatGuid,
+                    SourceId = payToDatId
+                });
+            }
 
-                //get the amount from the matching index position
-                if (payToDatCollRecord.PtdBdEmplyeCalcAmts != null && payToDatCollRecord.PtdBdEmplyeCalcAmts.Count > indexForPtdbnded)
+            //get the amount from the matching index position
+            if ((payToDatCollRecord.PtdBdEmplyeCalcAmts != null && payToDatCollRecord.PtdBdEmplyeCalcAmts.Count > indexForPtdbnded)
+                && (payToDatCollRecord.PtdBdEmplyeCalcAmts[indexForPtdbnded].HasValue))
+            {
+                amountValue = payToDatCollRecord.PtdBdEmplyeCalcAmts[indexForPtdbnded].Value;
+            }
+            else
+            {
+                if (exception == null)
+                    exception = new RepositoryException();
+
+                exception.AddError(new RepositoryError("Bad.Data", "There is no amount for this record.")
                 {
-                    if (payToDatCollRecord.PtdBdEmplyeCalcAmts[indexForPtdbnded].HasValue)
-                    {
-                        amountValue = payToDatCollRecord.PtdBdEmplyeCalcAmts[indexForPtdbnded].Value;
-                    }
-                    else
-                    {
-                        throw new RepositoryException(string.Concat("There is no amount for this record", guid, " it is not valid"));
-                    }
-                }
-                else
-                {
-                    throw new RepositoryException(string.Concat("There is no amount for this record", guid, " it is not valid"));
-                }
+                    Id = payToDatGuid,
+                    SourceId = payToDatId
+                });
+            }
+            
+            //set the currency country
+            amountCurrency = await GetHostCountryAsync();
 
-                //set the currency country
-                amountCurrency = await GetHostCountryAsync();
-
-
-                //var perBenGuidInfo = await GetGuidFromRecordInfoAsync("PERBEN", arrangementId);
-
+            if (!string.IsNullOrEmpty(arrangementId))
+            {
                 //has either the PERBEN.INTG.INTERVAL or PERBEN.INTG.MON.PAY.PERIODS 
                 var perBenRecord = await DataReader.ReadRecordAsync<Perben>("PERBEN", arrangementId);
                 if (!((perBenRecord.PerbenIntgInterval.HasValue) ||
                       (perBenRecord.PerbenIntgMonPayPeriods != null && perBenRecord.PerbenIntgMonPayPeriods.Any())))
                 {
-                    throw new RepositoryException("No payroll deduction arrangement found for the contribution payroll deduction requested");
+                    if (exception == null)
+                        exception = new RepositoryException();
 
+                    exception.AddError(new RepositoryError("Bad.Data", "Missing either the PERBEN.INTG.INTERVAL or PERBEN.INTG.MON.PAY.PERIODS")
+                    {
+                        Id = payToDatGuid,
+                        SourceId = payToDatId
+                    });
                 }
-                //get the guid for the arrangement
-                var perBenGuidInfo = perBenRecord.RecordGuid;
+            }
+            PayrollDeduction retval = null;
+            try
+            {
+                retval = new PayrollDeduction(payToDatGuid, payToDatId, arrangementId, deductionDate, amountCurrency, amountValue);
+            }
+            catch (Exception ex)
+            {
+                if (exception == null)
+                    exception = new RepositoryException();
 
-                if (!string.IsNullOrEmpty(perBenGuidInfo))
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message)
                 {
-                    arrangementGuid = perBenGuidInfo;
-                }
-
+                    Id = payToDatGuid,
+                    SourceId = payToDatId
+                });
             }
 
-            return new PayrollDeduction(payToDatGuid, payToDatId, arrangementId, arrangementGuid, deductionDate, amountCurrency, amountValue);
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+            return retval;
         }
 
         public async Task<PayrollDeduction> BuildPayrollDeductionsAsync(Paytodat payToDatCollRecord, ICollection<Perben> perbens, string perbenId = "")
         {
-            if (payToDatCollRecord == null) 
+            if (payToDatCollRecord == null)
             {
-                throw new KeyNotFoundException("contribution-payroll-deduction not found.");
+               if (exception == null)
+                    exception = new RepositoryException();
+
+                exception.AddError(new RepositoryError("Bad.Data", "PayToDat is required."));
+                return null;
             }
 
             if (string.IsNullOrEmpty(perbenId))
             {
-                throw new KeyNotFoundException(string.Concat("contribution-payroll-deduction perbenId not found.", payToDatCollRecord.Recordkey));
+                if (exception == null)
+                    exception = new RepositoryException();
+
+                exception.AddError(new RepositoryError("Bad.Data", "contribution-payroll-deduction perbenId not found.")
+                {
+                   
+                    SourceId = payToDatCollRecord != null ? payToDatCollRecord.Recordkey : ""
+                });
+                return null;
             }
 
             var payToDatGuidInfo = string.Empty;
 
+            
+
             if (perbens == null)
-                perbens = await DataReader.BulkReadRecordAsync<Perben>("PERBEN");
+                perbens = await DataReader.BulkReadRecordAsync<Perben>("PERBEN", perbenId);
 
             var perben = perbens.FirstOrDefault(p => p.Recordkey == perbenId);
             var perbenBdId = (perben != null) ? perben.PerbenBdId : "";
@@ -276,17 +391,23 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 payToDatGuidInfo = await GetGuidFromRecordInfoAsync("PAYTODAT", payToDatCollRecord.Recordkey, "PTD.BD.CODES", perbenBdId);
             }
 
-            // var payToDatGuidInfo = await GetRecordInfoFromGuidAsync(payToDatCollRecord.RecordGuid);
             //if it is null there is not contribution-payroll-deduction for this guid
             if (payToDatGuidInfo == null)
             {
-                throw new KeyNotFoundException(string.Concat("contribution-payroll-deduction GUID ", payToDatCollRecord.RecordGuid, " not found."));
+                if (exception == null)
+                    exception = new RepositoryException();
+
+                exception.AddError(new RepositoryError("Bad.Data", "PAYTODAT GUID not found with secondary key PTD.BD.CODES.")
+                {
+                    Id = payToDatGuidInfo,
+                    SourceId = payToDatCollRecord != null ? payToDatCollRecord.Recordkey : ""
+                });
             }
 
             var payToDatId = payToDatCollRecord.Recordkey;
-            var payToDatGuid = payToDatGuidInfo;
+            //var payToDatGuid = payToDatGuidInfo;
             var arrangementId = string.Empty;
-            var arrangementGuid = string.Empty;
+            // var arrangementGuid = string.Empty;
             DateTime deductionDate = default(DateTime);
             Decimal amountValue = default(decimal);
             var amountCurrency = string.Empty;
@@ -308,7 +429,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
                 //convert a unidata internal value into a datetime
                 DateTime zeroDate = new DateTime(1967, 12, 31);
-                double  offsetDate = zeroDate.ToOADate();
+                double offsetDate = zeroDate.ToOADate();
 
                 var date = DateTime.FromOADate(double.Parse(periodDate) + offsetDate);
 
@@ -319,65 +440,131 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             int indexForPtdbnded = -1;
             if (!string.IsNullOrEmpty(perbenId) && payToDatCollRecord.PtdbndedEntityAssociation != null && payToDatCollRecord.PtdbndedEntityAssociation.Any())
             {
-                //indexForPtdbnded = payToDatCollRecord.PtdbndedEntityAssociation.FindIndex(
-                //        i => i.PtdBdCodesAssocMember == payToDatGuidInfo.SecondaryKey);
-
+                
                 indexForPtdbnded = payToDatCollRecord.PtdbndedEntityAssociation.FindIndex(
                     i => i.PtdPerbenIdAssocMember == perbenId); //payToDatCollRecord.PtdPerbenId[0]);
                 //nothing was found, not a valid record
                 if (indexForPtdbnded == -1)
                 {
-                    throw new RepositoryException(string.Concat("There are no matching Ptdbnded associations, record ", payToDatGuid, " is not valid"));
+                   if (exception == null)
+                        exception = new RepositoryException();
+
+                    exception.AddError(new RepositoryError("Bad.Data", "There are no matching Ptdbnded associations.")
+                    {
+                        Id = payToDatGuidInfo,
+                        SourceId = payToDatCollRecord != null ? payToDatCollRecord.Recordkey : ""
+                    });
                 }
                 arrangementId = payToDatCollRecord.PtdbndedEntityAssociation[indexForPtdbnded].PtdPerbenIdAssocMember;
                 // arrangementId = payToDatCollRecord.PtdbndedEntityAssociation[indexForPtdbnded].PtdBendedcsIdAssocMember;
             }
             else
             {
-                throw new RepositoryException(string.Concat("There are no Ptdbnded associations, record", payToDatCollRecord.RecordGuid, " is not valid"));
+                if (exception == null)
+                    exception = new RepositoryException();
+
+                exception.AddError(new RepositoryError("Bad.Data", "There are no matching Ptdbnded associations.")
+                {
+                    Id = payToDatGuidInfo,
+                    SourceId = payToDatCollRecord != null ? payToDatCollRecord.Recordkey : ""
+                });
             }
 
             //get the amount from the matching index position
-            if (payToDatCollRecord.PtdBdEmplyeCalcAmts != null && payToDatCollRecord.PtdBdEmplyeCalcAmts.Count > indexForPtdbnded)
+            if ((payToDatCollRecord.PtdBdEmplyeCalcAmts != null && payToDatCollRecord.PtdBdEmplyeCalcAmts.Count > indexForPtdbnded)
+                && (payToDatCollRecord.PtdBdEmplyeCalcAmts[indexForPtdbnded].HasValue))
             {
-                if (payToDatCollRecord.PtdBdEmplyeCalcAmts[indexForPtdbnded].HasValue)
-                {
-                    amountValue = payToDatCollRecord.PtdBdEmplyeCalcAmts[indexForPtdbnded].Value;
-                }
-                else
-                {
-                    throw new RepositoryException(string.Concat("There is no amount for this record", payToDatCollRecord.RecordGuid, " it is not valid"));
-                }
+                amountValue = payToDatCollRecord.PtdBdEmplyeCalcAmts[indexForPtdbnded].Value;
             }
             else
             {
-                throw new RepositoryException(string.Concat("There is no amount for this record", payToDatCollRecord.RecordGuid, " it is not valid"));
-            }
+                if (exception == null)
+                    exception = new RepositoryException();
 
+                exception.AddError(new RepositoryError("Bad.Data", "There is no amount for this record.")
+                {
+                    Id = payToDatGuidInfo,
+                    SourceId = payToDatCollRecord != null ? payToDatCollRecord.Recordkey : ""
+                });
+            }
+            
             //set the currency country
             amountCurrency = await GetHostCountryAsync();
 
-
-            //has either the PERBEN.INTG.INTERVAL or PERBEN.INTG.MON.PAY.PERIODS 
-            var perBenRecord = await DataReader.ReadRecordAsync<Perben>("PERBEN", arrangementId);
-            if (!((perBenRecord.PerbenIntgInterval.HasValue) ||
-                  (perBenRecord.PerbenIntgMonPayPeriods != null && perBenRecord.PerbenIntgMonPayPeriods.Any())))
+            if (!string.IsNullOrEmpty(arrangementId))
             {
-                throw new RepositoryException("No payroll deduction arrangement found for the contribution payroll deduction requested");
+                //has either the PERBEN.INTG.INTERVAL or PERBEN.INTG.MON.PAY.PERIODS 
+                var perBenRecord = await DataReader.ReadRecordAsync<Perben>("PERBEN", arrangementId);
+                if (!((perBenRecord.PerbenIntgInterval.HasValue) ||
+                      (perBenRecord.PerbenIntgMonPayPeriods != null && perBenRecord.PerbenIntgMonPayPeriods.Any())))
+                {
+                    if (exception == null)
+                        exception = new RepositoryException();
 
+                    exception.AddError(new RepositoryError("Bad.Data", "Missing either the PERBEN.INTG.INTERVAL or PERBEN.INTG.MON.PAY.PERIODS.")
+                    {
+                        Id = payToDatGuidInfo,
+                        SourceId = payToDatCollRecord != null ? payToDatCollRecord.Recordkey : ""
+                    });
+
+                }
             }
-            //get the guid for the arrangement
-            var perBenGuidInfo = perBenRecord.RecordGuid;
 
-            if (!string.IsNullOrEmpty(perBenGuidInfo))
+            PayrollDeduction retval = null;
+            try
             {
-                arrangementGuid = perBenGuidInfo;
+                retval = new PayrollDeduction(payToDatGuidInfo, payToDatId, arrangementId, deductionDate, amountCurrency, amountValue);
             }
+            catch (Exception ex)
+            {
+                if (exception == null)
+                    exception = new RepositoryException();
 
-            return new PayrollDeduction(payToDatGuid, payToDatId, arrangementId, arrangementGuid, deductionDate, amountCurrency, amountValue);
-
-            
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message)
+                {
+                    Id = payToDatGuidInfo,
+                    SourceId = payToDatCollRecord != null ? payToDatCollRecord.Recordkey : ""
+                });
+            }
+            return retval; 
         }
+
+        /// <summary>
+        /// Using a collection of perben ids, get a dictionary collection of associated guids
+        /// </summary>
+        /// <param name="perbenIds">collection of perben ids</param>
+        /// <returns>Dictionary consisting of a personId (key) and guid (value)</returns>
+        public async Task<Dictionary<string, string>> GetPerbenGuidsCollectionAsync(IEnumerable<string> perbenIds)
+        {
+            if ((perbenIds == null) || (perbenIds != null && !perbenIds.Any()))
+            {
+                return new Dictionary<string, string>();
+            }
+            var perbenGuidCollection = new Dictionary<string, string>();
+
+            var perbenGuidLookup = perbenIds
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct().ToList()
+                .ConvertAll(p => new RecordKeyLookup("PERBEN", p, false)).ToArray();
+            var recordKeyLookupResults = await DataReader.SelectAsync(perbenGuidLookup);
+            foreach (var recordKeyLookupResult in recordKeyLookupResults)
+            {
+                try
+                {
+                    var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                    if (!perbenGuidCollection.ContainsKey(splitKeys[1]))
+                    {
+                        perbenGuidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
+                    }
+                }
+                catch (Exception) // Do not throw error.
+                {
+                }
+            }
+
+            return perbenGuidCollection;
+        }
+
 
         private async Task<string> GetHostCountryAsync()
         {
@@ -397,7 +584,5 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             var newDate = DateTime.Parse(date).Date;
             return UniDataFormatter.UnidataFormatDate(newDate, internationalParameters.HostShortDateFormat, internationalParameters.HostDateDelimiter);
         }
-
-
     }
 }

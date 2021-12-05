@@ -1,10 +1,11 @@
-//Copyright 2019 Ellucian Company L.P. and its affiliates.
+//Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
@@ -52,7 +53,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="criteria">JSON formatted selection criteria.</param>
         /// <returns>List of StudentCohortAssignments <see cref="Dtos.StudentCohortAssignments"/> objects representing matching studentCohortAssignments</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter , PermissionsFilter(StudentPermissionCodes.ViewStudentCohortAssignments)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.StudentCohortAssignments))]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
@@ -68,6 +69,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _studentCohortAssignmentsService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -129,7 +131,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID to desired studentCohortAssignments</param>
         /// <returns>A studentCohortAssignments object <see cref="Dtos.StudentCohortAssignments"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewStudentCohortAssignments)]
         public async Task<Dtos.StudentCohortAssignments> GetStudentCohortAssignmentsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -147,6 +149,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _studentCohortAssignmentsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                    await _studentCohortAssignmentsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                    await _studentCohortAssignmentsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),

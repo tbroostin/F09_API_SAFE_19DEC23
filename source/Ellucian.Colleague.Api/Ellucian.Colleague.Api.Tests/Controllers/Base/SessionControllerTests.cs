@@ -1,4 +1,5 @@
-﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
+using System;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -401,6 +402,64 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                     .Returns(Task.Delay(0));
                 var result = await controllerUnderTest.PostResetPasswordAsync(new ResetPassword() { NewPassword = "testNewPassword", ResetToken = "testToken", UserId = "testUser" });
                 Assert.AreEqual(result.StatusCode, HttpStatusCode.OK);
+            }
+        }
+
+
+        [TestClass]
+        public class PutSyncAsyncTests : SessionControllerTests
+        {
+            #region Test Context
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+            #endregion
+
+
+            [TestInitialize]
+            public void Initialize()
+            {
+
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+                base.SessionControllerTestsInitialize();
+            }
+
+            [TestMethod]
+            public async Task PutSyncAsyncSuccessful()
+            {
+                SessionControllerTestsInitialize();
+                await controllerUnderTest.PutSyncAsync();
+            }
+
+            [TestMethod]
+            public async Task PutSyncAsyncThrowsException_ReturnsBadRequest()
+            {
+                var fakeSession = new LegacyColleagueSession()
+                {
+                    SecurityToken = "12345",
+                    ControlId = "12345"
+                };
+
+                sessionRepositoryMock.Setup(s => s.SyncSessionAsync(It.IsAny<string>(), It.IsAny<string>()))
+                    .Throws(new Exception("sync error occurred"));
+
+                var result = await controllerUnderTest.PutSyncAsync();
+                Assert.AreEqual(result.StatusCode, HttpStatusCode.BadRequest);
             }
         }
     }

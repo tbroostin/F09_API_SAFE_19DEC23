@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,6 +23,7 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
             degreePlanEntity.LastReviewedDate = Source.LastReviewedDate;
             degreePlanEntity.ReviewRequestedDate = Source.ReviewRequestedDate;
             degreePlanEntity.ReviewRequestedTime = Source.ReviewRequestedTime;
+            degreePlanEntity.ArchiveNotificationDate = Source.ArchiveNotificationDate;
             if (Source.Terms != null)
             {
                 foreach (var tc in Source.Terms)
@@ -34,7 +35,7 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
                         {
                             foreach (var plannedcourse in tc.PlannedCourses)
                             {
-                                if (!string.IsNullOrEmpty(plannedcourse.CourseId))
+                                if (!string.IsNullOrEmpty(plannedcourse.CourseId) || !string.IsNullOrEmpty(plannedcourse.CoursePlaceholderId))
                                 {
                                     Domain.Student.Entities.GradingType gradingType = Domain.Student.Entities.GradingType.Graded;
                                     switch (plannedcourse.GradingType)
@@ -64,7 +65,11 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
                                             break;
                                     }
                                     // planned course warnings are not mapped back into the domain.
-                                    degreePlanEntity.AddCourse(new Domain.Student.Entities.DegreePlans.PlannedCourse(plannedcourse.CourseId, plannedcourse.SectionId, gradingType, waitStatus, plannedcourse.AddedBy, plannedcourse.AddedOn) { Credits = plannedcourse.Credits, IsProtected = plannedcourse.IsProtected }, tc.TermId);
+                                    degreePlanEntity.AddCourse(
+                                        new Domain.Student.Entities.DegreePlans.PlannedCourse(
+                                        course: plannedcourse.CourseId, section: plannedcourse.SectionId, gradingType: gradingType, status: waitStatus,
+                                        addedBy: plannedcourse.AddedBy, addedOn: plannedcourse.AddedOn, coursePlaceholder: plannedcourse.CoursePlaceholderId)
+                                      { Credits = plannedcourse.Credits, IsProtected = plannedcourse.IsProtected }, tc.TermId);
                                 }
                             }
                         }
@@ -75,7 +80,7 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
             {
                 foreach (var ntpc in Source.NonTermPlannedCourses)
                 {
-                    if (!string.IsNullOrEmpty(ntpc.CourseId))
+                    if (!string.IsNullOrEmpty(ntpc.CourseId) || !string.IsNullOrEmpty(ntpc.CoursePlaceholderId))
                     {
                         Domain.Student.Entities.GradingType gradingType = Domain.Student.Entities.GradingType.Graded;
                         switch (ntpc.GradingType)
@@ -105,7 +110,9 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
                                 break;
                         }
 
-                        degreePlanEntity.AddCourse(new Domain.Student.Entities.DegreePlans.PlannedCourse(ntpc.CourseId, ntpc.SectionId, gradingType, waitStatus, ntpc.AddedBy, ntpc.AddedOn) { Credits = ntpc.Credits, IsProtected = ntpc.IsProtected }, null);
+                        degreePlanEntity.AddCourse(new Domain.Student.Entities.DegreePlans.PlannedCourse(course: ntpc.CourseId, section: ntpc.SectionId, gradingType: gradingType,
+                            status: waitStatus, addedBy: ntpc.AddedBy, addedOn: ntpc.AddedOn, coursePlaceholder: ntpc.CoursePlaceholderId)
+                        { Credits = ntpc.Credits, IsProtected = ntpc.IsProtected }, null);
                     }
                 }
             }
@@ -143,7 +150,7 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
                 {
                     if (note.Id == 0)
                     {
-                        notes.Add(new Domain.Student.Entities.DegreePlans.DegreePlanNote(note.Text));
+                        notes.Add(new Domain.Student.Entities.DegreePlans.DegreePlanNote(note.Text, note.PersonType));
                     }
                     else
                     {

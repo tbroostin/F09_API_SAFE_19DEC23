@@ -20,7 +20,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="limit">Limit for paging results</param>
         /// <param name="bypassCache">Flag to bypass cache</param>
         /// <returns>Collection of <see cref="Requisitions">requisitions</see> objects</returns>          
-        Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.Requisitions>, int>> GetRequisitionsAsync(int offset, int limit, bool bypassCache = false);
+        Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.Requisitions>, int>> GetRequisitionsAsync(int offset, int limit, Dtos.Requisitions criteriaObject, bool bypassCache = false);
 
         /// <summary>
         /// Get a requisition by guid.
@@ -84,5 +84,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="requisitionDeleteRequest">The requisition delete request DTO.</param>        
         /// <returns>The requisition delete response DTO.</returns>
         Task<Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteResponse> DeleteRequisitionsAsync(Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionDeleteRequest requisitionDeleteRequest);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="filterCriteria"></param>
+        /// <returns></returns>
+        Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.RequisitionSummary>> QueryRequisitionSummariesAsync(Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria criteria);
     }
 }

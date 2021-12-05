@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Ellucian.Colleague.Dtos.Base;
+using Ellucian.Colleague.Dtos.Student;
 
 namespace Ellucian.Colleague.Dtos.Planning
 {

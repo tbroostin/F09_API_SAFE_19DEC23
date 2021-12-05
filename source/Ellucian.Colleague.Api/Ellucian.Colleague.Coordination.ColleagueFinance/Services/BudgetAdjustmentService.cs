@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
@@ -393,7 +393,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 // Validate that the current user is the same person ID as the one obtained from the repository.
                 if (!CurrentUser.IsPerson(budgetAdjustment.PersonId))
                 {
-                    var message = "The current user " + CurrentUser.PersonId + " is not the person " + budgetAdjustment.PersonId + " that owns the record returned from the repository";
+                    var message = "The current user " + CurrentUser.PersonId + " is not the person that owns the record returned from the repository";
                     logger.Error(message);
                     throw new PermissionsException(message);
                 }
@@ -436,7 +436,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             catch (Exception e)
             {
-                logger.Info(e, "Could not locate Staff Login ID for person ID: " + CurrentUser.PersonId);
+                logger.Error(e, "Could not locate Staff Login ID for person ID: " + CurrentUser.PersonId);
                 throw new PermissionsException("Could not find Staff information for the user.");
             }
 
@@ -566,7 +566,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             catch (Exception e)
             {
-                logger.Info(e, "Could not locate Staff Login ID for person ID: " + CurrentUser.PersonId);
+                logger.Error(e, "Could not locate Staff Login ID for person ID: " + CurrentUser.PersonId);
                 throw new ApplicationException("Could not find Staff information for the user.");
             }
 
@@ -577,7 +577,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             // Check the budget adjustment that was retrieved from the database.
             if (budgetAdjustmentEntity == null)
             {
-                logger.Info("Could not retrieve the budget adjustment: " + id);
+                logger.Error("Could not retrieve the budget adjustment: " + id);
                 throw new ApplicationException("Could not retrieve the budget adjustment.");
             }
 
@@ -755,7 +755,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         }
                         else
                         {
-                            var message = "The current user " + CurrentUser.PersonId + " is not the person " + adjustmentSummary.PersonId + " that owns the record returned from the repository";
+                            var message = "The current user " + CurrentUser.PersonId + " is not the person that owns the record returned from the repository";
                             logger.Error(message);
                         }
                     }

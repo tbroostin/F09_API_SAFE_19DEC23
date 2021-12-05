@@ -1,4 +1,4 @@
-﻿// Copyright 2013-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2013-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,7 +26,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 {  "5",     "MATH.BS plan",              "0000896", "1"},
                 {"802",     "MATH.BS plan",             "00004002", "16"},
                 {"808",     "MATH.BS plan",             "00004008", "96"},
-                {"809",     "lang   plan",             "0016301", "1"}
+                {"809",     "lang   plan",             "0016301", "1"},
+                {"810",     "repeats with planned courses",             "0016302", "1"}
                 };
 
             for (int i = 0; i < planData.Length / 4; i++)
@@ -68,6 +69,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
                                    {"809","2015/FA" },//This will match with student 0016301 in teststudentrepo
 
+                                   {"810","2014/FA" },
+                                   {"810","2016/FA" },
+                                   {"810","2029/FA" },
+
                                   };
 
             for (int i = 0; i < planTerms.Length / 2; i++)
@@ -108,6 +113,11 @@ namespace Ellucian.Colleague.Domain.Student.Tests
 
                                         {"809","2015/FA","7444","","3.0","G","","N" }, //GERM-100
                                         {"809","2015/FA","7442","","3.0","G","","N" },//ARTH-100
+
+                                        //degree plan used by student 0016302 for repeats with planned courses
+                                         {"810","2014/FA","7435","01","3.0","G","","N" },//planned for MATH-300BB
+                                         {"810","2016/FA","7435","02","3.0","G","","N" },//planned for MATH-300BB
+                                         {"810","2029/FA","7435","03","3.0","G","","N" },//planned for MATH-300BB
                                     };
             try
             {
@@ -163,12 +173,18 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 nonTermPlannedCourse.AddWarning(pcWarning);
                 degreePlan3.AddCourse(nonTermPlannedCourse, null);
 
+                // Add a course placeholder to plan 3 should be ignored by eval and archive.
+                degreePlan3.AddCourse(new PlannedCourse(course: null, section: null, coursePlaceholder: "MUSC-200"), "2009/SP");
+
                 // Add approvals for two of the planned courses on 2.
                 var degreePlan2 = degreePlans.Where(d => d.Id == 2).FirstOrDefault();
                 var approvals = new List<DegreePlanApproval>();
                 approvals.Add(new DegreePlanApproval("00004001", DegreePlanApprovalStatus.Approved, new DateTime(2008, 06, 01, 10, 0, 0), "130", "2008/FA"));
                 approvals.Add(new DegreePlanApproval("00004002", DegreePlanApprovalStatus.Denied, new DateTime(2008, 06, 03, 8, 30, 0), "143", "2008/FA"));
                 degreePlan2.Approvals = approvals;
+
+                // Add a course placeholder to plan 2 should be ignored by eval and archive.
+                degreePlan2.AddCourse(new PlannedCourse(course: null, section: null, coursePlaceholder: "MUSC-100"), "2011/SP");
 
                 // Add approvals for two of the planned courses on 3.
                 degreePlan3.Approvals = approvals;

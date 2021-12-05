@@ -1,4 +1,4 @@
-﻿//Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -51,27 +51,51 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             if (string.IsNullOrEmpty(guid))
             {
                 throw new ArgumentNullException("guid", "GUID is required to get a ContributionPayrollDeduction.");
-            } 
+            }
+            PayrollDeduction payrollDeductionDomainEntity = null;
+            Dictionary<string, string> arrangementGuidCollection = null;
             try
             {
-                CheckGetViewContributionPayrollDeductionsPermission();
+                payrollDeductionDomainEntity = await _contributionPayrollDeductionsRepository.GetContributionPayrollDeductionByGuidAsync(guid);
 
-                return ConvertContributionPayrollDeductionsEntityToDto(
-                    (await _contributionPayrollDeductionsRepository.GetContributionPayrollDeductionByGuidAsync(guid)));
+                if (payrollDeductionDomainEntity == null)
+                {
+                    throw new KeyNotFoundException("contribution-payroll-deductions not found for GUID '" + guid + "'");
+                }
 
-            }
-            catch (InvalidOperationException ex)
-            {
-                throw new KeyNotFoundException("contribution-payroll-deductions not found for GUID " + guid, ex);
+                arrangementGuidCollection = await _contributionPayrollDeductionsRepository.GetPerbenGuidsCollectionAsync(new List<string> { payrollDeductionDomainEntity.ArrangementId });
+
             }
             catch (KeyNotFoundException ex)
             {
-                throw new KeyNotFoundException("contribution-payroll-deductions not found for GUID " + guid, ex);
+                throw new KeyNotFoundException("contribution-payroll-deductions not found for GUID '" + guid + "'", ex);
             }
             catch (RepositoryException ex)
             {
-                throw new Exception(ex.Message, ex);
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }                
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Global.Internal.Error");
+                throw IntegrationApiException;
             }
+
+            Ellucian.Colleague.Dtos.ContributionPayrollDeductions retval = null;
+            try
+            {
+                retval = ConvertContributionPayrollDeductionsEntityToDto(payrollDeductionDomainEntity,arrangementGuidCollection);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Global.Internal.Error");
+            }
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            return retval;
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN DATA MODEL</remarks>
@@ -80,55 +104,73 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// </summary>
         /// <returns>Collection of ContributionPayrollDeductions DTO objects</returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.ContributionPayrollDeductions>, int>> GetContributionPayrollDeductionsAsync(int offset, int limit,
-            string arrangement = "",  bool bypassCache = false)
+            string arrangement = "", bool bypassCache = false)
         {
-            try
+            string arrangementCode = "";
+            if (!string.IsNullOrEmpty(arrangement))
             {
-                CheckGetViewContributionPayrollDeductionsPermission();
-
-                string arrangementCode = "";
-                if (!string.IsNullOrEmpty(arrangement))
+                try
                 {
-                    try
-                    {
-                        arrangementCode = await _contributionPayrollDeductionsRepository.GetKeyFromGuidAsync(arrangement);
-                        if (string.IsNullOrEmpty(arrangementCode))
-                        {
-                            return new Tuple<IEnumerable<Ellucian.Colleague.Dtos.ContributionPayrollDeductions>, int>(new List<Ellucian.Colleague.Dtos.ContributionPayrollDeductions>(), 0);
-                        }
-                    }
-                    catch(KeyNotFoundException e)
+                    arrangementCode = await _contributionPayrollDeductionsRepository.GetKeyFromGuidAsync(arrangement);
+                    if (string.IsNullOrEmpty(arrangementCode))
                     {
                         return new Tuple<IEnumerable<Ellucian.Colleague.Dtos.ContributionPayrollDeductions>, int>(new List<Ellucian.Colleague.Dtos.ContributionPayrollDeductions>(), 0);
                     }
                 }
-
-                var contributionPayrollDeductionsEntitiesTuple = await _contributionPayrollDeductionsRepository.GetContributionPayrollDeductionsAsync(offset, limit, arrangementCode, bypassCache);
-                if (contributionPayrollDeductionsEntitiesTuple != null)
+                catch (Exception e)
                 {
-                    var contributionPayrollDeductionsEntities = contributionPayrollDeductionsEntitiesTuple.Item1.ToList();
-                    var totalCount = contributionPayrollDeductionsEntitiesTuple.Item2;
-
-                    if (contributionPayrollDeductionsEntities.Any())
-                    {
-                        var contributionPayrollDeductions = new List<Ellucian.Colleague.Dtos.ContributionPayrollDeductions>();
-
-                        foreach (var contributionPayrollDeduction in contributionPayrollDeductionsEntities)
-                        {
-                            contributionPayrollDeductions.Add(this.ConvertContributionPayrollDeductionsEntityToDto(contributionPayrollDeduction));
-                        }
-                        return new Tuple<IEnumerable<Ellucian.Colleague.Dtos.ContributionPayrollDeductions>, int>(contributionPayrollDeductions, totalCount);
-                    }
-                    // no results
-                    return new Tuple<IEnumerable<Ellucian.Colleague.Dtos.ContributionPayrollDeductions>, int>(new List<Ellucian.Colleague.Dtos.ContributionPayrollDeductions>(), totalCount);
+                    return new Tuple<IEnumerable<Ellucian.Colleague.Dtos.ContributionPayrollDeductions>, int>(new List<Ellucian.Colleague.Dtos.ContributionPayrollDeductions>(), 0);
                 }
-                //no results
+            }
+
+            Tuple<IEnumerable<PayrollDeduction>, int> contributionPayrollDeductionsEntitiesTuple = null;
+            try
+            {
+                contributionPayrollDeductionsEntitiesTuple = await _contributionPayrollDeductionsRepository.GetContributionPayrollDeductionsAsync(offset, limit, arrangementCode, bypassCache);
+            }
+
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Global.Internal.Error");
+                throw IntegrationApiException;
+            }
+
+            if (contributionPayrollDeductionsEntitiesTuple == null || contributionPayrollDeductionsEntitiesTuple.Item1 == null)
+            {
                 return new Tuple<IEnumerable<Ellucian.Colleague.Dtos.ContributionPayrollDeductions>, int>(new List<Ellucian.Colleague.Dtos.ContributionPayrollDeductions>(), 0);
             }
-            catch (Exception e)
+
+            var contributionPayrollDeductions = new List<Ellucian.Colleague.Dtos.ContributionPayrollDeductions>();
+
+            var arrangementIds = contributionPayrollDeductionsEntitiesTuple.Item1
+                    .Where(x => (!string.IsNullOrEmpty(x.ArrangementId)))
+                    .Select(x => x.ArrangementId).Distinct().ToList();
+
+            var arrangementGuidCollection = await _contributionPayrollDeductionsRepository.GetPerbenGuidsCollectionAsync(arrangementIds);
+
+
+            foreach (var contributionPayrollDeduction in contributionPayrollDeductionsEntitiesTuple.Item1)
             {
-                throw new ArgumentException(e.Message);
+                try
+                {
+                    contributionPayrollDeductions.Add(this.ConvertContributionPayrollDeductionsEntityToDto(contributionPayrollDeduction, arrangementGuidCollection));
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "Global.Internal.Error");
+                }
             }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+            return new Tuple<IEnumerable<Ellucian.Colleague.Dtos.ContributionPayrollDeductions>, int>(contributionPayrollDeductions, contributionPayrollDeductionsEntitiesTuple.Item2);
         }
 
 
@@ -138,12 +180,34 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// </summary>
         /// <param name="source">ContributionPayrollDeductions domain entity</param>
         /// <returns>ContributionPayrollDeductions DTO</returns>
-        private Ellucian.Colleague.Dtos.ContributionPayrollDeductions ConvertContributionPayrollDeductionsEntityToDto(PayrollDeduction source)
+        private Ellucian.Colleague.Dtos.ContributionPayrollDeductions ConvertContributionPayrollDeductionsEntityToDto(PayrollDeduction source, Dictionary<string, string> arrangementGuidCollection)
         {
             var contributionPayrollDeductions = new Ellucian.Colleague.Dtos.ContributionPayrollDeductions();
 
             contributionPayrollDeductions.Id = source.Guid;
-            contributionPayrollDeductions.Arrangement = new GuidObject2(source.ArrangementGuid);
+
+            if (!string.IsNullOrEmpty(source.ArrangementId))
+            {
+                if (arrangementGuidCollection == null)
+                {
+                    IntegrationApiExceptionAddError(string.Concat("PERBEN GUID not found for arrangement: '", source.ArrangementId, "'"), "GUID.Not.Found"
+                        , source.Id, source.Guid);
+                }
+                else
+                {
+                    var arrangementGuid = string.Empty;
+                    arrangementGuidCollection.TryGetValue(source.ArrangementId, out arrangementGuid);
+                    if (string.IsNullOrEmpty(arrangementGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("PERBEN GUID not found for arrangement: '", source.ArrangementId, "'"), "GUID.Not.Found"
+                            , source.Id, source.Guid);
+                    }
+                    else
+                    {
+                        contributionPayrollDeductions.Arrangement = new GuidObject2(arrangementGuid);
+                    }
+                }
+            }
             contributionPayrollDeductions.DeductedOn = source.DeductionDate;
             var amount = new AmountDtoProperty
             {
@@ -160,21 +224,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             contributionPayrollDeductions.Amount = amount;
 
             return contributionPayrollDeductions;
-        }
-
-
-        /// <summary>
-        /// Helper method to determine if the user has permission to view ContributionPayrollDeductions.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckGetViewContributionPayrollDeductionsPermission()
-        {
-            var hasPermission = HasPermission(HumanResourcesPermissionCodes.ViewContributionPayrollDeductions);
-
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view Institution Jobs.");
-            }
         }
     }
 }

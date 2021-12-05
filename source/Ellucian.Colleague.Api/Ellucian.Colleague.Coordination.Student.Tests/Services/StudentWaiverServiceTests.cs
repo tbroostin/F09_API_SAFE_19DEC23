@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -755,7 +755,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task GetStudentWaivers_NullStudentWaiversEntityByRepositoryGet()
             {
-                waiverRepoMock.Setup(repo => repo.GetStudentWaiversAsync(It.IsAny<string>())).ReturnsAsync(null);
+                waiverRepoMock.Setup(repo => repo.GetStudentWaiversAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 var waiverDto = await waiverService.GetStudentWaiversAsync(studentId);
                 Assert.AreEqual(waiverDto.Count(), 0);
             }

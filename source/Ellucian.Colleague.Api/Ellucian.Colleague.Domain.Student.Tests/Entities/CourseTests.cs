@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2021-2015 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,7 +29,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
             private Course course;
             private List<string> courseTypes;
             private ICollection<CourseApproval> approvals;
-            
+
 
             [TestInitialize]
             public void Initialize()
@@ -50,7 +50,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 approvals = new List<CourseApproval>() { new CourseApproval("A", DateTime.Today, "0000043", "0003315", DateTime.Today) };
                 course = new Course("2", title, longTitle, deptCodes, subjCode, number, acadLevelCode, courseLevelCodes, credits, ceus, approvals);
                 courseTypes = new List<string>() { "A", "B", "C" };
-               
+
             }
 
             [TestMethod]
@@ -535,6 +535,12 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 course.AddEquatedCourseId(equates.ElementAt(0));
                 Assert.AreEqual(equates.ElementAt(0), course.EquatedCourseIds.ElementAt(0));
             }
+
+            [TestMethod]
+            public void Course_NonRequiredProperties_ShowDropRoster_FalseWhenNotSet()
+            {
+                Assert.IsFalse(course.ShowDropRoster);
+            }
         }
 
         [TestClass]
@@ -647,7 +653,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 Assert.AreEqual(endDate, course.EndDate);
             }
 
-
             [TestMethod]
             public void ActiveStatusAndPastStartDateAndPastEndDateIsNotCurrent()
             {
@@ -665,7 +670,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 course.EndDate = DateTime.Today;
                 Assert.IsTrue(course.IsCurrent);
             }
-
 
             [TestMethod]
             public void ActiveStatusAndPastStartDateAndFutureEndDateIsCurrent()
@@ -694,7 +698,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 Assert.IsTrue(course.IsCurrent);
             }
 
-
             [TestMethod]
             public void NonActiveStatusAndCurrentDatesIsNotCurrent()
             {
@@ -709,7 +712,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 course = new Course("2", title, longTitle, deptCodes, subjCode, number, acadLevelCode, courseLevelCodes, credits, ceus, new List<CourseApproval>() { new CourseApproval("T", DateTime.Today, "0000043", "0003315", DateTime.Today) { Status = CourseStatus.Terminated } });
                 Assert.IsFalse(course.IsCurrent);
             }
-
             public void NonActiveStatusAndFutureDatesIsNotCurrent()
             {
                 course = new Course("2", title, longTitle, deptCodes, subjCode, number, acadLevelCode, courseLevelCodes, credits, ceus, approvals);

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -86,25 +86,31 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// </summary>
         public bool SSNIsFormatted { get { return _SSNIsFormatted; } }
 
-/// <summary>
-/// Constructor for ProxyConfiguration
-/// </summary>
-/// <param name="isEnabled">Flag indicating whether or not proxy functionality is allowed</param>
-/// <param name="disclosureDocId">Code for the disclosure release approval document</param>
-/// <param name="emailDocId">Code for the proxy email document</param>
-/// <param name="canAddOtherUsers">Flag indicating whether or not users may add non-existent/unrelated users as proxies</param>
-public ProxyConfiguration(bool isEnabled, string disclosureDocId, string emailDocId, bool canAddOtherUsers, bool UsingFormattingSubroutine)
+        /// <summary>
+        /// Proxy and User Permission mapping objects
+        /// </summary>
+        public ReadOnlyCollection<ProxyAndUserPermissionsMap> ProxyAndUserPermissionsMap { get; private set; }
+
+        /// <summary>
+        /// Constructor for ProxyConfiguration
+        /// </summary>
+        /// <param name="isEnabled">Flag indicating whether or not proxy functionality is allowed</param>
+        /// <param name="disclosureDocId">Code for the disclosure release approval document</param>
+        /// <param name="emailDocId">Code for the proxy email document</param>
+        /// <param name="canAddOtherUsers">Flag indicating whether or not users may add non-existent/unrelated users as proxies</param>
+        public ProxyConfiguration(bool isEnabled, string disclosureDocId, string emailDocId, bool canAddOtherUsers, bool UsingFormattingSubroutine, List<ProxyAndUserPermissionsMap> proxyAndUserPermissionsMap)
         {
             _proxyEnabled = isEnabled;
             _disclosureReleaseDocumentId = disclosureDocId;
             _proxyEmailDocumentId = emailDocId;
             _canAddOtherUsers = canAddOtherUsers;
             _SSNIsFormatted = UsingFormattingSubroutine;
-
+            
             DisclosureReleaseText = string.Empty;
             WorkflowGroups = _workflowGroups.AsReadOnly();
             RelationshipTypeCodes = _relationshipTypeCodes.AsReadOnly();
             DemographicFields = _demographicFields.AsReadOnly();
+            ProxyAndUserPermissionsMap = proxyAndUserPermissionsMap.AsReadOnly();
         }
 
         /// <summary>

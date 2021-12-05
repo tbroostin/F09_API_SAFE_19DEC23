@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -115,9 +115,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="type"></param>
         /// <param name="ignoreCache"></param>
         /// <returns></returns>
-        public async Task<Tuple<IEnumerable<EducationalInstitution>, int>> GetEducationalInstitutionsByTypeAsync(int offset, int limit, Dtos.EnumProperties.EducationalInstitutionType? type, bool bypassCache = false)
+        public async Task<Tuple<IEnumerable<EducationalInstitution>, int>> GetEducationalInstitutionsByTypeAsync(int offset, int limit, Dtos.EducationalInstitution educationalInstitution,
+                Dtos.EnumProperties.EducationalInstitutionType? type, bool bypassCache = false)
         {
-            CheckEducationalInstitutionsViewPermissions();
+            //CheckEducationalInstitutionsViewPermissions();
 
             #region apply filters
 
@@ -133,6 +134,18 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     break;
             }
 
+            List<Tuple<string, string>> creds = new List<Tuple<string, string>>();
+            if (educationalInstitution != null && educationalInstitution.Credentials != null && educationalInstitution.Credentials.Any())
+            {
+                educationalInstitution.Credentials.ToList().ForEach(i =>
+               {
+                   var tempValue = i.Value.Contains("'") ? i.Value.Replace("'", string.Empty) : i.Value;
+                   Tuple<string, string> tuple = new Tuple<string, string>(i.Type.ToString(), tempValue);
+                   creds.Add(tuple);
+               });
+            }
+
+
             #endregion
 
             #region get domain entities from repository
@@ -141,7 +154,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             try
             {
-                institutions = await _institutionRepository.GetInstitutionAsync(offset, limit, typeFilter);
+                institutions = await _institutionRepository.GetInstitutionAsync(offset, limit, typeFilter, creds);
             }
             catch (RepositoryException ex)
             {
@@ -219,7 +232,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 throw IntegrationApiException;
             }
 
-            CheckEducationalInstitutionsViewPermissions();
+            //CheckEducationalInstitutionsViewPermissions();
 
             Institution institution;
 
@@ -376,6 +389,18 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     educationInsitution.SocialMedia = personSocialMediaDtos;
                 }
             }
+            if (!string.IsNullOrEmpty(institution.Id))
+            {
+                educationInsitution.Credentials = new List<Credential3DtoProperty>()
+                {
+                    new Credential3DtoProperty()
+                    {
+                        Type = Credential3Type.ColleaguePersonId,
+                        Value = institution.Id
+                    }
+                };
+            }
+
             return educationInsitution;
         }
 

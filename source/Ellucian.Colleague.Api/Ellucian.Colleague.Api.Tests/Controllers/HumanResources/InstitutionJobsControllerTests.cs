@@ -1,13 +1,15 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.HumanResources;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Base.Tests;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -15,12 +17,15 @@ using Moq;
 using Newtonsoft.Json.Linq;
 using slf4net;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 {
@@ -441,6 +446,184 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             return institutionJob;
         }
+
+        //Permissions
+
+        // Success
+        // Get 8
+        //GetInstitutionJobsAsync
+        [TestMethod]
+        public async Task InstitutionJobsController_GetInstitutionJobsAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionJobs" },
+                    { "action", "GetInstitutionJobsAsync" }
+                };
+            HttpRoute route = new HttpRoute("institution-jobs", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            InstitutionJobsController.Request.SetRouteData(data);
+            InstitutionJobsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewInstitutionJob, HumanResourcesPermissionCodes.CreateInstitutionJob });
+
+            var controllerContext = InstitutionJobsController.ControllerContext;
+            var actionDescriptor = InstitutionJobsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            var tuple = new Tuple<IEnumerable<Dtos.InstitutionJobs>, int>(InstitutionJobList, 5);
+
+            institutionJobServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            var institutionJobs = await InstitutionJobsController.GetInstitutionJobsAsync(new Paging(10, 0), criteriaFilter);
+
+            Object filterObject;
+            InstitutionJobsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewInstitutionJob));
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.CreateInstitutionJob));
+
+        }
+
+
+        // Exception
+        // Get 8
+        //GetInstitutionJobsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task EmployeesController_GetInstitutionJobsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionJobs" },
+                    { "action", "GetInstitutionJobsAsync" }
+                };
+            HttpRoute route = new HttpRoute("institution-jobs", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            InstitutionJobsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = InstitutionJobsController.ControllerContext;
+            var actionDescriptor = InstitutionJobsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                institutionJobServiceMock.Setup(s => s.GetInstitutionJobsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                institutionJobServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view institution-jobs."));
+                await InstitutionJobsController.GetInstitutionJobsAsync(new Paging(100, 0), criteriaFilter);
+
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        // Success
+        // Get By Id 8
+        //GetInstitutionJobsByGuidAsync
+        [TestMethod]
+        public async Task InstitutionJobsController_GetInstitutionJobsByGuidAsync_Permissions()
+        {
+            var thisInstitutionJob = InstitutionJobList.Where(m => m.Id == "625c69ff-280b-4ed3-9474-662a43616a8a").FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionJobs" },
+                    { "action", "GetInstitutionJobsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("institution-jobs", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            InstitutionJobsController.Request.SetRouteData(data);
+            InstitutionJobsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewInstitutionJob, HumanResourcesPermissionCodes.CreateInstitutionJob });
+
+            var controllerContext = InstitutionJobsController.ControllerContext;
+            var actionDescriptor = InstitutionJobsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            var tuple = new Tuple<IEnumerable<Dtos.InstitutionJobs>, int>(InstitutionJobList, 5);
+
+            institutionJobServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            institutionJobServiceMock.Setup(x => x.GetInstitutionJobsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(thisInstitutionJob);
+            var institutionJob = await InstitutionJobsController.GetInstitutionJobsByGuidAsync("625c69ff-280b-4ed3-9474-662a43616a8a");
+
+            Object filterObject;
+            InstitutionJobsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewInstitutionJob));
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.CreateInstitutionJob));
+
+        }
+
+
+        // Exception
+        // Get By Id 8
+        //GetInstitutionJobsByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task EmployeesController_GetInstitutionJobsByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionJobs" },
+                    { "action", "GetInstitutionJobsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("institution-jobs", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            InstitutionJobsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = InstitutionJobsController.ControllerContext;
+            var actionDescriptor = InstitutionJobsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                institutionJobServiceMock.Setup(gc => gc.GetInstitutionJobsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                institutionJobServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view institution-jobs."));
+                await InstitutionJobsController.GetInstitutionJobsByGuidAsync("sdjfh");
+
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
     }
 
     [TestClass]
@@ -928,6 +1111,185 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 
             return institutionJob;
         }
+
+        //Permissions
+
+        // Success
+        // Get 11
+        //GetInstitutionJobs2Async
+        [TestMethod]
+        public async Task InstitutionJobsController_GetInstitutionJobs2Async_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionJobs" },
+                    { "action", "GetInstitutionJobs2Async" }
+                };
+            HttpRoute route = new HttpRoute("institution-jobs", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            InstitutionJobsController.Request.SetRouteData(data);
+            InstitutionJobsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewInstitutionJob, HumanResourcesPermissionCodes.CreateInstitutionJob });
+
+            var controllerContext = InstitutionJobsController.ControllerContext;
+            var actionDescriptor = InstitutionJobsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            var tuple = new Tuple<IEnumerable<Dtos.InstitutionJobs2>, int>(InstitutionJobList, 5);
+
+            institutionJobServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            var institutionJobs = await InstitutionJobsController.GetInstitutionJobs2Async(new Paging(10, 0), criteriaFilter);
+
+            Object filterObject;
+            InstitutionJobsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewInstitutionJob));
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.CreateInstitutionJob));
+
+        }
+
+
+        // Exception
+        // Get 11
+        //GetInstitutionJobs2Async
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task EmployeesController_GetInstitutionJobs2Async_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionJobs" },
+                    { "action", "GetInstitutionJobs2Async" }
+                };
+            HttpRoute route = new HttpRoute("institution-jobs", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            InstitutionJobsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = InstitutionJobsController.ControllerContext;
+            var actionDescriptor = InstitutionJobsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                institutionJobServiceMock.Setup(s => s.GetInstitutionJobs2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                institutionJobServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view institution-jobs."));
+                await InstitutionJobsController.GetInstitutionJobs2Async(new Paging(100, 0), criteriaFilter);
+
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        // Success
+        // Get By Id 11
+        //GetInstitutionJobsByGuid2Async
+        [TestMethod]
+        public async Task InstitutionJobsController_GetInstitutionJobsByGuid2Async_Permissions()
+        {
+            var thisInstitutionJob = InstitutionJobList.Where(m => m.Id == "625c69ff-280b-4ed3-9474-662a43616a8a").FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionJobs" },
+                    { "action", "GetInstitutionJobsByGuid2Async" }
+                };
+            HttpRoute route = new HttpRoute("institution-jobs", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            InstitutionJobsController.Request.SetRouteData(data);
+            InstitutionJobsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewInstitutionJob, HumanResourcesPermissionCodes.CreateInstitutionJob });
+
+            var controllerContext = InstitutionJobsController.ControllerContext;
+            var actionDescriptor = InstitutionJobsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            var tuple = new Tuple<IEnumerable<Dtos.InstitutionJobs2>, int>(InstitutionJobList, 5);
+
+            institutionJobServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            institutionJobServiceMock.Setup(x => x.GetInstitutionJobsByGuid2Async(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(thisInstitutionJob);
+            var institutionJob = await InstitutionJobsController.GetInstitutionJobsByGuid2Async("625c69ff-280b-4ed3-9474-662a43616a8a");
+
+            Object filterObject;
+            InstitutionJobsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewInstitutionJob));
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.CreateInstitutionJob));
+
+        }
+
+
+        // Exception
+        // Get By Id 11
+        //GetInstitutionJobsByGuid2Async
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task EmployeesController_GetInstitutionJobsByGuid2Async_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionJobs" },
+                    { "action", "GetInstitutionJobsByGuid2Async" }
+                };
+            HttpRoute route = new HttpRoute("institution-jobs", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            InstitutionJobsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = InstitutionJobsController.ControllerContext;
+            var actionDescriptor = InstitutionJobsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                institutionJobServiceMock.Setup(gc => gc.GetInstitutionJobsByGuid2Async(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                institutionJobServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view institution-jobs."));
+                await InstitutionJobsController.GetInstitutionJobsByGuid2Async("sdjfh");
+
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
     }
 
     [TestClass]
@@ -1573,6 +1935,185 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             await InstitutionJobsController.GetInstitutionJobsByGuid3Async("sdjfh");
         }
 
+        //Permissions
+
+        // Success
+        // Get 12
+        //GetInstitutionJobs3Async
+        [TestMethod]
+        public async Task InstitutionJobsController_GetInstitutionJobs3Async_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionJobs" },
+                    { "action", "GetInstitutionJobs3Async" }
+                };
+            HttpRoute route = new HttpRoute("institution-jobs", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            InstitutionJobsController.Request.SetRouteData(data);
+            InstitutionJobsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewInstitutionJob, HumanResourcesPermissionCodes.CreateInstitutionJob });
+
+            var controllerContext = InstitutionJobsController.ControllerContext;
+            var actionDescriptor = InstitutionJobsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            var tuple = new Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>(InstitutionJobList, 5);
+
+            institutionJobServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).ReturnsAsync(tuple);
+            var institutionJobs = await InstitutionJobsController.GetInstitutionJobs3Async(new Paging(10, 0), criteriaFilter);
+
+            Object filterObject;
+            InstitutionJobsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewInstitutionJob));
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.CreateInstitutionJob));
+
+        }
+
+
+        // Exception
+        // Get 12
+        //GetInstitutionJobs3Async
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task EmployeesController_GetInstitutionJobs3Async_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionJobs" },
+                    { "action", "GetInstitutionJobs3Async" }
+                };
+            HttpRoute route = new HttpRoute("institution-jobs", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            InstitutionJobsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = InstitutionJobsController.ControllerContext;
+            var actionDescriptor = InstitutionJobsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                institutionJobServiceMock.Setup(s => s.GetInstitutionJobs3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<Dictionary<string, string>>())).Throws<PermissionsException>();
+                institutionJobServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view institution-jobs."));
+                await InstitutionJobsController.GetInstitutionJobs3Async(new Paging(100, 0), criteriaFilter);
+
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        // Success
+        // Get By Id 12
+        //GetInstitutionJobsByGuid2Async
+        [TestMethod]
+        public async Task InstitutionJobsController_GetInstitutionJobsByGuid2Async_Permissions()
+        {
+            var thisInstitutionJob = InstitutionJobList.Where(m => m.Id == "625c69ff-280b-4ed3-9474-662a43616a8a").FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionJobs" },
+                    { "action", "GetInstitutionJobsByGuid2Async" }
+                };
+            HttpRoute route = new HttpRoute("institution-jobs", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            InstitutionJobsController.Request.SetRouteData(data);
+            InstitutionJobsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewInstitutionJob, HumanResourcesPermissionCodes.CreateInstitutionJob });
+
+            var controllerContext = InstitutionJobsController.ControllerContext;
+            var actionDescriptor = InstitutionJobsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            var tuple = new Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>(InstitutionJobList, 5);
+
+            institutionJobServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            institutionJobServiceMock.Setup(x => x.GetInstitutionJobsByGuid3Async(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(thisInstitutionJob);
+            var institutionJob = await InstitutionJobsController.GetInstitutionJobsByGuid3Async("625c69ff-280b-4ed3-9474-662a43616a8a");
+
+            Object filterObject;
+            InstitutionJobsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewInstitutionJob));
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.CreateInstitutionJob));
+
+        }
+
+
+        // Exception
+        // Get By Id 12
+        //GetInstitutionJobsByGuid2Async
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task EmployeesController_GetInstitutionJobsByGuid2Async_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionJobs" },
+                    { "action", "GetInstitutionJobsByGuid2Async" }
+                };
+            HttpRoute route = new HttpRoute("institution-jobs", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            InstitutionJobsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = InstitutionJobsController.ControllerContext;
+            var actionDescriptor = InstitutionJobsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                institutionJobServiceMock.Setup(gc => gc.GetInstitutionJobsByGuid3Async(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                institutionJobServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view institution-jobs."));
+                await InstitutionJobsController.GetInstitutionJobsByGuid3Async("sdjfh");
+
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
+
         #region v12 Post InstitutionJobs
 
         [TestMethod]
@@ -1674,7 +2215,96 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             institutionJobServiceMock.Setup(gc => gc.PostInstitutionJobsAsync(It.IsAny<Dtos.InstitutionJobs3>())).Throws<Exception>();
             await InstitutionJobsController.PostInstitutionJobs3Async(new Dtos.InstitutionJobs3() { Id = institutionJobsGuid });
         }
-        
+
+        //Permissions
+
+        // Success
+        // Post 12
+        //PostInstitutionJobs3Async
+        [TestMethod]
+        public async Task InstitutionJobsController_PostInstitutionJobs3Async_Permissions()
+        {
+            var thisInstitutionJob = InstitutionJobList.Where(m => m.Id == institutionJobsGuid).FirstOrDefault();
+            thisInstitutionJob.Id = "00000000-0000-0000-0000-000000000000";
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionJobs" },
+                    { "action", "PostInstitutionJobs3Async" }
+                };
+            HttpRoute route = new HttpRoute("institution-jobs", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            InstitutionJobsController.Request.SetRouteData(data);
+            InstitutionJobsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.CreateInstitutionJob);
+
+            var controllerContext = InstitutionJobsController.ControllerContext;
+            var actionDescriptor = InstitutionJobsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            institutionJobServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            institutionJobServiceMock.Setup(x => x.PostInstitutionJobsAsync(It.IsAny<Dtos.InstitutionJobs3>())).ReturnsAsync(thisInstitutionJob);
+            var institutionJob = await InstitutionJobsController.PostInstitutionJobs3Async(thisInstitutionJob);
+
+            Object filterObject;
+            InstitutionJobsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+            
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.CreateInstitutionJob));
+
+        }
+
+
+        // Exception
+        // Post 12
+        //PostInstitutionJobs3Async
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task EmployeesController_PostInstitutionJobs3Async_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionJobs" },
+                    { "action", "PostInstitutionJobs3Async" }
+                };
+            HttpRoute route = new HttpRoute("institution-jobs", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            InstitutionJobsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = InstitutionJobsController.ControllerContext;
+            var actionDescriptor = InstitutionJobsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                institutionJobServiceMock.Setup(gc => gc.PostInstitutionJobsAsync(It.IsAny<Dtos.InstitutionJobs3>())).Throws<PermissionsException>();
+                institutionJobServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to create institution-jobs."));
+                await InstitutionJobsController.PostInstitutionJobs3Async(new Dtos.InstitutionJobs3() { Id = institutionJobsGuid });
+
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion
 
         #region v12 PUT institutionJobs
@@ -1731,6 +2361,96 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         {
             var dto = new Dtos.InstitutionJobs3() { Id = institutionJobsGuid };
             await InstitutionJobsController.PutInstitutionJobs3Async(Guid.NewGuid().ToString(), dto);
+        }
+        
+        //Permissions
+
+        // Success
+        // Put 12
+        //PutInstitutionJobs3Async
+        [TestMethod]
+        public async Task InstitutionJobsController_PutInstitutionJobs3Async_Permissions()
+        {
+            var thisInstitutionJob = InstitutionJobList.Where(m => m.Id == institutionJobsGuid).FirstOrDefault();
+            var guid = thisInstitutionJob.Id;
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionJobs" },
+                    { "action", "PutInstitutionJobs3Async" }
+                };
+            HttpRoute route = new HttpRoute("institution-jobs", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            InstitutionJobsController.Request.SetRouteData(data);
+            InstitutionJobsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.CreateInstitutionJob);
+
+            var controllerContext = InstitutionJobsController.ControllerContext;
+            var actionDescriptor = InstitutionJobsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            institutionJobServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            institutionJobServiceMock.Setup(s => s.PutInstitutionJobsAsync(It.IsAny<Dtos.InstitutionJobs3>())).ReturnsAsync(thisInstitutionJob);
+            var result = await InstitutionJobsController.PutInstitutionJobs3Async(guid, thisInstitutionJob);
+
+            Object filterObject;
+            InstitutionJobsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.CreateInstitutionJob));
+
+        }
+
+
+        // Exception
+        // Put 12
+        //PutInstitutionJobs3Async
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task EmployeesController_PutInstitutionJobs3Async_Invalid_Permissions()
+        {
+            var thisInstitutionJob = InstitutionJobList.Where(m => m.Id == institutionJobsGuid).FirstOrDefault();
+            var guid = thisInstitutionJob.Id;
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionJobs" },
+                    { "action", "PutInstitutionJobs3Async" }
+                };
+            HttpRoute route = new HttpRoute("institution-jobs", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            InstitutionJobsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = InstitutionJobsController.ControllerContext;
+            var actionDescriptor = InstitutionJobsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                institutionJobServiceMock.Setup(s => s.PutInstitutionJobsAsync(It.IsAny<Dtos.InstitutionJobs3>())).Throws<PermissionsException>();
+                institutionJobServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to update institution-jobs."));
+                await InstitutionJobsController.PutInstitutionJobs3Async(guid, thisInstitutionJob);
+
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
         }
 
         #endregion

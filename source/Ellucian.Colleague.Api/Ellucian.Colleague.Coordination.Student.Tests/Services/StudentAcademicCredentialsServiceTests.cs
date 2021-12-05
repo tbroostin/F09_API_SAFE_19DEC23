@@ -1,9 +1,8 @@
-//Copyright 2019 Ellucian Company L.P. and its affiliates.
+//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Colleague.Domain.Base.Tests;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -27,8 +26,8 @@ using System.Threading.Tasks;
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
     [TestClass]
-    public class StudentAcademicCredentialsServiceTests: UserFactories.StudentUserFactory.StudentAcademicCredentialsUser
-    {        
+    public class StudentAcademicCredentialsServiceTests : UserFactories.StudentUserFactory.StudentAcademicCredentialsUser
+    {
         private Mock<IStudentAcademicCredentialsRepository> _studentAcademicCredentialsRepositoryMock;
         private Mock<IStudentAcademicProgramRepository> _studentAcademicProgramRepositoryMock;
         private Mock<IReferenceDataRepository> _referenceDataRepositoryMock;
@@ -75,11 +74,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             permissionViewAnyStudentAcadCreds = new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewStudentAcademicCredentials);
             _sacRole.AddPermission(permissionViewAnyStudentAcadCreds);
 
-            BuildAndMockData();            
+            BuildAndMockData();
 
             _studentAcademicCredentialsService = new StudentAcademicCredentialsService(
                 _studentAcademicCredentialsRepositoryMock.Object, _studentAcademicProgramRepositoryMock.Object,
-                _personRepositoryMock.Object, _referenceDataRepositoryMock.Object, _studentReferenceDataRepositoryMock.Object, 
+                _personRepositoryMock.Object, _referenceDataRepositoryMock.Object, _studentReferenceDataRepositoryMock.Object,
                 _termRepositoryMock.Object, _adapterRegistryMock.Object, userFactory, _roleRepositoryMock.Object,
                _configurationRepoMock.Object, _loggerMock.Object);
         }
@@ -118,7 +117,19 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     },
                     GraduatedOn = DateTime.Today.AddDays(-30),
                     StudentId = "1",
-                    StudentProgramGuid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc"
+                    StudentProgramGuid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc",
+                    AcadMajors = new List<string>()
+                    {
+                        "AT", "AC"
+                    },
+                    AcadMinors = new List<string>()
+                    {
+                        "CU"
+                    },
+                    AcadSpecializations = new List<string>()
+                    {
+                        "MT"
+                    }
                 }
             };
             entitiesWithNoData = new List<StudentAcademicCredential>()
@@ -128,7 +139,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     AcadAcadProgramId = "",
                     AcadDisciplines = new List<string>()
                     {
-                        
+
                     },
                     AcademicLevel = "",
                     AcademicPeriod = "",
@@ -207,7 +218,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                     new Domain.Base.Entities.AcademicDiscipline("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "AT", "Athletic", Domain.Base.Entities.AcademicDisciplineType.Major),
                     new Domain.Base.Entities.AcademicDiscipline("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "AC", "Academic", Domain.Base.Entities.AcademicDisciplineType.Major),
-                    new Domain.Base.Entities.AcademicDiscipline("d2253ac7-9931-4560-b42f-1fccd43c952e", "CU", "Cultural", Domain.Base.Entities.AcademicDisciplineType.Minor)
+                    new Domain.Base.Entities.AcademicDiscipline("d2253ac7-9931-4560-b42f-1fccd43c952e", "CU", "Cultural", Domain.Base.Entities.AcademicDisciplineType.Minor),
+                    new Domain.Base.Entities.AcademicDiscipline("e2253ac7-9931-4560-b42f-1fccd43c952e", "MT", "Math", Domain.Base.Entities.AcademicDisciplineType.Concentration)
             };
             _referenceDataRepositoryMock.Setup(repo => repo.GetAcademicDisciplinesAsync(It.IsAny<bool>())).ReturnsAsync(acadDiscipliness);
             _referenceDataRepositoryMock.SetupSequence(repo => repo.GetAcadDisciplinesGuidAsync(It.IsAny<string>()))
@@ -276,12 +288,19 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             var results = await _studentAcademicCredentialsService.GetStudentAcademicCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), studentAcademicCredential.FirstOrDefault(),
                 personFilterFilter2, academicProgramsFilter, It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>());
             Assert.IsNotNull(results);
+
+            var result = results.Item1.FirstOrDefault();
+
+            Assert.IsTrue(result.Disciplines.Any(x1 => x1.Id == "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc"), "Contains Discipline Major");
+            Assert.IsTrue(result.Disciplines.Any(x2 => x2.Id == "d2253ac7-9931-4560-b42f-1fccd43c952e"), "Contains Discipline Minor");
+            Assert.IsTrue(result.Disciplines.Any(x3 => x3.Id == "e2253ac7-9931-4560-b42f-1fccd43c952e"), "Contains Discipline Specialization");
+
         }
 
         [TestMethod]
         public async Task GetStudentAcademicCredentialsAsync_NoCreds_Filter_EmptyResult()
         {
-            _referenceDataRepositoryMock.Setup(repo => repo.GetAcadCredentialsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            _referenceDataRepositoryMock.Setup(repo => repo.GetAcadCredentialsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
             var results = await _studentAcademicCredentialsService.GetStudentAcademicCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), studentAcademicCredential.FirstOrDefault(),
                 It.IsAny<PersonFilterFilter2>(), It.IsAny<AcademicProgramsFilter>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>());
             Assert.IsNotNull(results);
@@ -324,7 +343,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [TestMethod]
         public async Task GetStudentAcademicCredentialsAsync_NoAcad_Levels_Filter_EmptyResult()
         {
-            _studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            _studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
             var results = await _studentAcademicCredentialsService.GetStudentAcademicCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), studentAcademicCredential.FirstOrDefault(),
                 It.IsAny<PersonFilterFilter2>(), It.IsAny<AcademicProgramsFilter>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>());
             Assert.IsNotNull(results);
@@ -398,7 +417,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [TestMethod]
         public async Task GetStudentAcademicCredentialsAsync_Person_Filter_NamedQuery_EmptyResult()
         {
-            _referenceDataRepositoryMock.Setup(repo => repo.GetPersonIdsByPersonFilterGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            _referenceDataRepositoryMock.Setup(repo => repo.GetPersonIdsByPersonFilterGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             personFilterFilter2 = new PersonFilterFilter2()
             {
                 personFilter = new GuidObject2("BAD_ID")
@@ -426,7 +445,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [TestMethod]
         public async Task GetStudentAcademicCredentialsAsync_Acad_Program_NamedQuery_EmptyResult()
         {
-            _studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicProgramsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            _studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicProgramsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
             academicProgramsFilter = new AcademicProgramsFilter()
             {
                 AcademicPrograms = new GuidObject2("BAD_ID")
@@ -457,25 +476,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetStudentAcademicCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(),
                It.IsAny<StudentAcademicCredential>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>())).ReturnsAsync(tupleWithNodata);
             var results = await _studentAcademicCredentialsService.GetStudentAcademicCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), null,
-                null, null, It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>());            
-        }
-
-
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task GetStudentAcademicCredentialsAsync_PermissionsException()
-        {
-            _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
-            var results = await _studentAcademicCredentialsService.GetStudentAcademicCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), null,
                 null, null, It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>());
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task GetStudentAcademicCredentialsByGuidAsync_PermissionsException()
-        {
-            _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
-            var results = await _studentAcademicCredentialsService.GetStudentAcademicCredentialsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>());
         }
 
         [TestMethod]
@@ -507,7 +508,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         {
             Tuple<string, string, string> tuple = new Tuple<string, string, string>("ACAD.CREDENTIALS", "BAD_ID", "BAD_ID");
             _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetAcadCredentialKeyAsync(It.IsAny<string>())).ReturnsAsync(tuple);
-            _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetStudentAcademicCredentialByGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetStudentAcademicCredentialByGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             var results = await _studentAcademicCredentialsService.GetStudentAcademicCredentialsByGuidAsync("BAD_ID", It.IsAny<bool>());
         }
 
@@ -518,7 +519,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             Tuple<string, string, string> tuple = new Tuple<string, string, string>("ACAD.CREDENTIALS", "ID", "ID");
             _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetAcadCredentialKeyAsync(It.IsAny<string>())).ReturnsAsync(tuple);
             _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetStudentAcademicCredentialByGuidAsync(It.IsAny<string>())).ReturnsAsync(entities.FirstOrDefault());
-            _personRepositoryMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(null);
+            _personRepositoryMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(() => null);
             var results = await _studentAcademicCredentialsService.GetStudentAcademicCredentialsByGuidAsync("BAD_ID", It.IsAny<bool>());
         }
 
@@ -536,7 +537,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [ExpectedException(typeof(IntegrationApiException))]
         public async Task GetStudentAcademicCredentialsByGuidAsync_Acad_Level_Null_IntegrationApiException()
         {
-            var entity = entities.FirstOrDefault();            
+            var entity = entities.FirstOrDefault();
 
             Tuple<string, string, string> tuple = new Tuple<string, string, string>("ACAD.CREDENTIALS", "ID", "ID");
             _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetAcadCredentialKeyAsync(It.IsAny<string>())).ReturnsAsync(tuple);
@@ -585,28 +586,159 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(IntegrationApiException))]
-        public async Task GetStudentAcademicCredentialsByGuidAsync_Major_Null_IntegrationApiException()
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetStudentAcademicCredentialsByGuidAsync_Major_Null_ArgumentNullException()
         {
             var entity = entities.FirstOrDefault();
 
             Tuple<string, string, string> tuple = new Tuple<string, string, string>("ACAD.CREDENTIALS", "ID", "ID");
             _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetAcadCredentialKeyAsync(It.IsAny<string>())).ReturnsAsync(tuple);
+            entity.AcadMajors = new List<string>() { "ART" };
+            entity.AcadMinors = null;
+            entity.AcadSpecializations = null;
             _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetStudentAcademicCredentialByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetAcadDisciplinesGuidAsync(It.IsAny<string>())).ReturnsAsync("");
+            _referenceDataRepositoryMock.Setup(repo => repo.GetAcadDisciplinesGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
+            _referenceDataRepositoryMock.Setup(repo => repo.GetAcademicDisciplinesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
             var result = await _studentAcademicCredentialsService.GetStudentAcademicCredentialsByGuidAsync("ID", It.IsAny<bool>());
         }
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
-        public async Task GetStudentAcademicCredentialsByGuidAsync_Major_Null_IntegrationApiException2()
+        public async Task GetStudentAcademicCredentialsByGuidAsync_Major_NotFound_IntegrationApiException()
         {
             var entity = entities.FirstOrDefault();
 
             Tuple<string, string, string> tuple = new Tuple<string, string, string>("ACAD.CREDENTIALS", "ID", "ID");
             _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetAcadCredentialKeyAsync(It.IsAny<string>())).ReturnsAsync(tuple);
+            entity.AcadMajors = new List<string>() { "BAD" };
             _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetStudentAcademicCredentialByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetAcadDisciplinesGuidAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
+            var result = await _studentAcademicCredentialsService.GetStudentAcademicCredentialsByGuidAsync("ID", It.IsAny<bool>());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task GetStudentAcademicCredentialsByGuidAsync_NoMajors_IntegrationApiException()
+        {
+            var entity = entities.FirstOrDefault();
+
+            Tuple<string, string, string> tuple = new Tuple<string, string, string>("ACAD.CREDENTIALS", "ID", "ID");
+            _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetAcadCredentialKeyAsync(It.IsAny<string>())).ReturnsAsync(tuple);
+            entity.AcadMinors = null;
+            entity.AcadMajors = new List<string>() { "AT" };
+            entity.AcadSpecializations = null;
+            _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetStudentAcademicCredentialByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
+            List<Domain.Base.Entities.AcademicDiscipline> acadDiscipliness = new List<Domain.Base.Entities.AcademicDiscipline>()
+            {
+                    new Domain.Base.Entities.AcademicDiscipline("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "CU", "Athletic", Domain.Base.Entities.AcademicDisciplineType.Minor),
+                               };
+            _referenceDataRepositoryMock.Setup(repo => repo.GetAcademicDisciplinesAsync(It.IsAny<bool>())).ReturnsAsync(acadDiscipliness);
+
+            var result = await _studentAcademicCredentialsService.GetStudentAcademicCredentialsByGuidAsync("ID", It.IsAny<bool>());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetStudentAcademicCredentialsByGuidAsync_Minor_Null_ArgumentNullException()
+        {
+            var entity = entities.FirstOrDefault();
+
+            Tuple<string, string, string> tuple = new Tuple<string, string, string>("ACAD.CREDENTIALS", "ID", "ID");
+            _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetAcadCredentialKeyAsync(It.IsAny<string>())).ReturnsAsync(tuple);
+            entity.AcadMinors = new List<string>() { "ART" };
+            entity.AcadMajors = null;
+            entity.AcadSpecializations = null;
+            _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetStudentAcademicCredentialByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
+            _referenceDataRepositoryMock.Setup(repo => repo.GetAcadDisciplinesGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
+            _referenceDataRepositoryMock.Setup(repo => repo.GetAcademicDisciplinesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
+            var result = await _studentAcademicCredentialsService.GetStudentAcademicCredentialsByGuidAsync("ID", It.IsAny<bool>());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task GetStudentAcademicCredentialsByGuidAsync_Minor_NotFound_IntegrationApiException()
+        {
+            var entity = entities.FirstOrDefault();
+
+            Tuple<string, string, string> tuple = new Tuple<string, string, string>("ACAD.CREDENTIALS", "ID", "ID");
+            _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetAcadCredentialKeyAsync(It.IsAny<string>())).ReturnsAsync(tuple);
+            entity.AcadMinors = new List<string>() { "BAD" };
+            _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetStudentAcademicCredentialByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
+            // _referenceDataRepositoryMock.Setup(repo => repo.GetAcadDisciplinesGuidAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
+            var result = await _studentAcademicCredentialsService.GetStudentAcademicCredentialsByGuidAsync("ID", It.IsAny<bool>());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task GetStudentAcademicCredentialsByGuidAsync_NoMinors_IntegrationApiException()
+        {
+            var entity = entities.FirstOrDefault();
+
+            Tuple<string, string, string> tuple = new Tuple<string, string, string>("ACAD.CREDENTIALS", "ID", "ID");
+            _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetAcadCredentialKeyAsync(It.IsAny<string>())).ReturnsAsync(tuple);
+            entity.AcadMinors = new List<string>() { "CU" };
+            entity.AcadMajors = null;
+            entity.AcadSpecializations = null;
+            _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetStudentAcademicCredentialByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
+            List<Domain.Base.Entities.AcademicDiscipline> acadDiscipliness = new List<Domain.Base.Entities.AcademicDiscipline>()
+            {
+                    new Domain.Base.Entities.AcademicDiscipline("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "AT", "Athletic", Domain.Base.Entities.AcademicDisciplineType.Major),
+                               };
+            _referenceDataRepositoryMock.Setup(repo => repo.GetAcademicDisciplinesAsync(It.IsAny<bool>())).ReturnsAsync(acadDiscipliness);
+
+            var result = await _studentAcademicCredentialsService.GetStudentAcademicCredentialsByGuidAsync("ID", It.IsAny<bool>());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetStudentAcademicCredentialsByGuidAsync_Specialization_Null_ArgumentNullException()
+        {
+            var entity = entities.FirstOrDefault();
+
+            Tuple<string, string, string> tuple = new Tuple<string, string, string>("ACAD.CREDENTIALS", "ID", "ID");
+            _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetAcadCredentialKeyAsync(It.IsAny<string>())).ReturnsAsync(tuple);
+            entity.AcadMinors = null;
+            entity.AcadMajors = null;
+            entity.AcadSpecializations = new List<string>() { "MT" };
+            _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetStudentAcademicCredentialByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
+            _referenceDataRepositoryMock.Setup(repo => repo.GetAcadDisciplinesGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
+            _referenceDataRepositoryMock.Setup(repo => repo.GetAcademicDisciplinesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
+            var result = await _studentAcademicCredentialsService.GetStudentAcademicCredentialsByGuidAsync("ID", It.IsAny<bool>());
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task GetStudentAcademicCredentialsByGuidAsync_NoSpecializations_IntegrationApiException()
+        {
+            var entity = entities.FirstOrDefault();
+
+            Tuple<string, string, string> tuple = new Tuple<string, string, string>("ACAD.CREDENTIALS", "ID", "ID");
+            _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetAcadCredentialKeyAsync(It.IsAny<string>())).ReturnsAsync(tuple);
+            entity.AcadMinors = null;
+            entity.AcadMajors = null;
+            entity.AcadSpecializations = new List<string>() { "MT" };
+            _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetStudentAcademicCredentialByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
+            List<Domain.Base.Entities.AcademicDiscipline> acadDiscipliness = new List<Domain.Base.Entities.AcademicDiscipline>()
+            {
+                    new Domain.Base.Entities.AcademicDiscipline("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "AT", "Athletic", Domain.Base.Entities.AcademicDisciplineType.Major),
+                               };
+            _referenceDataRepositoryMock.Setup(repo => repo.GetAcademicDisciplinesAsync(It.IsAny<bool>())).ReturnsAsync(acadDiscipliness);
+
+            var result = await _studentAcademicCredentialsService.GetStudentAcademicCredentialsByGuidAsync("ID", It.IsAny<bool>());
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task GetStudentAcademicCredentialsByGuidAsync_Specialization_NotFound_IntegrationApiException()
+        {
+            var entity = entities.FirstOrDefault();
+
+            Tuple<string, string, string> tuple = new Tuple<string, string, string>("ACAD.CREDENTIALS", "ID", "ID");
+            _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetAcadCredentialKeyAsync(It.IsAny<string>())).ReturnsAsync(tuple);
+            entity.AcadSpecializations = new List<string>() { "BAD" };
+            _studentAcademicCredentialsRepositoryMock.Setup(repo => repo.GetStudentAcademicCredentialByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
+            //_referenceDataRepositoryMock.Setup(repo => repo.GetAcadDisciplinesGuidAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
             var result = await _studentAcademicCredentialsService.GetStudentAcademicCredentialsByGuidAsync("ID", It.IsAny<bool>());
         }
 

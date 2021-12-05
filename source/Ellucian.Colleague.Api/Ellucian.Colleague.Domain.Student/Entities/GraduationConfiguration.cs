@@ -96,6 +96,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// </summary>
         public string ExpandRequirements { get; set; }
 
+        /// <summary>
+        /// Enum indicating the expand settings for the Requirements in My progress page
+        /// </summary>
+        public ExpandRequirementSetting ExpandRequirementSetting { get; set; }
+
 
         /// <summary>
         /// Constructor for GraduationConfiguration

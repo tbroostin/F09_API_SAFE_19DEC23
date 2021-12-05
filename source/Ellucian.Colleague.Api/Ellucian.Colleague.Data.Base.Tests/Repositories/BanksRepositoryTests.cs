@@ -1,4 +1,4 @@
-﻿/*Copyright 2015 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2020 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -290,7 +290,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
 
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<PrDepositCodes>(It.IsAny<string[]>(), It.IsAny<bool>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
                 var bank = await repositoryUnderTest.GetBankAsync("011000015");
                 loggerMock.Verify(l => l.Info(It.Is<string>(s => s.Equals("Null PR.DEPOSIT.CODES read from database"))));
             }
@@ -554,7 +554,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             public async Task NullParametersAreLoggedAndExceptionIsCaughtAndLoggedTest()
             {
                 dataReaderMock.Setup(d => d.ReadRecordAsync<BankInfoParms>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 await repositoryUnderTest.GetAllBanksAsync();
 

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -119,7 +119,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 //throw new ArgumentException("Student Non-Courses record for " + studentId + " are missing.");
                 var errorMessage = string.Format("Student Non-Courses records for '{0}' are missing.", studentId);
                 logger.Error(ex.ToString());
-                logger.Info(errorMessage);
+                logger.Error(errorMessage);
             }
             return tests;
         }
@@ -159,8 +159,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 //throw new ArgumentException("Student Non-Courses record for Students are missing.");
                 var errorMessage = string.Format("Student Non-Courses records for selected students cannot be read.");
-                logger.Error(ex.ToString());
-                logger.Info(errorMessage);
+                logger.Error(ex, errorMessage);
             }
             return tests;
         }
@@ -194,7 +193,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             if (codeAssoc == null)
                             {
                                 var errorMessage = string.Format("Student ID: '{0}' Student Non Course Record '{1}' has an invalid category of '{2}'", stncData.StncPersonId, stncData.Recordkey, stncData.StncCategory);
-                                logger.Warn(errorMessage);
+                                logger.Error(errorMessage);
                             }
                             if (codeAssoc != null && ((codeAssoc.ValActionCode1AssocMember == "A") || (codeAssoc.ValActionCode1AssocMember == "P") || (codeAssoc.ValActionCode1AssocMember == "T")))
                             {

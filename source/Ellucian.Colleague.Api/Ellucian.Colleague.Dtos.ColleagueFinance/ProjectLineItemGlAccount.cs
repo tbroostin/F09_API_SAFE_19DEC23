@@ -47,5 +47,10 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// List of actuals transactions for this GL Account
         /// </summary>
         public List<GlTransaction> ActualsGlTransactions { get; set; }
+
+        /// <summary>
+        /// GL Account active flag.
+        /// </summary>
+        public bool IsGlActive { get; set; }
     }
 }

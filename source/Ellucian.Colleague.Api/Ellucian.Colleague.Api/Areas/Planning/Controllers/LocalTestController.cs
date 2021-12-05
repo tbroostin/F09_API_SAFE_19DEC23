@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Areas.Planning.Models.Tests;
 using Ellucian.Colleague.Configuration;
 using Ellucian.Colleague.Coordination.Planning.Services;
@@ -131,7 +131,7 @@ namespace Ellucian.Colleague.Api.Areas.Planning.Controllers
             var studentProgramRepo = new StudentProgramRepository(cacheProvider, txFactory, logger, apiSettingsMock);
             var courseRepo = new CourseRepository(cacheProvider, txFactory, logger, apiSettingsMock);
             var termRepo = new TermRepository(cacheProvider, txFactory, logger);
-            var academicCreditRepo = new AcademicCreditRepository(cacheProvider, txFactory, logger, courseRepo, gradeRepo, termRepo, apiSettingsMock);
+            var academicCreditRepo = new AcademicCreditRepository(cacheProvider, txFactory, logger, courseRepo, gradeRepo, termRepo, null, apiSettingsMock);
             var degreePlanRepo = new DegreePlanRepository(cacheProvider, txFactory, logger, apiSettingsMock);
             var studentDegreePlanRepo = new StudentDegreePlanRepository(cacheProvider, txFactory, logger, apiSettingsMock);
             var programRepo = new ProgramRepository(cacheProvider, txFactory, logger, apiSettingsMock);

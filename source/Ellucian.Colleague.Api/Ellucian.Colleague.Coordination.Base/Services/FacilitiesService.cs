@@ -2454,7 +2454,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             if (_hostCountry == null)
             {
-                _hostCountry = await _referenceDataRepository.GetHostCountry(_hostCountry);
+                _hostCountry = await _referenceDataRepository.GetHostCountryAsync();
             }
             return _hostCountry;
         }

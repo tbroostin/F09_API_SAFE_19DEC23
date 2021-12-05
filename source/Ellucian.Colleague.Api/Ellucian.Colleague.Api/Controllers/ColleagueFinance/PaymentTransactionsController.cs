@@ -4,6 +4,7 @@ using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.EnumProperties;
@@ -55,12 +56,12 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="document">Named query</param>
         ///  <param name="criteria">criteria filter</param>
         /// <returns>List of PaymentTransactions <see cref="Dtos.PaymentTransactions"/> objects representing matching paymentTransactions</returns>
-        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter, PermissionsFilter(ColleagueFinancePermissionCodes.ViewPaymentTransactionsIntg)]
         [ValidateQueryStringFilter()]
         [QueryStringFilterFilter("document", typeof(DocumentFilter)), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(PaymentTransactions))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
-        public async Task<IHttpActionResult> GetPaymentTransactionsAsync(Paging page, QueryStringFilter document, QueryStringFilter criteria) 
+        public async Task<IHttpActionResult> GetPaymentTransactionsAsync(Paging page, QueryStringFilter document, QueryStringFilter criteria)
         {
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
@@ -72,6 +73,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                _paymentTransactionsService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -98,7 +100,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                         throw new ArgumentException("documentType", "Type is required when requesting a document");
                     }
                 }
-             
+
                 var pageOfItems = await _paymentTransactionsService.GetPaymentTransactionsAsync(page.Offset, page.Limit, documentGuid, documentTypeValue, criteriaFilter, bypassCache);
 
                 AddEthosContextProperties(
@@ -145,7 +147,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="guid">GUID to desired paymentTransactions</param>
         /// <returns>A paymentTransactions object <see cref="Dtos.PaymentTransactions"/> in EEDM format</returns>
-        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter, PermissionsFilter(ColleagueFinancePermissionCodes.ViewPaymentTransactionsIntg)]
         public async Task<Dtos.PaymentTransactions> GetPaymentTransactionsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -163,6 +165,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                _paymentTransactionsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                     await _paymentTransactionsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await _paymentTransactionsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),

@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -12,10 +12,9 @@ using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos;
-using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Colleague.Domain.HumanResources;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Services
 {
@@ -31,7 +30,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             ICurrentUserFactory currentUserFactory,
             IRoleRepository roleRepository,
             ILogger logger)
-                : base(adapterRegistry, currentUserFactory, roleRepository, logger, configurationRepository : configurationRepository)
+                : base(adapterRegistry, currentUserFactory, roleRepository, logger, configurationRepository: configurationRepository)
         {
 
             _referenceDataRepository = referenceDataRepository;
@@ -44,20 +43,46 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns>Collection of PersonEmploymentProficiencies DTO objects</returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.PersonEmploymentProficiencies>, int>> GetPersonEmploymentProficienciesAsync(int offset, int limit, bool bypassCache = false)
         {
-            CheckUserPersonEmploymentProficienciesViewPermissions();
-
             var personEmploymentProficienciesCollection = new List<Ellucian.Colleague.Dtos.PersonEmploymentProficiencies>();
-
-            var tuplePEP = await _referenceDataRepository.GetPersonEmploymentProficienciesAsync(offset, limit, bypassCache);
-            var personEmploymentProficienciesEntities = tuplePEP.Item1;
-            if (personEmploymentProficienciesEntities != null && personEmploymentProficienciesEntities.Any())
+            int totalCount = 0;
+            try
             {
-                foreach (var personEmploymentProficiencies in personEmploymentProficienciesEntities)
+                var tuplePEP = await _referenceDataRepository.GetPersonEmploymentProficienciesAsync(offset, limit, bypassCache);
+                var personEmploymentProficienciesEntities = tuplePEP.Item1;
+                totalCount = tuplePEP.Item2;
+                if (personEmploymentProficienciesEntities != null && personEmploymentProficienciesEntities.Any())
                 {
-                    personEmploymentProficienciesCollection.Add(await ConvertPersonEmploymentProficienciesEntityToDto(personEmploymentProficiencies));
+                    foreach (var personEmploymentProficiencies in personEmploymentProficienciesEntities)
+                    {
+                        try
+                        {
+                            personEmploymentProficienciesCollection.Add(await ConvertPersonEmploymentProficienciesEntityToDto(personEmploymentProficiencies));
+                        }
+                        catch (RepositoryException ex)
+                        {
+                            IntegrationApiExceptionAddError(ex, "Bad.Data", personEmploymentProficiencies.Guid, personEmploymentProficiencies.RecordKey);
+                        }
+                        catch (Exception ex)
+                        {
+                            IntegrationApiExceptionAddError(ex.Message, "Bad.Data", personEmploymentProficiencies.Guid, personEmploymentProficiencies.RecordKey);
+                        }
+                    }
                 }
             }
-            return new Tuple<IEnumerable<PersonEmploymentProficiencies>, int>(personEmploymentProficienciesCollection,tuplePEP.Item2);
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Bad.Data");
+            }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+            return new Tuple<IEnumerable<PersonEmploymentProficiencies>, int>(personEmploymentProficienciesCollection, totalCount);
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -67,22 +92,31 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns>PersonEmploymentProficiencies DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.PersonEmploymentProficiencies> GetPersonEmploymentProficienciesByGuidAsync(string guid)
         {
-            CheckUserPersonEmploymentProficienciesViewPermissions();
-
             try
             {
-                return await ConvertPersonEmploymentProficienciesEntityToDto(await _referenceDataRepository.GetPersonEmploymentProficiency(guid));
+                var personEmployment = await ConvertPersonEmploymentProficienciesEntityToDto(await _referenceDataRepository.GetPersonEmploymentProficiency(guid));
+                if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+                {
+                    throw IntegrationApiException;
+                }
+                return personEmployment;
             }
             catch (KeyNotFoundException ex)
             {
-                throw new KeyNotFoundException("person-employment-proficiencies not found for GUID " + guid, ex);
+                //throw new KeyNotFoundException("person-employment-proficiencies not found for GUID " + guid, ex);
+                IntegrationApiExceptionAddError("person-employment-proficiencies not found for GUID " + guid, "GUID.Not.Found", guid, "", System.Net.HttpStatusCode.NotFound);
+                throw IntegrationApiException;
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
             }
             catch (InvalidOperationException ex)
             {
                 throw new KeyNotFoundException("person-employment-proficiencies not found for GUID " + guid, ex);
             }
         }
-
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
@@ -95,45 +129,42 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             var personEmploymentProficiencies = new Ellucian.Colleague.Dtos.PersonEmploymentProficiencies();
             if (string.IsNullOrWhiteSpace(source.Guid))
             {
-                throw new MissingFieldException("Record is missing GUID, Entity: ‘HR.IND.SKILL’, Record ID: ‘" + source.RecordKey + "’");
+                IntegrationApiExceptionAddError("Record is missing GUID, Entity: ‘HR.IND.SKILL’, Record ID: ‘" + source.RecordKey + "’", "Bad.Data", source.Guid, source.RecordKey);
             }
-            personEmploymentProficiencies.Id = source.Guid;
+            else
+            {
+                personEmploymentProficiencies.Id = source.Guid;
+            }
 
             if (string.IsNullOrWhiteSpace(source.PersonId))
             {
-                throw new MissingFieldException("Record is missing Person ID, Entity: ‘HR.IND.SKILL’, Record ID: ‘" + source.RecordKey + "’");
+                IntegrationApiExceptionAddError("Record is missing Person ID, Entity: ‘HR.IND.SKILL’, Record ID: ‘" + source.RecordKey + "’", "Bad.Data", source.Guid, source.RecordKey);
+            }
+            else
+            {
+                var personGuid = await _referenceDataRepository.GetGuidFromID(source.PersonId, "PERSON");
+                personEmploymentProficiencies.Person = new GuidObject2(personGuid);
             }
 
-            var personGuid = await _referenceDataRepository.GetGuidFromID(source.PersonId, "PERSON");
-            personEmploymentProficiencies.Person = new GuidObject2(personGuid);
-
-            var proficiencyGuid = await _referenceDataRepository.GetGuidFromID(source.ProficiencyId, "JOBSKILLS");
-            personEmploymentProficiencies.Proficiency = new GuidObject2(proficiencyGuid);
+            if (string.IsNullOrWhiteSpace(source.ProficiencyId))
+            {
+                IntegrationApiExceptionAddError("Record is missing Proficiency ID, Entity: ‘JOBSKILLS’, Record ID: ‘" + source.RecordKey + "’", "Bad.Data", source.Guid, source.RecordKey);
+            }
+            else
+            {
+                var proficiencyGuid = await _referenceDataRepository.GetGuidFromID(source.ProficiencyId, "JOBSKILLS");
+                personEmploymentProficiencies.Proficiency = new GuidObject2(proficiencyGuid);
+            }
 
             personEmploymentProficiencies.StartOn = source.StartOn.HasValue ? source.StartOn.Value : new DateTime();
             personEmploymentProficiencies.EndOn = source.EndOn.HasValue ? source.EndOn.Value : new DateTime();
 
-            if(!string.IsNullOrEmpty(source.Comment))
+            if (!string.IsNullOrEmpty(source.Comment))
             {
                 personEmploymentProficiencies.Comment = source.Comment;
             }
 
             return personEmploymentProficiencies;
         }
-
-        /// <summary>
-        /// Verifies if the user has the correct permissions to view a person employment proficiencies.
-        /// </summary>
-        private void CheckUserPersonEmploymentProficienciesViewPermissions()
-        {
-            // access is ok if the current user has the view person employment profciencies permission
-            if (!HasPermission(HumanResourcesPermissionCodes.ViewPersonEmpProficiencies))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view person-employment-proficiencies.");
-                throw new PermissionsException("User is not authorized to view person-employment-proficiencies.");
-            }
-        }
-
     }
 }
-

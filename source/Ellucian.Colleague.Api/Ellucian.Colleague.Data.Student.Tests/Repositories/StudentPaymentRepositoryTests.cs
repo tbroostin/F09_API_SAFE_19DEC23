@@ -347,7 +347,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             studentPaymentsDataContracts.Add(studentPaymentDataContract);
             dataReaderMock.Setup(x => x.SelectAsync("AR.PAY.ITEMS.INTG", "")).ReturnsAsync(studentPaymentsIds);
             dataReaderMock.Setup(i => i.BulkReadRecordAsync<ArPayItemsIntg>("AR.PAY.ITEMS.INTG",
-                It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(null);
+                It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(() => null);
 
             var actuals = await _studentPaymentRepository.GetAsync(1, 1, true);
         }
@@ -515,7 +515,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             studentPaymentsDataContracts.Add(studentPaymentDataContract);
             dataReaderMock.Setup(x => x.SelectAsync("AR.PAY.ITEMS.INTG", "")).ReturnsAsync(studentPaymentsIds);
             dataReaderMock.Setup(i => i.BulkReadRecordAsync<ArPayItemsIntg>("AR.PAY.ITEMS.INTG",
-                It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(null);
+                It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(() => null);
 
             var actuals = await _studentPaymentRepository.GetAsync2(1, 1, true);
         }

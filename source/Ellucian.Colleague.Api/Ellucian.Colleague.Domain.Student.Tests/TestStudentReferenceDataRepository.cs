@@ -532,7 +532,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 {
                     new Student.Entities.InstructionalMethod("bb66b971-3ee0-4477-9bb7-539721f93434" ,"02", "Lecture And/Or Discussion", false),
                     new Student.Entities.InstructionalMethod("5aeebc5c-c973-4f83-be4b-f64c95002124", "10", "Learning Laboratory", false),
-                    new Student.Entities.InstructionalMethod("27178aab-a6e8-4d1e-ae27-eca1f7b33363", "70", "Radio Course", false)
+                    new Student.Entities.InstructionalMethod("27178aab-a6e8-4d1e-ae27-eca1f7b33363", "70", "Radio Course", false),
                 });
         }
 
@@ -789,6 +789,57 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             });
         }
 
+
+
+        public Task<string> GetStudentAcademicCreditStatusesGuidAsync(string code)
+        {
+            List<Student.Entities.SectionRegistrationStatusItem> statuses = new List<Student.Entities.SectionRegistrationStatusItem>()
+                {
+                   new Student.Entities.SectionRegistrationStatusItem("3cf900894jck", "N", "New")
+                {
+                    Status = new Student.Entities.SectionRegistrationStatus()
+                    {
+                        RegistrationStatus = Student.Entities.RegistrationStatus.Registered, SectionRegistrationStatusReason = Student.Entities.RegistrationStatusReason.Registered
+                    }
+                },
+                new Student.Entities.SectionRegistrationStatusItem("3cf900894alk", "A", "Add")
+                {
+                    Status = new Student.Entities.SectionRegistrationStatus()
+                    {
+                        RegistrationStatus = Student.Entities.RegistrationStatus.Registered, SectionRegistrationStatusReason = Student.Entities.RegistrationStatusReason.Registered
+                    }
+                },
+                new Student.Entities.SectionRegistrationStatusItem("3cf900894kkj", "D", "Dropped")
+                {
+                    Status = new Student.Entities.SectionRegistrationStatus()
+                    {
+                        RegistrationStatus = Student.Entities.RegistrationStatus.NotRegistered, SectionRegistrationStatusReason = Student.Entities.RegistrationStatusReason.Dropped
+                    }
+                },
+                new Student.Entities.SectionRegistrationStatusItem("3cf900894els", "W", "Withdrawn")
+                {
+                    Status = new Student.Entities.SectionRegistrationStatus()
+                    {
+                        RegistrationStatus = Student.Entities.RegistrationStatus.NotRegistered, SectionRegistrationStatusReason = Student.Entities.RegistrationStatusReason.Withdrawn
+                    }
+                },
+                new Student.Entities.SectionRegistrationStatusItem("3cf900894srm", "X", "Deleted")
+                {
+                    Status = new Student.Entities.SectionRegistrationStatus()
+                    {
+                        RegistrationStatus = Student.Entities.RegistrationStatus.NotRegistered, SectionRegistrationStatusReason = Student.Entities.RegistrationStatusReason.Dropped
+                    }
+                },
+                new Student.Entities.SectionRegistrationStatusItem("3cf900894jck", "C", "Canceled")
+                {
+                    Status = new Student.Entities.SectionRegistrationStatus()
+                    {
+                        RegistrationStatus = Student.Entities.RegistrationStatus.NotRegistered, SectionRegistrationStatusReason = Student.Entities.RegistrationStatusReason.Canceled
+                    }
+                }
+                };
+            return Task.FromResult(statuses.FirstOrDefault(c => c.Code == code).Guid);
+        }
         public Task<IEnumerable<Student.Entities.SectionStatusCode>> GetSectionStatusCodesAsync()
         {
             return Task.FromResult<IEnumerable<Student.Entities.SectionStatusCode>>(new List<Student.Entities.SectionStatusCode>()

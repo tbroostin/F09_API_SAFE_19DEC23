@@ -1,4 +1,6 @@
-﻿using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
+
+using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
@@ -68,6 +70,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 }
             };
             var cfWebConfigurationAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.ColleagueFinanceWebConfiguration, Dtos.ColleagueFinance.ColleagueFinanceWebConfiguration>(adapterRegistryMock.Object, logger);
+            var purchasingDefaultsAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.PurchasingDefaults, Dtos.ColleagueFinance.PurchasingDefaults>(adapterRegistryMock.Object, logger);
+            var voucherWebConfigAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.VoucherWebConfiguration, Dtos.ColleagueFinance.VoucherWebConfiguration>(adapterRegistryMock.Object, logger);
+            adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.ColleagueFinance.Entities.PurchasingDefaults, Dtos.ColleagueFinance.PurchasingDefaults>()).Returns(purchasingDefaultsAdapter);
+            adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.ColleagueFinance.Entities.VoucherWebConfiguration, Dtos.ColleagueFinance.VoucherWebConfiguration>()).Returns(voucherWebConfigAdapter);
             adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.ColleagueFinance.Entities.ColleagueFinanceWebConfiguration, Dtos.ColleagueFinance.ColleagueFinanceWebConfiguration>()).Returns(cfWebConfigurationAdapter);
             colleagueFinanceWebConfigurationsRepoMock.Setup(r => r.GetColleagueFinanceWebConfigurations()).Returns(Task.FromResult(colleagueFinanceWebConfigurationsEntity));
             colleagueFinanceWebConfigurationsService = new ColleagueFinanceWebConfigurationsService(colleagueFinanceWebConfigurationsRepo, configurationRepo, adapterRegistry, currentUserFactory, roleRepo, logger);
@@ -85,6 +91,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.DefaultTaxCodes.Count(), result.DefaultTaxCodes.Count());
             Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.DefaultAPTypeCode, result.DefaultAPTypeCode);
             Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.PurchasingDefaults.DefaultShipToCode, result.PurchasingDefaults.DefaultShipToCode);
+            Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.VoucherAttachmentCollectionId, result.VoucherAttachmentCollectionId);
+            Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.PurchaseOrderAttachmentCollectionId, result.PurchaseOrderAttachmentCollectionId);
+            Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.RequisitionAttachmentCollectionId, result.RequisitionAttachmentCollectionId);
+            Assert.AreEqual(colleagueFinanceWebConfigurationsEntity.AreVoucherAttachmentsRequired, result.AreVoucherAttachmentsRequired);
         }
 
         [TestMethod]

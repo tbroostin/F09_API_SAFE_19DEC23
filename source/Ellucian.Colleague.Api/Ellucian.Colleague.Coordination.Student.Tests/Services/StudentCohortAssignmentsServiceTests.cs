@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -272,7 +272,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task StudentCohortAssignmentsService_GetStudentCohortAssignmentsByGuidAsync_InvalidId()
             {
-                _studentCohortAssignmentRepositoryMock.Setup(rp => rp.GetStudentCohortAssignmentByIdAsync("ABC")).ReturnsAsync(null);
+                _studentCohortAssignmentRepositoryMock.Setup(rp => rp.GetStudentCohortAssignmentByIdAsync("ABC")).ReturnsAsync(() => null);
                 await _studentCohortAssignmentsService.GetStudentCohortAssignmentsByGuidAsync("ABC");
             }
 

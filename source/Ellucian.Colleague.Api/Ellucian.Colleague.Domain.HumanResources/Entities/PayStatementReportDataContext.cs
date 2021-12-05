@@ -1,4 +1,4 @@
-﻿/*Copyright 2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2021 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -68,6 +68,29 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             personEmploymentStatus = personEmploymentStatuses.FirstOrDefault(status =>
                 status.StartDate <= registerEntry.PayPeriodEndDate &&
                 (!status.EndDate.HasValue || status.EndDate.Value >= registerEntry.PayPeriodEndDate));
+        }
+
+        /// <summary>
+        /// Constructor for PayStatementReportDataContext adjustment records
+        /// </summary>
+        /// <param name="registerEntry"></param>
+        public PayStatementReportDataContext(PayStatementSourceData sourceData, PayrollRegisterEntry registerEntry,
+            IEnumerable<PersonEmploymentStatus> personEmploymentStatuses)
+        {
+            if (sourceData == null)
+            {
+                throw new ArgumentNullException("sourceData");
+            }
+            if (registerEntry == null)
+            {
+                throw new ArgumentNullException("registerEntry");
+            }
+            this.sourceData = sourceData;
+            payrollRegisterEntry = registerEntry;
+            personBenefitDeductions = new List<PersonBenefitDeduction>();
+            personEmploymentStatus = personEmploymentStatuses != null ? personEmploymentStatuses.FirstOrDefault(status =>
+                status.StartDate <= registerEntry.PayPeriodEndDate &&
+                (!status.EndDate.HasValue || status.EndDate.Value >= registerEntry.PayPeriodEndDate)) : null;
         }
     }
 }

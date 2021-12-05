@@ -1,18 +1,23 @@
 //Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -297,6 +302,178 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.IsNotNull(result);
             }
 
+            //GET V10
+            //Successful
+            //GetSectionInstructorsAsync
+
+            [TestMethod]
+            public async Task SectionInstructorsController_GetSectionInstructorsAsync_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionInstructors" },
+                    { "action", "GetSectionInstructorsAsync" }
+                };
+                HttpRoute route = new HttpRoute("section-instructors", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                controller.Request.SetRouteData(data);
+                controller.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(new string[] {StudentPermissionCodes.ViewSectionInstructors,
+                StudentPermissionCodes.CreateSectionInstructors});
+
+                var controllerContext = controller.ControllerContext;
+                var actionDescriptor = controller.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                serviceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                serviceMock.Setup(x => x.GetSectionInstructorsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), false)).ReturnsAsync(tupleResult);
+                var result = await controller.GetSectionInstructorsAsync(null, criteria);
+
+                Object filterObject;
+                controller.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewSectionInstructors));
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateSectionInstructors));
+
+            }
+
+            //GET V10
+            //Exception
+            //GetSectionInstructorsAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionInstructorsController_GetSectionInstructorsAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionInstructors" },
+                    { "action", "GetPersonHoldsAsync" }
+                };
+                HttpRoute route = new HttpRoute("section-instructors", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                controller.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = controller.ControllerContext;
+                var actionDescriptor = controller.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    serviceMock.Setup(x => x.GetSectionInstructorsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), false)).ThrowsAsync(new PermissionsException());
+                    serviceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view section-instructors."));
+                    await controller.GetSectionInstructorsAsync(new Paging(limit, offset), criteria);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+
+            }
+
+            //GET BY ID V10
+            //Successful
+            //GetSectionInstructorsByGuidAsync
+
+            [TestMethod]
+            public async Task SectionInstructorsController_GetSectionInstructorsByGuidAsync_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionInstructors" },
+                    { "action", "GetSectionInstructorsByGuidAsync" }
+                };
+                HttpRoute route = new HttpRoute("section-instructors", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                controller.Request.SetRouteData(data);
+                controller.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(new string[] {StudentPermissionCodes.ViewSectionInstructors,
+                StudentPermissionCodes.CreateSectionInstructors});
+
+                var controllerContext = controller.ControllerContext;
+                var actionDescriptor = controller.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                serviceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                serviceMock.Setup(x => x.GetSectionInstructorsByGuidAsync(It.IsAny<string>())).ReturnsAsync(sectionInstructor);
+                var result = await controller.GetSectionInstructorsByGuidAsync(guid);
+
+                Object filterObject;
+                controller.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewSectionInstructors));
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateSectionInstructors));
+
+            }
+
+            //GET BY ID V10
+            //Exception
+            //GetSectionInstructorsByGuidAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionInstructorsController_GetSectionInstructorsByGuidAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionInstructors" },
+                    { "action", "GetSectionInstructorsByGuidAsync" }
+                };
+                HttpRoute route = new HttpRoute("section-instructors", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                controller.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = controller.ControllerContext;
+                var actionDescriptor = controller.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    serviceMock.Setup(x => x.GetSectionInstructorsByGuidAsync(It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+                    serviceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view section-instructors."));
+                    await controller.GetSectionInstructorsByGuidAsync(guid);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
         }
 
         [TestClass]
@@ -413,6 +590,92 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 Assert.IsNotNull(result);
             }
+            //POST V10
+            //Successful
+            //PostSectionInstructorsAsync
+
+            [TestMethod]
+            public async Task SectionInstructorsController_PostSectionInstructorsAsync_Permissions()
+            {
+                sectionInstructor = new SectionInstructors() { Id = "00000000-0000-0000-0000-000000000000" };
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionInstructors" },
+                    { "action", "PostSectionInstructorsAsync" }
+                };
+                HttpRoute route = new HttpRoute("section-instructors", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                controller.Request.SetRouteData(data);
+                controller.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(new string[] {StudentPermissionCodes.ViewSectionInstructors,
+                StudentPermissionCodes.CreateSectionInstructors});
+
+                var controllerContext = controller.ControllerContext;
+                var actionDescriptor = controller.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                serviceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                serviceMock.Setup(x => x.CreateSectionInstructorsAsync(It.IsAny<SectionInstructors>())).ReturnsAsync(sectionInstructor);
+                var result = await controller.PostSectionInstructorsAsync(sectionInstructor);
+
+                Object filterObject;
+                controller.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewSectionInstructors));
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateSectionInstructors));
+
+            }
+
+            //POST V10
+            //Exception
+            //PostSectionInstructorsAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionInstructorsController_PostSectionInstructorsAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionInstructors" },
+                    { "action", "PostSectionInstructorsAsync" }
+                };
+                HttpRoute route = new HttpRoute("section-instructors", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                controller.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = controller.ControllerContext;
+                var actionDescriptor = controller.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                    serviceMock.Setup(x => x.CreateSectionInstructorsAsync(It.IsAny<SectionInstructors>())).ThrowsAsync(new PermissionsException());
+                    serviceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to create section-instructors."));
+                    await controller.PostSectionInstructorsAsync(sectionInstructor);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
         }
 
         [TestClass]
@@ -547,6 +810,91 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 Assert.IsNotNull(result);
             }
+            //PUT V10
+            //Successful
+            //PutSectionInstructorsAsync
+
+            [TestMethod]
+            public async Task SectionInstructorsController_PutSectionInstructorsAsync_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionInstructors" },
+                    { "action", "PutSectionInstructorsAsync" }
+                };
+                HttpRoute route = new HttpRoute("section-instructors", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                controller.Request.SetRouteData(data);
+                controller.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.CreateSectionInstructors);
+
+                var controllerContext = controller.ControllerContext;
+                var actionDescriptor = controller.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                serviceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                serviceMock.Setup(s => s.UpdateSectionInstructorsAsync(It.IsAny<string>(), It.IsAny<Dtos.SectionInstructors>())).ReturnsAsync(sectionInstructor);
+                serviceMock.Setup(s => s.GetSectionInstructorsByGuidAsync(sectionInstructor.Id)).ReturnsAsync(sectionInstructor);
+                var result = await controller.PutSectionInstructorsAsync(guid, sectionInstructor);
+
+                Object filterObject;
+                controller.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateSectionInstructors));
+
+            }
+
+            //Put V10
+            //Exception
+            //PutSectionInstructorsAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionInstructorsController_PutSectionInstructorsAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionInstructors" },
+                    { "action", "PutSectionInstructorsAsync" }
+                };
+                HttpRoute route = new HttpRoute("section-instructors", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                controller.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = controller.ControllerContext;
+                var actionDescriptor = controller.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    serviceMock.Setup(s => s.UpdateSectionInstructorsAsync(It.IsAny<string>(), It.IsAny<Dtos.SectionInstructors>())).ThrowsAsync(new PermissionsException());
+                    serviceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to update section-instructors."));
+                    await controller.PutSectionInstructorsAsync(guid, sectionInstructor);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
         }
 
         [TestClass]
@@ -638,6 +986,90 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 await controller.DeleteSectionInstructorsAsync(guid);
 
             }
+
+            //DELETE V10
+            //Successful
+            //DeleteSectionInstructorsAsync
+
+            [TestMethod]
+            public async Task SectionInstructorsController_DeleteSectionInstructorsAsync_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionInstructors" },
+                    { "action", "DeleteSectionInstructorsAsync" }
+                };
+                HttpRoute route = new HttpRoute("section-instructors", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                controller.Request.SetRouteData(data);
+                controller.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.CreateSectionInstructors);
+
+                var controllerContext = controller.ControllerContext;
+                var actionDescriptor = controller.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                serviceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                serviceMock.Setup(s => s.DeleteSectionInstructorsAsync(It.IsAny<string>())).Returns(Task.FromResult(true));
+                await controller.DeleteSectionInstructorsAsync(guid);
+
+                Object filterObject;
+                controller.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateSectionInstructors));
+
+            }
+
+            //DELETE V10
+            //Exception
+            //DeleteSectionInstructorsAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionInstructorsController_DeleteSectionInstructorsAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionInstructors" },
+                    { "action", "DeleteSectionInstructorsAsync" }
+                };
+                HttpRoute route = new HttpRoute("section-instructors", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                controller.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = controller.ControllerContext;
+                var actionDescriptor = controller.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    serviceMock.Setup(s => s.DeleteSectionInstructorsAsync(It.IsAny<string>())).Throws(new PermissionsException());
+                    serviceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to delete section-instructors."));
+                    await controller.DeleteSectionInstructorsAsync(guid);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
         }
     }
 }

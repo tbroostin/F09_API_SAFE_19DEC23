@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -16,6 +16,8 @@ using Ellucian.Web.Dependency;
 using slf4net;
 using Ellucian.Dmi.Runtime;
 using System.Collections.ObjectModel;
+using System.Text;
+using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
@@ -49,6 +51,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns>Voucher domain entity.</returns>
         public async Task<Voucher> GetVoucherAsync(string voucherId, string personId, GlAccessLevel glAccessLevel, IEnumerable<string> glAccessAccounts, int versionNumber)
         {
+            logger.Debug(string.Format("voucher {0} ", voucherId));
+            logger.Debug(string.Format("gl access level {0}", glAccessLevel));
+
             if (string.IsNullOrEmpty(voucherId))
             {
                 throw new ArgumentNullException("voucherId");
@@ -57,6 +62,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (glAccessAccounts == null)
             {
                 glAccessAccounts = new List<string>();
+                logger.Debug(string.Format("no GL accounts for voucher {0} ", voucherId));
             }
 
             var voucher = await DataReader.ReadRecordAsync<Vouchers>(voucherId);
@@ -176,7 +182,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 voucherDomainEntity.VendorState = voucher.VouMiscState;
                 voucherDomainEntity.VendorZip = voucher.VouMiscZip;
                 voucherDomainEntity.VendorCountry = voucher.VouMiscCountry;
-
             }
             else
             {
@@ -191,6 +196,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 else
                 {
                     var addressRecord = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Address>(voucher.VouAddressId);
+
                     if (addressRecord != null)
                     {
                         voucherDomainEntity.VendorAddressLines = addressRecord.AddressLines;
@@ -201,6 +207,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     }
                 }
 
+                // Assign Vendor address
+                await GetVendorAddress(voucher, voucherDomainEntity);
             }
 
             if (voucher.VouMaintGlTranDate.HasValue)
@@ -289,9 +297,38 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
             }
 
+            // Populate the line item domain entities and add them to the voucher domain entity
             var lineItemIds = voucher.VouItemsId;
+            int documentFiscalYear = 0;
             if (lineItemIds != null && lineItemIds.Count() > 0)
             {
+                // determine the fiscal year from the voucher date or maintenance date
+                DateTime? transactionDate = voucher.VouDate;
+                if (voucher.VouMaintGlTranDate != null)
+                {
+                    transactionDate = voucher.VouMaintGlTranDate;
+                }
+                logger.Debug(string.Format("transaction date for funds avail {0} ", transactionDate));
+                if (transactionDate.HasValue)
+                {
+                    var transactionDateMonth = transactionDate.Value.Month;
+                    documentFiscalYear = transactionDate.Value.Year;
+
+                    var fiscalYearDataContract = await DataReader.ReadRecordAsync<Fiscalyr>("ACCOUNT.PARAMETERS", "FISCAL.YEAR", true);
+                    if (fiscalYearDataContract != null && fiscalYearDataContract.FiscalStartMonth.HasValue)
+                    {
+                        if (fiscalYearDataContract.FiscalStartMonth > 1)
+                        {
+                            if (transactionDateMonth >= fiscalYearDataContract.FiscalStartMonth)
+                            {
+                                documentFiscalYear += 1;
+                            }
+                        }
+                    }
+                }
+                logger.Debug(string.Format("voucher fiscal year {0} ", documentFiscalYear));
+
+                // Read the item records for the list of IDs in the voucher record
                 var lineItemRecords = await DataReader.BulkReadRecordAsync<Items>(lineItemIds.ToArray());
                 if ((lineItemRecords != null) && (lineItemRecords.Count > 0))
                 {
@@ -335,6 +372,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         }
 
                     }
+
+                    // define a unique list of GL numbers to use for funds availability when the user has full GL access.
+                    List<string> availableFundsGlAccounts = new List<string>();
 
                     foreach (var lineItem in lineItemRecords)
                     {
@@ -403,6 +443,16 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                             foreach (var glDistr in lineItem.VouchGlEntityAssociation)
                             {
+                                // build a list of unique list of GL numbers on the line item GL distributions
+                                // if the user has full GL access.
+                                if (glAccessLevel == GlAccessLevel.Full_Access || CanUserByPassGlAccessCheck(personId, voucher, voucherDomainEntity))
+                                {
+                                    if (!availableFundsGlAccounts.Contains(glDistr.ItmVouGlNoAssocMember))
+                                    {
+                                        availableFundsGlAccounts.Add(glDistr.ItmVouGlNoAssocMember);
+                                    }
+                                }
+
                                 // The GL Distribution always uses the local currency amount.
                                 LineItemGlDistribution glDistribution = new LineItemGlDistribution(glDistr.ItmVouGlNoAssocMember,
                                     glDistr.ItmVouGlQtyAssocMember.HasValue ? glDistr.ItmVouGlQtyAssocMember.Value : 0,
@@ -556,10 +606,227 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             }
                         }
                     }
+
+                    // For each GL number that the user for which the user has access, get the funds availability 
+                    // information on disk and add the amounts that are on the voucher if the voucher status is
+                    // In Progress or Not Approved.
+                    if (glNumbersAllowed.Any() || ((glAccessLevel == GlAccessLevel.Full_Access || CanUserByPassGlAccessCheck(personId, voucher, voucherDomainEntity)) && availableFundsGlAccounts.Any()))
+                    {
+                        logger.Debug(string.Format("Calculating funds availability"));
+                        string[] fundsAvailabilityArray;
+                        if ((glAccessLevel == GlAccessLevel.Full_Access || CanUserByPassGlAccessCheck(personId, voucher, voucherDomainEntity)) && availableFundsGlAccounts.Any())
+                        {
+                            fundsAvailabilityArray = availableFundsGlAccounts.ToArray();
+                        }
+                        else
+                        {
+                            fundsAvailabilityArray = glNumbersAllowed.ToArray();
+                        }
+
+                        //Read GL Account records.
+                        var glAccountContracts = await DataReader.BulkReadRecordAsync<GlAccts>(fundsAvailabilityArray);
+
+                        GlAcctsMemos glAccountMemosForFiscalYear;
+                        string documentFiscalYr = documentFiscalYear.ToString();
+                        decimal accountBudgetAmount = 0m;
+                        decimal accountActualAmount = 0m;
+                        decimal accountEncumbranceAmount = 0m;
+                        decimal accountRequisitionAmount = 0m;
+
+                        // Get funds availability information for all GL numbers for which the user has access.
+                        string glpId = null;
+                        foreach (var glAccount in fundsAvailabilityArray)
+                        {
+                            // get GL account available funds.
+                            var glAccountContract = glAccountContracts.FirstOrDefault(x => x.Recordkey == glAccount);
+                            if (glAccountContract != null)
+                            {
+                                if (glAccountContract.MemosEntityAssociation != null)
+                                {
+                                    // Check that the GL account is available for the fiscal year.
+                                    glAccountMemosForFiscalYear = glAccountContract.MemosEntityAssociation.FirstOrDefault(x => x.AvailFundsControllerAssocMember == documentFiscalYr);
+                                    if (glAccountMemosForFiscalYear != null)
+                                    {
+                                        glpId = null;
+                                        if (string.IsNullOrEmpty(glAccountMemosForFiscalYear.GlPooledTypeAssocMember))
+                                        {
+                                            accountBudgetAmount = glAccountMemosForFiscalYear.GlBudgetPostedAssocMember.HasValue ? glAccountMemosForFiscalYear.GlBudgetPostedAssocMember.Value : 0m;
+                                            accountBudgetAmount += glAccountMemosForFiscalYear.GlBudgetMemosAssocMember.HasValue ? glAccountMemosForFiscalYear.GlBudgetMemosAssocMember.Value : 0m;
+                                            accountEncumbranceAmount = glAccountMemosForFiscalYear.GlEncumbrancePostedAssocMember.HasValue ? glAccountMemosForFiscalYear.GlEncumbrancePostedAssocMember.Value : 0m;
+                                            accountEncumbranceAmount += glAccountMemosForFiscalYear.GlEncumbranceMemosAssocMember.HasValue ? glAccountMemosForFiscalYear.GlEncumbranceMemosAssocMember.Value : 0m;
+                                            accountRequisitionAmount = glAccountMemosForFiscalYear.GlRequisitionMemosAssocMember.HasValue ? glAccountMemosForFiscalYear.GlRequisitionMemosAssocMember.Value : 0m;
+                                            accountActualAmount = glAccountMemosForFiscalYear.GlActualPostedAssocMember.HasValue ? glAccountMemosForFiscalYear.GlActualPostedAssocMember.Value : 0m;
+                                            accountActualAmount += glAccountMemosForFiscalYear.GlActualMemosAssocMember.HasValue ? glAccountMemosForFiscalYear.GlActualMemosAssocMember.Value : 0m;
+                                        }
+                                        //poolee gl accounts should be assigned with corresponding umbrella gl account amounts
+                                        else
+                                        {
+                                            if (glAccountMemosForFiscalYear.GlPooledTypeAssocMember.ToUpperInvariant() == "U")
+                                            {
+                                                glpId = glAccount;
+                                                PopulateGlAmountFromFaFields(glAccountMemosForFiscalYear, out accountBudgetAmount, out accountActualAmount, out accountEncumbranceAmount, out accountRequisitionAmount);
+                                            }
+                                            else if (glAccountMemosForFiscalYear.GlPooledTypeAssocMember.ToUpperInvariant() == "P")
+                                            {
+                                                // get umbrella for this poolee
+                                                var umbrellaGlAccount = glAccountMemosForFiscalYear.GlBudgetLinkageAssocMember;
+
+                                                // Read the GL.ACCTS record for the umbrella, and get the amounts for fiscal year.
+                                                var umbrellaAccount = await DataReader.ReadRecordAsync<GlAccts>(umbrellaGlAccount);
+                                                if (umbrellaAccount != null)
+                                                {
+                                                    var umbrellaGlAccountAmounts = umbrellaAccount.MemosEntityAssociation.FirstOrDefault(x => x.AvailFundsControllerAssocMember == documentFiscalYr);
+                                                    if (umbrellaGlAccountAmounts != null)
+                                                    {
+                                                        glpId = umbrellaGlAccount;
+                                                        PopulateGlAmountFromFaFields(umbrellaGlAccountAmounts, out accountBudgetAmount, out accountActualAmount, out accountEncumbranceAmount, out accountRequisitionAmount);
+                                                    }
+                                                    else
+                                                    {
+                                                        logger.Debug(string.Format("Cannot get budget pool account for funds availability"));
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    logger.Debug(string.Format("Cannot get budget pool account for fiscal year"));
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // if the voucher status is In Progress or Not Approved, add the GL amounts from the
+                                    // line item GL distributions to the actuals funds availability information. Reduce the
+                                    // encumbrance funds availability amount if voucher originated from a PO or BPO.
+                                    if (voucher.VouStatus.First().ToUpper() == "U" || voucher.VouStatus.First().ToUpper() == "N")
+                                    {
+                                        // If the GL account that the user has access to is a part of a budget pool, read the GLP record
+                                        // to get all of the GL numbers associated with the budget pool so that the funds availability can 
+                                        // updated for all of the GL numbers in the budget pool that are on the line items.
+                                        List<string> budgetPoolAccounts = new List<string>();
+                                        if (!string.IsNullOrEmpty(glpId))
+                                        {
+                                            string glpFyrFilename = "GLP." + documentFiscalYr;
+                                            var glpFyrDataContract = await DataReader.ReadRecordAsync<GlpFyr>(glpFyrFilename, glpId);
+                                            budgetPoolAccounts.Add(glpId);
+                                            if (glpFyrDataContract != null && glpFyrDataContract.GlpPooleeAcctsList != null && glpFyrDataContract.GlpPooleeAcctsList.Any())
+                                            {
+                                                foreach (var poolee in glpFyrDataContract.GlpPooleeAcctsList)
+                                                {
+                                                    budgetPoolAccounts.Add(poolee);
+                                                }
+                                            }
+                                        }
+
+                                        if (!string.IsNullOrEmpty(voucher.VouPoNo) || !string.IsNullOrEmpty(voucher.VouBpoId))
+                                        {
+                                            if (!string.IsNullOrEmpty(voucher.VouPoNo))
+                                            {
+                                                // if the voucher originated from a purchase order, then use the data contracts for the line items
+                                                // on the voucher to update the actuals funds availability amount from the VOU line item GL distributions,
+                                                // and update the encumbrance funds availability amount from the purchase order line item GL distributions.
+                                                foreach (var lineItem in lineItemRecords)
+                                                {
+                                                    if ((lineItem.VouchGlEntityAssociation != null) && (lineItem.VouchGlEntityAssociation.Any()))
+                                                    {
+                                                        foreach (var glDist in lineItem.VouchGlEntityAssociation)
+                                                        {
+                                                            if (glDist != null)
+                                                            {
+                                                                if (glDist.ItmVouGlNoAssocMember == glAccount || budgetPoolAccounts.Contains(glDist.ItmVouGlNoAssocMember))
+                                                                {
+                                                                    if (glDist.ItmVouGlAmtAssocMember.HasValue)
+                                                                    {
+                                                                        accountActualAmount += glDist.ItmVouGlAmtAssocMember.Value;
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    if ((lineItem.ItemPoEntityAssociation != null) && (lineItem.ItemPoEntityAssociation.Any()))
+                                                    {
+                                                        foreach (var glDist in lineItem.ItemPoEntityAssociation)
+                                                        {
+                                                            if (glDist != null)
+                                                            {
+                                                                if (glDist.ItmPoGlNoAssocMember == glAccount || budgetPoolAccounts.Contains(glDist.ItmPoGlNoAssocMember))
+                                                                {
+                                                                    if (glDist.ItmPoGlAmtAssocMember.HasValue)
+                                                                    {
+                                                                        accountEncumbranceAmount -= glDist.ItmPoGlAmtAssocMember.Value;
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            else
+                                            {
+                                                // TODO                                                   
+                                            }
+                                        }
+                                        else
+                                        {
+                                            foreach (var lineItem in voucherDomainEntity.LineItems)
+                                            {
+                                                if (lineItem != null)
+                                                {
+                                                    foreach (var glDistribution in lineItem.GlDistributions)
+                                                    {
+                                                        if (glDistribution != null)
+                                                        {
+                                                            if (glDistribution.GlAccountNumber == glAccount || budgetPoolAccounts.Contains(glDistribution.GlAccountNumber))
+                                                            {
+                                                                accountActualAmount += glDistribution.Amount;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Update the funds availability information on the line item GL distributions, and
+                                    // update the line item to indicate that there is GL number on the line item that is
+                                    // overbudget.
+                                    foreach (var lineItem in voucherDomainEntity.LineItems)
+                                    {
+                                        foreach (var glDistribution in lineItem.GlDistributions)
+                                        {
+                                            if (glDistribution.GlAccountNumber == glAccount)
+                                            {
+                                                glDistribution.BudgetAmount = accountBudgetAmount;
+                                                glDistribution.ActualAmount = accountActualAmount;
+                                                glDistribution.EncumbranceAmount = accountEncumbranceAmount;
+                                                glDistribution.RequisitionAmount = accountRequisitionAmount;
+
+                                                if ((accountBudgetAmount - accountActualAmount - accountEncumbranceAmount - accountRequisitionAmount) < 0)
+                                                {
+                                                    lineItem.OverBudget = true;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        logger.Debug(string.Format("Completed calculating funds availability"));
+                    }
                 }
             }
 
             return voucherDomainEntity;
+        }
+
+        private static void PopulateGlAmountFromFaFields(GlAcctsMemos glAccountMemos, out decimal budgetAmount, out decimal actualAmount, out decimal encumbranceAmount, out decimal requisitionAmount)
+        {
+            budgetAmount = glAccountMemos.FaBudgetPostedAssocMember.HasValue ? glAccountMemos.FaBudgetPostedAssocMember.Value : 0m;
+            budgetAmount += glAccountMemos.FaBudgetMemoAssocMember.HasValue ? glAccountMemos.FaBudgetMemoAssocMember.Value : 0m;
+            encumbranceAmount = glAccountMemos.FaEncumbrancePostedAssocMember.HasValue ? glAccountMemos.FaEncumbrancePostedAssocMember.Value : 0m;
+            encumbranceAmount += glAccountMemos.FaEncumbranceMemoAssocMember.HasValue ? glAccountMemos.FaEncumbranceMemoAssocMember.Value : 0m;
+            requisitionAmount = glAccountMemos.FaRequisitionMemoAssocMember.HasValue ? glAccountMemos.FaRequisitionMemoAssocMember.Value : 0m;
+            actualAmount = glAccountMemos.FaActualPostedAssocMember.HasValue ? glAccountMemos.FaActualPostedAssocMember.Value : 0m;
+            actualAmount += glAccountMemos.FaActualMemoAssocMember.HasValue ? glAccountMemos.FaActualMemoAssocMember.Value : 0m;
         }
 
         /// <summary>
@@ -569,78 +836,18 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns>collection of voucher summary domain entity objects</returns>
         public async Task<IEnumerable<VoucherSummary>> GetVoucherSummariesByPersonIdAsync(string personId)
         {
-            List<string> filteredVouchers = new List<string>();
-
             if (string.IsNullOrEmpty(personId))
             {
                 throw new ArgumentNullException("personId");
             }
             var cfWebDefaults = await DataReader.ReadRecordAsync<CfwebDefaults>("CF.PARMS", "CFWEB.DEFAULTS");
 
-            filteredVouchers = await ApplyFilterCriteriaAsync(personId, filteredVouchers, cfWebDefaults);
+            var filteredVouchers = await ApplyFilterCriteriaAsync(personId, cfWebDefaults);
 
             if (!filteredVouchers.Any())
                 return null;
 
-            var VoucherData = await DataReader.BulkReadRecordAsync<DataContracts.Vouchers>(filteredVouchers.ToArray());
-
-            var VoucherList = new List<VoucherSummary>();
-            if (VoucherData != null && VoucherData.Any())
-            {
-                Dictionary<string, string> hierarchyNameDictionary = await GetPersonHierarchyNamesDictionaryAsync(VoucherData);
-                Dictionary<string, PurchaseOrders> poDictionary = new Dictionary<string, PurchaseOrders>();
-                Dictionary<string, Bpo> bpoDictionary = new Dictionary<string, Bpo>();
-                //Dictionary<string, RcVouchers> rcvDictionary = new Dictionary<string, RcVouchers>();
-
-                poDictionary = await BuildPurchaseOrderDictionaryAsync(VoucherData);
-                bpoDictionary = await BuildBlanketPODictionaryAsync(VoucherData);
-                //rcvDictionary = await BuildBlanketRcvDictionaryAsync(VoucherData);
-
-                // Read the OPERS records associated with the approval signatures and 
-                // next approvers on the voucher, and build approver objects.
-                var operators = new List<string>();
-                Collection<Opers> opersCollection = new Collection<Opers>();
-                // get list of Approvers and next approvers from the entire voucher records
-                var allVoucherDataApprovers = VoucherData.SelectMany(voucherContract => voucherContract.VouAuthorizations).Distinct().ToList();
-                if (allVoucherDataApprovers != null && allVoucherDataApprovers.Any(x => x != null))
-                {
-                    operators.AddRange(allVoucherDataApprovers);
-                }
-                var allVoucherDataNextApprovers = VoucherData.SelectMany(voucherContract => voucherContract.VouNextApprovalIds).Distinct().ToList();
-                if (allVoucherDataNextApprovers != null && allVoucherDataNextApprovers.Any(x => x != null))
-                {
-                    operators.AddRange(allVoucherDataNextApprovers);
-                }
-                var uniqueOperators = operators.Distinct().ToList();
-                if (uniqueOperators.Count > 0)
-                {
-                    opersCollection = await DataReader.BulkReadRecordAsync<Opers>("UT.OPERS", uniqueOperators.ToArray(), true);
-                }
-
-
-                foreach (var voucher in VoucherData)
-                {
-                    try
-                    {
-                        string requestorName = string.Empty;
-                        if (!string.IsNullOrEmpty(voucher.VouRequestor))
-                            hierarchyNameDictionary.TryGetValue(voucher.VouRequestor, out requestorName);
-
-                        // If there is no vendor name and there is a vendor id, use the hierarchy to get the vendor name.
-                        var VoucherVendorName = voucher.VouMiscName != null && voucher.VouMiscName.Any() ? voucher.VouMiscName.FirstOrDefault() : string.Empty;
-                        if ((string.IsNullOrEmpty(VoucherVendorName)) && (!string.IsNullOrEmpty(voucher.VouVendor)))
-                        {
-                            hierarchyNameDictionary.TryGetValue(voucher.VouVendor, out VoucherVendorName);
-                        }
-                        VoucherList.Add(BuildVoucherSummary(voucher, poDictionary, bpoDictionary, VoucherVendorName, requestorName, opersCollection));
-                    }
-                    catch (Exception ex)
-                    {
-                        throw ex;
-                    }
-                }
-            }
-            return VoucherList.AsEnumerable();
+            return await BuildVoucherSummaryList(personId, filteredVouchers);
 
         }
 
@@ -860,6 +1067,40 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
 
             return filteredVouchers;
+        }
+
+        /// <summary>
+        /// Get Voucher summary list for the given user
+        /// </summary>
+        /// <param name="criteria">procurement filter criteria</param>      
+        /// <returns>list of voucher summary domain entity objects</returns>
+        public async Task<IEnumerable<VoucherSummary>> QueryVoucherSummariesAsync(ProcurementDocumentFilterCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("filterCriteria", "filter criteria must be specified.");
+            }
+
+            var personId = criteria.PersonId;
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId");
+            }
+            var cfWebDefaults = await DataReader.ReadRecordAsync<CfwebDefaults>("CF.PARMS", "CFWEB.DEFAULTS");
+            string queryCriteria = await BuildFilterCriteria(criteria, cfWebDefaults);
+            if (string.IsNullOrEmpty(queryCriteria))
+            {
+                throw new ApplicationException("Invalid query string.");
+            }
+            var filteredVoucherIds = await DataReader.SelectAsync("VOUCHERS", queryCriteria);
+
+            if (filteredVoucherIds == null || !filteredVoucherIds.Any())
+            {
+                logger.Debug(string.Format("Vouchers not found for query string: {0}.", queryCriteria));
+                return null;
+            }
+            logger.Info(string.Format("Vouchers count {0} found.", filteredVoucherIds.ToList().Count()));
+            return await BuildVoucherSummaryList(personId, filteredVoucherIds.ToList());
         }
 
         /// <summary>
@@ -1168,47 +1409,50 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 return false;
         }
 
-        private async Task<List<string>> ApplyFilterCriteriaAsync(string personId, List<string> filteredVouchers, CfwebDefaults cfWebDefaults)
+        private async Task<List<string>> ApplyFilterCriteriaAsync(string personId, CfwebDefaults cfWebDefaults)
         {
+            List<string> filteredVouchers = new List<string>();
             //where personId is requestor
             string reqPersonIdQuery = string.Format("WITH VOU.REQUESTOR EQ '{0}'", personId);
             filteredVouchers = await ExecuteQueryStatementAsync(filteredVouchers, reqPersonIdQuery);
-
-            if (cfWebDefaults != null)
+            if (filteredVouchers != null && filteredVouchers.Any())
             {
-                string voucherStartEndTransDateQuery = string.Empty;
-                //Filter by CfwebCkrStartDate, CfwebCkrEndDate values configured in CFWP form
-                //when CfwebCkrStartDate & CfwebCkrEndDate has a value
-                if (cfWebDefaults.CfwebCkrStartDate.HasValue && cfWebDefaults.CfwebCkrEndDate.HasValue)
+                if (cfWebDefaults != null)
                 {
-                    var startDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebCkrStartDate.Value);
-                    var endDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebCkrEndDate.Value);
-                    voucherStartEndTransDateQuery = string.Format("WITH (VOU.MAINT.GL.TRAN.DATE GE '{0}' AND VOU.MAINT.GL.TRAN.DATE LE '{1}') OR WITH (VOU.DATE GE '{0}' AND VOU.DATE LE '{1}')", startDate, endDate);
-                }
-                //when CfwebCkrStartDate has value but CfwebCkrEndDate is null
-                else if (cfWebDefaults.CfwebCkrStartDate.HasValue && !cfWebDefaults.CfwebCkrEndDate.HasValue)
-                {
-                    var startDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebCkrStartDate.Value);
-                    voucherStartEndTransDateQuery = string.Format("VOU.MAINT.GL.TRAN.DATE GE '{0}' OR WITH VOU.DATE GE '{0}'", startDate);
-                }
-                //when CfwebCkrStartDate is null but CfwebCkrEndDate has value
-                else if (!cfWebDefaults.CfwebCkrStartDate.HasValue && cfWebDefaults.CfwebCkrEndDate.HasValue)
-                {
-                    var endDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebCkrEndDate.Value);
-                    voucherStartEndTransDateQuery = string.Format("WITH ((VOU.MAINT.GL.TRAN.DATE NE '') AND (VOU.MAINT.GL.TRAN.DATE LE '{0}')) OR WITH ((VOU.DATE NE '') AND (VOU.DATE LE '{0}'))", endDate);
-                }
+                    string voucherStartEndTransDateQuery = string.Empty;
+                    //Filter by CfwebCkrStartDate, CfwebCkrEndDate values configured in CFWP form
+                    //when CfwebCkrStartDate & CfwebCkrEndDate has a value
+                    if (cfWebDefaults.CfwebCkrStartDate.HasValue && cfWebDefaults.CfwebCkrEndDate.HasValue)
+                    {
+                        var startDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebCkrStartDate.Value);
+                        var endDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebCkrEndDate.Value);
+                        voucherStartEndTransDateQuery = string.Format("WITH (VOU.MAINT.GL.TRAN.DATE GE '{0}' AND VOU.MAINT.GL.TRAN.DATE LE '{1}') OR WITH (VOU.DATE GE '{0}' AND VOU.DATE LE '{1}')", startDate, endDate);
+                    }
+                    //when CfwebCkrStartDate has value but CfwebCkrEndDate is null
+                    else if (cfWebDefaults.CfwebCkrStartDate.HasValue && !cfWebDefaults.CfwebCkrEndDate.HasValue)
+                    {
+                        var startDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebCkrStartDate.Value);
+                        voucherStartEndTransDateQuery = string.Format("VOU.MAINT.GL.TRAN.DATE GE '{0}' OR WITH VOU.DATE GE '{0}'", startDate);
+                    }
+                    //when CfwebCkrStartDate is null but CfwebCkrEndDate has value
+                    else if (!cfWebDefaults.CfwebCkrStartDate.HasValue && cfWebDefaults.CfwebCkrEndDate.HasValue)
+                    {
+                        var endDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebCkrEndDate.Value);
+                        voucherStartEndTransDateQuery = string.Format("WITH ((VOU.MAINT.GL.TRAN.DATE NE '') AND (VOU.MAINT.GL.TRAN.DATE LE '{0}')) OR WITH ((VOU.DATE NE '') AND (VOU.DATE LE '{0}'))", endDate);
+                    }
 
-                if (!string.IsNullOrEmpty(voucherStartEndTransDateQuery))
-                {
-                    filteredVouchers = await ExecuteQueryStatementAsync(filteredVouchers, voucherStartEndTransDateQuery);
-                }
+                    if (!string.IsNullOrEmpty(voucherStartEndTransDateQuery))
+                    {
+                        filteredVouchers = await ExecuteQueryStatementAsync(filteredVouchers, voucherStartEndTransDateQuery);
+                    }
 
-                //query by CfwebCkrStatuses if statuses are configured in CFWP form.
-                if (cfWebDefaults.CfwebCkrStatuses != null && cfWebDefaults.CfwebCkrStatuses.Any())
-                {
-                    var voucherStatusesCriteria = string.Join(" ", cfWebDefaults.CfwebCkrStatuses.Select(x => string.Format("'{0}'", x.ToUpper())));
-                    voucherStatusesCriteria = "WITH VOU.CURRENT.STATUS EQ " + voucherStatusesCriteria;
-                    filteredVouchers = await ExecuteQueryStatementAsync(filteredVouchers, voucherStatusesCriteria);
+                    //query by CfwebCkrStatuses if statuses are configured in CFWP form.
+                    if (cfWebDefaults.CfwebCkrStatuses != null && cfWebDefaults.CfwebCkrStatuses.Any())
+                    {
+                        var voucherStatusesCriteria = string.Join(" ", cfWebDefaults.CfwebCkrStatuses.Select(x => string.Format("'{0}'", x.ToUpper())));
+                        voucherStatusesCriteria = "WITH VOU.CURRENT.STATUS EQ " + voucherStatusesCriteria;
+                        filteredVouchers = await ExecuteQueryStatementAsync(filteredVouchers, voucherStatusesCriteria);
+                    }
                 }
             }
             return filteredVouchers;
@@ -1314,7 +1558,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             var voucherStatus = ConvertVoucherStatus(voucherDataContract.VouStatus, voucherDataContract.Recordkey);
 
-            var voucherSummaryEntity = new VoucherSummary(voucherDataContract.Recordkey, voucherDataContract.VouDefaultInvoiceNo, vendorName, voucherDate)
+            var voucherSummaryEntity = new VoucherSummary(voucherDataContract.Recordkey, vendorName, voucherDate)
             {
                 Status = voucherStatus,
                 MaintenanceDate = maintenanceDate,
@@ -1322,7 +1566,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 RequestorName = requestorName,
                 Amount = voucherDataContract.VouTotalAmt.HasValue ? voucherDataContract.VouTotalAmt.Value : 0,
                 InvoiceDate = voucherDataContract.VouDefaultInvoiceDate.HasValue ? voucherDataContract.VouDefaultInvoiceDate.Value : default(DateTime?),
-
+                InvoiceNumber = voucherDataContract.VouDefaultInvoiceNo
             };
             // build approvers and add to entity
             if ((voucherDataContract.VouAuthEntityAssociation != null) && (voucherDataContract.VouAuthEntityAssociation.Any()))
@@ -1607,5 +1851,264 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             voucherDomainEntity.InvoiceDate = voucher.VouDefaultInvoiceDate;
             return voucherDomainEntity;
         }
+
+        private async Task<string> BuildFilterCriteria(ProcurementDocumentFilterCriteria criteria, CfwebDefaults cfWebDefaults)
+        {
+            bool skipCFWPDateRangeFilter = false;
+            bool skipCFWPStatusFilter = false;
+
+            StringBuilder queryCriteria = new StringBuilder();
+            //personID criteria
+            queryCriteria.Append(string.Format("WITH VOU.REQUESTOR EQ '{0}' ", criteria.PersonId));
+
+            //if SS criteria contains dateFrom or dateTo, CFWP date range filter should be skipped.
+            if (criteria.DateFrom.HasValue || criteria.DateTo.HasValue)
+            {
+                skipCFWPDateRangeFilter = true;
+            }
+            List<string> procurementFilterStatuses = new List<string>();
+            if (criteria.Statuses != null && criteria.Statuses.Any())
+            {
+                foreach (var item in criteria.Statuses)
+                {
+                    var status = ConvertVoucherStatus(item);
+                    if (!string.IsNullOrEmpty(status))
+                    {
+                        procurementFilterStatuses.Add(status);
+                    }
+                }
+            }
+            //if SS criteria contains statuses, CFWP status filter should be skipped
+            if (procurementFilterStatuses.Any())
+            {
+                skipCFWPStatusFilter = true;
+            }
+            if (cfWebDefaults != null)
+            {
+                if (!skipCFWPDateRangeFilter)
+                {
+                    //criteria set in cfwebdefaults - CfwebCkrStartDate, CfwebCkrEndDate
+                    var cfwpDateRangeCriteria = await BuildDateRangeQueryAsync(cfWebDefaults.CfwebCkrStartDate, cfWebDefaults.CfwebCkrEndDate);
+                    if (!string.IsNullOrEmpty(cfwpDateRangeCriteria))
+                    {
+                        logger.Debug(string.Format("QueryVoucherSummaries - CFWP date range - data reader - query string: '{0}'.", cfwpDateRangeCriteria));
+                        queryCriteria.Append(cfwpDateRangeCriteria);
+                    }
+                }
+                if (!skipCFWPStatusFilter)
+                {
+                    //criteria set in cfwebdefaults - CfwebCkrStatuses (VOU.CURRENT.STATUS).
+                    var statusesQuery = ProcurementFilterUtility.BuildListQuery(cfWebDefaults.CfwebCkrStatuses, "VOU.CURRENT.STATUS");
+                    if (!string.IsNullOrEmpty(statusesQuery))
+                    {
+                        logger.Debug(string.Format("QueryVoucherSummaries - CFWP statuses - data reader - query string: '{0}'.", statusesQuery));
+                        queryCriteria.Append(statusesQuery);
+                    }
+                }
+            }
+
+            //criteria sent from SS - VendorID's (VOU.VENDOR).
+            var vendorIdCriteria = ProcurementFilterUtility.BuildListQuery(criteria.VendorIds, "VOU.VENDOR");
+            if (!string.IsNullOrEmpty(vendorIdCriteria))
+            {
+                logger.Debug(string.Format("QueryVoucherSummaries - VendorId's - data reader - query string: '{0}'.", vendorIdCriteria));
+                queryCriteria.Append(!string.IsNullOrEmpty(vendorIdCriteria) ? vendorIdCriteria : string.Empty);
+            }
+            //criteria sent from SS - Min - Max Amount (VOU.TOTAL.AMT).
+            var amountCriteria = ProcurementFilterUtility.BuildAmountRangeQuery(criteria, "VOU.TOTAL.AMT");
+            if (!string.IsNullOrEmpty(amountCriteria))
+            {
+                logger.Debug(string.Format("QueryVoucherSummaries - Amount range - data reader - query string: '{0}'.", amountCriteria));
+                queryCriteria.Append(amountCriteria);
+            }
+            //criteria sent from SS - From - To date range
+            if (skipCFWPDateRangeFilter)
+            {
+                var procurementDateRangeCriteria = await BuildDateRangeQueryAsync(criteria.DateFrom, criteria.DateTo);
+                if (!string.IsNullOrEmpty(procurementDateRangeCriteria))
+                {
+                    logger.Debug(string.Format("QueryVoucherSummaries - SS procurement filter date range - data reader - query string: '{0}'.", procurementDateRangeCriteria));
+                    queryCriteria.Append(procurementDateRangeCriteria);
+                }
+            }
+
+            if (skipCFWPStatusFilter)
+            {
+                //criteria sent from SS - Statuses
+                var procurementStatusesCriteria = ProcurementFilterUtility.BuildListQuery(procurementFilterStatuses, "VOU.CURRENT.STATUS");
+                if (!string.IsNullOrEmpty(procurementStatusesCriteria))
+                {
+                    logger.Debug(string.Format("QueryVoucherSummaries - SS procurement filter statuses - data reader - query string: '{0}'.", procurementStatusesCriteria));
+                    queryCriteria.Append(procurementStatusesCriteria);
+                }
+            }
+            queryCriteria.Append("BY.DSND VOUCHERS.ID");
+            logger.Debug(string.Format("QueryVoucherSummaries - data reader - query string: '{0}'.", queryCriteria));
+            return queryCriteria.ToString();
+        }
+
+        private async Task<string> BuildDateRangeQueryAsync(DateTime? dateFrom, DateTime? dateTo)
+        {
+            string startEndTransDateQuery = string.Empty;
+            if (dateFrom != null || dateTo != null)
+            {
+                //when dateFrom & dateTo has a value
+                if (dateFrom.HasValue && dateTo.HasValue)
+                {
+                    var startDate = await GetUnidataFormatDateAsync(dateFrom.Value);
+                    var endDate = await GetUnidataFormatDateAsync(dateTo.Value);
+                    startEndTransDateQuery = string.Format("AND WITH (VOU.MAINT.GL.TRAN.DATE GE '{0}' AND VOU.MAINT.GL.TRAN.DATE LE '{1}') OR (VOU.DATE GE '{0}' AND VOU.DATE LE '{1}') ", startDate, endDate);
+                }
+                //when dateFrom has value but dateTo is null
+                else if (dateFrom.HasValue && !dateTo.HasValue)
+                {
+                    var startDate = await GetUnidataFormatDateAsync(dateFrom.Value);
+                    startEndTransDateQuery = string.Format("AND WITH (VOU.MAINT.GL.TRAN.DATE GE '{0}' OR VOU.DATE GE '{0}') ", startDate);
+                }
+                //when dateFrom is null but dateTo has value
+                else if (!dateFrom.HasValue && dateTo.HasValue)
+                {
+                    var endDate = await GetUnidataFormatDateAsync(dateTo.Value);
+                    startEndTransDateQuery = string.Format("AND WITH ((VOU.MAINT.GL.TRAN.DATE NE '') AND (VOU.MAINT.GL.TRAN.DATE LE '{0}')) OR ((VOU.DATE NE '') AND (VOU.DATE LE '{0}')) ", endDate);
+                }
+            }
+
+            return startEndTransDateQuery;
+        }
+
+        private async Task<IEnumerable<VoucherSummary>> BuildVoucherSummaryList(string personId, List<string> filteredVoucherIds)
+        {
+            var voucherList = new List<VoucherSummary>();
+
+            if (!filteredVoucherIds.Any())
+                return voucherList;
+
+            var voucherData = await DataReader.BulkReadRecordAsync<DataContracts.Vouchers>(filteredVoucherIds.ToArray());
+
+            if (voucherData != null && voucherData.Any())
+            {
+                Dictionary<string, string> hierarchyNameDictionary = await GetPersonHierarchyNamesDictionaryAsync(voucherData);
+                Dictionary<string, PurchaseOrders> poDictionary = new Dictionary<string, PurchaseOrders>();
+                Dictionary<string, Bpo> bpoDictionary = new Dictionary<string, Bpo>();
+                //Dictionary<string, RcVouchers> rcvDictionary = new Dictionary<string, RcVouchers>();
+
+                poDictionary = await BuildPurchaseOrderDictionaryAsync(voucherData);
+                bpoDictionary = await BuildBlanketPODictionaryAsync(voucherData);
+                //rcvDictionary = await BuildBlanketRcvDictionaryAsync(VoucherData);
+
+                // Read the OPERS records associated with the approval signatures and 
+                // next approvers on the voucher, and build approver objects.
+                var operators = new List<string>();
+                Collection<Opers> opersCollection = new Collection<Opers>();
+                // get list of Approvers and next approvers from the entire voucher records
+                var allVoucherDataApprovers = voucherData.SelectMany(voucherContract => voucherContract.VouAuthorizations).Distinct().ToList();
+                if (allVoucherDataApprovers != null && allVoucherDataApprovers.Any(x => x != null))
+                {
+                    operators.AddRange(allVoucherDataApprovers);
+                }
+                var allVoucherDataNextApprovers = voucherData.SelectMany(voucherContract => voucherContract.VouNextApprovalIds).Distinct().ToList();
+                if (allVoucherDataNextApprovers != null && allVoucherDataNextApprovers.Any(x => x != null))
+                {
+                    operators.AddRange(allVoucherDataNextApprovers);
+                }
+                var uniqueOperators = operators.Distinct().ToList();
+                if (uniqueOperators.Count > 0)
+                {
+                    opersCollection = await DataReader.BulkReadRecordAsync<Opers>("UT.OPERS", uniqueOperators.ToArray(), true);
+                }
+
+
+                foreach (var voucher in voucherData)
+                {
+                    try
+                    {
+                        string requestorName = string.Empty;
+                        if (!string.IsNullOrEmpty(voucher.VouRequestor))
+                            hierarchyNameDictionary.TryGetValue(voucher.VouRequestor, out requestorName);
+
+                        // If there is no vendor name and there is a vendor id, use the hierarchy to get the vendor name.
+                        var VoucherVendorName = voucher.VouMiscName != null && voucher.VouMiscName.Any() ? voucher.VouMiscName.FirstOrDefault() : string.Empty;
+                        if ((string.IsNullOrEmpty(VoucherVendorName)) && (!string.IsNullOrEmpty(voucher.VouVendor)))
+                        {
+                            hierarchyNameDictionary.TryGetValue(voucher.VouVendor, out VoucherVendorName);
+                        }
+                        voucherList.Add(BuildVoucherSummary(voucher, poDictionary, bpoDictionary, VoucherVendorName, requestorName, opersCollection));
+                    }
+                    catch (Exception ex)
+                    {
+                        throw ex;
+                    }
+                }
+            }
+            return voucherList;
+        }
+
+
+        private static string ConvertVoucherStatus(string status)
+        {
+            string voucherStatus = null;
+
+            if (!string.IsNullOrEmpty(status))
+            {
+                switch (status.ToUpper())
+                {
+                    case "INPROGRESS":
+                        voucherStatus = "U";
+                        break;
+                    case "NOTAPPROVED":
+                        voucherStatus = "N";
+                        break;
+                    case "OUTSTANDING":
+                        voucherStatus = "O";
+                        break;
+                    case "PAID":
+                        voucherStatus = "P";
+                        break;
+                    case "RECONCILED":
+                        voucherStatus = "R";
+                        break;
+                    case "VOIDED":
+                        voucherStatus = "V";
+                        break;
+                    case "CANCELLED":
+                        voucherStatus = "X";
+                        break;
+                }
+            }
+
+            return voucherStatus;
+        }
+
+        #region Get VendorAddress
+        private async Task GetVendorAddress(Vouchers voucher, Voucher voucherDomainEntity)
+        {
+            if (!string.IsNullOrEmpty(voucher.VouVendor) && !string.IsNullOrEmpty(voucher.VouAddressId))
+            {
+                TxGetVoucherVendorResultsRequest searchRequest = new TxGetVoucherVendorResultsRequest();
+                searchRequest.ASearchCriteria = voucher.VouVendor;
+                searchRequest.AApType = string.Empty;
+                try
+                {
+                    TxGetVoucherVendorResultsResponse searchResponse = await transactionInvoker.ExecuteAsync<TxGetVoucherVendorResultsRequest, TxGetVoucherVendorResultsResponse>(searchRequest);
+
+                    if (searchResponse != null && searchResponse.VoucherVendorSearchResults != null && searchResponse.VoucherVendorSearchResults.Any())
+                    {
+                        var voucherAddressResult = searchResponse.VoucherVendorSearchResults.FirstOrDefault(x => x.AlVendorAddrIds == voucher.VouAddressId);
+                        if (voucherAddressResult != null)
+                        {
+                            voucherDomainEntity.VendorAddressTypeCode = voucherAddressResult.AlVendAddrTypeCodes;
+                            voucherDomainEntity.VendorAddressTypeDesc = voucherAddressResult.AlVendAddrTypeDesc;
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    var message = string.Format("{0} Unable to get Vendor address by lookup.", voucher.VouVendor);
+                    logger.Error(message);
+                }
+
+            }
+        }
+        #endregion
     }
 }

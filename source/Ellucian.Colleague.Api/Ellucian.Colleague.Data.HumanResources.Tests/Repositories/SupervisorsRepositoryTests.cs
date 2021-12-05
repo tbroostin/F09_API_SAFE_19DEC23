@@ -1,16 +1,13 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Data.HumanResources.Repositories;
-using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
@@ -23,6 +20,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         public SupervisorsRepository actualRepository;
 
         public string supervisorId;
+        public string superviseeId;
+        public DateTime? lookbackDate;
 
         // mocks
         public SupervisorsRepository BuildRepository()
@@ -30,8 +29,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             // select perpos with hrpId
             dataReaderMock.Setup(d => d.SelectAsync("PERPOS", It.Is<string>(s => s.Contains("WITH PERPOS.HRP.ID EQ"))))
                 .Returns<string, string>((f, criteria) =>
-                        Task.FromResult((testRepository.PerposRecords == null) ? null :
+                        Task.FromResult((testRepository.PerposRecords == null) ? null : lookbackDate.HasValue ?
                             testRepository.PerposRecords
+                            .Where(rec => criteria.Contains(rec.PerposSupervisorHrpId) && (!rec.PerposEndDate.HasValue || rec.PerposEndDate.Value >= lookbackDate))
+                            .Select(rec => rec.RecordKey).ToArray() : testRepository.PerposRecords
                             .Where(rec => criteria.Contains(rec.PerposSupervisorHrpId))
                             .Select(rec => rec.RecordKey).ToArray()
                         ));
@@ -55,22 +56,33 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                     ));
 
             //select perpos by direct supervisor id
-            dataReaderMock.Setup(d => d.SelectAsync("PERPOS", It.Is<string>(c => c.Contains("WITH INDEX.PERPOS.SUPERVISOR EQ"))))
+            dataReaderMock.Setup(d => d.SelectAsync("PERPOS", It.Is<string>(c => c.Contains("WITH INDEX.PERPOS.SUPERVISOR EQ " + It.IsAny<string>()))))
                 .Returns<string, string>((f, criteria) =>
-                    Task.FromResult((testRepository.PerposRecords == null) ? null :
+                    Task.FromResult((testRepository.PerposRecords == null) ? null : lookbackDate.HasValue ?
                         testRepository.PerposRecords
+                        .Where(rec => !string.IsNullOrEmpty(rec.PerposSupervisorHrpId) && criteria.Contains(rec.PerposSupervisorHrpId)
+                        && (!rec.PerposEndDate.HasValue || rec.PerposEndDate.Value >= lookbackDate))
+                        .Select(rec => rec.RecordKey).ToArray() : testRepository.PerposRecords
                         .Where(rec => criteria.Contains(rec.PerposSupervisorHrpId))
                         .Select(rec => rec.RecordKey).ToArray()
                     ));
 
             //select perpos by position id without direct supervisor
-            dataReaderMock.Setup(d => d.SelectAsync("PERPOS", "WITH PERPOS.POSITION.INDEX EQ ? AND WITH INDEX.PERPOS.SUPERVISOR EQ ''", It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>()))
+            dataReaderMock.Setup(d => d.SelectAsync("PERPOS", It.Is<string>(c => c.Contains("WITH PERPOS.POSITION.INDEX EQ ? AND WITH INDEX.PERPOS.SUPERVISOR EQ ''"
+                + It.IsAny<string>())),
+                It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>()))
                 .Returns<string, string, string[], string, bool, int>((f, c, values, p, b, i) =>
-                    Task.FromResult(testRepository.PerposRecords == null ? null :
+                    {
+                        var idsList = values.ToList();
+                        return Task.FromResult(testRepository.PerposRecords == null ? null : lookbackDate.HasValue ?
                         testRepository.PerposRecords
-                        .Where(rec => values.Contains(rec.PerposPositionId) && string.IsNullOrEmpty(rec.PerposSupervisorHrpId))
-                        .Select(rec => rec.RecordKey).ToArray()
-                    ));
+                        .Where(rec => idsList.Contains(string.Format("\"{0}\"", rec.PerposPositionId)) && string.IsNullOrEmpty(rec.PerposSupervisorHrpId)
+                        && (!rec.PerposEndDate.HasValue || rec.PerposEndDate.Value >= lookbackDate))
+                        .Select(rec => rec.RecordKey).ToArray() :
+                        testRepository.PerposRecords
+                        .Where(rec => idsList.Contains(string.Format("\"{0}\"", rec.PerposPositionId)) && string.IsNullOrEmpty(rec.PerposSupervisorHrpId))
+                        .Select(rec => rec.RecordKey).ToArray());
+                    });
 
             // read perpos with list of keys
             dataReaderMock.Setup(d => d.BulkReadRecordAsync<Perpos>(It.IsAny<string[]>(), It.IsAny<bool>()))
@@ -92,10 +104,24 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 
             // read from perpos with selection critiera
             dataReaderMock.Setup(d => d.BulkReadRecordAsync<Perpos>(It.Is<string>(c => c.Contains("WITH PERPOS.HRP.ID EQ")), It.IsAny<bool>()))
-                .Returns<string, bool>((ids, b) => Task.FromResult(testRepository.PerposRecords == null ? null :
-                    new Collection<Perpos>(
+                .Returns<string, bool>((ids, b) => Task.FromResult(testRepository.PerposRecords == null ? null : lookbackDate.HasValue ?
+                new Collection<Perpos>(
                         testRepository.PerposRecords
-                        .Where(rec => ids.Contains(rec.RecordKey))
+                        .Where(rec => rec.PerposHrpId == supervisorId && (!rec.PerposEndDate.HasValue || rec.PerposEndDate.Value >= lookbackDate))
+                        .Select(rec => new Perpos()
+                        {
+                            Recordkey = rec.RecordKey,
+                            PerposAltSupervisorId = rec.PerposAltSupervisorId,
+                            PerposSupervisorHrpId = rec.PerposSupervisorHrpId,
+                            PerposStartDate = rec.PerposStartDate,
+                            PerposPositionId = rec.PerposPositionId,
+                            PerposHrpId = rec.PerposHrpId,
+                            PerposEndDate = rec.PerposEndDate
+                        }).ToList()
+                    )
+                    : new Collection<Perpos>(
+                        testRepository.PerposRecords
+                        .Where(rec => rec.PerposHrpId == supervisorId)
                         .Select(rec => new Perpos()
                         {
                             Recordkey = rec.RecordKey,
@@ -121,11 +147,20 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             //select Positions by supervisory position
             dataReaderMock.Setup(d => d.SelectAsync("POSITION", "WITH INDEX.POS.SUPER EQ ?", It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>()))
                 .Returns<string, string, string[], string, bool, int>((f, c, values, p, b, i) =>
-                    Task.FromResult(testRepository.PositionRecords == null ? null :
-                        testRepository.PositionRecords
-                        .Where(rec => values.Contains(rec.PosSupervisorPosId))
-                        .Select(rec => rec.Recordkey).ToArray()
-                    ));
+                {
+                    if (testRepository.PositionRecords != null)
+                    {
+                        var idsList = values.ToList();
+                        var selectedRecords = testRepository.PositionRecords.Where(pr => !string.IsNullOrEmpty(pr.PosSupervisorPosId)
+                            && idsList.Contains(string.Format("\"{0}\"", pr.PosSupervisorPosId)));
+                        var ids = selectedRecords.Select(rec => rec.Recordkey).ToArray();
+                        return Task.FromResult(ids);
+                    }
+                    else return Task.FromResult((string[])null);
+
+                });
+
+
 
             //read from Positions using keys
             dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.Position>(It.IsAny<string[]>(), It.IsAny<bool>()))
@@ -145,12 +180,12 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                             PosStartDate = rec.PosStartDate,
                             PosSupervisorPosId = rec.PosSupervisorPosId,
                             PosTimeEntryForm = rec.TimeEntryType,
-                            PosTitle = rec.PosTitle,                           
+                            PosTitle = rec.PosTitle,
                             PosAltSuperPosId = rec.PosAltSuperPosId,
                         }).ToList())));
 
 
-                
+
 
             loggerMock.Setup(l => l.IsErrorEnabled).Returns(true);
             apiSettings.BulkReadSize = 1;
@@ -166,6 +201,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             base.MockInitialize();
             testRepository = new TestSupervisorsRepository();
             actualRepository = BuildRepository();
+
         }
 
         // tests
@@ -191,9 +227,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             [TestMethod]
             public async Task NullPerposKeysTest()
             {
-                dataReaderMock.Setup(d => d.SelectAsync("PERPOS", It.IsAny<string>()))
-                    .ReturnsAsync(null);
-
+                dataReaderMock.Setup(d => d.SelectAsync("PERPOS", It.IsAny<string>())).Returns(Task.FromResult((string[])null));
+                dataReaderMock.Setup(d => d.BulkReadRecordAsync<Perpos>(It.IsAny<string[]>(), true)).ReturnsAsync(() => null);
                 var emptyList = await actualRepository.GetSuperviseesBySupervisorAsync(supervisorId);
 
                 Assert.IsFalse(emptyList.Any());
@@ -215,6 +250,24 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 CollectionAssert.AreEqual(expected.ToList(), actual.ToList());
             }
 
+            [TestMethod]
+            public async Task LookbackDatePassedIn_LaterThanEndDate_ExpectedSubordinateIdsReturnedTest()
+            {
+                lookbackDate = new DateTime(2020, 01, 02);
+                var expected = await testRepository.GetSuperviseesBySupervisorAsync(supervisorId, lookbackDate);
+                var actual = await actualRepository.GetSuperviseesBySupervisorAsync(supervisorId, lookbackDate);
+                CollectionAssert.AreEqual(expected.ToList(), actual.ToList());
+            }
+
+            [TestMethod]
+            public async Task LookbackDatePassedIn_EarlierThanEndDate_ExpectedSubordinateIdsReturnedTest()
+            {
+                lookbackDate = new DateTime(1999, 01, 01);
+                var expected = await testRepository.GetSuperviseesBySupervisorAsync(supervisorId, lookbackDate);
+                var actual = await actualRepository.GetSuperviseesBySupervisorAsync(supervisorId, lookbackDate);
+                CollectionAssert.AreEqual(expected.ToList(), actual.ToList());
+            }
+
             #endregion
 
             #region POSITION SUPERVISORS
@@ -225,20 +278,46 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 
 
         [TestClass]
-        public class GetSupervisorIdsForPositionsAsyncTests :  SupervisorsRepositoryTests
+        public class GetSupervisorIdsForPositionsAsyncTests : SupervisorsRepositoryTests
         {
             [TestInitialize]
             public void Initialize()
             {
                 SupervisorsRepositoryTestsInitialize();
+                superviseeId = "24601";
+
+                // mock call to getSuperviseePerposIds to simulate lookback
+                dataReaderMock.Setup(d => d.SelectAsync("PERPOS", It.Is<string>(s => s.Contains("WITH PERPOS.HRP.ID EQ"))))
+                .Returns<string, string>((f, criteria) =>
+                        Task.FromResult(
+                            testRepository.PerposRecords
+                            .Where(rec => criteria.Contains(superviseeId) && rec.PerposHrpId == superviseeId && (!rec.PerposEndDate.HasValue || rec.PerposEndDate.Value >= lookbackDate))
+                            .Select(rec => rec.RecordKey).ToArray()
+                        ));
             }
 
             [TestMethod]
             public async Task ExecuteTest()
             {
                 var result = await actualRepository.GetSupervisorIdsForPositionsAsync(new string[1] { "TMA001" });
+            }
 
-                
+            [TestMethod]
+            public async Task LookbackDatePassedIn_LaterThanEndDate_GetSupervisorsBySuperviseeAsync()
+            {
+                lookbackDate = new DateTime(2020, 01, 02);
+                var expected = await testRepository.GetSupervisorsBySuperviseeAsync(superviseeId, lookbackDate);
+                var actual = await actualRepository.GetSupervisorsBySuperviseeAsync(superviseeId, lookbackDate);
+                CollectionAssert.AreEqual(expected.ToList(), actual.ToList());
+            }
+
+            [TestMethod]
+            public async Task LookbackDatePassedIn_EarlierThanEndDate_GetSupervisorsBySuperviseeAsync()
+            {
+                lookbackDate = new DateTime(1999, 01, 01);
+                var expected = await testRepository.GetSupervisorsBySuperviseeAsync(superviseeId, lookbackDate);
+                var actual = await actualRepository.GetSupervisorsBySuperviseeAsync(superviseeId, lookbackDate);
+                CollectionAssert.AreEqual(expected.ToList(), actual.ToList());
             }
         }
 

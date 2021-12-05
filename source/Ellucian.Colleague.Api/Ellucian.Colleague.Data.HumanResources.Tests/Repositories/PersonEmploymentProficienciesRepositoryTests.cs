@@ -63,19 +63,21 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 
                 dicResult = new Dictionary<string, GuidLookupResult>()
                 {
-                    { guid, new GuidLookupResult() { Entity = "", PrimaryKey = "1" } }
+                    { guid, new GuidLookupResult() { Entity = "HR.IND.SKILL", PrimaryKey = "1" } }
                 };
             }
 
             #endregion
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
-            public async Task GetPersonEmploymentProficienciesAsync_KeyNotFoundException_HrIndSkills_Null()
+            public async Task GetPersonEmploymentProficienciesAsync_HrIndSkills_Null()
             {
-                dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.HrIndSkill>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(() => null);
+                dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.HrIndSkill>(It.IsAny<string>(), It.IsAny<string[]>(), true)).ReturnsAsync(() => null);
 
-                await repository.GetPersonEmploymentProficienciesAsync(0, 10, true);
+                var result = await repository.GetPersonEmploymentProficienciesAsync(0, 10, true);
+                Assert.IsInstanceOfType(result.Item1, typeof(IEnumerable<Domain.HumanResources.Entities.PersonEmploymentProficiency>));
+                Assert.AreEqual(0, result.Item2);
             }
 
             [TestMethod]
@@ -131,7 +133,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             public async Task GetPersonEmploymentProficiency_KeyNotFoundException_HrIndSkill_Null()
             {
                 dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dicResult);
-                dataReaderMock.Setup(d => d.ReadRecordAsync<DataContracts.HrIndSkill>(It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.ReadRecordAsync<DataContracts.HrIndSkill>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
 
                 await repository.GetPersonEmploymentProficiency(guid);
             }

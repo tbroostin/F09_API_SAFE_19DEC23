@@ -1,4 +1,4 @@
-﻿// Copyright 2017 - 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017 - 2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -50,6 +50,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public string DeprecationNotice { get; set; }
         public DateTime? SunsetDate { get; set; }
         public List<string> HttpMethodsSupported { get; set; }
+        public string ParentApi { get; set; }
 
         /// <summary>
         /// Constructor for Ethos Extended Data

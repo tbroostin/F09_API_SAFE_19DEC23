@@ -1,9 +1,8 @@
-//Copyright 2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos;
@@ -26,8 +25,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private readonly IStudentReferenceDataRepository _referenceDataRepository;
         private readonly IPersonRepository _personRepository;
         private readonly ITermRepository _termsRepository;
-
-
         public StudentFinancialAidAcademicProgressStatusesService(
             IStudentFinancialAidAcademicProgressStatusesRepository studentFinancialAidAcademicProgressStatusesRepository,
             IStudentReferenceDataRepository referenceDataRepository,
@@ -55,13 +52,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<Dtos.StudentFinancialAidAcademicProgressStatuses>, int>> GetStudentFinancialAidAcademicProgressStatusesAsync
             (int offset, int limit, Dtos.StudentFinancialAidAcademicProgressStatuses criteria = null, bool bypassCache = false)
-        {
-            if (!await CheckViewStudentFinancialAidAcadProgressStatusesPermission())
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view student-financial-aid-academic-progress-statuses.");
-                throw new PermissionsException("User is not authorized to view student-financial-aid-academic-progress-statuses.");
-            }
-
+        {         
             string personId = string.Empty, statusId = string.Empty, typeId = string.Empty;
             if (criteria != null)
             {
@@ -130,12 +121,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             try
             {
-                if (!await CheckViewStudentFinancialAidAcadProgressStatusesPermission())
-                {
-                    logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view student-financial-aid-academic-progress-statuses.");
-                    throw new PermissionsException("User is not authorized to view student-financial-aid-academic-progress-statuses.");
-                }
-
                 var entity = await _studentFinancialAidAcademicProgressStatusesRepository.GetSapResultByGuidAsync(guid);
                 if (entity == null)
                 {
@@ -286,20 +271,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 return await _personRepository.GetPersonGuidsCollectionAsync(ids);
             }
             return null;
-        }
-
-        /// <summary>
-        /// Permissions code that allows an external system to perform the READ operation.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private async Task<bool> CheckViewStudentFinancialAidAcadProgressStatusesPermission()
-        {
-            IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
-            if (userPermissions.Contains(StudentPermissionCodes.ViewStudentFinancialAidAcadProgress))
-            {
-                return true;
-            }
-            return false;
         }
     }
 }

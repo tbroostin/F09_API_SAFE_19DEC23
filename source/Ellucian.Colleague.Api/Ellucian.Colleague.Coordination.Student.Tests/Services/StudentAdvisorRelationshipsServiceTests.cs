@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 
 using System;
@@ -17,6 +17,7 @@ using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Coordination.Student.Tests.UserFactories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -387,25 +388,59 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsByGuidAsync_InvalidId()
             {
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).Throws<KeyNotFoundException>();
 
-                await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
+                try
+                {
+                    await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "student-advisor-relationships not found for GUID 99" && error.Code == "GUID.Not.Found")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsByGuidAsync_InvalidOperationException()
             {
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).Throws<InvalidOperationException>();
 
-                await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
+                try
+                {
+                    await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "student-advisor-relationships not found for GUID 99" && error.Code == "GUID.Not.Found")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsByGuidAsync_SourceInvalidGuidException()
             {
                 StudentAdvisorRelationship entity = _studentAdvisorRelationshipsCollection.First();
@@ -415,11 +450,28 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
 
-                await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
+                try
+                {
+                    await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "Record does not contain a valid GUID. Entity: STUDENT.ADVISEMENT, Record ID: '1'" && error.Code == "Bad.Data")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsByGuidAsync_SourceInvalidAdvisorException()
             {
                 StudentAdvisorRelationship entity = _studentAdvisorRelationshipsCollection.First();
@@ -429,11 +481,28 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
 
-                await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
+                try
+                {
+                    await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "Record does not contain an advisor ID. Entity: STUDENT.ADVISEMENT, Record ID: '1'" && error.Code == "Bad.Data")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsByGuidAsync_SourceInvalidStudentException()
             {
                 StudentAdvisorRelationship entity = _studentAdvisorRelationshipsCollection.First();
@@ -443,11 +512,28 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
 
-                await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
+                try
+                {
+                    await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "Record does not contain a student ID. Entity: STUDENT.ADVISEMENT, Record ID: '1'" && error.Code == "Bad.Data")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsByGuidAsync_SourceInvalidStartOnException()
             {
                 StudentAdvisorRelationship entity = _studentAdvisorRelationshipsCollection.First();
@@ -457,11 +543,28 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
 
-                await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
+                try
+                {
+                    await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "Record does not contain a start date. Entity: STUDENT.ADVISEMENT, Record ID: '1'" && error.Code == "Bad.Data")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsByGuidAsync_NoAdvisorGuidFound()
             {
                 StudentAdvisorRelationship entity = _studentAdvisorRelationshipsCollection.First();
@@ -471,11 +574,28 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
 
-                await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
+                try
+                {
+                    await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "Could not retrive the advisor's GUID. Entity: PERSON, Record ID: '" + entity.Advisor + "'" && error.Code == "Validation.Exception")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsByGuidAsync_NoStudentGuidFound()
             {
                 StudentAdvisorRelationship entity = _studentAdvisorRelationshipsCollection.First();
@@ -485,58 +605,87 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
 
-                await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
+                try
+                {
+                    await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "Could not retrive the student's GUID. Entity: PERSON, Record ID: '" + entity.Student + "'" && error.Code == "Validation.Exception")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsByGuidAsync_NoAdvsiorTypeGuidFound()
             {
                 StudentAdvisorRelationship entity = _studentAdvisorRelationshipsCollection.First();
                 var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.Guid);
 
                 entity.AdvisorType = "notFoundID";
-                _referenceRepositoryMock.Setup(x => x.GetAdvisorTypeGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                _referenceRepositoryMock.Setup(x => x.GetAdvisorTypeGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
 
-                await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
+                try
+                {
+                    await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "The field STAD.TYPE could not be matched with an advisor-types resource or the GUID is missing. Entity: ADVISOR.TYPES, Record ID: '" + entity.AdvisorType + "'" && error.Code == "Validation.Exception")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsByGuidAsync_NoProgramGuidFound()
             {
                 StudentAdvisorRelationship entity = _studentAdvisorRelationshipsCollection.First();
                 var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.Guid);
 
                 entity.Program = "notFoundID";
-                _referenceRepositoryMock.Setup(x => x.GetAcademicProgramsGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                _referenceRepositoryMock.Setup(x => x.GetAcademicProgramsGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
 
-                await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
+                try
+                {
+                    await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "The field STAD.ACAD.PROGRAM could not be matched with an academic-programs resource or the GUID is missing. Entity: ACAD.PROGRAMS, Record ID: '" + entity.Program + "'" && error.Code == "Validation.Exception")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                    throw ex;
+                }
             }
-
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task StudentAdvisorRelationshipsService_GetStudentAdvisorRelationshipsByGuidAsync_NoPermission()
-            {
-                curntUserFactory = new CurrentUserSetup.StudentUserFactory();
-                _studentAdvisorRelationshipsService = new StudentAdvisorRelationshipsService(_referenceRepositoryMock.Object, _studentAdvisorRelationshipsRepositoryMock.Object,
-                    _personRepositoryMock.Object, _adapterRegistryMock.Object, _advisorTypesServiceMock.Object, curntUserFactory,
-                    _roleRepositoryMock.Object, _loggerMock.Object, _studentRepoMock.Object, baseConfigurationRepository);
-
-                StudentAdvisorRelationship entity = _studentAdvisorRelationshipsCollection.First();
-                var expected = _dtoStudentAdvisorRelList.FirstOrDefault(x => x.Id == entity.Guid);
-
-                entity.Program = "notFoundID";
-
-                _studentAdvisorRelationshipsRepositoryMock.Setup(x => x.GetStudentAdvisorRelationshipsByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
-
-                await _studentAdvisorRelationshipsService.GetStudentAdvisorRelationshipsByGuidAsync("99");
-            }
-
-
         }
-
     }
 }

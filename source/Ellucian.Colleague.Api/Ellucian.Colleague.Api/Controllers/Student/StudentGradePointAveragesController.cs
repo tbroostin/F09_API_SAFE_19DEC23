@@ -5,6 +5,7 @@ using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
@@ -55,7 +56,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="gradeDate"></param>
         /// <returns></returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewStudentGradePointAverages)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.StudentGradePointAverages))]
         [QueryStringFilterFilter("gradeDate", typeof(Dtos.Filters.GradeDateFilter))]
@@ -74,6 +75,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _studentGradePointAveragesService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -146,7 +148,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID to desired studentGradePointAverages</param>
         /// <returns>A studentGradePointAverages object <see cref="Dtos.StudentGradePointAverages"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewStudentGradePointAverages)]
         public async Task<Dtos.StudentGradePointAverages> GetStudentGradePointAveragesByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -166,6 +168,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _studentGradePointAveragesService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                    await _studentGradePointAveragesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                    await _studentGradePointAveragesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),

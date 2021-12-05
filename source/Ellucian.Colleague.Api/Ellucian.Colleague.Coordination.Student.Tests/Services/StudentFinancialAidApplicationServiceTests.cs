@@ -221,7 +221,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_Null_Tuple()
             {
                 var emptyTuple = new Tuple<IEnumerable<Domain.Student.Entities.Fafsa>, int>(new List<Domain.Student.Entities.Fafsa>(), 0);
-                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).ReturnsAsync(null);
+                faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), false, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).ReturnsAsync(() => null);
 
                 Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplication = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<Dtos.FinancialAidApplication>(), false);
                 Assert.AreEqual(emptyTuple.Item1.Count(), 0);
@@ -332,7 +332,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof( IntegrationApiException ) )]
             public async Task StudentFinancialAidApplicationService_GetFinancialAidApplicationsAsync_NoPersonGuid_ArgumentNullException()
             {
-                personRepoMock.Setup(x => x.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(null);
+                personRepoMock.Setup(x => x.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(() => null);
                 faAppRepoMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>() ) ).ReturnsAsync(_financialAidApplicationTuple);
                 Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int> financialAidApplications = await financialAidApplicationService.GetAsync(0, 100, It.IsAny<Dtos.FinancialAidApplication>(), true);
             }

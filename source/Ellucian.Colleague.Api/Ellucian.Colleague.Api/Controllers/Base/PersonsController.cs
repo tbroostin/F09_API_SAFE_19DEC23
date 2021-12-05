@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates
 
 using System;
 using System.Collections.Generic;
@@ -28,6 +28,8 @@ using Ellucian.Web.Http.ModelBinding;
 using Newtonsoft.Json;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Dtos.DtoProperties;
+using Ellucian.Colleague.Domain.Base;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -68,13 +70,14 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Gets a subset of person credentials.
         /// </summary>
         /// <returns>The requested <see cref="Dtos.PersonCredential">PersonsCredentials</see></returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPerson, BasePermissionCodes.CreatePerson, BasePermissionCodes.UpdatePerson })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetPersonCredentialsAsync(Paging page)
         {
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 bool bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {
@@ -107,6 +110,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
             catch (Exception e)
             {
                 _logger.Error(e.ToString());
@@ -118,13 +126,14 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Gets a subset of person credentials.
         /// </summary>
         /// <returns>The requested <see cref="Dtos.PersonCredential">PersonsCredentials</see></returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPerson, BasePermissionCodes.CreatePerson, BasePermissionCodes.UpdatePerson })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetPersonCredentials2Async(Paging page)
         {
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 bool bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {
@@ -157,6 +166,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
             catch (RepositoryException rex)
             {
                 _logger.Error(rex.Message);
@@ -173,7 +187,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Gets a subset of person credentials.
         /// </summary>
         /// <returns>The requested <see cref="Dtos.PersonCredential2">PersonsCredentials</see></returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPerson, BasePermissionCodes.CreatePerson, BasePermissionCodes.UpdatePerson })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.PersonCredential2))]
@@ -182,6 +196,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         {
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 bool bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {
@@ -249,6 +264,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
             catch (RepositoryException rex)
             {
                 _logger.Error(rex.Message);
@@ -266,7 +286,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <returns>The requested <see cref="Dtos.PersonCredential3">PersonsCredentials</see></returns>
         [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
-        [HttpGet]
+        [HttpGet, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPerson, BasePermissionCodes.CreatePerson, BasePermissionCodes.UpdatePerson })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.PersonCredential3))]
@@ -275,6 +295,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         {
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 bool bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {
@@ -387,6 +408,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="id">A global identifier of a person.</param>
         /// <returns>The requested <see cref="Dtos.PersonCredential">PersonsCredentials</see></returns>
         [EedmResponseFilter]
+        [HttpGet, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPerson, BasePermissionCodes.CreatePerson, BasePermissionCodes.UpdatePerson })]
         public async Task<Dtos.PersonCredential> GetPersonCredentialByGuidAsync(string id)
         {
             var bypassCache = false;
@@ -400,6 +422,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 var credential = await _personService.GetPersonCredentialByGuidAsync(id);
 
                 if (credential != null)
@@ -431,6 +454,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="id">A global identifier of a person.</param>
         /// <returns>The requested <see cref="Dtos.PersonCredential2">PersonsCredentials</see></returns>
         [EedmResponseFilter]
+        [HttpGet, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPerson, BasePermissionCodes.CreatePerson, BasePermissionCodes.UpdatePerson })]
         public async Task<Dtos.PersonCredential2> GetPersonCredential2ByGuidAsync(string id)
         {
             var bypassCache = false;
@@ -444,6 +468,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 var credential = await _personService.GetPersonCredential2ByGuidAsync(id);
 
                 if (credential != null)
@@ -480,6 +505,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="id">A global identifier of a person.</param>
         /// <returns>The requested <see cref="Dtos.PersonCredential2">PersonsCredentials</see></returns>
         [EedmResponseFilter]
+        [HttpGet, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPerson, BasePermissionCodes.CreatePerson, BasePermissionCodes.UpdatePerson })]
         public async Task<Dtos.PersonCredential2> GetPersonCredential3ByGuidAsync(string id)
         {
             var bypassCache = false;
@@ -493,6 +519,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 var credential = await _personService.GetPersonCredential3ByGuidAsync(id);
 
                 if (credential != null)
@@ -531,6 +558,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <returns>The requested <see cref="Dtos.PersonCredential3">PersonsCredentials</see></returns>
         [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
         [EedmResponseFilter]
+        [HttpGet, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPerson, BasePermissionCodes.CreatePerson, BasePermissionCodes.UpdatePerson })]
         public async Task<Dtos.PersonCredential3> GetPersonCredential4ByGuidAsync(string id)
         {
             var bypassCache = false;
@@ -544,6 +572,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 var credential = await _personService.GetPersonCredential4ByGuidAsync(id);
 
                 if (credential != null)
@@ -642,6 +671,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(csse.Message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -703,6 +736,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(csse.Message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception)
             {
                 throw CreateNotFoundException("person", personId);
@@ -751,6 +788,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(csse.Message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception)
             {
                 throw CreateNotFoundException("person", personId);
@@ -788,7 +829,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             catch (PermissionsException e)
             {
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -832,7 +873,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="credentialValue">Person Credential equal to</param>
         /// <param name="personFilter">Selection from SaveListParms definition or person-filters</param>
         /// <returns>List of Person2 <see cref="Dtos.Person2"/> objects representing matching persons</returns>
-        [HttpGet, FilteringFilter(IgnoreFiltering = true)]
+        [HttpGet, FilteringFilter(IgnoreFiltering = true), PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPerson, BasePermissionCodes.CreatePerson, BasePermissionCodes.UpdatePerson })]
         [ValidateQueryStringFilter(new string[] { "title", "firstName", "middleName", "lastNamePrefix", "lastName", "pedigree", "preferredName", "role", "credentialType", "credentialValue", "personFilter" }, false, true)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         public async Task<IHttpActionResult> GetPerson2Async(Paging page, [FromUri] string title = "", [FromUri] string firstName = "", [FromUri] string middleName = "",
@@ -894,6 +935,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -913,7 +955,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -960,7 +1002,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
-                AddEthosContextProperties(
+               AddEthosContextProperties(
                     await _personService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await _personService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                         new List<string>() { guid }));
@@ -969,7 +1011,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             catch (PermissionsException e)
             {
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -1017,7 +1059,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// credentialValue - Person Credential equal to
         /// personFilter - Selection from SaveListParms definition or person-filters</param>
         /// <returns>List of Person2 <see cref="Dtos.Person3"/> objects representing matching persons</returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPerson, BasePermissionCodes.CreatePerson, BasePermissionCodes.UpdatePerson })]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.Filters.PersonFilter))]
         [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter))]
@@ -1036,6 +1078,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -1150,7 +1193,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -1206,7 +1249,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             catch (PermissionsException e)
             {
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -1251,7 +1294,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// credentialValue - Person Credential equal to
         /// personFilter - Selection from SaveListParms definition or person-filters</param>
         /// <returns>List of Person3 <see cref="Dtos.Person3"/> objects representing matching persons</returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPerson, BasePermissionCodes.CreatePerson, BasePermissionCodes.UpdatePerson })]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.Person4))]
         [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter))]
@@ -1269,6 +1312,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -1336,7 +1380,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -1440,7 +1484,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// alternativeCredentialsValue -alternativeCredentials equal to
         /// personFilter - Selection from SaveListParms definition or person-filters</param>
         /// <returns>List of Person5 <see cref="Dtos.Person5"/> objects representing matching persons</returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPerson, BasePermissionCodes.CreatePerson, BasePermissionCodes.UpdatePerson })]
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.Person5))]
@@ -1459,6 +1503,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -1492,6 +1537,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                                 throw new ArgumentException("credentialType", string.Concat("credentials.type filter of 'ssn' is not supported."));
                             case Credential3Type.Sin:
                                 throw new ArgumentException("credentialType", string.Concat("credentials.type filter of 'sin' is not supported."));
+                            case Credential3Type.TaxIdentificationNumber:
+                                throw new ArgumentException("credentialType", string.Concat("credentials.type filter of 'taxIdentificationNumber' is not supported."));
                         }
                     }
                 }
@@ -1584,7 +1631,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="person">DTO of the new person</param>
         /// <returns>A person object <see cref="Person2"/> in HeDM format</returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(BasePermissionCodes.CreatePerson)]
         public async Task<Person2> PostPerson2Async([ModelBinder(typeof(EedmModelBinder))] Person2 person)
         {
             if (person == null)
@@ -1599,6 +1646,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 // check citizenship fields
                 var xx = await _personService.CheckCitizenshipfields(person.CitizenshipStatus, person.CitizenshipCountry, null, null);
 
@@ -1622,7 +1670,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -1656,7 +1704,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="person">DTO of the new person</param>
         /// <returns>A person object <see cref="Person3"/> in HeDM format</returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(BasePermissionCodes.CreatePerson)]
         public async Task<Person3> PostPerson3Async([ModelBinder(typeof(EedmModelBinder))] Person3 person)
         {
             if (person == null)
@@ -1671,6 +1719,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 // check citizenship fields
                 var xx = await _personService.CheckCitizenshipfields(person.CitizenshipStatus, person.CitizenshipCountry, null, null);
 
@@ -1694,7 +1743,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -1728,7 +1777,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="person">DTO of the new person</param>
         /// <returns>A person object <see cref="Person4"/> in HeDM format</returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(BasePermissionCodes.CreatePerson)]
         public async Task<Person4> PostPerson4Async([ModelBinder(typeof(EedmModelBinder))] Person4 person)
         {
             if (person == null)
@@ -1747,6 +1796,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 // Check citizenship fields
                 var xx = await _personService.CheckCitizenshipfields(person.CitizenshipStatus, person.CitizenshipCountry, null, null);
 
@@ -1770,7 +1820,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -1805,7 +1855,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="person">DTO of the new person</param>
         /// <returns>A person object <see cref="Person5"/> in HeDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(BasePermissionCodes.CreatePerson)]
         public async Task<Person5> PostPerson5Async([ModelBinder(typeof(EedmModelBinder))] Person5 person)
         {
             if (person == null)
@@ -1826,6 +1876,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 // Check citizenship fields
                 await _personService.CheckCitizenshipfields2(person.CitizenshipStatus, person.CitizenshipCountry, null, null);
 
@@ -1977,7 +2028,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -2041,13 +2092,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
-                //get Data Privacy List
                 var dpList = await _personService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
                 //call import extend method that needs the extracted extension dataa and the config
                 await _personService.ImportExtendedEthosData(await ExtractExtendedData(await _personService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
-
-
 
                 // do partial merge
                 var originalPerson = new Dtos.Person3();
@@ -2089,7 +2137,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -2212,7 +2260,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -2278,7 +2326,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
-                //get Data Privacy List
+                 //get Data Privacy List
                 var dpList = await _personService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
                 //call import extend method that needs the extracted extension dataa and the config
@@ -2412,6 +2460,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 throw CreateHttpResponseException(permissionException.Message, HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(csse.Message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception)
             {
                 throw CreateHttpResponseException("Unable to update profile information", HttpStatusCode.BadRequest);
@@ -2463,6 +2515,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 throw CreateHttpResponseException(permissionException.Message, HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(csse.Message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception)
             {
                 throw CreateHttpResponseException("Unable to update profile information", HttpStatusCode.BadRequest);
@@ -2506,6 +2562,10 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 throw CreateHttpResponseException(permissionException.Message, HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(csse.Message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception)
             {
                 throw CreateHttpResponseException("Unable to update emergency information", HttpStatusCode.BadRequest);
@@ -2545,7 +2605,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="person"><see cref="Person2">Person</see> to use for querying</param>
         /// <returns>List of matching <see cref="Person2">persons</see></returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPerson, BasePermissionCodes.CreatePerson, BasePermissionCodes.UpdatePerson })]
         public async Task<IEnumerable<Person2>> QueryPerson2ByPostAsync([FromBody] Person2 person)
         {
             var bypassCache = false;
@@ -2560,6 +2620,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 AddDataPrivacyContextProperty((await _personService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
                 return await _personService.QueryPerson2ByPostAsync(person);
             }
@@ -2579,7 +2640,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="person"><see cref="Person3">Person</see> to use for querying</param>
         /// <returns>List of matching <see cref="Person3">persons</see></returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPerson, BasePermissionCodes.CreatePerson, BasePermissionCodes.UpdatePerson })]
         public async Task<IEnumerable<Person3>> QueryPerson3ByPostAsync([FromBody] Person3 person)
         {
             var bypassCache = false;
@@ -2594,6 +2655,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 AddDataPrivacyContextProperty((await _personService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
                 return await _personService.QueryPerson3ByPostAsync(person);
             }
@@ -2613,7 +2675,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="person"><see cref="Person4">Person</see> to use for querying</param>
         /// <returns>List of matching <see cref="Person4">persons</see></returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPerson, BasePermissionCodes.CreatePerson, BasePermissionCodes.UpdatePerson })]
         public async Task<IEnumerable<Person4>> QueryPerson4ByPostAsync([FromBody] Person4 person)
         {
             var bypassCache = false;
@@ -2628,6 +2690,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 var personDtos = await _personService.QueryPerson4ByPostAsync(person, bypassCache);
 
                 AddEthosContextProperties(await _personService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -2653,7 +2716,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="person"><see cref="Person5">Person</see> to use for querying</param>
         /// <returns>List of matching <see cref="Person5">persons</see></returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPerson, BasePermissionCodes.CreatePerson, BasePermissionCodes.UpdatePerson })]
         public async Task<IEnumerable<Person5>> QueryPerson5ByPostAsync([FromBody] Person5 person)
         {
             var bypassCache = false;
@@ -2668,6 +2731,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 var personDtos = await _personService.QueryPerson5ByPostAsync(person, bypassCache);
 
                 AddEthosContextProperties(await _personService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -2754,5 +2818,30 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         }
 
         #endregion
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<GuidObject2> GetPersonGuidByIdAsync([FromUri] string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw CreateHttpResponseException("Person ID is required", HttpStatusCode.BadRequest);
+            }
+            try
+            {
+                var personGuid = await _personService.GetPersonGuidByIdAsync(id);
+                return personGuid;
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e, "Error retrieving person GUID by ID");
+                throw CreateHttpResponseException("Person GUID could not be found.", HttpStatusCode.BadRequest);
+            }
+
+        }
     }
 }

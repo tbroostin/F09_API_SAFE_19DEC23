@@ -26,7 +26,7 @@ namespace Ellucian.Colleague.Dtos
         /// <summary>
         /// Human-readable description
         /// </summary>
-        [DataMember(Name = "description")]
+        [JsonProperty("description", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public string Description { get; set; }
 
         /// <summary>

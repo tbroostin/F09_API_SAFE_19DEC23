@@ -31,6 +31,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         private Mock<ILogger> loggerMock;
         private VouchersController voucherController;
         private List<VoucherSummary> voucherSummaryCollection;
+        private Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria filterCriteria;
         private Voucher voucher;
         private Voucher2 voucher2;
         private string personId = "0000100";
@@ -45,6 +46,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             loggerMock = new Mock<ILogger>();
             voucherSummaryCollection = new List<VoucherSummary>();
 
+            filterCriteria = new ProcurementDocumentFilterCriteria();
+            filterCriteria.PersonId = "0000100";
+            filterCriteria.VendorIds = new List<string>() { "0000190" };
+            
             BuildVoucherSummaryData();
 
             voucherController = new VouchersController(voucherServiceMock.Object, loggerMock.Object)
@@ -57,6 +62,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
         private void BuildVoucherSummaryData()
         {
+            
             voucherSummaryCollection = new List<VoucherSummary>()
             {
                 new VoucherSummary()
@@ -338,7 +344,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
         #endregion
 
-        #region qapi
+        #region GetVouchersByVendorAndInvoiceNoAsync
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task VouchersController_GetVouchersByVendorAndInvoiceNoAsync_ArgumentNullException()
@@ -419,6 +425,68 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             Assert.IsNotNull(result);
         }
         #endregion  
+
+        #region Voucher Summary
+
+        [TestMethod]
+        public async Task VouchersController_QueryVoucherSummariesAsync()
+        {
+            var expected = voucherSummaryCollection.AsEnumerable();
+            voucherServiceMock.Setup(r => r.QueryVoucherSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ReturnsAsync(expected);
+            
+            var result = await voucherController.QueryVoucherSummariesAsync(filterCriteria);
+            Assert.IsNotNull(result);
+           Assert.AreEqual(expected.Count(), result.Count());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VouchersController_QueryVoucherSummariesAsync_Criteria_Null()
+        {
+            await voucherController.QueryVoucherSummariesAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VouchersController_QueryVoucherSummariesAsync_ArgumentNullException()
+        {            
+            voucherServiceMock.Setup(r => r.QueryVoucherSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ThrowsAsync(new ArgumentNullException());
+            await voucherController.QueryVoucherSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VouchersController_QueryVoucherSummariesAsync_Exception()
+        {
+            voucherServiceMock.Setup(r => r.QueryVoucherSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ThrowsAsync(new Exception());
+            await voucherController.QueryVoucherSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VouchersController_QueryVoucherSummariesAsync_KeyNotFoundException()
+        {
+            voucherServiceMock.Setup(r => r.QueryVoucherSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ThrowsAsync(new KeyNotFoundException());
+            await voucherController.QueryVoucherSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VouchersController_QueryVoucherSummariesAsync_ApplicationException()
+        {
+            voucherServiceMock.Setup(r => r.QueryVoucherSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ThrowsAsync(new ApplicationException());
+            await voucherController.QueryVoucherSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VouchersController_QueryVoucherSummariesAsync_PermissionException()
+        {
+            voucherServiceMock.Setup(r => r.QueryVoucherSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ThrowsAsync(new PermissionsException());
+            await voucherController.QueryVoucherSummariesAsync(filterCriteria);
+        }
+
+        #endregion
     }
 
 
@@ -434,8 +502,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
         private Mock<IVoucherService> voucherServiceMock;
         private Mock<ILogger> loggerMock;
-        private VouchersController vouchersController;
-        private Tuple<IEnumerable<Voucher2>, int> vouchersCollection;
+        private VouchersController vouchersController;        
         private Dtos.ColleagueFinance.VoucherCreateUpdateRequest createUpdateVoucherRequest;
         private VoucherCreateUpdateResponse createUpdateVoucherReponse;
         [TestInitialize]

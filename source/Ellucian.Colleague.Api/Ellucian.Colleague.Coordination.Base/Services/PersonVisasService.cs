@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -73,10 +73,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<Dtos.PersonVisa>, int>> GetAllAsync(int offset, int limit, string person, bool bypassCache)
         {
-            CheckUserPersonVisasViewPermissions();
-
-            Tuple<IEnumerable<PersonVisa>, int> personVisaEntities = await _personVisasRepository.GetAllPersonVisasAsync(offset, limit, person, bypassCache);
-            List<Dtos.PersonVisa> personVisaDtos = new List<Dtos.PersonVisa>();
+           
+            var personVisaEntities = await _personVisasRepository.GetAllPersonVisasAsync(offset, limit, person, bypassCache);
+            var personVisaDtos = new List<Dtos.PersonVisa>();
 
             if (personVisaEntities != null && personVisaEntities.Item2 > 0)
             {
@@ -100,11 +99,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         public async Task<Tuple<IEnumerable<Dtos.PersonVisa>, int>> GetAll2Async(int offset, int limit, string person, string visaTypeCategory, string visaTypeDetail, bool bypassCache)
         {
 
-            List<Dtos.PersonVisa> personVisaDtos = new List<Dtos.PersonVisa>();
+            var personVisaDtos = new List<Dtos.PersonVisa>();
             List<string> visaTypeCategories = null;
-
-
-            CheckUserPersonVisasViewPermissions();
 
             #region filters
 
@@ -192,8 +188,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>Dtos.PersonVisa</returns>
         public async Task<Dtos.PersonVisa> GetPersonVisaByIdAsync(string id)
         {
-            CheckUserPersonVisasViewPermissions();
-
+      
             if (string.IsNullOrEmpty(id))
             {
                 throw new ArgumentNullException("Must provide a personVisa id for retrieval");
@@ -227,12 +222,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>Dtos.PersonVisa</returns>
         public async Task<Dtos.PersonVisa> GetPersonVisaById2Async(string guid)
         {
-            CheckUserPersonVisasViewPermissions();
-
             if (string.IsNullOrEmpty(guid))
             {
-                //throw new ArgumentNullException("Must provide a personVisa GUID for retrieval");
-                IntegrationApiExceptionAddError("Must provide a person-visas GUID for retrieval.", "Missing.GUID",
+                 IntegrationApiExceptionAddError("Must provide a person-visas GUID for retrieval.", "Missing.GUID",
                    "", "", System.Net.HttpStatusCode.NotFound);
                 throw IntegrationApiException;
             }
@@ -250,16 +242,11 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (KeyNotFoundException)
             {
-                //throw new KeyNotFoundException("No person-visas was found for GUID '" + guid + "'.");
-                IntegrationApiExceptionAddError("No person-visas was found for GUID '" + guid + "'.", "GUID.Not.Found",
-                    guid, "", System.Net.HttpStatusCode.NotFound);
-                throw IntegrationApiException;
-
+                throw new KeyNotFoundException("No person-visas was found for GUID '" + guid + "'.");
             }
 
             if ((personVisaEntity == null) || (string.IsNullOrEmpty(personVisaEntity.Type)))
             {
-                //throw new KeyNotFoundException("No person-visas was found for GUID '" + guid + "'.");
                 IntegrationApiExceptionAddError("No person-visas was found for GUID '" + guid + "'.", "GUID.Not.Found",
                     guid, "", System.Net.HttpStatusCode.NotFound);
                 throw IntegrationApiException;
@@ -289,8 +276,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>Dtos.PersonVisa</returns>
         public async Task<Dtos.PersonVisa> PostPersonVisaAsync(Dtos.PersonVisa personVisa)
         {
-            CheckUserPersonVisasCreatePermissions();
-
+            
             if (personVisa == null || personVisa.Person == null || string.IsNullOrEmpty(personVisa.Person.Id))
             {
                 throw new KeyNotFoundException("person id is a required property for personVisas");
@@ -309,8 +295,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if (personVisa == null)
                 throw new ArgumentNullException("PersonVisa", "Must provide a personVisa for create.");
 
-            CheckUserPersonVisasCreatePermissions();
-
             return await this.PutPersonVisa2Async(string.Empty, personVisa);
         }
 
@@ -322,7 +306,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>Dtos.PersonVisa</returns>
         public async Task<Dtos.PersonVisa> PutPersonVisaAsync(string id, Dtos.PersonVisa personVisa)
         {
-            CheckUserPersonVisasUpdatePermissions();
 
             if (string.IsNullOrEmpty(id))
             {
@@ -359,8 +342,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             var personVisaResponse = await _personVisasRepository.UpdatePersonVisaAsync(personVisaRequest);
 
-            //Dtos.PersonVisa personVisaDto = await this.GetPersonVisaByIdAsync(personVisaResponse.StrGuid);
-            return await ConvertPersonVisaEntityToDtoAsync(personVisaResponse, false);
+             return await ConvertPersonVisaEntityToDtoAsync(personVisaResponse, false);
 
         }
 
@@ -376,8 +358,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 throw new ArgumentNullException("PersonVisa", "Must provide a personVisa for update.");
             }
-
-            CheckUserPersonVisasUpdatePermissions();
 
             if (string.IsNullOrEmpty(id))
             {
@@ -675,7 +655,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>PersonVisaRequest</returns>
         private async Task<PersonVisaRequest> ConvertPersonVisaDtoToRequestAsync(string entityId, Dtos.PersonVisa personVisa)
         {
-
             PersonVisaRequest personVisaRequest = new PersonVisaRequest(personVisa.Id, entityId);
             if (personVisa.Entries != null && personVisa.Entries.Any())
             {
@@ -764,8 +743,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>string</returns>
         private async Task<string> ConvertDtoVisaTypeToEntityVisaTypeCategoryAsync(Dtos.PersonVisa personVisa, bool bypassCache)
         {
-            
-            
+                    
             _visaTypeEntities = await this.GetVisaTypesAsync(bypassCache);
             
             //If VisaType.Detail is null then choose first one with nonImmigrant VisaTypeCategory
@@ -1005,63 +983,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     return VisaTypeCategory.NonImmigrant;
                 default:
                     throw new InvalidOperationException("Invalid visa type category filter value.");
-            }
-        }
-
-        /// <summary>
-        /// converts entity visa type category to dto visa type category
-        /// </summary>
-        /// <param name="Domain.Base.Entities.visaTypeCategory">Domain.Base.Entities.visaTypeCategory</param>
-        /// <returns>Dtos.VisaTypeCategory</returns>
-        private Dtos.VisaTypeCategory ConvertFilterVisaTypeCategoryToVisaTypeCategoryDto(string visaTypeCategory)
-        {
-            switch (visaTypeCategory)
-            {
-                case "immigrant":
-                    return Dtos.VisaTypeCategory.Immigrant;
-                case "nonImmigrant":
-                    return Dtos.VisaTypeCategory.NonImmigrant;
-                default:
-                    return Dtos.VisaTypeCategory.NotSet;
-            }
-        }
-
-        /// <summary>
-        /// Verifies if the user has the correct permissions to view a person visa
-        /// </summary>
-        private void CheckUserPersonVisasViewPermissions()
-        {
-            // access is ok if the current user has the view or update person visas permission
-            if (!HasPermission(BasePermissionCodes.ViewAnyPersonVisa) && !HasPermission(BasePermissionCodes.UpdateAnyPersonVisa))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view person-visas.");
-                throw new PermissionsException("User is not authorized to view person-visas.");
-            }
-        }
-
-
-        /// <summary>
-        /// Verifies if the user has the correct permissions to update a person visa
-        private void CheckUserPersonVisasUpdatePermissions()
-        {
-            // access is ok if the current user has the update person visas permission
-            if (!HasPermission(BasePermissionCodes.UpdateAnyPersonVisa))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to update person-visas.");
-                throw new PermissionsException("User is not authorized to update person-visas.");
-            }
-        }
-
-        /// <summary>
-        /// Verifies if the user has the correct permissions to create a person visa
-        /// </summary>
-        private void CheckUserPersonVisasCreatePermissions()
-        {
-            // access is ok if the current user has the create person visas permission
-            if (!HasPermission(BasePermissionCodes.UpdateAnyPersonVisa))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to create person-visas.");
-                throw new PermissionsException("User is not authorized to create person-visas.");
             }
         }
 

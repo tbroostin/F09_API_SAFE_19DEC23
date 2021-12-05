@@ -1144,6 +1144,45 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             }
 
             [TestMethod]
+            public async Task Configuration_BlankStatusTextTest()
+            {
+                var officeParametersRecord = expectedRepository.officeParameterRecordData.First();
+                officeParametersRecord.BlankStatusText = "No status";
+                actualOffices = (await actualRepository.GetFinancialAidOfficesAsync()).ToList();
+                var actualConfiguration = actualOffices.First(o => o.Id == officeParametersRecord.OfficeCode).Configurations.First(c => c.AwardYear == officeParametersRecord.AwardYear);
+
+                Assert.AreEqual(officeParametersRecord.BlankStatusText, actualConfiguration.FaBlankStatusText);
+            }
+
+            [TestMethod]
+            public async Task Configuration_BlankDueDateTextTest()
+            {
+                var officeParametersRecord = expectedRepository.officeParameterRecordData.First();
+                officeParametersRecord.BlankDueDateText = "No due date";
+                actualOffices = (await actualRepository.GetFinancialAidOfficesAsync()).ToList();
+                var actualConfiguration = actualOffices.First(o => o.Id == officeParametersRecord.OfficeCode).Configurations.First(c => c.AwardYear == officeParametersRecord.AwardYear);
+
+                Assert.AreEqual(officeParametersRecord.BlankDueDateText, actualConfiguration.FaBlankDueDateText);
+            }
+
+            [TestMethod]
+            public async Task Configuration_ShowAslaInfoTest()
+            {
+                var officeParametersRecord = expectedRepository.officeParameterRecordData.First();
+                officeParametersRecord.ShowAslaInfo = "Y";
+                actualOffices = (await actualRepository.GetFinancialAidOfficesAsync()).ToList();
+                var actualConfiguration = actualOffices.First(o => o.Id == officeParametersRecord.OfficeCode).Configurations.First(c => c.AwardYear == officeParametersRecord.AwardYear);
+
+                Assert.IsTrue(actualConfiguration.ShowAslaInfo);
+
+                officeParametersRecord.ShowAslaInfo = "n";
+                actualOffices = (await actualRepository.GetFinancialAidOfficesAsync()).ToList();
+                actualConfiguration = actualOffices.First(o => o.Id == officeParametersRecord.OfficeCode).Configurations.First(c => c.AwardYear == officeParametersRecord.AwardYear);
+
+                Assert.IsFalse(actualConfiguration.ShowAslaInfo);
+            }
+
+            [TestMethod]
             public async Task Configuration_NewLoanCommunicationStatusTest()
             {
                 var officeParametersRecord = expectedRepository.officeParameterRecordData.First();
@@ -2344,6 +2383,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 Assert.IsTrue(actualConfiguration.ShowBudgetDetailsOnAwardLetter);
             }
 
+
             [TestMethod]
             public async Task StudentAwardLetterBudgetDetailsDescription_ReturnsExpectedValueTest()
             {
@@ -2500,7 +2540,10 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                                 FopIgnoreAwardsOnChklst = officeParameter.IgnoreAwardsOnChecklist,
                                 FopIgnoreAwdCatOnChklst = officeParameter.IgnoreAwardCategoriesOnChecklist,
                                 FopShowBudgetDetails = officeParameter.ShowBudgetDetailsOnAwardLetter,
-                                FopBudgetDtlDesc = officeParameter.StudentAwardLetterBudgetDetailsDescription
+                                FopBudgetDtlDesc = officeParameter.StudentAwardLetterBudgetDetailsDescription,
+                                FopBlankStatusText = officeParameter.BlankStatusText,
+                                FopBlankDueDateText = officeParameter.BlankDueDateText,
+                                FopShowChkAslaInfo = officeParameter.ShowAslaInfo
                             }).ToList()));
                     });
 

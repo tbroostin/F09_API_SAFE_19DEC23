@@ -71,7 +71,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         /// <param name="documentSubmittedBy"></param>
         /// <returns></returns>
         Task<List<FundsAvailable>> CheckAvailableFundsAsync(List<FundsAvailable> fundsAvailable,
-          string purchaseOrderId = "", string voucherId = "", string blanketPurchaseOrderNumber = "", string documentSubmittedBy = "", string requisitionId = "");
+          string purchaseOrderId = "", string voucherId = "", string blanketPurchaseOrderNumber = "", string documentSubmittedBy = "", string requisitionId = "", List<string> BpoReqIds = null);
 
 
     }

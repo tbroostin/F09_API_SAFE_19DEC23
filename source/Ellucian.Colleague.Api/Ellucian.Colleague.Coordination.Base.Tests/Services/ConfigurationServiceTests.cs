@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -120,7 +120,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             FakeDmiSettings.SharedSecret = "secret";
             FakeColleagueSettings = new ColleagueSettings();
             FakeColleagueSettings.DmiSettings = FakeDmiSettings;
-            FakeSettings = new Settings(FakeColleagueSettings, System.Diagnostics.SourceLevels.Information);
+            FakeSettings = new Settings(FakeColleagueSettings, Serilog.Events.LogEventLevel.Information);
 
             FakeApiBackupConfigData = new ApiBackupConfigData();
             FakeApiBackupConfigData.ApiSettings = FakeApiSettings;
@@ -598,6 +598,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.FormT4);
 
             Assert.AreEqual(Domain.Base.TaxFormTypes.FormT4, configurationDto.TaxForm);
+            Assert.AreEqual(configurationDomainEntity.HideConsent, configurationDto.HideConsent);
             Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
             Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
         }
@@ -609,6 +610,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.FormT4A);
 
             Assert.AreEqual(Domain.Base.TaxFormTypes.FormT4A, configurationDto.TaxForm);
+            Assert.AreEqual(configurationDomainEntity.HideConsent, configurationDto.HideConsent);
             Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
             Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
         }
@@ -620,6 +622,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             var configurationDomainEntity = await testConfigurationRepository.GetTaxFormConsentConfiguration2Async(Domain.Base.TaxFormTypes.FormT2202A);
 
             Assert.AreEqual(Domain.Base.TaxFormTypes.FormT2202A, configurationDto.TaxForm);
+            Assert.AreEqual(configurationDomainEntity.HideConsent, configurationDto.HideConsent);
             Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentText, configurationDto.ConsentText);
             Assert.AreEqual(configurationDomainEntity.ConsentParagraphs.ConsentWithheldText, configurationDto.ConsentWithheldText);
         }

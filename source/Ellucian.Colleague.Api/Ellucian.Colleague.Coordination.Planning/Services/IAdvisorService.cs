@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Dtos.Planning;
 using System;
@@ -35,6 +35,6 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
         /// <param name="advisorIds">Advisor IDs for whom data will be retrieved</param>
         /// <returns>A list of <see cref="Advisor">Advisors</see> object containing advisor name</returns>
         Task<IEnumerable<Dtos.Planning.Advisor>> QueryAdvisorsByPostAsync(IEnumerable<string> advisorIds);
-        Task<PrivacyWrapper<Dtos.Planning.Advisee>> PostCompletedAdvisementAsync(string studentId, Dtos.Planning.CompletedAdvisement completeAdvisement);
+        Task<PrivacyWrapper<Dtos.Planning.Advisee>> PostCompletedAdvisementAsync(string studentId, Dtos.Student.CompletedAdvisement completeAdvisement);
     }
 }

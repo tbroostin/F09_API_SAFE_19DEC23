@@ -170,9 +170,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             [ExpectedException(typeof(Exception))]
             public async Task PersonBenefitDependentsRepo_GetsGetPersonBenefitDependents_Exception()
             {
-                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
-                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(null);
-                dataAccessorMock.Setup(da => da.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(null);
+                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
+                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(() => null);
+                dataAccessorMock.Setup(da => da.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(() => null);
 
                 await perbensRepo.GetPersonBenefitDependentsAsync(0, 2, true);
             }

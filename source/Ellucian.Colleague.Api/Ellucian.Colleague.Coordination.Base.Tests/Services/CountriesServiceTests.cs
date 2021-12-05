@@ -1,4 +1,4 @@
-﻿//Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -417,7 +417,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             public async Task CountriesService_PutCountriesAsync_IntegrationApiException_GuidNotFound()
             {
                 _countryRepositoryMock.Setup(repo => repo.GetCountryByGuidAsync(countriesGuid))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 var currencyDto = _countriesDtoCollection.FirstOrDefault(x => x.Id == countriesGuid);
 
@@ -525,7 +525,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var currencyDto = _countriesDtoCollection.FirstOrDefault(x => x.Id == countriesGuid);
 
                 var currencyEntity = _countriesEntityCollection.FirstOrDefault(x => x.Guid == countriesGuid);
-                _countryRepositoryMock.Setup(repo => repo.UpdateCountryAsync(It.IsAny<Domain.Base.Entities.Country>())).ReturnsAsync(null);
+                _countryRepositoryMock.Setup(repo => repo.UpdateCountryAsync(It.IsAny<Domain.Base.Entities.Country>())).ReturnsAsync(() => null);
 
                 await _countriesService.PutCountriesAsync(countriesGuid, currencyDto);
             }

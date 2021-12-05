@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -89,6 +89,25 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// </summary>
         public string SubmittedBy { get; set; }
 
+        /// <summary>
+        /// The GL account budget amount.
+        /// </summary>
+        public decimal BudgetAmount { get; set; }
+
+        /// <summary>
+        /// The GL account encumbrance amount. 
+        /// </summary>
+        public decimal EncumbranceAmount { get; set; }
+
+        /// <summary>
+        /// The GL account requisition amount. 
+        /// </summary>
+        public decimal RequisitionAmount { get; set; }
+
+        /// <summary>
+        /// The GL account actual amount.
+        /// </summary>
+        public decimal ActualAmount { get; set; }
 
         /// <summary>
         /// This constructor initializes a Line Item general ledger distribution domain entity.

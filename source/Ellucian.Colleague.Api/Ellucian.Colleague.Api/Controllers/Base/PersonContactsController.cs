@@ -1,9 +1,10 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2021 Ellucian Company L.P. and its affiliates
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
@@ -11,6 +12,7 @@ using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.License;
+using Ellucian.Web.Security;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -53,7 +55,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="page"></param>
         /// <param name="person">Person id filter.</param>
         /// <returns></returns>
-        [HttpGet]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, PermissionsFilter(BasePermissionCodes.ViewAnyPersonContact)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [FilteringFilter(IgnoreFiltering = true)]
         [ValidateQueryStringFilter(new string[] { "person"}, false, true)]
@@ -82,6 +85,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _emergencyInformationService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(200, 0);
@@ -96,6 +100,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
                 return new PagedHttpActionResult<IEnumerable<Dtos.PersonContactSubject>>(pageOfItems.Item1, page, pageOfItems.Item2, Request);
             }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (KeyNotFoundException e)
             {
                 _logger.Error(e.ToString());
@@ -106,6 +120,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
+            
         }
 
         /// <summary>
@@ -113,7 +128,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="id"></param>
         /// <returns>Dtos.PersonContactSubject</returns>
-        [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(BasePermissionCodes.ViewAnyPersonContact)]
         public async Task<Dtos.PersonContactSubject> GetPersonEmergencyContactsByIdAsync([FromUri] string id)
         {
             bool bypassCache = false;
@@ -127,6 +143,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _emergencyInformationService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(id))
                 {
                     throw new ArgumentNullException("Person contact id is required");
@@ -138,6 +155,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                     new List<string>() { id }));
 
                 return await _emergencyInformationService.GetPersonEmergencyContactByIdAsync(id);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (KeyNotFoundException e)
             {

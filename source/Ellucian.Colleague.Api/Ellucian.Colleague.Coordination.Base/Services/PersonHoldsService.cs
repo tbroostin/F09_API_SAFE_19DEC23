@@ -1,8 +1,8 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
-using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
@@ -47,31 +47,168 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// </summary>
         /// <returns>Tuple containing a Collection of Dtos.PersonHold, along with total record count</returns>
         public async Task<Tuple<IEnumerable<Dtos.PersonHold>, int>> GetPersonHoldsAsync(int offset, int limit, bool bypassCache = false)
-        {
-            CheckUserPersonHoldsViewPermissions();
-
+        {           
             var dtoPersonHolds = new List<Dtos.PersonHold>();
-            var personHoldsEntities = await _personHoldsRepository.GetPersonHoldsAsync(offset, limit);
-           
-            //Get all hold types with category
-            var personHoldTypes = await _referenceDataRepository.GetRestrictionsWithCategoryAsync(bypassCache) as List<Domain.Base.Entities.Restriction>;
-
-            if (personHoldTypes != null)
+            Tuple<IEnumerable<PersonRestriction>, int> personHoldsEntities = new Tuple<IEnumerable<PersonRestriction>, int>(new List<PersonRestriction>(), 0);
+            try
             {
-                var personIds = personHoldsEntities.Item1.Where(p => !string.IsNullOrWhiteSpace(p.StudentId)).Select(s => s.StudentId).ToList();
+                personHoldsEntities = await _personHoldsRepository.GetPersonHoldsAsync(offset, limit);
+
+                //Get all hold types with category
+                var personHoldTypes = await _referenceDataRepository.GetRestrictionsWithCategoryAsync(bypassCache) as List<Domain.Base.Entities.Restriction>;
+
+                if (personHoldTypes != null)
+                {
+                    var personIds = personHoldsEntities.Item1.Where(p => !string.IsNullOrWhiteSpace(p.StudentId)).Select(s => s.StudentId).ToList();
+                    var personIdDict = await _personRepository.GetPersonGuidsCollectionAsync(personIds.Distinct());
+
+                    foreach (var holdEntity in personHoldsEntities.Item1)
+                    {
+                        var restriction = personHoldTypes.FirstOrDefault(r => r != null && r.Code == holdEntity.RestrictionId);
+
+                        if (restriction != null)
+                        {
+                            string personId;
+                            if (personIdDict != null && personIdDict.Any() && personIdDict.TryGetValue(holdEntity.StudentId, out personId))
+                            {
+                                var dtosPersonHold = BuildPersonHold(holdEntity.Guid, holdEntity, personHoldTypes, personId,
+                               restriction);
+                                dtoPersonHolds.Add(dtosPersonHold);
+                            }
+                        }
+                        else
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Person hold type '{0}' is missing the GUID or is invalid.", holdEntity.RestrictionId), "Bad.Data", holdEntity.Guid, holdEntity.Id);
+                        }
+                    }
+                }
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+            }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+
+            return new Tuple<IEnumerable<Dtos.PersonHold>, int>(dtoPersonHolds, personHoldsEntities.Item2);
+        }
+
+        /// <summary>
+        /// Retrieves all active person holds for hold id
+        /// </summary>
+        /// <param name="id">guid for the person hold</param>
+        /// <returns>List of PersonHold for the person</returns>
+        public async Task<Dtos.PersonHold> GetPersonHoldAsync(string id, bool bypassCache = false)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("Person hold GUID is required.");
+            }
+            
+            PersonRestriction personHoldEntity = null;
+            try
+            {
+                personHoldEntity = await _personHoldsRepository.GetPersonHoldByIdAsync(id);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+            }
+            catch (KeyNotFoundException)
+            {
+                throw new KeyNotFoundException(string.Format("No person-holds was found for GUID '{0}'", id));
+
+            }
+            if (personHoldEntity == null)
+            {
+                throw new KeyNotFoundException(string.Format("No person-holds was found for GUID '{0}'", id));
+            }
+
+            Dtos.PersonHold dtoPersonHolds = null;
+
+            try {
+                var personHoldTypes = await _referenceDataRepository.GetRestrictionsWithCategoryAsync(bypassCache) as List<Domain.Base.Entities.Restriction>;
+
+                string personId = await _personRepository.GetPersonGuidFromIdAsync(personHoldEntity.StudentId);
+                if (string.IsNullOrEmpty(personId))
+                {
+                    throw new KeyNotFoundException(string.Format("Did not find any person with id: {0}", personHoldEntity.StudentId));
+                }
+
+                //Get the person hold type(restriction)
+                Restriction restriction = personHoldTypes.FirstOrDefault(r => r != null && r.Code.Equals(personHoldEntity.RestrictionId, StringComparison.OrdinalIgnoreCase));
+                if (restriction == null)
+                {
+                    IntegrationApiExceptionAddError(string.Format("Person hold type '{0}' is missing the GUID or is invalid.", personHoldEntity.RestrictionId), "Bad.Data", personHoldEntity.Guid, personHoldEntity.Id);
+                    throw IntegrationApiException;
+                }
+
+                //Get the guid for the entity, just to make sure guid is generated, get the guid based on entity id
+                string personHoldId = await _personHoldsRepository.GetStudentHoldGuidFromIdAsync(personHoldEntity.Id);
+                if (string.IsNullOrEmpty(personHoldId))
+                {
+                    throw new KeyNotFoundException(string.Format("Did not find guid for id: {0}", personHoldEntity.Id));
+                }
+
+                dtoPersonHolds = BuildPersonHold(personHoldEntity.Guid, personHoldEntity, personHoldTypes, personId, restriction);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+            }
+            catch (KeyNotFoundException)
+            {
+                throw new KeyNotFoundException(string.Format("No person-holds was found for GUID '{0}'", id));
+
+            }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+
+            return dtoPersonHolds;
+        }
+
+        /// <summary>
+        /// Gets person holds based on personId
+        /// </summary>
+        /// <param name="person"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<Dtos.PersonHold>> GetPersonHoldsAsync(string personId, bool bypassCache = false)
+        {
+
+            if (string.IsNullOrEmpty(personId))
+            {
+                return new List<Dtos.PersonHold>();
+            }
+
+            List<Dtos.PersonHold> dtoPersonHolds = new List<Dtos.PersonHold>();
+
+            try
+            {
+                List<Domain.Base.Entities.PersonRestriction> personHoldsEntities = await _personHoldsRepository.GetPersonHoldsByPersonIdAsync(personId) as List<Domain.Base.Entities.PersonRestriction>;
+
+                //Get all hold types with category
+                List<Domain.Base.Entities.Restriction> personHoldTypes = await _referenceDataRepository.GetRestrictionsWithCategoryAsync(bypassCache) as List<Domain.Base.Entities.Restriction>;
+
+                var personIds = personHoldsEntities.Where(p => !string.IsNullOrWhiteSpace(p.StudentId)).Select(s => s.StudentId).ToList();
                 var personIdDict = await _personRepository.GetPersonGuidsCollectionAsync(personIds.Distinct());
 
-                foreach (var holdEntity in personHoldsEntities.Item1)
+                foreach (var holdEntity in personHoldsEntities)
                 {
-                    var restriction = personHoldTypes.FirstOrDefault(r => r.Code == holdEntity.RestrictionId);
+                    Dtos.PersonHold dtosPersonHold = null;
 
+                    Restriction restriction = personHoldTypes.Where(r => r.Code == holdEntity.RestrictionId).FirstOrDefault();
                     if (restriction != null)
                     {
-                        string personId;
-                        if(personIdDict != null && personIdDict.Any() && personIdDict.TryGetValue(holdEntity.StudentId, out personId))
+                        string tempPersonId;
+                        if (personIdDict != null && personIdDict.Any() && personIdDict.TryGetValue(holdEntity.StudentId, out tempPersonId))
                         {
-                            var dtosPersonHold = BuildPersonHold(holdEntity.Guid, holdEntity, personHoldTypes, personId,
-                           restriction);
+                            dtosPersonHold = BuildPersonHold(holdEntity.Guid, holdEntity, personHoldTypes, tempPersonId, restriction);
                             dtoPersonHolds.Add(dtosPersonHold);
                         }
                     }
@@ -85,108 +222,16 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     }
                 }
             }
-            return new Tuple<IEnumerable<Dtos.PersonHold>, int>(dtoPersonHolds, personHoldsEntities.Item2);
-        }
-
-        /// <summary>
-        /// Retrieves all active person holds for hold id
-        /// </summary>
-        /// <param name="id">id for the person hold</param>
-        /// <returns>List of PersonHold for the person</returns>
-        public async Task<Dtos.PersonHold> GetPersonHoldAsync(string id, bool bypassCache = false)
-        {
-            if (string.IsNullOrEmpty(id))
+            catch (RepositoryException ex)
             {
-                throw new ArgumentNullException("Person hold id is required");
+                IntegrationApiExceptionAddError(ex);
             }
 
-            CheckUserPersonHoldsViewPermissions();
-
-            Dtos.PersonHold dtoPersonHolds = null;
-
-            PersonRestriction personHoldEntity = await _personHoldsRepository.GetPersonHoldByIdAsync(id);
-            if (personHoldEntity == null)
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
             {
-                throw new KeyNotFoundException(string.Format("Did not find any person hold entity with id: {0}", id));
-            }
-            else
-            {
-                //Get all hold types with category
-                List<Domain.Base.Entities.Restriction> personHoldTypes = await _referenceDataRepository.GetRestrictionsWithCategoryAsync(bypassCache) as List<Domain.Base.Entities.Restriction>;
-
-                string personId = await _personRepository.GetPersonGuidFromIdAsync(personHoldEntity.StudentId);
-                if (string.IsNullOrEmpty(personId))
-                {
-                    throw new KeyNotFoundException(string.Format("Did not find any person with id: {0}", personHoldEntity.StudentId));
-                }
-
-                //Get the person hold type(restriction)
-                Restriction restriction = personHoldTypes.FirstOrDefault(r => r.Code.Equals(personHoldEntity.RestrictionId, StringComparison.OrdinalIgnoreCase));
-                if (restriction == null)
-                {
-                    throw new KeyNotFoundException(string.Format("Did not find any person hold type with id: {0}", personHoldEntity.RestrictionId));
-                }
-
-                //Get the guid for the entity, just to make sure guid is generated, get the guid based on entity id
-                string personHoldId = await _personHoldsRepository.GetStudentHoldGuidFromIdAsync(personHoldEntity.Id);
-                if (string.IsNullOrEmpty(personHoldId))
-                {
-                    throw new KeyNotFoundException(string.Format("Did not find guid for id: {0}", personHoldEntity.Id));
-                }
-
-                dtoPersonHolds = BuildPersonHold(personHoldEntity.Guid, personHoldEntity, personHoldTypes, personId, restriction);
+                throw IntegrationApiException;
             }
 
-            return dtoPersonHolds;
-        }
-
-        /// <summary>
-        /// Gets person holds based on personId
-        /// </summary>
-        /// <param name="person"></param>
-        /// <returns></returns>
-        public async Task<IEnumerable<Dtos.PersonHold>> GetPersonHoldsAsync(string personId, bool bypassCache = false)
-        {
-            CheckUserPersonHoldsViewPermissions();
-
-            if (string.IsNullOrEmpty(personId))
-            {
-                return new List<Dtos.PersonHold>();
-                //throw new ArgumentNullException("Person id is required");
-            }
-            List<Domain.Base.Entities.PersonRestriction> personHoldsEntities = await _personHoldsRepository.GetPersonHoldsByPersonIdAsync(personId) as List<Domain.Base.Entities.PersonRestriction>;
-
-            List<Dtos.PersonHold> dtoPersonHolds = new List<Dtos.PersonHold>();
-
-            //Get all hold types with category
-            List<Domain.Base.Entities.Restriction> personHoldTypes = await _referenceDataRepository.GetRestrictionsWithCategoryAsync(bypassCache) as List<Domain.Base.Entities.Restriction>;
-
-            var personIds = personHoldsEntities.Where(p => !string.IsNullOrWhiteSpace(p.StudentId)).Select(s => s.StudentId).ToList();
-            var personIdDict = await _personRepository.GetPersonGuidsCollectionAsync(personIds.Distinct());
-
-            foreach (var holdEntity in personHoldsEntities)
-            {
-                Dtos.PersonHold dtosPersonHold = null;
-
-                Restriction restriction = personHoldTypes.Where(r => r.Code == holdEntity.RestrictionId).FirstOrDefault();
-                if (restriction != null)
-                {
-                    string tempPersonId;
-                    if (personIdDict != null && personIdDict.Any() && personIdDict.TryGetValue(holdEntity.StudentId, out tempPersonId))
-                    {
-                        dtosPersonHold = BuildPersonHold(holdEntity.Guid, holdEntity, personHoldTypes, tempPersonId, restriction);
-                        dtoPersonHolds.Add(dtosPersonHold);
-                    }
-                }
-                else
-                {
-                    if (!string.IsNullOrEmpty(holdEntity.RestrictionId))
-                    {
-                        logger.Info("The '" + holdEntity.RestrictionId +
-                                    "' restriction code is not defined.  Ignoring during person-holds Get.");
-                    }
-                }
-            }
             return dtoPersonHolds;
         }
        
@@ -204,12 +249,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 throw new ArgumentNullException("guid", "GUID is required to delete a person-holds.");
             }
-            // get user permissions
-            CheckUserPersonHoldsDeletePermissions();
 
             try
             {
-
                 var personHoldEntity = await _personHoldsRepository.GetPersonHoldByIdAsync(personHoldsId);
                 if (personHoldEntity == null)
                 {
@@ -227,50 +269,18 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     logger.Info(warningMessage);
                 }
             }
-            catch (KeyNotFoundException ex)
+            catch (RepositoryException ex)
             {
-                throw new KeyNotFoundException(string.Format("Person-holds not found for guid: '{0}'.", personHoldsId));
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+            catch (KeyNotFoundException)
+            {
+                IntegrationApiExceptionAddError(string.Format("Person-holds not found for guid: '{0}'.", personHoldsId), "GUID.Not.Found", personHoldsId);
+                throw IntegrationApiException;
             }
         }
 
-        /// <summary>
-        /// Provides an integration user permission to view/get holds (a.k.a. restrictions) from Colleague.
-        /// </summary>
-        private void CheckUserPersonHoldsViewPermissions()
-        {
-            // access is ok if the current user has the view person-holds permission
-            if ((!HasPermission(PersonHoldsPermissionCodes.ViewPersonHold)) && (!HasPermission(PersonHoldsPermissionCodes.CreateUpdatePersonHold)))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view person-holds.");
-                throw new PermissionsException("User is not authorized to view person-holds.");
-            }
-        }
-
-        /// <summary>
-        /// Provides an integration user permission to view/get holds (a.k.a. restrictions) from Colleague.
-        /// </summary>
-        private void CheckUserPersonHoldsCreateUpdatePermissions()
-        {
-            // access is ok if the current user has the create/update person-holds permission
-            if (!HasPermission(PersonHoldsPermissionCodes.CreateUpdatePersonHold))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to create/update person-holds.");
-                throw new PermissionsException("User is not authorized to create/update person-holds.");
-            }
-        }
-
-        /// <summary>
-        /// Provides an integration user permission to delete a hold (a.k.a. a record from STUDENT.RESTRICTIONS) in Colleague.
-        /// </summary>
-        private void CheckUserPersonHoldsDeletePermissions()
-        {
-            // access is ok if the current user has the delete person-holds permission
-            if (!HasPermission(PersonHoldsPermissionCodes.DeletePersonHold))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to delete person-holds.");
-                throw new PermissionsException("User is not authorized to delete person-holds.");
-            }
-        }
         #endregion
 
         #region PUT Method
@@ -283,12 +293,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns></returns>
         public async Task<Dtos.PersonHold> UpdatePersonHoldAsync(string id, Dtos.PersonHold personHoldDto)
         {
-            CheckUserPersonHoldsCreateUpdatePermissions();
 
             _personHoldsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
             string personId = string.Empty;
             Domain.Base.Entities.Restriction holdType = null;
-            string notificationIndicator = string.Empty;
             string personHoldEnityId = string.Empty;            
 
             //Check id's match, For POST id will be blank & will come in the payload
@@ -303,7 +311,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             //Check start date is before end date
             if (personHoldDto.StartOn > personHoldDto.EndOn)
             {
-                throw new InvalidOperationException("The hold start date must be on or before the hold end date.");
+                IntegrationApiExceptionAddError("The hold start date must be on or before the hold end date.", "Validation.Exception", id);
             }            
 
             // get the person ID associated with the incoming guid            
@@ -312,14 +320,16 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 var person = await _personRepository.GetPersonByGuidNonCachedAsync(personHoldDto.Person.Id);
                 if (person == null)
                 {
-                    throw new KeyNotFoundException("Person ID associated to id '" + personHoldDto.Person.Id + "' not found");
+                    IntegrationApiExceptionAddError("Person ID associated to id '" + personHoldDto.Person.Id + "' not found", "Validation.Exception", id);
                 }
-
-                if(person != null && !string.IsNullOrEmpty(person.PersonCorpIndicator) && person.PersonCorpIndicator.Equals("Y", StringComparison.InvariantCultureIgnoreCase))
+                else
                 {
-                    throw new InvalidOperationException("The person specified is an organization, not a person.");
+                    if (!string.IsNullOrEmpty(person.PersonCorpIndicator) && person.PersonCorpIndicator.Equals("Y", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        IntegrationApiExceptionAddError("The person specified is an organization, not a person.", "Validation.Exception", id);
+                    }
+                    personId = person.Id;
                 }
-                personId = person.Id;
             }
 
             /* 
@@ -334,7 +344,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                 if (holdType == null)
                 {
-                    throw new KeyNotFoundException("Person hold type associated with id '" + personHoldDto.PersonHoldTypeType.Detail.Id + "' was not found");
+                    IntegrationApiExceptionAddError("Person hold type associated with id '" + personHoldDto.PersonHoldTypeType.Detail.Id + "' was not found", "Validation.Exception", id);
                 }
             }
 
@@ -346,29 +356,57 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 
                 if (holdType == null)
                 {
-                    throw new KeyNotFoundException("Person hold type associated with category '" + personHoldDto.PersonHoldTypeType.PersonHoldCategory.ToString() + "' was not found");
+                    IntegrationApiExceptionAddError("Person hold type associated with category '" + personHoldDto.PersonHoldTypeType.PersonHoldCategory.ToString() + "' was not found", "Validation.Exception", id);
                 }
             }
 
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+
             //On a POST or PUT, if the enumeration here is "notify" we can store "Y" to STR.PRTL.DISPLAY.FLAG. Otherwise, we can leave STR.PRTL.DISPLAY.FLAG blank.
-            notificationIndicator = (personHoldDto.NotificationIndicator == Dtos.NotificationIndicatorType.Notify) ? "Y" : string.Empty;
+            string notificationIndicator = string.Empty;
+            switch (personHoldDto.NotificationIndicator)
+            {
+                case Dtos.NotificationIndicatorType.Notify:
+                    notificationIndicator = "Y";
+                    break;
+                case Dtos.NotificationIndicatorType.Watch:
+                    notificationIndicator = "N";
+                    break;
+                default: break;
+            }
 
+            Dtos.PersonHold personHoldDtos = null;
             //Construct the request for PUT or POST
-            var request = new PersonHoldRequest(personHoldEnityId, personId, holdType.Code, personHoldDto.StartOn, personHoldDto.EndOn, notificationIndicator);
-            if (personHoldDto.Id.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
+            try
             {
-                request.PersonHoldGuid = string.Empty;
-            }
-            else
-            {
-                request.PersonHoldGuid = personHoldDto.Id;
-            }
-            request.Comments = personHoldDto.Comment;
-            
-            //Update the person hold
-            var response = await _personHoldsRepository.UpdatePersonHoldAsync(request);
+                var request = new PersonHoldRequest(personHoldEnityId, personId, holdType.Code, personHoldDto.StartOn, personHoldDto.EndOn, notificationIndicator);
+                if (personHoldDto.Id.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
+                {
+                    request.PersonHoldGuid = string.Empty;
+                }
+                else
+                {
+                    request.PersonHoldGuid = personHoldDto.Id;
+                }
+                request.Comments = personHoldDto.Comment;
 
-            Dtos.PersonHold personHoldDtos = await this.GetPersonHoldAsync(response.PersonHoldGuid);
+                //Update the person hold
+                var response = await _personHoldsRepository.UpdatePersonHoldAsync(request);
+
+                personHoldDtos = await this.GetPersonHoldAsync(response.PersonHoldGuid);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+            }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
 
             return personHoldDtos;
         }
@@ -400,59 +438,69 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             dtoPersonHolds.EndOn = personHoldEntity.EndDate;
             dtoPersonHolds.Person = new Dtos.GuidObject2(personId);
-            dtoPersonHolds.PersonHoldTypeType = ConvertCategoryToPersonHoldTypeType(personHoldType, personHoldTypes);
+            try
+            {
+                dtoPersonHolds.PersonHoldTypeType = ConvertCategoryToPersonHoldTypeType(personHoldType, personHoldTypes);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(string.Format("Person hold type '{0}' is missing the GUID or is invalid. {1}", personHoldEntity.RestrictionId, ex.Message), "Bad.Data", personHoldEntity.Guid, personHoldEntity.Id);
+            }
             if (personHoldEntity.StartDate != null) dtoPersonHolds.StartOn = personHoldEntity.StartDate.Value;
-            dtoPersonHolds.NotificationIndicator = ConvertDisplayFlagToNotificationIndicatorType(personHoldEntity.NotificationIndicator);
+            
+      
+            dtoPersonHolds.NotificationIndicator = ConvertDisplayFlagToNotificationIndicatorType( personHoldType.RestPrtlDisplayFlag, personHoldEntity.NotificationIndicator);
+
             return dtoPersonHolds;
         }
-        #endregion
+        #endregion                                         
 
         #region Convert  and Helper Methods
         /// <summary>
         /// Check for required fields and empty id fields
         /// </summary>
         /// <param name="personHoldDto"></param>
-        private static void CheckForRequiredFields(Dtos.PersonHold personHoldDto)
+        private void CheckForRequiredFields(Dtos.PersonHold personHoldDto)
         {
             if (personHoldDto.Person == null)
             {
-                throw new ArgumentNullException("personHoldDto.person", "Must provide person for person-holds");
+                IntegrationApiExceptionAddError("Must provide person for person-holds", "Validation.Exception", personHoldDto.Id);
             }
 
             if (personHoldDto.Person != null && string.IsNullOrEmpty(personHoldDto.Person.Id))
             {
-                throw new ArgumentNullException("personHoldDto.person.id", "Must provide person id for person-holds");
+                IntegrationApiExceptionAddError("Must provide person id for person-holds", "Validation.Exception", personHoldDto.Id);
             }
 
             if (personHoldDto.PersonHoldTypeType == null)
             {
-                throw new ArgumentNullException("personHoldDto.personHoldTypeType", "Must provide person hold type for person-holds");
+                IntegrationApiExceptionAddError("Must provide person hold type for person-holds", "Validation.Exception", personHoldDto.Id);
             }
             
             if (personHoldDto.PersonHoldTypeType != null && personHoldDto.PersonHoldTypeType.PersonHoldCategory == null &&
                personHoldDto.PersonHoldTypeType.Detail != null && !string.IsNullOrEmpty(personHoldDto.PersonHoldTypeType.Detail.Id))
             {
-                throw new ArgumentNullException("The category is required if the type is included in the payload.");
+                IntegrationApiExceptionAddError("The category is required if the type is included in the payload.", "Validation.Exception", personHoldDto.Id);
             }
 
             if (personHoldDto.PersonHoldTypeType != null && personHoldDto.PersonHoldTypeType.PersonHoldCategory == null)
             {
-                throw new ArgumentNullException("personHoldDto.personHoldTypeType", "Must provide person hold category for person-holds");
+                IntegrationApiExceptionAddError("Must provide person hold category for person-holds", "Validation.Exception", personHoldDto.Id);
             }
 
             if (personHoldDto.PersonHoldTypeType != null && personHoldDto.PersonHoldTypeType.Detail != null && string.IsNullOrEmpty(personHoldDto.PersonHoldTypeType.Detail.Id))
             {
-                throw new ArgumentNullException("personHoldDto.personHoldTypeType.detail.id", "Must provide id if person hold type details is included for person-holds");
+                IntegrationApiExceptionAddError("Must provide id if person hold type details is included for person-holds", "Validation.Exception", personHoldDto.Id);
             }          
 
             if (personHoldDto.NotificationIndicator != null && string.IsNullOrEmpty(personHoldDto.NotificationIndicator.Value.ToString()))
             {
-                throw new ArgumentNullException("personHoldDto.notificationIndicator", "Must provide value for notification indicator if notification indicator is included for person-holds");
+                IntegrationApiExceptionAddError("Must provide value for notification indicator if notification indicator is included for person-holds", "Validation.Exception", personHoldDto.Id);
             }
 
             if (personHoldDto.StartOn == null || (personHoldDto.StartOn != null && string.IsNullOrEmpty(personHoldDto.StartOn.ToString())))
             {
-                throw new ArgumentNullException("personHoldDto.startOn", "Must provide start on for person-holds");
+                IntegrationApiExceptionAddError("Must provide start on for person-holds", "Validation.Exception", personHoldDto.Id);
             }
 
             DateTimeOffset startOn;
@@ -460,29 +508,40 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             if (personHoldDto.StartOn != null && !DateTimeOffset.TryParse(personHoldDto.StartOn.ToString(), out startOn))
             {
-                throw new FormatException("Provided startOn date has invalid format");
+                IntegrationApiExceptionAddError("Provided startOn date has invalid format", "Validation.Exception", personHoldDto.Id);
             }
 
             if (personHoldDto.EndOn != null && personHoldDto.EndOn.HasValue && !DateTimeOffset.TryParse(personHoldDto.EndOn.Value.ToString(), out endOn) )
             {
-                throw new FormatException("Provided endOn date has invalid format");
+                IntegrationApiExceptionAddError("Provided endOn date has invalid format", "Validation.Exception", personHoldDto.Id);
             }            
         }
 
         /// <summary>
-        /// Converts string displayFlag to Dtos.NotificationIndicatorType
+        /// Converts STR.PRTL.DISPLAY.FLAG or REST.PRTL.DISPLAY.FLAG to Dtos.NotificationIndicatorType
+        ///     If the STR.PRTL.DISPLAY.FLAG is set to "Y" then return "notify". 
+        ///     If STR.PRTL.DISPLAY.FLAG is set to "N" then return "watch".
+        ///     Otherwise, if STR.PRTL.DISPLAY.FLAG is null then check the REST.PRTL.DISPLAY.FLAG attribute 
+        ///      from the corresponding RESTRICTIONS record.  If populated with a "Y" then return "notify". 
+        ///     If REST.PRTL.DISPLAY.FLAG is blank or null then return "watch".
         /// </summary>
-        /// <param name="displayFlag">displayFlag</param>
-        /// <returns></returns>
-        private Dtos.NotificationIndicatorType ConvertDisplayFlagToNotificationIndicatorType(string displayFlag)
+        /// <param name="restPrtlDisplayFlag">REST.PRTL.DISPLAY.FLAG</param>
+        /// <param name="strPrtlDisplayFlag">STR.PRTL.DISPLAY.FLAG</param>
+        /// <returns>Dtos.NotificationIndicatorType</returns>
+        private Dtos.NotificationIndicatorType ConvertDisplayFlagToNotificationIndicatorType(string restPrtlDisplayFlag, string strPrtlDisplayFlag)
         {
-            switch (displayFlag)
+            if (!string.IsNullOrEmpty(strPrtlDisplayFlag))
             {
-                case "Y":
-                return Dtos.NotificationIndicatorType.Notify;
-                default:
-                return Dtos.NotificationIndicatorType.Watch;
+                if (strPrtlDisplayFlag == "Y")
+                    return Dtos.NotificationIndicatorType.Notify;
+                else if (strPrtlDisplayFlag == "N")
+                    return Dtos.NotificationIndicatorType.Watch;
             }
+            if ((!string.IsNullOrEmpty(restPrtlDisplayFlag)) && (restPrtlDisplayFlag == "Y"))      
+            {
+                return Dtos.NotificationIndicatorType.Notify;
+            }
+            return Dtos.NotificationIndicatorType.Watch;
         }
 
         /// <summary>
@@ -517,7 +576,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     break;
             }
 
-            tempRestriction = personHoldTypes.FirstOrDefault(ht => ht.Code == restriction.Code);
+            tempRestriction = personHoldTypes.FirstOrDefault(ht => ht != null && ht.Code == restriction.Code);
             if (tempRestriction == null)
                 throw new KeyNotFoundException("Person hold type was not found.");
 

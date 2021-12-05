@@ -1,4 +1,8 @@
-﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates.*/
+
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
@@ -9,6 +13,7 @@ using Ellucian.Web.Http.Configuration;
 using slf4net;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -18,7 +23,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
     public class EmployeeLeavePlansRepository : BaseColleagueRepository, IEmployeeLeavePlansRepository
     {
         private readonly ApiSettings apiSettings;
-
+        const string AllEmployeeLeavePlanCache = "AllEmployeeLeavePlan";
+        const int AllEmployeeLeavePlanCacheTimeout = 20; // Clear from cache every 20 minutes
+        RepositoryException exception = null;
         public EmployeeLeavePlansRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)
         {
@@ -34,42 +41,142 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <returns>Tuple of Perleave Entity objects <see cref="Perleave"/> and a count for paging.</returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Perleave>, int>> GetEmployeeLeavePlansAsync(int offset, int limit, bool bypassCache = false)
         {
+            int totalCount = 0;
+            string[] subList = null;
+            var employeeLeavePlansRecords = new List<Domain.HumanResources.Entities.Perleave>();
+            Collection<DataContracts.Perleave> empLeaveplanRecords = null;
+
             try
             {
-                string criteria = string.Empty;
-                var EmployeeLeavePlansKeys = await DataReader.SelectAsync("PERLEAVE", criteria);
-                var EmployeeLeavePlansRecords = new List<Domain.HumanResources.Entities.Perleave>();
-                var totalCount = 0;
-                if (EmployeeLeavePlansKeys == null || !EmployeeLeavePlansKeys.Any())
+                var employeeLeavePlanCacheKey = CacheSupport.BuildCacheKey(AllEmployeeLeavePlanCache);
+
+                var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+                    this,
+                    ContainsKey,
+                    GetOrAddToCacheAsync,
+                    AddOrUpdateCacheAsync,
+                    transactionInvoker,
+                    employeeLeavePlanCacheKey,
+                    "PERLEAVE",
+                    offset,
+                    limit,
+                    AllEmployeeLeavePlanCacheTimeout,
+                    async () =>
+                    {
+                        return new CacheSupport.KeyCacheRequirements() { };
+                    });
+
+                if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
                 {
                     return new Tuple<IEnumerable<Domain.HumanResources.Entities.Perleave>, int>(null, 0);
                 }
+                subList = keyCache.Sublist.ToArray();
 
-                totalCount = EmployeeLeavePlansKeys.Count();
-                Array.Sort(EmployeeLeavePlansKeys);
-                var EmployeeLeavePlansubList = EmployeeLeavePlansKeys.Skip(offset).Take(limit);
-                if (EmployeeLeavePlansubList != null && EmployeeLeavePlansubList.Any())
+                totalCount = keyCache.TotalCount.Value;
+
+                empLeaveplanRecords = await DataReader.BulkReadRecordAsync<DataContracts.Perleave>("PERLEAVE", subList);
+                if (empLeaveplanRecords == null || empLeaveplanRecords.Count == 0)
                 {
-                    try
-                    {
-                        var empLeaveplanRecords = await DataReader.BulkReadRecordAsync<DataContracts.Perleave>(EmployeeLeavePlansubList.ToArray(), bypassCache);
-                        foreach (var plan in empLeaveplanRecords)
-                        {
-
-                            EmployeeLeavePlansRecords.Add(BuildEmployeeLeavePlans(plan));
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        throw ex;
-                    }
+                    if (exception == null)
+                        exception = new RepositoryException();
+                    exception.AddError(new RepositoryError("Bad.Data", "An unexpected error occurred extracting PERLEAVE data."));
+                   
                 }
-                return new Tuple<IEnumerable<Domain.HumanResources.Entities.Perleave>, int>(EmployeeLeavePlansRecords, totalCount);
+
             }
             catch (Exception ex)
             {
-                throw ex;
+                if (exception == null)
+                    exception = new RepositoryException();
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message));               
             }
+
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+
+            foreach (var plan in empLeaveplanRecords)
+            {
+                try
+                {
+                    bool error = false;
+                    if (string.IsNullOrEmpty(plan.RecordGuid))
+                    {
+                        if (exception == null)
+                            exception = new RepositoryException();
+                        exception.AddError(new RepositoryError("Bad.Data",
+                            "EmployeeLeavePlans guid can not be null or empty. Entity: ‘LEAVPLAN’")
+                        {
+                            SourceId = plan.Recordkey,
+                            Id = plan.RecordGuid
+                        });
+                        error = true;
+                    }
+                    if (string.IsNullOrEmpty(plan.Recordkey))
+                    {
+                        if (exception == null)
+                            exception = new RepositoryException();
+                        exception.AddError(new RepositoryError("Bad.Data", "EmployeeLeavePlans id can not be null or empty. Entity: ‘LEAVPLAN’")
+                        {
+                            SourceId = plan.Recordkey,
+                            Id = plan.RecordGuid
+                        });
+                        error = true;
+                    }
+                    if (string.IsNullOrEmpty(plan.PerlvHrpId))
+                    {
+                        if (exception == null)
+                            exception = new RepositoryException();
+                        exception.AddError(new RepositoryError("Bad.Data", "EmployeeLeavePlans PersonId can not be null or empty. Entity: ‘LEAVPLAN’")
+                        {
+                            SourceId = plan.Recordkey,
+                            Id = plan.RecordGuid
+                        });
+                        error = true;
+                    }
+                    if (string.IsNullOrEmpty(plan.PerlvLpnId))
+                    {
+                        if (exception == null)
+                            exception = new RepositoryException();
+                        exception.AddError(new RepositoryError("Bad.Data", "EmployeeLeavePlans plan can not be null or empty. Entity: ‘LEAVPLAN’")
+                        {
+                            SourceId = plan.Recordkey,
+                            Id = plan.RecordGuid
+                        });
+                        error = true;
+                    }
+                    if ((plan.PerlvStartDate == null) || (!plan.PerlvStartDate.HasValue))
+                    {
+                        if (exception == null)
+                            exception = new RepositoryException();
+                        exception.AddError(new RepositoryError("Bad.Data", "EmployeeLeavePlans startDate can not be null or empty. Entity: ‘LEAVPLAN’")
+                        {
+                            SourceId = plan.Recordkey,
+                            Id = plan.RecordGuid
+                        });
+                        error = true;
+                    }
+                    if (!error)
+                        employeeLeavePlansRecords.Add(BuildEmployeeLeavePlans(plan));
+                }
+
+                catch (Exception ex)
+                {
+                    if (exception == null)
+                        exception = new RepositoryException();
+                    exception.AddError(new RepositoryError("Bad.Data", ex.Message)
+                    {
+                        SourceId = plan.Recordkey,
+                        Id = plan.RecordGuid
+                    });
+                }
+            }
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+            return new Tuple<IEnumerable<Domain.HumanResources.Entities.Perleave>, int>(employeeLeavePlansRecords, totalCount);
         }
 
         /// <summary>
@@ -89,22 +196,139 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 throw new KeyNotFoundException("EmployeeLeavePlan id " + guid + "does not exist");
             }
+            DataContracts.Perleave empLeavePlanRecord = null;
             try
             {
-                var empLeavePlanRecord = await DataReader.ReadRecordAsync<DataContracts.Perleave>("PERLEAVE", empLeaveplanId);
-                if (empLeavePlanRecord == null)
-                {
-                    throw new KeyNotFoundException("EmployeeLeavePlan not found with id " + guid);
-                }
-                return BuildEmployeeLeavePlans(empLeavePlanRecord);
+                empLeavePlanRecord = await DataReader.ReadRecordAsync<DataContracts.Perleave>("PERLEAVE", empLeaveplanId);                
             }
             catch (Exception ex)
             {
-                throw ex;
+                if (exception == null)
+                    exception = new RepositoryException();
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message));
+                throw exception;
             }
+            if (empLeavePlanRecord == null)
+            {
+                throw new KeyNotFoundException("EmployeeLeavePlan not found with id " + guid);
+            }
+            Perleave retval = null;
+            try
+            {
+                bool error = false;
+                if (string.IsNullOrEmpty(empLeavePlanRecord.RecordGuid))
+                {
+                    if (exception == null)
+                        exception = new RepositoryException();
+                    exception.AddError(new RepositoryError("Bad.Data",
+                        "EmployeeLeavePlans guid can not be null or empty. Entity: ‘LEAVPLAN’")
+                    {
+                        SourceId = empLeavePlanRecord.Recordkey,
+                        Id = empLeavePlanRecord.RecordGuid
+                    });
+                    error = true;
+                }
+                if (string.IsNullOrEmpty(empLeavePlanRecord.Recordkey))
+                {
+                    if (exception == null)
+                        exception = new RepositoryException();
+                    exception.AddError(new RepositoryError("Bad.Data", "EmployeeLeavePlans id can not be null or empty. Entity: ‘LEAVPLAN’")
+                    {
+                        SourceId = empLeavePlanRecord.Recordkey,
+                        Id = empLeavePlanRecord.RecordGuid
+                    });
+                    error = true;
+                }
+                if (string.IsNullOrEmpty(empLeavePlanRecord.PerlvHrpId))
+                {
+                    if (exception == null)
+                        exception = new RepositoryException();
+                    exception.AddError(new RepositoryError("Bad.Data", "EmployeeLeavePlans PersonId can not be null or empty. Entity: ‘LEAVPLAN’")
+                    {
+                        SourceId = empLeavePlanRecord.Recordkey,
+                        Id = empLeavePlanRecord.RecordGuid
+                    });
+                    error = true;
+                }
+                if (string.IsNullOrEmpty(empLeavePlanRecord.PerlvLpnId))
+                {
+                    if (exception == null)
+                        exception = new RepositoryException();
+                    exception.AddError(new RepositoryError("Bad.Data", "EmployeeLeavePlans plan can not be null or empty. Entity: ‘LEAVPLAN’")
+                    {
+                        SourceId = empLeavePlanRecord.Recordkey,
+                        Id = empLeavePlanRecord.RecordGuid
+                    });
+                    error = true;
+                }
+                if ((empLeavePlanRecord.PerlvStartDate == null) || (!empLeavePlanRecord.PerlvStartDate.HasValue))
+                {
+                    if (exception == null)
+                        exception = new RepositoryException();
+                    exception.AddError(new RepositoryError("Bad.Data", "EmployeeLeavePlans startDate can not be null or empty. Entity: ‘LEAVPLAN’")
+                    {
+                        SourceId = empLeavePlanRecord.Recordkey,
+                        Id = empLeavePlanRecord.RecordGuid
+                    });
+                    error = true;
+                }
+                if (!error)
+                    retval = BuildEmployeeLeavePlans(empLeavePlanRecord);
+            }
+
+            catch (Exception ex)
+            {
+                if (exception == null)
+                    exception = new RepositoryException();
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message)
+                {
+                    SourceId = empLeavePlanRecord.Recordkey,
+                    Id = empLeavePlanRecord.RecordGuid
+                });
+            }
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+            return retval;
 
         }
 
+        /// <summary>
+        /// Get Collection of PerLeave GUIDs and IDs
+        /// </summary>
+        /// <param name="perleaveIds">collection of PerLeave ids</param>
+        /// <returns>Dictionary consisting of a perLeaveId (key) and guid (value)</returns>
+        public async Task<Dictionary<string, string>> GetPerleaveGuidsCollectionAsync(IEnumerable<string> perleaveIds)
+        {
+            if ((perleaveIds == null) || (perleaveIds != null && !perleaveIds.Any()))
+            {
+                return new Dictionary<string, string>();
+            }
+            var perleaveGuidCollection = new Dictionary<string, string>();
+
+            var perleaveGuidLookup = perleaveIds
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct().ToList()
+                .ConvertAll(p => new RecordKeyLookup("PERLEAVE", p, false)).ToArray();
+            var recordKeyLookupResults = await DataReader.SelectAsync(perleaveGuidLookup);
+            foreach (var recordKeyLookupResult in recordKeyLookupResults)
+            {
+                try
+                {
+                    var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                    if (!perleaveGuidCollection.ContainsKey(splitKeys[1]))
+                    {
+                        perleaveGuidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
+                    }
+                }
+                catch (Exception) // Do not throw error.
+                {
+                }
+            }
+
+            return perleaveGuidCollection;
+        }
 
         /// <summary>
         /// Get EmployeeLeavePlans entity for a specific id
@@ -142,11 +366,13 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <param name="leavePlans"></param>
         /// <param name="leaveTypes"></param>
         /// <param name="earnTypes"></param>
+        /// <param name="includeLeavePlansWithNoEarningsTypes">Optional parameter that indicates whether or not to include leave plans without associated any earnigs types</param>
         /// <returns>EmployeeLeavePlan entities for given employee Id</returns>
-        public async Task<IEnumerable<EmployeeLeavePlan>> GetEmployeeLeavePlansByEmployeeIdsAsync(IEnumerable<string> employeeIds, 
+        public async Task<IEnumerable<EmployeeLeavePlan>> GetEmployeeLeavePlansByEmployeeIdsAsync(IEnumerable<string> employeeIds,
             IEnumerable<LeavePlan> leavePlans,
-            IEnumerable<LeaveType> leaveTypes, 
-            IEnumerable<EarningType2> earnTypes)
+            IEnumerable<LeaveType> leaveTypes,
+            IEnumerable<EarningType2> earnTypes,
+            bool includeLeavePlansWithNoEarningsTypes = false)
         {
             if (employeeIds == null || !employeeIds.Any())
             {
@@ -157,7 +383,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 logger.Error("leavePlans are required to build EmployeeLeavePlan objects");
                 leavePlans = new List<LeavePlan>();
             }
-            
+
             if (earnTypes == null || !earnTypes.Any())
             {
                 logger.Error("earnTypes are required to build EmployeeLeavePlan objects");
@@ -175,7 +401,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             var distinctEmployeeIds = employeeIds.Distinct().ToArray();
 
             var perLeaveCriteria = "WITH PERLV.HRP.ID.INDEX EQ '?'";
-            var perLeaveKeys = await DataReader.SelectAsync("PERLEAVE", perLeaveCriteria, distinctEmployeeIds);            
+            var perLeaveKeys = await DataReader.SelectAsync("PERLEAVE", perLeaveCriteria, distinctEmployeeIds);
 
 
             if (perLeaveKeys == null || !perLeaveKeys.Any())
@@ -190,12 +416,12 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
 
             if (perLeaveDetailKeys == null)
-            {                
+            {
                 perLeaveDetailKeys = new string[0];
             }
 
             var perLeaveDetailDataContracts = await DataReader.BulkReadRecordAsync<DataContracts.Perlvdtl>(perLeaveDetailKeys);
-            
+
             // Accrual Details for leave plan id
             var perLeaveAccrualDetailCriteria = "WITH PLA.HRP.ID EQ '?'";
             var perLeaveAccrualDetailKeys = await DataReader.SelectAsync("PERLVACC", perLeaveAccrualDetailCriteria, distinctEmployeeIds);
@@ -226,7 +452,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     }
                     else
                     {
-                        var leavePlan = leavePlanDictionary[perLeaveDataContract.PerlvLpnId];                        
+                        var leavePlan = leavePlanDictionary[perLeaveDataContract.PerlvLpnId];
                         var leaveType = leaveTypes.FirstOrDefault(lt => lt.Code == leavePlan.Type);
                         var leaveCategory = LeaveTypeCategory.None;
                         if (leaveType != null)
@@ -234,31 +460,40 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                             leaveCategory = leaveType.TimeType;
                         }
 
-                        if (leavePlan.EarningsTypes == null || !leavePlan.EarningsTypes.Any())
-                        {
-                            logger.Error(string.Format("No earnings types defined for LeavePlan {0}; unable to build EmployeeLeavePlan entity for {1}.", perLeaveDataContract.PerlvLpnId, perLeaveDataContract.Recordkey));
-                        }
-                        else if (!perLeaveDataContract.PerlvStartDate.HasValue)
+                        if (!perLeaveDataContract.PerlvStartDate.HasValue)
                         {
                             logger.Error(string.Format("No startdate specified for Perleave LeavePlan {0}; unable to build EmployeeLeavePlan entity.", perLeaveDataContract.Recordkey));
                         }
+                        // SS Leave Balance page doesn't mandate the earnigs type to be associated with a leave plan.
+                        else if ((leavePlan.EarningsTypes == null || !leavePlan.EarningsTypes.Any()) && !includeLeavePlansWithNoEarningsTypes)
+                        {
+                            logger.Error(string.Format("No earnings types defined for LeavePlan {0}; unable to build EmployeeLeavePlan entity for {1}.", perLeaveDataContract.PerlvLpnId, perLeaveDataContract.Recordkey));
+                        }
                         else
                         {
-                            // a leave plan's earnings type is defined as a list, but only the first value matters
-                            var earningsTypeId = leavePlan.EarningsTypes.First();
-                            var earningsTypeEntity = earnTypes.FirstOrDefault(et => et.Code == earningsTypeId);
-                            var earningsTypeDescription = "No Description";
-                            if (earningsTypeEntity != null)
+                            string earningsTypeId = null, earningsTypeDescription = "No Description";
+                            IEnumerable<string> earningTypeList = new List<string>();
+                            EarningType2 earningsTypeEntity;
+
+                            if (leavePlan.EarningsTypes != null && leavePlan.EarningsTypes.Any())
                             {
-                                earningsTypeDescription = earningsTypeEntity.Description;
-                                
-                            }
-                            else
-                            {
-                                logger.Error(string.Format("EarningsTypeId {0} defined on leavePlan {1} does not exist as an EARNTYPE record"));
+                                // a leave plan's earnings type is defined as a list, but only the first value matters
+                                earningsTypeId = leavePlan.EarningsTypes.First();
+                                earningsTypeEntity = earnTypes.FirstOrDefault(et => et.Code == earningsTypeId);
+
+                                if (earningsTypeEntity != null)
+                                {
+                                    earningsTypeDescription = earningsTypeEntity.Description;
+                                }
+                                else
+                                {
+                                    logger.Error(string.Format("EarningsTypeId defined on leavePlan does not exist as an EARNTYPE record"));
+                                }
+
+                                //Used for comp time display in Time Entry
+                                earningTypeList = leavePlan.EarningsTypes;
                             }
 
-         
                             var leaveAllowedDate = perLeaveDataContract.PerlvAllowedDate.HasValue ? perLeaveDataContract.PerlvAllowedDate.Value : perLeaveDataContract.PerlvStartDate.Value;
                             var priorPeriodBalance = perLeaveDataContract.PerlvBalance.HasValue ? perLeaveDataContract.PerlvBalance.Value : 0.00m;
 
@@ -266,9 +501,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
                             var yearlyStartMonth = leavePlan.YearlyStartDate.HasValue ? leavePlan.YearlyStartDate.Value.Month : 1;
                             var yearlyStartDay = leavePlan.YearlyStartDate.HasValue ? leavePlan.YearlyStartDate.Value.Day : 1;
+                            var isPlanYearStartDateDefined = leavePlan.YearlyStartDate.HasValue ? true : false;
 
-                            //Used for comp time display in Time Entry
-                            var earningTypeList = leavePlan.EarningsTypes;
 
                             DataContracts.Perlvacc leaveAccrualDetails = null;
                             if (perlvaccDetailDataContracts != null)
@@ -284,26 +518,32 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                                 leaveAccrualDetails = new DataContracts.Perlvacc();
                             }
 
-                            var employeeLeavePlan = new EmployeeLeavePlan(perLeaveDataContract.Recordkey, 
-                                perLeaveDataContract.PerlvHrpId, 
+                            bool isLeaveReportingPlan = (!string.IsNullOrWhiteSpace(perLeaveDataContract.PerlvLeaveReporting) && perLeaveDataContract.PerlvLeaveReporting.Equals("Y", StringComparison.OrdinalIgnoreCase)) || (leavePlan.IsLeaveReportingPlan && string.IsNullOrWhiteSpace(perLeaveDataContract.PerlvLeaveReporting));
+
+                            var employeeLeavePlan = new EmployeeLeavePlan(perLeaveDataContract.Recordkey,
+                                perLeaveDataContract.PerlvHrpId,
                                 perLeaveDataContract.PerlvStartDate.Value,
                                 perLeaveDataContract.PerlvEndDate,
-                                perLeaveDataContract.PerlvLpnId, 
-                                leavePlan.Title, 
-                                leavePlan.StartDate.Value, 
+                                perLeaveDataContract.PerlvLpnId,
+                                leavePlan.Title,
+                                leavePlan.StartDate.Value,
                                 leavePlan.EndDate,
-                                leaveCategory, 
-                                earningsTypeId, 
-                                earningsTypeDescription, 
-                                leaveAllowedDate, 
-                                priorPeriodBalance, 
+                                leaveCategory,
+                                earningsTypeId,
+                                earningsTypeDescription,
+                                leaveAllowedDate,
+                                priorPeriodBalance,
                                 yearlyStartMonth,
                                 yearlyStartDay,
-                                leavePlan.EarningsTypes,
+                                isLeaveReportingPlan,
+                                earningTypeList,
                                 leaveAccrualDetails.PlaAccrualHours,
                                 leaveAccrualDetails.PlaAccrualLimit,
                                 leaveAccrualDetails.PlaCarryoverHours,
-                                allowNegative);
+                                leavePlan.AccrualMethod,
+                                isPlanYearStartDateDefined,
+                                allowNegative,
+                                includeLeavePlansWithNoEarningsTypes);
 
                             employeeLeavePlans.Add(employeeLeavePlan);
 
@@ -376,8 +616,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     return LeaveTransactionType.Used;
                 case "J":
                     return LeaveTransactionType.Adjusted;
+                case "L":
+                    return LeaveTransactionType.LeaveReporting;
                 default:
-                    throw new ArgumentException("leave transaction action does not match allowable values, A, U and J", "action");
+                    throw new ArgumentException("leave transaction action does not match allowable values, A, U , L or J", "action");
             }
         }
 
@@ -388,11 +630,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <returns></returns>
         private Ellucian.Colleague.Domain.HumanResources.Entities.Perleave BuildEmployeeLeavePlans(DataContracts.Perleave empLeavePlanRecord)
         {
-            Domain.HumanResources.Entities.Perleave empLeaveplanEntity = new Domain.HumanResources.Entities.Perleave(empLeavePlanRecord.RecordGuid, empLeavePlanRecord.Recordkey, empLeavePlanRecord.PerlvStartDate, empLeavePlanRecord.PerlvHrpId, empLeavePlanRecord.PerlvLpnId)
+            return new Domain.HumanResources.Entities.Perleave(empLeavePlanRecord.RecordGuid, empLeavePlanRecord.Recordkey, empLeavePlanRecord.PerlvStartDate, empLeavePlanRecord.PerlvHrpId, empLeavePlanRecord.PerlvLpnId)
             {
                 EndDate = empLeavePlanRecord.PerlvEndDate
             };
-            return empLeaveplanEntity;
+            
         }
     }
 }

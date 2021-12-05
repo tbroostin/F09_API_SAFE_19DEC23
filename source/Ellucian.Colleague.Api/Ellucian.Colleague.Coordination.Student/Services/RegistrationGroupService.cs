@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -54,7 +54,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             else
             {
-                logger.Info(string.Format("User {0} is in registration group {1}.", CurrentUser.PersonId, registrationGroupId));
+                logger.Debug(string.Format("User {0} is in registration group {1}.", CurrentUser.PersonId, registrationGroupId));
             }
             // Get the registration group for this person
             var registrationGroup = await _registrationGroupRepository.GetRegistrationGroupAsync(registrationGroupId);

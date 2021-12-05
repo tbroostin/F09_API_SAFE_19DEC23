@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -427,6 +427,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// </summary>
         public bool? AllowWaitlistMultipleSections { get; set; }
 
+        /// <summary>
+        /// Indicates whether the drop roster should be displayed for the course
+        /// </summary>
+        public bool ShowDropRoster { get; set; }
 
         #endregion
 

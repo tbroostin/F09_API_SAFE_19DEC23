@@ -1,4 +1,4 @@
-﻿//Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -20,6 +20,7 @@ using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
 using System.Linq;
 using Ellucian.Colleague.Coordination.BudgetManagement.Services;
+using Ellucian.Colleague.Domain.BudgetManagement;
 
 namespace Ellucian.Colleague.Api.Controllers.BudgetManagement
 {
@@ -51,12 +52,12 @@ namespace Ellucian.Colleague.Api.Controllers.BudgetManagement
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <param name="criteria">The default named query implementation for filtering</param>
         /// <returns>List of BudgetPhaseLineItems <see cref="Dtos.BudgetPhaseLineItems"/> objects representing matching budgetPhaseLineItems</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        [PermissionsFilter(new string[] { BudgetManagementPermissionCodes.ViewBudgetPhaseLineItems })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.BudgetPhaseLineItems))]
-        public async Task<IHttpActionResult> GetBudgetPhaseLineItemsAsync(Paging page,
-            QueryStringFilter criteria = null)
+        public async Task<IHttpActionResult> GetBudgetPhaseLineItemsAsync(Paging page, QueryStringFilter criteria = null)
         {
             var bypassCache = false;
             if (Request.Headers.CacheControl != null)
@@ -68,6 +69,8 @@ namespace Ellucian.Colleague.Api.Controllers.BudgetManagement
             }
             try
             {
+                _budgetPhaseLineItemsService.ValidatePermissions(GetPermissionsMetaData());
+
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -84,14 +87,9 @@ namespace Ellucian.Colleague.Api.Controllers.BudgetManagement
 
                 if (criteriaObj != null)
                 {
-                    if(criteriaObj.BudgetPhase != null && string.IsNullOrEmpty(criteriaObj.BudgetPhase.Id))
+                    if (criteriaObj.BudgetPhase != null && !string.IsNullOrEmpty(criteriaObj.BudgetPhase.Id))
                     {
-                        throw new ArgumentNullException("Budget phase does not contain data.");
-                    }
-                    else
-                    {
-                        budgetPhase = criteriaObj.BudgetPhase != null && !string.IsNullOrEmpty(criteriaObj.BudgetPhase.Id) ? 
-                            criteriaObj.BudgetPhase.Id : string.Empty;
+                        budgetPhase = criteriaObj.BudgetPhase.Id;
                     }
 
                     if (criteriaObj.AccountingStringComponentValues != null && criteriaObj.AccountingStringComponentValues.Any())
@@ -124,7 +122,7 @@ namespace Ellucian.Colleague.Api.Controllers.BudgetManagement
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -153,7 +151,8 @@ namespace Ellucian.Colleague.Api.Controllers.BudgetManagement
         /// </summary>
         /// <param name="guid">GUID to desired budgetPhaseLineItems</param>
         /// <returns>A budgetPhaseLineItems object <see cref="Dtos.BudgetPhaseLineItems"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [EedmResponseFilter, PermissionsFilter(new string[] { BudgetManagementPermissionCodes.ViewBudgetPhaseLineItems }) ]
         public async Task<Dtos.BudgetPhaseLineItems> GetBudgetPhaseLineItemsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -171,10 +170,13 @@ namespace Ellucian.Colleague.Api.Controllers.BudgetManagement
             }
             try
             {
-                 AddEthosContextProperties(
-                   await _budgetPhaseLineItemsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
-                   await _budgetPhaseLineItemsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
-                       new List<string>() { guid }));
+
+                _budgetPhaseLineItemsService.ValidatePermissions(GetPermissionsMetaData());
+
+                AddEthosContextProperties(
+               await _budgetPhaseLineItemsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
+               await _budgetPhaseLineItemsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
+                   new List<string>() { guid }));
                 return await _budgetPhaseLineItemsService.GetBudgetPhaseLineItemsByGuidAsync(guid);
             }
             catch (KeyNotFoundException e)
@@ -185,7 +187,7 @@ namespace Ellucian.Colleague.Api.Controllers.BudgetManagement
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -214,7 +216,7 @@ namespace Ellucian.Colleague.Api.Controllers.BudgetManagement
         /// </summary>
         /// <param name="budgetPhaseLineItems">DTO of the new budgetPhaseLineItems</param>
         /// <returns>A budgetPhaseLineItems object <see cref="Dtos.BudgetPhaseLineItems"/> in EEDM format</returns>
-        [HttpPost]
+        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.BudgetPhaseLineItems> PostBudgetPhaseLineItemsAsync([FromBody] Dtos.BudgetPhaseLineItems budgetPhaseLineItems)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
@@ -228,7 +230,7 @@ namespace Ellucian.Colleague.Api.Controllers.BudgetManagement
         /// <param name="guid">GUID of the budgetPhaseLineItems to update</param>
         /// <param name="budgetPhaseLineItems">DTO of the updated budgetPhaseLineItems</param>
         /// <returns>A budgetPhaseLineItems object <see cref="Dtos.BudgetPhaseLineItems"/> in EEDM format</returns>
-        [HttpPut]
+        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.BudgetPhaseLineItems> PutBudgetPhaseLineItemsAsync([FromUri] string guid, [FromBody] Dtos.BudgetPhaseLineItems budgetPhaseLineItems)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
@@ -240,7 +242,7 @@ namespace Ellucian.Colleague.Api.Controllers.BudgetManagement
         /// Delete (DELETE) a budgetPhaseLineItems
         /// </summary>
         /// <param name="guid">GUID to desired budgetPhaseLineItems</param>
-        [HttpDelete]
+        [HttpDelete, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task DeleteBudgetPhaseLineItemsAsync(string guid)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.

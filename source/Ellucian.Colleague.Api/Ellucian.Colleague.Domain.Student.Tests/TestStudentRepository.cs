@@ -92,6 +92,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                                     {"0016295","ReplaceAndReplacement-student-11","","REPEAT.BB","120,121,122,123" }, //2 drop graded, 1 drop ungraded, 1 completed
                                     {"0016296","ReplaceAndReplacement-student-12","","REPEAT.BB","120,122,114,124" }, //1 drop graded, 1 drop ungraded, 1 complete, 1 inprogress
                                     {"0016297","ReplaceAndReplacement-student-13","","REPEAT.BB","120,122,114,123" }, //1 drop graded, 1 drop ungraded, 2 complete (1 is replacement)
+                                    {"0016302","ReplaceAndReplacement-student-14-AllPlannedRepeatedCourses","810","REPEAT.BB","123,124,119" },//MATH-300BB is repeated ENGL-201- 123 COMPLTEED 124 IP
 
                                         //set up acad credits for course that have retake for credits set to Y
 
@@ -439,6 +440,11 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
 
         public Task<IEnumerable<Student.Entities.Student>> GetStudentSearchByNameForExactMatchAsync(string lastName, string firstName = null, string middleName = null, int pageSize = int.MaxValue, int pageIndex = 1)
+        {
+            throw new NotImplementedException();
+        }
+
+        Task<IEnumerable<StudentAcademicLevel>> IStudentRepository.GetStudentAcademicLevelsAsync(string studentId)
         {
             throw new NotImplementedException();
         }

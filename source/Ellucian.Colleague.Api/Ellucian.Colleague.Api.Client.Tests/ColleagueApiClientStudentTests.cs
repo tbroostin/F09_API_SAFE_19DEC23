@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Colleague.Dtos.Student.DegreePlans;
@@ -450,6 +450,89 @@ namespace Ellucian.Colleague.Api.Client.Tests
             }
 
             [TestMethod]
+            public async Task GetFacultySections5_Cache()
+            {
+                // Arrange
+                var mathSection = new Section4()
+                {
+                    Id = "01",
+                    CourseId = _courseId,
+                    Title = "Mathematics",
+                    FacultyIds = new List<string>() { _facultyId }
+                };
+
+                var courseListResponse = new List<Section4>();
+                courseListResponse.Add(mathSection);
+
+                var courseId = mathSection.Id;
+                var facultyId = mathSection.FacultyIds.First();
+
+                var serializedResponse = JsonConvert.SerializeObject(courseListResponse);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var result = await client.GetFacultySections5Async(facultyId);
+
+                var retrievedMathSection = result.ElementAt(0);
+
+                // Assert
+                Assert.IsNotNull(result);
+                Assert.AreEqual(mathSection.Id, retrievedMathSection.Id);
+                Assert.AreEqual(mathSection.CourseId, retrievedMathSection.CourseId);
+            }
+
+            [TestMethod]
+            public async Task GetFacultySections5_NoCache()
+            {
+                // Arrange
+                var mathSection = new Section4()
+                {
+                    Id = "01",
+                    CourseId = _courseId,
+                    Title = "Mathematics",
+                    FacultyIds = new List<string>() { _facultyId }
+                };
+
+                var courseListResponse = new List<Section4>();
+                courseListResponse.Add(mathSection);
+
+                var courseId = mathSection.Id;
+                var facultyId = mathSection.FacultyIds.First();
+
+                var serializedResponse = JsonConvert.SerializeObject(courseListResponse);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var result = await client.GetFacultySections5Async(facultyId, useCache: false);
+
+                var retrievedMathSection = result.ElementAt(0);
+
+                // Assert
+                Assert.IsNotNull(result);
+                Assert.AreEqual(mathSection.Id, retrievedMathSection.Id);
+                Assert.AreEqual(mathSection.CourseId, retrievedMathSection.CourseId);
+            }
+
+
+            [TestMethod]
             public async Task SearchSectionAsync()
             {
                 // Arrange
@@ -460,9 +543,9 @@ namespace Ellucian.Colleague.Api.Client.Tests
 
                 var sectionFilter = new Filter()
                 {
-                     Count = 5,
-                     Selected = true,
-                     Value = simpleStringValue
+                    Count = 5,
+                    Selected = true,
+                    Value = simpleStringValue
                 };
 
                 var section1 = new Section3() { Id = "SectionId", Title = "Section Title" };
@@ -1685,6 +1768,54 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 Assert.IsNotNull(clientResponse.MaximumCommencementGuests);
                 Assert.AreEqual(graduationConfiguration.ApplicationQuestions.Count(), clientResponse.ApplicationQuestions.Count());
                 Assert.AreEqual(graduationConfiguration.GraduationTerms.Count(), clientResponse.GraduationTerms.Count());
+            }
+
+            [TestMethod]
+            public async Task ClientGetGraduationConfiguration2Async_ReturnsSerializedGraduationConfiguration()
+            {
+                // Arrange
+                var graduationConfiguration2 = new GraduationConfiguration2();
+                graduationConfiguration2.ApplyForDifferentProgramLink = "www.differentprogram.com/abc";
+                graduationConfiguration2.CapAndGownLink = "http:\\capandgown.com";
+                graduationConfiguration2.CommencementInformationLink = "someCommencementLinkText.com";
+                graduationConfiguration2.MaximumCommencementGuests = 5;
+                graduationConfiguration2.PhoneticSpellingLink = "phoneticspelling.com";
+                graduationConfiguration2.ApplicationQuestions = new List<GraduationQuestion>()
+                {
+                    new GraduationQuestion() {Type = GraduationQuestionType.DiplomaName, IsRequired = false},
+                     new GraduationQuestion(){Type = GraduationQuestionType.AttendCommencement, IsRequired = true},
+                };
+                graduationConfiguration2.GraduationTerms = new List<string>()
+                {
+                    "2016/SP",
+                     "2016/FA"
+                };
+                graduationConfiguration2.ExpandRequirementSetting = ExpandRequirementSetting.Expand;
+                var serializedResponse = JsonConvert.SerializeObject(graduationConfiguration2);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetGraduationConfigurationAsync();
+
+                // Assert that the expected number of items is returned and each of the expected items is found in the response
+                Assert.IsNotNull(clientResponse);
+                Assert.IsNotNull(clientResponse.CommencementInformationLink);
+                Assert.IsNotNull(clientResponse.ApplyForDifferentProgramLink);
+                Assert.IsNotNull(clientResponse.CapAndGownLink);
+                Assert.IsNotNull(clientResponse.PhoneticSpellingLink);
+                Assert.IsNotNull(clientResponse.MaximumCommencementGuests);
+                Assert.AreEqual(graduationConfiguration2.ExpandRequirementSetting, ExpandRequirementSetting.Expand);
+                Assert.AreEqual(graduationConfiguration2.ApplicationQuestions.Count(), clientResponse.ApplicationQuestions.Count());
+                Assert.AreEqual(graduationConfiguration2.GraduationTerms.Count(), clientResponse.GraduationTerms.Count());
             }
 
         }
@@ -3521,6 +3652,70 @@ namespace Ellucian.Colleague.Api.Client.Tests
             }
 
             [TestMethod]
+            public async Task Client_QueryAcademicCredits3Async_ReturnsSerializedRequest_UseCache_False()
+            {
+                // Arrange
+                List<Dtos.Student.AcademicCredit3> academicCredits = new List<Dtos.Student.AcademicCredit3>();
+                var credit1 = new Dtos.Student.AcademicCredit3()
+                {
+                    Id = "1",
+                    CourseId = "100",
+                    Credit = 3.0m,
+                    Status = CreditStatus.Add.ToString(),
+                    SectionId = "3000",
+                    StudentId = "1111111",
+                    AdjustedCredit = 3m
+
+                };
+                academicCredits.Add(credit1);
+                var credit2 = new Dtos.Student.AcademicCredit3()
+                {
+                    Id = "2",
+                    CourseId = "100",
+                    Credit = 3.0m,
+                    Status = CreditStatus.Dropped.ToString(),
+                    SectionId = "3000",
+                    StudentId = "1111112",
+                    AdjustedCredit = null
+
+                };
+                academicCredits.Add(credit2);
+
+                AcademicCreditQueryCriteria criteria = new AcademicCreditQueryCriteria() { SectionIds = new List<string>() { "3000" } };
+                AcademicCreditsWithInvalidKeys academicCreditsWithInvalidKeys = new AcademicCreditsWithInvalidKeys(academicCredits, new List<string>() { "not found" });
+                var serializedResponse = JsonConvert.SerializeObject(academicCreditsWithInvalidKeys);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.QueryAcademicCreditsWithInvalidKeysAsync(criteria, useCache: false);
+
+                // Assert that the expected items are returned
+                Assert.IsNotNull(clientResponse);
+                foreach (var credit in academicCredits)
+                {
+                    var responseItem = clientResponse.AcademicCredits.Where(cr => cr.Id == credit.Id).FirstOrDefault();
+                    Assert.IsNotNull(responseItem);
+                    Assert.AreEqual(credit.StudentId, responseItem.StudentId);
+                    Assert.AreEqual(credit.CourseId, responseItem.CourseId);
+                    Assert.AreEqual(credit.Credit, responseItem.Credit);
+                    Assert.AreEqual(credit.SectionId, responseItem.SectionId);
+                    Assert.AreEqual(credit.Status, responseItem.Status);
+                    Assert.AreEqual(credit.AdjustedCredit, responseItem.AdjustedCredit);
+                }
+                Assert.AreEqual("not found", clientResponse.InvalidAcademicCreditIds.ToList()[0]);
+            }
+
+
+            [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task Client_QueryAcademicCredits3Async_Null_Criteria_throws_Exception()
             {
@@ -3700,6 +3895,9 @@ namespace Ellucian.Colleague.Api.Client.Tests
                     "2016/SP",
                      "2016/FA"
                 };
+                facultyGradingConfiguration.ShowPassAudit = true;
+                facultyGradingConfiguration.ShowRepeated = true;
+
                 var serializedResponse = JsonConvert.SerializeObject(facultyGradingConfiguration);
 
                 var response = new HttpResponseMessage(HttpStatusCode.OK);
@@ -3719,6 +3917,8 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 Assert.IsNotNull(clientResponse);
                 Assert.IsTrue(clientResponse.IncludeCrosslistedStudents);
                 Assert.IsTrue(clientResponse.IncludeDroppedWithdrawnStudents);
+                Assert.IsTrue(clientResponse.ShowPassAudit);
+                Assert.IsTrue(clientResponse.ShowRepeated);
                 Assert.AreEqual(facultyGradingConfiguration.AllowedGradingTerms.Count(), clientResponse.AllowedGradingTerms.Count());
             }
         }
@@ -3871,6 +4071,80 @@ namespace Ellucian.Colleague.Api.Client.Tests
                 Assert.AreEqual(searchStartDate, clientResponse.EarliestSearchDate);
                 Assert.AreEqual(searchEndDate, clientResponse.LatestSearchDate);
 
+            }
+        }
+
+        [TestClass]
+        public class GetCourseCatalogConfiguration4Async
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task ClientGetCourseCatalogConfiguration4Async_ReturnsSerializedCourseCatalogConfiguration()
+            {
+                // Arrange
+                var searchStartDate = DateTime.Now.AddDays(-180);
+                var searchEndDate = DateTime.Now.AddDays(180);
+
+
+                var courseCatalogConfiguration = new CourseCatalogConfiguration4();
+                courseCatalogConfiguration.EarliestSearchDate = searchStartDate;
+                courseCatalogConfiguration.LatestSearchDate = searchEndDate;
+                courseCatalogConfiguration.CatalogFilterOptions = new List<CatalogFilterOption3>();
+                courseCatalogConfiguration.CatalogFilterOptions.Add(new CatalogFilterOption3() { Type = CatalogFilterType3.AcademicLevels, IsHidden = false });
+                courseCatalogConfiguration.CatalogFilterOptions.Add(new CatalogFilterOption3() { Type = CatalogFilterType3.CourseLevels, IsHidden = true });
+                courseCatalogConfiguration.CatalogSearchResultHeaderOptions = new List<CatalogSearchResultHeaderOption2>();
+
+                courseCatalogConfiguration.CatalogSearchResultHeaderOptions.Add(new CatalogSearchResultHeaderOption2() { Type = CatalogSearchResultHeaderType2.Comments, IsHidden = false });
+                courseCatalogConfiguration.CatalogSearchResultHeaderOptions.Add(new CatalogSearchResultHeaderOption2() { Type = CatalogSearchResultHeaderType2.BookstoreLink, IsHidden = true });
+                courseCatalogConfiguration.CatalogSearchResultHeaderOptions.Add(new CatalogSearchResultHeaderOption2() { Type = CatalogSearchResultHeaderType2.PlannedStatus, IsHidden = true });
+                courseCatalogConfiguration.BypassApiCacheForAvailablityData = true;
+
+                var serializedResponse = JsonConvert.SerializeObject(courseCatalogConfiguration);
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetCourseCatalogConfiguration4Async();
+
+                // Assert that the expected number of items is returned and each of the expected items is found in the response
+                Assert.IsNotNull(clientResponse);
+                Assert.AreEqual(searchStartDate, clientResponse.EarliestSearchDate);
+                Assert.AreEqual(searchEndDate, clientResponse.LatestSearchDate);
+                Assert.AreEqual(3, courseCatalogConfiguration.CatalogSearchResultHeaderOptions.Count);
+                Assert.AreEqual(CatalogSearchResultHeaderType2.Comments, courseCatalogConfiguration.CatalogSearchResultHeaderOptions[0].Type);
+                Assert.IsFalse(courseCatalogConfiguration.CatalogSearchResultHeaderOptions[0].IsHidden);
+                Assert.AreEqual(CatalogSearchResultHeaderType2.BookstoreLink, courseCatalogConfiguration.CatalogSearchResultHeaderOptions[1].Type);
+                Assert.IsTrue(courseCatalogConfiguration.CatalogSearchResultHeaderOptions[1].IsHidden);
+                Assert.AreEqual(CatalogSearchResultHeaderType2.PlannedStatus, courseCatalogConfiguration.CatalogSearchResultHeaderOptions[2].Type);
+                Assert.IsTrue(courseCatalogConfiguration.CatalogSearchResultHeaderOptions[2].IsHidden);
+
+                Assert.AreEqual(2, courseCatalogConfiguration.CatalogFilterOptions.Count);
+                Assert.AreEqual(CatalogFilterType3.AcademicLevels, courseCatalogConfiguration.CatalogFilterOptions[0].Type);
+                Assert.IsFalse(courseCatalogConfiguration.CatalogFilterOptions[0].IsHidden);
+                Assert.AreEqual(CatalogFilterType3.CourseLevels, courseCatalogConfiguration.CatalogFilterOptions[1].Type);
+                Assert.IsTrue(courseCatalogConfiguration.CatalogFilterOptions[1].IsHidden);
+                Assert.IsTrue(courseCatalogConfiguration.BypassApiCacheForAvailablityData);
             }
         }
 
@@ -4739,6 +5013,53 @@ namespace Ellucian.Colleague.Api.Client.Tests
                     Assert.AreEqual(expectedAttendance.MeetingDate, attendance.MeetingDate);
                 }
             }
+
+            [TestMethod]
+            public async Task QueryStudentAttendancesAsync_ReturnSerializedStudentAttendancesInstances_UseCache_false()
+            {
+                //Arrange
+                var timeoffset = new TimeSpan(4, 0, 0);
+                var meetingInstance = new SectionMeetingInstance() { SectionId = "1111111", InstructionalMethod = string.Empty, MeetingDate = new DateTime(2018, 1, 5), StartTime = null, EndTime = null };
+                var studentAttendanceDtos = new List<StudentAttendance>()
+                {
+                    new StudentAttendance() {StudentId = "1111111", SectionId = "SEC1", StudentCourseSectionId = "1234", MeetingDate = new DateTime(2018, 1, 5), AttendanceCategoryCode = "P", Comment = "Comment for 1111111"},
+                    new StudentAttendance() {StudentId = "2222222", SectionId = "SEC1", StudentCourseSectionId = "1235", MeetingDate = new DateTime(2018, 1, 5), AttendanceCategoryCode = "L", Comment = "Comment for 2222222"},
+                    new StudentAttendance() {StudentId = "3333333", SectionId = "SEC1",  StudentCourseSectionId = "1236", MeetingDate = new DateTime(2018, 1, 5), AttendanceCategoryCode = "E"}
+
+                };
+
+                var serializedResponse = JsonConvert.SerializeObject(studentAttendanceDtos);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.QueryStudentAttendancesAsync("111", false, null, false);
+
+                // Assert that the expected number of items is returned and each of the expected items is found in the response
+                Assert.IsNotNull(clientResponse);
+                Assert.IsInstanceOfType(clientResponse, typeof(IEnumerable<StudentAttendance>));
+                Assert.AreEqual(studentAttendanceDtos.Count(), clientResponse.Count());
+                foreach (var attendance in clientResponse)
+                {
+                    var expectedAttendance = studentAttendanceDtos.Where(sa => sa.StudentId == attendance.StudentId).FirstOrDefault();
+                    Assert.IsNotNull(expectedAttendance);
+                    Assert.AreEqual(expectedAttendance.StudentId, attendance.StudentId);
+                    Assert.AreEqual(expectedAttendance.SectionId, attendance.SectionId);
+                    Assert.AreEqual(expectedAttendance.StudentCourseSectionId, attendance.StudentCourseSectionId);
+                    Assert.AreEqual(expectedAttendance.AttendanceCategoryCode, attendance.AttendanceCategoryCode);
+                    Assert.AreEqual(expectedAttendance.Comment, attendance.Comment);
+                    Assert.AreEqual(expectedAttendance.MeetingDate, attendance.MeetingDate);
+                }
+            }
+
         }
 
         [TestClass]
@@ -9235,7 +9556,7 @@ namespace Ellucian.Colleague.Api.Client.Tests
 
                 var client = new ColleagueApiClient(testHttpClient, _logger);
 
-                var clientResponse = await client.QueryRetentionAlertCaseCategoryOrgRolesAsync(new List<string>() );
+                var clientResponse = await client.QueryRetentionAlertCaseCategoryOrgRolesAsync(new List<string>());
             }
 
             [TestMethod]
@@ -9345,7 +9666,7 @@ namespace Ellucian.Colleague.Api.Client.Tests
             [TestMethod]
             public async Task QueryRetentionAlertGroupOfCasesSummaryAsync_one_caseIds()
             {
-                var caseCatGroupSum = 
+                var caseCatGroupSum =
                     new RetentionAlertGroupOfCasesSummary()
                     {
                         Summary = "Advising Alert",
@@ -9368,8 +9689,8 @@ namespace Ellucian.Colleague.Api.Client.Tests
                                 }
                             }
                         }
-                    
-                };
+
+                    };
 
                 var serializedResponse = JsonConvert.SerializeObject(caseCatGroupSum);
 
@@ -9383,7 +9704,7 @@ namespace Ellucian.Colleague.Api.Client.Tests
 
                 var client = new ColleagueApiClient(testHttpClient, _logger);
 
-                var clientResponse = await client.GetRetentionAlertCaseOwnerSummaryAsync( "1" );
+                var clientResponse = await client.GetRetentionAlertCaseOwnerSummaryAsync("1");
             }
         }
 
@@ -9549,7 +9870,7 @@ namespace Ellucian.Colleague.Api.Client.Tests
             [TestMethod]
             public async Task GetRetentionAlertClosedCasesByReasonAsync_one_caseIds()
             {
-                
+
                 var closedCasesByReason = new List<RetentionAlertClosedCasesByReason>(){
                     new RetentionAlertClosedCasesByReason()
                     {
@@ -9567,7 +9888,7 @@ namespace Ellucian.Colleague.Api.Client.Tests
                                 LastActionDate = new DateTime(2020, 2, 1)
                             }
                         }
-                    } 
+                    }
                 };
                 var serializedResponse = JsonConvert.SerializeObject(closedCasesByReason);
 
@@ -9592,9 +9913,9 @@ namespace Ellucian.Colleague.Api.Client.Tests
                     {
                         Assert.AreEqual(closedCasesByReason[i].Cases.ToList()[j].CasesId, clientResponse.ToList()[i].Cases.ToList()[j].CasesId);
                         Assert.AreEqual(closedCasesByReason[i].Cases.ToList()[j].LastActionDate, clientResponse.ToList()[i].Cases.ToList()[j].LastActionDate);
-                    }                    
-                }                    
-            }           
+                    }
+                }
+            }
         }
 
         [TestClass]
@@ -9701,11 +10022,11 @@ namespace Ellucian.Colleague.Api.Client.Tests
                     Summary = "Summary",
                     Notes = new List<string>() { "Notes" }
                 };
-                var clientResponse = await client.SetRetentionAlertCaseReminderAsync("1",reminder);
+                var clientResponse = await client.SetRetentionAlertCaseReminderAsync("1", reminder);
                 Assert.AreEqual(setReminder.CaseId, clientResponse.CaseId);
                 Assert.AreEqual(setReminder.HasError, clientResponse.HasError);
                 CollectionAssert.AreEqual(setReminder.ErrorMessages.ToList(), clientResponse.ErrorMessages.ToList());
-                
+
             }
         }
 
@@ -10076,6 +10397,216 @@ namespace Ellucian.Colleague.Api.Client.Tests
             }
 
         }
+
+        [TestClass]
+        public class GetStudentAcademicLevelsAsync
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+            }
+
+
+            [TestMethod]
+            public async Task GetStudentAcademicLevelsAsync_ReturnsSerializedAcademicLevels()
+            {
+                // Arrange
+                var studentAcademicLevels = new List<Ellucian.Colleague.Dtos.Student.StudentAcademicLevel>()
+                    {
+                        new StudentAcademicLevel(){ AcademicLevel ="UG", AcademicCredits=null, IsActive=false, StudentAcademicLevelStartDate=new DateTime(2020,01,01)},
+                        new StudentAcademicLevel(){ AcademicLevel ="GR", AcademicCredits=null, IsActive=false, StudentAcademicLevelStartDate=new DateTime(2020,01,02)},
+                        new StudentAcademicLevel(){ AcademicLevel ="CE", AcademicCredits=null, IsActive=false, StudentAcademicLevelStartDate=new DateTime(2020,01,03)}
+                    };
+                var serializedResponse = JsonConvert.SerializeObject(studentAcademicLevels);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetStudentAcademicLevelsAsync("001100");
+
+                // Assert that the expected number of items is returned and each of the expected items is found in the response
+                Assert.IsNotNull(clientResponse);
+                Assert.AreEqual(studentAcademicLevels.Count(), clientResponse.Count());
+                foreach (var studentAcadLevel in clientResponse)
+                {
+                    Assert.IsNotNull(studentAcadLevel.AcademicLevel);
+                    Assert.IsNull(studentAcadLevel.AcademicCredits);
+                    Assert.IsFalse(studentAcadLevel.IsActive);
+                    var acadLevel = studentAcademicLevels.Where(c => c.AcademicLevel == studentAcadLevel.AcademicLevel).FirstOrDefault();
+                    Assert.AreEqual(acadLevel.StudentAcademicLevelStartDate, studentAcadLevel.StudentAcademicLevelStartDate);
+                    Assert.AreEqual(acadLevel.StudentAcademicLevelEndDate, studentAcadLevel.StudentAcademicLevelEndDate);
+                }
+            }
+        }
+
+        [TestClass]
+        public class GetSectionCensusConfigurationAsync
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task ClientGetSectionCensusConfigurationAsync_ReturnsSerializedSectionCensusConfiguration()
+            {
+                // Arrange
+                var configuration = new SectionCensusConfiguration()
+                {
+                    LastDateAttendedNeverAttendedCensusRoster = LastDateAttendedNeverAttendedFieldDisplayType.Hidden,
+                    CensusDatePositionSubmissionRange = new List<CensusDatePositionSubmission>()
+                        {
+                            new CensusDatePositionSubmission()
+                            {
+                                Position = 1,
+                                Label = "1st Census",
+                                CertifyDaysBeforeOffset = null
+                            },
+                            new CensusDatePositionSubmission()
+                            {
+                                Position = 3,
+                                Label = "3st Census",
+                                CertifyDaysBeforeOffset = 10
+                            }
+                        }
+                };
+
+                var serializedResponse = JsonConvert.SerializeObject(configuration);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.GetSectionCensusConfigurationAsync();
+
+
+                // Assert that the expected number of items is returned and each of the expected items is found in the response
+                Assert.IsNotNull(clientResponse);
+                Assert.AreEqual(configuration.LastDateAttendedNeverAttendedCensusRoster, clientResponse.LastDateAttendedNeverAttendedCensusRoster);
+
+                for (int i = 0; i < configuration.CensusDatePositionSubmissionRange.Count(); i++)
+                {
+                    var expectedSubmission = configuration.CensusDatePositionSubmissionRange.ElementAt(i);
+                    var actualSubmission = clientResponse.CensusDatePositionSubmissionRange.ElementAt(i);
+
+                    Assert.AreEqual(expectedSubmission.Position, actualSubmission.Position);
+                    Assert.AreEqual(expectedSubmission.Label, actualSubmission.Label);
+                    Assert.AreEqual(expectedSubmission.CertifyDaysBeforeOffset, actualSubmission.CertifyDaysBeforeOffset);
+                }
+            }
+        }
+
+        [TestClass]
+        public class QueryCoursePlaceholdersByIdsAsync
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+                _logger = _loggerMock.Object;
+            }
+
+            [TestMethod]
+            public async Task Api_Client_QueryCoursePlaceholdersByIdsAsync_returns_serialized_IEnumerable_CoursePlaceholders()
+            {
+                // Arrange
+                var coursePlaceholders = new List<CoursePlaceholder>()
+                {
+                    new CoursePlaceholder()
+                    {
+                        CreditInformation = "3 to 5 credits",
+                        Description = "Placeholder",
+                        EndDate = DateTime.Today.AddDays(7),
+                        Id = "1",
+                        StartDate = DateTime.Today.AddDays(-7),
+                        Title = "Placeholder Title"
+                    },
+                    new CoursePlaceholder()
+                    {
+                        CreditInformation = "4 to 6 credits",
+                        Description = "Placeholder 2",
+                        EndDate = DateTime.Today.AddDays(5),
+                        Id = "2",
+                        StartDate = DateTime.Today.AddDays(-6),
+                        Title = "Placeholder Title 2"
+                    }
+                };
+
+                var serializedResponse = JsonConvert.SerializeObject(coursePlaceholders);
+
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                var clientResponse = await client.QueryCoursePlaceholdersByIdsAsync(new List<string>() { "1" }, true);
+
+                // Assert that the expected number of items is returned and each of the expected items is found in the response
+                Assert.IsNotNull(clientResponse);
+                Assert.AreEqual(coursePlaceholders.Count, clientResponse.Count());
+
+                for (int i = 0; i < coursePlaceholders.Count(); i++)
+                {
+                    var expected = coursePlaceholders.ElementAt(i);
+                    var actual = clientResponse.ElementAt(i);
+
+                    Assert.AreEqual(expected.CreditInformation, actual.CreditInformation);
+                    Assert.AreEqual(expected.Description, actual.Description);
+                    Assert.AreEqual(expected.EndDate, actual.EndDate);
+                    Assert.AreEqual(expected.Id, actual.Id);
+                    Assert.AreEqual(expected.StartDate, actual.StartDate);
+                    Assert.AreEqual(expected.Title, actual.Title);
+                }
+            }
+        }
+
     }
 }
 

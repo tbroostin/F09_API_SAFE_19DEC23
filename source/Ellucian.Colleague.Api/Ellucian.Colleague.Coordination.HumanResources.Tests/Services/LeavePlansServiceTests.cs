@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017- Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -15,6 +15,7 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 {
@@ -103,7 +104,17 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 leavePlansRepositoryMock.Setup(l => l.GetLeavePlansAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ReturnsAsync(tupleLeavePlans);
                 leavePlansRepositoryMock.Setup(l => l.GetLeavePlansByIdAsync(It.IsAny<string>())).ReturnsAsync(domainLeavePlans);
                 referenceDataRepositoryMock.Setup(r => r.GetLeaveTypesAsync(false)).ReturnsAsync(leaveTypes);
+                foreach (var l in leaveTypes)
+                {
+                    referenceDataRepositoryMock.Setup(r => r.GetLeaveTypesGuidAsync(l.Code)).ReturnsAsync(l.Guid);
+                }
+
                 referenceDataRepositoryMock.Setup(r => r.GetEmploymentFrequenciesAsync(false)).ReturnsAsync(frequencies);
+
+                foreach (var f in frequencies)
+                {
+                    referenceDataRepositoryMock.Setup(r => r.GetEmploymentFrequenciesGuidAsync(f.Code)).ReturnsAsync(f.Guid);
+                }
             }
 
             #endregion      
@@ -111,7 +122,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             [TestMethod]
             public async Task LeavePlansService_GetLeavePlansAsync_Repository_Returns_Null()
             {
-                leavePlansRepositoryMock.Setup(l => l.GetLeavePlansAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ReturnsAsync(null);
+                leavePlansRepositoryMock.Setup(l => l.GetLeavePlansAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ReturnsAsync(() => null);
                 var result = await leavePlansService.GetLeavePlansAsync(0, 100);
 
                 Assert.IsNotNull(result);
@@ -119,7 +130,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task LeavePlansService_GetLeavePlansAsync_Exception_From_Repository()
             {
                 leavePlansRepositoryMock.Setup(l => l.GetLeavePlansAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ThrowsAsync(new Exception());
@@ -127,15 +138,15 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task LeavePlansService_GetLeavePlansAsync_LeaveType_Null_From_Repository()
             {
-                referenceDataRepositoryMock.Setup(r => r.GetLeaveTypesAsync(false)).ReturnsAsync(null);
+                referenceDataRepositoryMock.Setup(r => r.GetLeaveTypesGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 await leavePlansService.GetLeavePlansAsync(0, 100);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task LeavePlansService_GetLeavePlansAsync_Invalid_LeaveType()
             {
                 tupleLeavePlans = new Tuple<IEnumerable<LeavePlan>, int>(new List<LeavePlan>() { new LeavePlan(guid, "1", DateTime.Now, "title", "2", "s") { } }, 1);
@@ -144,7 +155,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task LeavePlansService_GetLeavePlansAsync_Invalid_RollOverLeaveType()
             {
                 tupleLeavePlans = new Tuple<IEnumerable<LeavePlan>, int>(new List<LeavePlan>() { new LeavePlan(guid, "1", DateTime.Now, "title", "1", "h") { RollOverLeaveType = "2" } }, 1);
@@ -153,17 +164,17 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task LeavePlansService_GetLeavePlansAsync_AccuralFrequencies_Null_From_Repository()
             {
-                tupleLeavePlans = new Tuple<IEnumerable<LeavePlan>, int>(new List<LeavePlan>() { new LeavePlan(guid, "1", DateTime.Now, "title", "1", "t") { AccuralFrequency = "1"} }, 1);
+                tupleLeavePlans = new Tuple<IEnumerable<LeavePlan>, int>(new List<LeavePlan>() { new LeavePlan(guid, "1", DateTime.Now, "title", "1", "t") { AccuralFrequency = "1" } }, 1);
                 leavePlansRepositoryMock.Setup(l => l.GetLeavePlansAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ReturnsAsync(tupleLeavePlans);
-                referenceDataRepositoryMock.Setup(r => r.GetEmploymentFrequenciesAsync(false)).ReturnsAsync(null);
+                referenceDataRepositoryMock.Setup(r => r.GetEmploymentFrequenciesGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 await leavePlansService.GetLeavePlansAsync(0, 100);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task LeavePlansService_GetLeavePlansAsync_Invalid_AccuralFrequency()
             {
                 tupleLeavePlans.Item1.FirstOrDefault().AllowNegative = "N";
@@ -193,13 +204,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 await leavePlansService.GetLeavePlansByGuidAsync(guid);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
-            public async Task LeavePlansService_GetLeavePlansByGuidAsync_InvalidOperationException_From_Repository()
-            {
-                leavePlansRepositoryMock.Setup(l => l.GetLeavePlansByIdAsync(It.IsAny<string>())).ThrowsAsync(new InvalidOperationException());
-                await leavePlansService.GetLeavePlansByGuidAsync(guid);
-            }
 
             [TestMethod]
             public async Task LeavePlansService_GetLeavePlansByGuidAsync()
@@ -210,6 +214,5 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 Assert.AreEqual(result.Id, guid);
             }
         }
-
     }
 }

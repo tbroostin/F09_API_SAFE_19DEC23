@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -44,14 +44,14 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         public void ProxySubject_AddPermission_InvalidPermission()
         {
             var subject = new ProxySubject("12345");
-            subject.AddPermission(new ProxyAccessPermission("1", "123", "456", "SFAA", DateTime.Today));
+            subject.AddPermission(new ProxyAccessPermission("1", "123", "456", "SFAA", DateTime.Today, DateTime.Today.AddDays(1)));
         }
 
         [TestMethod]
         public void ProxySubject_AddPermission_ValidPermission()
         {
             var subject = new ProxySubject("12345");
-            subject.AddPermission(new ProxyAccessPermission("1", "12345", "456", "SFAA", DateTime.Today));
+            subject.AddPermission(new ProxyAccessPermission("1", "12345", "456", "SFAA", DateTime.Today, DateTime.Today.AddDays(1)));
             Assert.AreEqual(1, subject.Permissions.Count);
         }
 
@@ -66,8 +66,8 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         public void ProxySubject_EffectiveDate_Permissions()
         {
             var subject = new ProxySubject("12345");
-            subject.AddPermission(new ProxyAccessPermission("1", "12345", "456", "SFAA", DateTime.Today.AddDays(-3)));
-            subject.AddPermission(new ProxyAccessPermission("1", "12345", "456", "SFAA", DateTime.Today.AddDays(-2)));
+            subject.AddPermission(new ProxyAccessPermission("1", "12345", "456", "SFAA", DateTime.Today.AddDays(-3), DateTime.Today.AddDays(1)));
+            subject.AddPermission(new ProxyAccessPermission("1", "12345", "456", "SFAA", DateTime.Today.AddDays(-2), DateTime.Today.AddDays(1)));
             Assert.AreEqual(DateTime.Today.AddDays(-2), subject.EffectiveDate);
         }
 
@@ -75,8 +75,8 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         public void ProxySubject_ReauthorizationNeeded_False()
         {
             var subject = new ProxySubject("12345");
-            subject.AddPermission(new ProxyAccessPermission("1", "12345", "456", "SFAA", DateTime.Today.AddDays(-3)));
-            subject.AddPermission(new ProxyAccessPermission("1", "12345", "456", "SFAA", DateTime.Today.AddDays(-2)));
+            subject.AddPermission(new ProxyAccessPermission("1", "12345", "456", "SFAA", DateTime.Today.AddDays(-3), DateTime.Today.AddDays(1)));
+            subject.AddPermission(new ProxyAccessPermission("1", "12345", "456", "SFAA", DateTime.Today.AddDays(-2), DateTime.Today.AddDays(1)));
             Assert.IsFalse(subject.ReauthorizationIsNeeded);
         }
 
@@ -84,8 +84,8 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         public void ProxySubject_ReauthorizationNeeded_True()
         {
             var subject = new ProxySubject("12345");
-            subject.AddPermission(new ProxyAccessPermission("1", "12345", "456", "SFAA", DateTime.Today.AddDays(-3)) { ReauthorizationDate = DateTime.Today.AddDays(-3) });
-            subject.AddPermission(new ProxyAccessPermission("1", "12345", "456", "SFAA", DateTime.Today.AddDays(-2)));
+            subject.AddPermission(new ProxyAccessPermission("1", "12345", "456", "SFAA", DateTime.Today.AddDays(-3), DateTime.Today.AddDays(1)) { ReauthorizationDate = DateTime.Today.AddDays(-3) });
+            subject.AddPermission(new ProxyAccessPermission("1", "12345", "456", "SFAA", DateTime.Today.AddDays(-2), DateTime.Today.AddDays(1)));
             Assert.IsTrue(subject.ReauthorizationIsNeeded);
         }
     }

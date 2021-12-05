@@ -30,6 +30,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     {
         public static char _VM = Convert.ToChar(DynamicArray.VM);
         private readonly string colleagueTimeZone;
+        private int bulkReadSize;
         const string AllApplicationStatusCacheKey = "AllApplicationStatusKeys";
         const int AllApplicationStatusCacheTimeout = 20;
 
@@ -37,6 +38,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             : base(cacheProvider, transactionFactory, logger)
         {
             colleagueTimeZone = apiSettings.ColleagueTimeZone;
+            bulkReadSize = apiSettings.BulkReadSize;
         }
 
         /// <summary>
@@ -80,7 +82,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                    AllApplicationStatusCacheTimeout,
                    async () =>
                    {
-
                        if (decidedOn != null && decidedOn != DateTimeOffset.MinValue)
                        {
                            var localDateTime = Convert.ToDateTime(decidedOn.ToLocalDateTime(colleagueTimeZone));
@@ -106,16 +107,30 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                            }
                        }
 
-                       // select all the applications that have the index populated. This should return all records with a status
-                       var applIdsWithStatus = await DataReader.SelectAsync("APPLICATIONS", applicationLimitingKeys.ToArray(),
-                           "WITH APPL.STATUS.DATE.TIME.IDX NE ''");
-
-
-
-                       if (applIdsWithStatus == null || !applIdsWithStatus.Any())
+                       if (!string.IsNullOrEmpty(applicationId))
                        {
-                           return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                           var recordInfo = await GetRecordInfoFromGuidAsync(applicationId);
+                           if (recordInfo == null)
+                           {
+                               return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                           }
+                           else if ((!recordInfo.Entity.Equals("APPLICATIONS", StringComparison.OrdinalIgnoreCase))
+                                   || (!string.IsNullOrEmpty(recordInfo.SecondaryKey)) || (string.IsNullOrEmpty(recordInfo.PrimaryKey)))
+                           {
+                               return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                           }
+                           else
+                           {
+                               if (applicationLimitingKeys != null && applicationLimitingKeys.Any() && !applicationLimitingKeys.Contains(recordInfo.PrimaryKey))
+                               {
+                                   return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                               }
+                               applicationLimitingKeys = new List<string>() { recordInfo.PrimaryKey };
+                           }
                        }
+
+                       selectionCriteria.Append("WITH APPL.STATUS.DATE.TIME.IDX NE ''");
+
                        // get all the special processing codes from application.statuses
                        var applStatusesNoSpCodeIds = await DataReader.SelectAsync("APPLICATION.STATUSES", "WITH APPS.SPECIAL.PROCESSING.CODE NE ''");
 
@@ -123,42 +138,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                        {
                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
                        }
-                       // get all the applications with a special processing code.
-                       // any status with an application special processing code that is not null indicates an application has been submitted
-                       var applStatusCriteria = "WITH APPL.STATUS EQ '" + (string.Join(" ", applStatusesNoSpCodeIds.Distinct())).Replace(" ", "' '") + "'";
-                       applIdsWithStatus = await DataReader.SelectAsync("APPLICATIONS", applIdsWithStatus, applStatusCriteria);
 
-                       if (applIdsWithStatus == null || !applIdsWithStatus.Any())
-                       {
-                           return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                       }
-
-                       if (!string.IsNullOrEmpty(applicationId))
-                       {
-                           var applId = await GetRecordKeyFromGuidAsync(applicationId);
-                           var recordInfo = await GetRecordInfoFromGuidAsync(applicationId);
-                           if (recordInfo == null)
-                           {
-                               return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                           }
-                           else if ((!recordInfo.Entity.Equals("APPLICATIONS", StringComparison.OrdinalIgnoreCase))
-                                   || (!string.IsNullOrEmpty(recordInfo.SecondaryKey)))
-                           {
-                               return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                           }
-                           else
-                           {
-                               selectionCriteria.Append(string.Format("WITH APPLICATIONS.ID EQ '{0}' AND ", applId));
-                           }
-                       }
-
-                       //apply the date filter          
-                       selectionCriteria.Append("WITH APPL.STATUS.DATE NE ''");
+                       // apply the date filter
                        if (convertedDecidedOnDate != 0)
                        {
                            selectionCriteria.Append(string.Format(" AND WITH APPL.STATUS.DATE {0} '{1}'", dateFilterOperation, convertedDecidedOnDate));
                        }
-                       selectionCriteria.Append(" AND WITH APPL.STATUS.TIME NE ''");
                        // special conditions to account for the date-filter operation which includes date + time.
                        // if EQ, then we want to make sure the time matches exactly
                        // allother operations need to make sure records from the actual date are included since the previous select can possibly remove them. 
@@ -177,7 +162,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                            }
                        }
 
-                       applIdsWithStatus = await DataReader.SelectAsync("APPLICATIONS", applIdsWithStatus,
+                       var applIdsWithStatus = await DataReader.SelectAsync("APPLICATIONS", applicationLimitingKeys.ToArray(),
                               selectionCriteria.ToString());
 
                        if (applIdsWithStatus == null || !applIdsWithStatus.Any())
@@ -219,7 +204,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                            }
                            catch (Exception ex)
                            {
-                               exception.AddError(new RepositoryError("data.access", ex.Message));
+                               exception.AddError(new RepositoryError("Bad.Data", ex.Message));
                                throw exception;
                            }
                        }
@@ -258,14 +243,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 catch (Exception ex)
                 {
-                    exception.AddError(new RepositoryError("data.access", ex.Message)); 
-                    exception.AddError(new RepositoryError("data.access", "Guids not found for APPLICATION with APPL.STATUS.DATE.TIME.IDX."));
+                    exception.AddError(new RepositoryError("Bad.Data", ex.Message)); 
+                    exception.AddError(new RepositoryError("Bad.Data", "Guids not found for APPLICATION with APPL.STATUS.DATE.TIME.IDX."));
                     throw exception;
                 }
 
-                if (dict == null)
+                if (dict == null || !dict.Any())
                 {
-                    exception.AddError(new RepositoryError("data.access", "Guids not found for APPLICATION with APPL.STATUS.DATE.TIME.IDX."));
+                    exception.AddError(new RepositoryError("Bad.Data", "Guids not found for APPLICATION with APPL.STATUS.DATE.TIME.IDX."));
                     throw exception;
                 }
 
@@ -283,7 +268,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                         if (string.IsNullOrEmpty(applGuidInfo))
                         {
-                            exception.AddError(new RepositoryError("data.access", string.Format("Guid not found for APPLICATION '{0}' with APPL.STATUS.DATE.TIME.IDX '{2}'.", applicationKey, applStatusIdx))
+                            exception.AddError(new RepositoryError("Bad.Data", string.Format("Guid not found for APPLICATION '{0}' with APPL.STATUS.DATE.TIME.IDX '{1}'.", applicationKey, applStatusIdx))
                             { SourceId = key });
                             continue;
                         }
@@ -303,7 +288,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                     catch (Exception ex)
                     {
-                        exception.AddError(new RepositoryError("data.access", string.Format("Application error occurred found for key {0}. {1}", key, ex.Message))
+                        exception.AddError(new RepositoryError("Bad.Data", string.Format("Application error occurred found for key {0}. {1}", key, ex.Message))
                             { SourceId = key });
                     }
                 }
@@ -316,7 +301,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return admissionStatusesEntities.Any() ? new Tuple<IEnumerable<Domain.Student.Entities.ApplicationStatus2>, int>(admissionStatusesEntities, totalCount) :
                 new Tuple<IEnumerable<Domain.Student.Entities.ApplicationStatus2>, int>(new List<Domain.Student.Entities.ApplicationStatus2>(), 0);
         }
-
 
         /// <summary>
         /// Using a collection of ids in the format application.id|appl.status.date.time.idx

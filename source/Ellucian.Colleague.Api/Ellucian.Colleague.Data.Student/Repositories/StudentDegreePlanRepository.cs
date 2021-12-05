@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Text;
@@ -19,6 +19,7 @@ using Ellucian.Colleague.Domain.Student.Entities.DegreePlans;
 using Ellucian.Colleague.Domain.Student.Exceptions;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Data.Student.Transactions;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -43,7 +44,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             updateReq.StudentId = newPlan.PersonId;
             updateReq.TermIds = newPlan.TermIds.ToList();
 
-            // Update the degree plan
+            // Add the degree plan
             AddDegreePlanResponse updateResponse = await transactionInvoker.ExecuteAsync<AddDegreePlanRequest, AddDegreePlanResponse>(updateReq);
 
             if (String.IsNullOrEmpty(updateResponse.AErrorMessage))
@@ -81,6 +82,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             updateReq.LastReviewedBy = newPlan.LastReviewedAdvisorId;
             updateReq.ReviewRequestedDate = newPlan.ReviewRequestedDate;
             updateReq.ReviewRequestedTime = newPlan.ReviewRequestedTime;
+            updateReq.AArchiveNotificationDate = newPlan.ArchiveNotificationDate;
+            updateReq.IsAdvisorNotes = "Y";
             updateReq.CourseApprovals = new List<Transactions.CourseApprovals>();
             foreach (var item in newPlan.Approvals)
             {
@@ -108,6 +111,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         tc.TermIds = term;
                         tc.CourseIds = plannedCourse.CourseId;
                         tc.SectionIds = plannedCourse.SectionId;
+                        tc.AlCoursePlaceholders = plannedCourse.CoursePlaceholderId;
                         tc.Credits = plannedCourse.Credits;
                         tc.AddedBy = plannedCourse.AddedBy;
                         DateTime? addedOnDateTime = null;
@@ -177,6 +181,16 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 if (note.Id == 0 && !(string.IsNullOrEmpty(note.Text)))
                 {
                     updateReq.CommentText.Add(note.Text);
+                    if (note.PersonType == Dtos.Student.PersonType.Student)
+                    {
+                        updateReq.IsAdvisorNotes = "N";
+                    }
+                    else
+                    {
+                        //when the notes are from advisor, 
+                        //the advisor id needs to be set so that the email notifications are sent to the student appropriately
+                        updateReq.AdvisorId = newPlan.CurrentUserId;
+                    }
                 }
             }
 
@@ -189,62 +203,83 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
             }
 
-            // Update the plan
-            var updateResponse = await transactionInvoker.ExecuteAsync<Transactions.UpdateDegreePlanRequest, Transactions.UpdateDegreePlanResponse>(updateReq);
-
-            // Log any warnings
-            if (updateResponse.AlWarningMessages != null && updateResponse.AlWarningMessages.Any())
+            try 
             {
-                var degreePlanUpdateWarnings = new StringBuilder(String.Format("One or more warnings were generated when updating degree plan {0}:" + Environment.NewLine, updateResponse.DegreePlanId));
-                foreach (var message in updateResponse.AlWarningMessages)
+                // Update the plan
+                var updateResponse = await transactionInvoker.ExecuteAsync<Transactions.UpdateDegreePlanRequest, Transactions.UpdateDegreePlanResponse>(updateReq);
+
+                // CTX returns null object
+                if (updateResponse == null)
                 {
-                    degreePlanUpdateWarnings.AppendLine(message);
+                    throw new ApplicationException(String.Format("The request to update the degree plan {0} returned a null response.", updateReq.DegreePlanId));
                 }
-                logger.Info(degreePlanUpdateWarnings.ToString());
-            }
 
-            if (String.IsNullOrEmpty(updateResponse.AErrorMessage))
-            {
-                // Degree Plan update is successful. Remove the record from DEGREE_PLAN_RVW_ASGN table to remove the relation when Advising by Office is true                
-                if (!string.IsNullOrEmpty(newPlan.LastReviewedAdvisorId))
+                // Log any warnings
+                if (updateResponse.AlWarningMessages != null && updateResponse.AlWarningMessages.Any())
                 {
-                    var updateRevReq = new Transactions.MaintDegreePlanRvwAsgnRequest();
-                    updateRevReq.ADegreePlanId = newPlan.Id.ToString();
-                    updateRevReq.AReviewerId = newPlan.LastReviewedAdvisorId;
-                    updateRevReq.AAction = "D";
-                    Transactions.MaintDegreePlanRvwAsgnResponse deleteResponse = await transactionInvoker.ExecuteAsync<Transactions.MaintDegreePlanRvwAsgnRequest, Transactions.MaintDegreePlanRvwAsgnResponse>(updateRevReq);
-                    if (!string.IsNullOrEmpty(deleteResponse.AErrorMessage))
+                    var degreePlanUpdateWarnings = new StringBuilder(String.Format("One or more warnings were generated when updating degree plan {0}:" + Environment.NewLine, updateResponse.DegreePlanId));
+                    foreach (var message in updateResponse.AlWarningMessages)
                     {
-                        // Dont have to through the exception. Log it
-                        logger.Error(deleteResponse.AErrorMessage);
+                        degreePlanUpdateWarnings.AppendLine(message);
                     }
+                    logger.Info(degreePlanUpdateWarnings.ToString());
                 }
 
-                // Get the updated plan from Colleague using returned ID
-                int newPlanId = Convert.ToInt32(updateResponse.DegreePlanId);
-                var updatedDegreePlan = await GetAsync(newPlanId);
-                return updatedDegreePlan;
-            }
-
-            // Whatever the error was, log it.
-            logger.Error(updateResponse.AErrorMessage);
-            // Throw a different exception depending on the error
-            if (updateResponse.AErrorMessage == "Degree Plan update had version incompatibility. Update not performed.")
-            {
-                throw new InvalidOperationException("Version number mismatch.");
-            }
-            else
-            {
-                // If record wasn't found - meaning the id was bad - produce a different exception 
-                if (updateResponse.AErrorMessage.Contains("No Degree Plan found"))
+                if (String.IsNullOrEmpty(updateResponse.AErrorMessage))
                 {
-                    throw new KeyNotFoundException("Plan not found. Unable to update.");
+                    // Degree Plan update is successful. Remove the record from DEGREE_PLAN_RVW_ASGN table to remove the relation when Advising by Office is true                
+                    if (!string.IsNullOrEmpty(newPlan.LastReviewedAdvisorId))
+                    {
+                        var updateRevReq = new Transactions.MaintDegreePlanRvwAsgnRequest();
+                        updateRevReq.ADegreePlanId = newPlan.Id.ToString();
+                        updateRevReq.AReviewerId = newPlan.LastReviewedAdvisorId;
+                        updateRevReq.AAction = "D";
+                        Transactions.MaintDegreePlanRvwAsgnResponse deleteResponse = await transactionInvoker.ExecuteAsync<Transactions.MaintDegreePlanRvwAsgnRequest, Transactions.MaintDegreePlanRvwAsgnResponse>(updateRevReq);
+                        if (!string.IsNullOrEmpty(deleteResponse.AErrorMessage))
+                        {
+                            // Dont have to through the exception. Log it
+                            logger.Error(deleteResponse.AErrorMessage);
+                        }
+                    }
+
+                    // Get the updated plan from Colleague using returned ID
+                    int newPlanId = Convert.ToInt32(updateResponse.DegreePlanId);
+                    var updatedDegreePlan = await GetAsync(newPlanId);
+                    return updatedDegreePlan;
+                }
+
+                // Whatever the error was, log it.
+                logger.Error(updateResponse.AErrorMessage);
+                // Throw a different exception depending on the error
+                if (updateResponse.AErrorMessage == "Degree Plan update had version incompatibility. Update not performed.")
+                {
+                    throw new InvalidOperationException("Version number mismatch.");
                 }
                 else
                 {
-                    // Record was locked, or other invalid data condition such as a bad term or course or section provided, etc.
-                    throw new ArgumentException("Unresolved errors on update for Plan Id " + newPlan.Id);
+                    // If record wasn't found - meaning the id was bad - produce a different exception 
+                    if (updateResponse.AErrorMessage.Contains("No Degree Plan found"))
+                    {
+                        throw new KeyNotFoundException("Plan not found. Unable to update.");
+                    }
+                    else
+                    {
+                        // Record was locked, or other invalid data condition such as a bad term or course or section provided, etc.
+                        throw new ArgumentException("Unresolved errors on update for Plan Id " + newPlan.Id);
+                    }
                 }
+            }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = string.Format("Colleague transaction error occurred while updating degree plan {0}", updateReq.DegreePlanId);
+                logger.Error(ce, message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                string exceptionMsg = string.Format("An error occurred while attempting to update the degree plan {0}.", updateReq.DegreePlanId);
+                logger.Error(ex, exceptionMsg);
+                throw;
             }
         }
 
@@ -329,6 +364,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 degreePlan.LastReviewedDate = plan.DpLastReviewedDate;
                 degreePlan.ReviewRequestedDate = plan.DpReviewRequestedDate;
                 degreePlan.ReviewRequestedTime = plan.DpReviewRequestedTime;
+                degreePlan.ArchiveNotificationDate = plan.DpArchiveNotificationDate;
 
                 // Add approval association
                 // As of Colleague SU 61699.11, degree plan approvals  returned by Colleague will only carry the current status of each course/term combination. 
@@ -382,9 +418,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             {
                                 if (!string.IsNullOrEmpty(plannedcourse.DptCoursesAssocMember))
                                 {
-                                    string course = plannedcourse.DptCoursesAssocMember;
-                                    string section = string.IsNullOrEmpty(plannedcourse.DptSectionsAssocMember) ? null : plannedcourse.DptSectionsAssocMember;
+                                    string course = string.IsNullOrWhiteSpace(plannedcourse.DptCoursesAssocMember) ? null : plannedcourse.DptCoursesAssocMember;
+                                    string section = string.IsNullOrWhiteSpace(plannedcourse.DptSectionsAssocMember) ? null : plannedcourse.DptSectionsAssocMember;
                                     decimal? credits = plannedcourse.DptCreditsAssocMember;
+                                    string coursePlaceholder = null; // course placeholder will always be empty when course has a vaule
                                     string addedBy = plannedcourse.DptAddedByAssocMember;
                                     DateTimeOffset? addedOn = null;
                                     if (plannedcourse.DptAddedOnDateAssocMember != null && plannedcourse.DptAddedOnTimeAssocMember != null)
@@ -464,16 +501,34 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     {
                                         isProtected = false;
                                     }
-                                    degreePlan.AddCourse(new PlannedCourse(course, section, gradingType, status, addedBy, addedOn) { Credits = credits, IsProtected = isProtected }, t.DptTerm);
+                                    degreePlan.AddCourse(new PlannedCourse(course: course, section: section, gradingType: gradingType, status: status,
+                                        addedBy: addedBy, addedOn: addedOn, coursePlaceholder: coursePlaceholder)
+                                        { Credits = credits, IsProtected = isProtected }, t.DptTerm);
+                                }
+                                else if (!string.IsNullOrEmpty(plannedcourse.DptCoursePlaceholdersAssocMember))
+                                {
+                                    string coursePlaceholder = string.IsNullOrWhiteSpace(plannedcourse.DptCoursePlaceholdersAssocMember) ? null : plannedcourse.DptCoursePlaceholdersAssocMember;
+                                    string addedBy = plannedcourse.DptAddedByAssocMember;
+                                    DateTimeOffset? addedOn = null;
+                                    if (plannedcourse.DptAddedOnDateAssocMember != null && plannedcourse.DptAddedOnTimeAssocMember != null)
+                                    {
+                                        addedOn = plannedcourse.DptAddedOnTimeAssocMember.ToPointInTimeDateTimeOffset(
+                                            plannedcourse.DptAddedOnDateAssocMember, colleagueTimeZone);
+                                    }
+                                    degreePlan.AddCourse(new PlannedCourse(course: null, section: null, gradingType: GradingType.Graded,
+                                        status: Domain.Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: addedBy, addedOn: addedOn,
+                                        coursePlaceholder: coursePlaceholder)
+                                    { IsProtected = false }, t.DptTerm);
                                 }
                             }
                         }
+
                         // Gather all waitlists for this student in this term in case they are on a waitlist for a section that is not already on the plan.
                         // (This can happen if they are waitlisted via another Colleague process RGN, webadvisor, etc. )
                         // Excluding non-term waitlist items for now based on possibilities of bad data in the WAIT.LIST file.
                         if (t.DptTerm != null)
                         {
-                            var studentTermWaitlists = waitlists.Where(swl => swl.WaitStudent == degreePlan.PersonId && swl.WaitTerm == t.DptTerm).ToList();
+                            var studentTermWaitlists = waitlists.Where(swl => swl.WaitStudent == degreePlan.PersonId).ToList();
                             IEnumerable<string> sectionsOnPlan = degreePlan.SectionsInPlan;
                             foreach (var wl in studentTermWaitlists)
                             {
@@ -483,11 +538,17 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     {
                                         if ((await GetWaitlistStatusActionCodeAsync(wl.WaitStatus)) == "4")
                                         {
-                                            degreePlan.AddCourse(new PlannedCourse(wl.WaitCourse, wl.WaitCourseSection, GradingType.Graded, Domain.Student.Entities.DegreePlans.WaitlistStatus.PermissionToRegister) { Credits = wl.WaitCred }, wl.WaitTerm);
+                                            degreePlan.AddCourse(new PlannedCourse(course: wl.WaitCourse, section: wl.WaitCourseSection,
+                                                gradingType: GradingType.Graded, status: Domain.Student.Entities.DegreePlans.WaitlistStatus.PermissionToRegister,
+                                                coursePlaceholder: null)
+                                            { Credits = wl.WaitCred }, wl.WaitTerm);
                                         }
                                         if ((await GetWaitlistStatusActionCodeAsync(wl.WaitStatus)) == "1")
                                         {
-                                            degreePlan.AddCourse(new PlannedCourse(wl.WaitCourse, wl.WaitCourseSection, GradingType.Graded, Domain.Student.Entities.DegreePlans.WaitlistStatus.Active) { Credits = wl.WaitCred }, wl.WaitTerm);
+                                            degreePlan.AddCourse(new PlannedCourse(course: wl.WaitCourse, section: wl.WaitCourseSection,
+                                                gradingType: GradingType.Graded, status: Domain.Student.Entities.DegreePlans.WaitlistStatus.Active,
+                                                coursePlaceholder: null)
+                                            { Credits = wl.WaitCred }, wl.WaitTerm);
                                         }
                                     }
                                 }
@@ -495,7 +556,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
                     }
                 }
-
 
                 // Now retrieve and add any comments that exist for this degree plan.
                 if (degreePlanCommentData != null)
@@ -547,7 +607,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             return degreePlans.AsEnumerable();
         }
-
 
         private async Task<ApplValcodes> GetWaitlistStatusesAsync()
         {

@@ -1,5 +1,5 @@
-# Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
-# Version 1.29.1 (Delivered with Colleague Web API 1.29.1)
+# Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
+# Version 1.33 (Delivered with Colleague Web API 1.33)
 
 # PURPOSE:
 # Warm up the Colleague Web API by pre-loading the most frequently-used and shared API data
@@ -104,11 +104,7 @@ $vndInvoicePayV1 = "application/vnd.ellucian-invoice-payment.v1+json"
 $vndIlpV1 = "application/vnd.ellucian-ilp.v1+json"
 $vndHrDemoV1 = "application/vnd.ellucian-human-resource-demographics.v1+json"
 $vndInstEnrV1 = "application/vnd.ellucian-instant-enrollment.v1+json"
-$vndEthosConfigurationSettingsOptions = "application/vnd.hedtech.integration.configuration-settings-options.v1.0.0+json"
-$vndEthosCollectionConfigurationSettingsOptions = "application/vnd.hedtech.integration.collection-configuration-settings-options.v1.0.0+json"
-$vndEthosCompoundConfigurationSettingsOptions = "application/vnd.hedtech.integration.compound-configuration-settings-options.v1.0.0+json"
-$vndEthosDefaultSettingsOptions = "application/vnd.hedtech.integration.default-settings-options.v1.0.0+json"
-$vndEthosMappingSettingsOptions = "application/vnd.hedtech.integration.mapping-settings-options.v1.0.0+json"
+$vndEedmV1 = "application/vnd.hedtech.integration.v1.0.0+json"
 
 #Restricted Headers list that can be set via property of System.Net.WebRequest 
 $RequestHeaderList=@("Accept", "Connection", "ContentLength", "ContentType", "Date", "Expect", "Host", 
@@ -209,6 +205,48 @@ function post([string]$url, [string]$body, [string]$token, [string]$accept, [has
 	{
 		return ""
 	}
+}
+
+# Sends an EEDM POST request to the specified endpoint URL using the provided token
+# that returns no response
+function eedmPost([string]$url, [string]$body, [string]$token, [string]$accept, [hashtable]$headers) 
+{
+	$req = [System.Net.WebRequest]::Create($url)
+	$req.Method ="POST"
+	if ($token) 
+	{
+		$req.Headers.Add("X-CustomCredentials", $token)
+	}
+	if ($accept) 
+	{
+		$req.Accept = $accept
+	}
+	$req.ContentType = "application/json"
+	$req.Timeout = 300000 # max 5 minutes
+	$Post = $body
+	$PostStr = [System.Text.Encoding]::UTF8.GetBytes($Post)
+	$req.ContentLength = $PostStr.Length
+
+	if ($headers)
+	{
+		Foreach($item in $headers.GetEnumerator())
+		{
+			# If the key is a restricted headers, set it via property of System.Net.WebRequest
+			if ($RequestHeaderList -contains $item.Key)
+			{
+				$req.($item.Key) = $item.Value
+			}
+			else #Add it to Header collection of the request
+			{
+				$req.Headers.Add($item.Key, $item.Value)
+			}
+		}
+	}
+
+	$requestStream = $req.GetRequestStream()
+	$requestStream.Write($PostStr, 0,$PostStr.length)
+	$requestStream.Close()	
+	return ""	
 }
 
 # Recycle application pool if supplied
@@ -602,12 +640,6 @@ if ($runEthosApi)
 	Write-Host "Getting Ethos citizenship-statuses..."
 	$results = get ($webApiBaseUrl + "/citizenship-statuses") $token
 
-	Write-Host "Getting Ethos collection-configuration-settings..."
-	$results = get ($webApiBaseUrl + "/collection-configuration-settings") $token
-
-	Write-Host "Getting Ethos collection-configuration-settings-options..."
-	$results = get ($webApiBaseUrl + "/collection-configuration-settings") $token $vndEthosCollectionConfigurationSettingsOptions
-
 	Write-Host "Getting Ethos comment-subject-area..."
 	$results = get ($webApiBaseUrl + "/comment-subject-area") $token
 
@@ -623,18 +655,6 @@ if ($runEthosApi)
 	Write-Host "Getting Ethos commodity-unit-types..."
 	$results = get ($webApiBaseUrl + "/commodity-unit-types") $token 
 	
-	Write-Host "Getting Ethos compound-configuration-settings..."
-	$results = get ($webApiBaseUrl + "/compound-configuration-settings") $token
-
-	Write-Host "Getting Ethos compound-configuration-settings-options..."
-	$results = get ($webApiBaseUrl + "/compound-configuration-settings") $token $vndEthosCompoundConfigurationSettingsOptions
-
-	Write-Host "Getting Ethos configuration-settings..."
-	$results = get ($webApiBaseUrl + "/configuration-settings") $token
-
-	Write-Host "Getting Ethos configuration-settings-options..."
-	$results = get ($webApiBaseUrl + "/configuration-settings") $token $vndEthosConfigurationSettingsOptions
-
 	Write-Host "Getting Ethos contract-types..."
 	$results = get ($webApiBaseUrl + "/contract-types") $token
 
@@ -682,12 +702,6 @@ if ($runEthosApi)
 	
 	Write-Host "Getting Ethos deduction-types..."
 	$results = get ($webApiBaseUrl + "/deduction-types") $token
-
-	Write-Host "Getting Ethos default-settings..."
-	$results = get ($webApiBaseUrl + "/default-settings") $token
-
-	Write-Host "Getting Ethos default-settings-options..."
-	$results = get ($webApiBaseUrl + "/default-settings") $token $vndEthosDefaultSettingsOptions
 
 	Write-Host "Getting Ethos earning-types..."
 	$results = get ($webApiBaseUrl + "/earning-types") $token
@@ -853,12 +867,6 @@ if ($runEthosApi)
 
 	Write-Host "Getting Ethos leave-types..."
 	$results = get ($webApiBaseUrl + "/leave-types") $token
-
-	Write-Host "Getting Ethos mapping-settings..."
-	$results = get ($webApiBaseUrl + "/mapping-settings") $token
-
-	Write-Host "Getting Ethos mapping-settings-options..."
-	$results = get ($webApiBaseUrl + "/mapping-settings") $token $vndEthosMappingSettingsOptions
 
 	Write-Host "Getting Ethos marital-statuses..."
 	$results = get ($webApiBaseUrl + "/marital-statuses") $token
@@ -1033,6 +1041,9 @@ if ($runEthosApi)
 
 	Write-Host "Getting Ethos financial-aid-academic-progress-statuses..."
 	$results = get ($webApiBaseUrl + "/financial-aid-academic-progress-statuses") $token
+
+	Write-Host "Clearing EEDM cache keys..."
+	$results = eedmPost ($webApiBaseUrl + "/eedm-cache-keys") "{}" $token $vndEedmV1
 }
 
 # The endpoint used below is available only with Colleague Web API 1.5 and later.

@@ -186,7 +186,7 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
 
         private IEnumerable<SfssLinks> GetSfssLinks()
         {
-            return DataReader.BulkReadRecord<Ellucian.Colleague.Data.Finance.DataContracts.SfssLinks>("SFSS.LINKS", "");
+            return DataReader.BulkReadRecord<Ellucian.Colleague.Data.Finance.DataContracts.SfssLinks>("SFSS.LINKS", "").OrderBy(x => x.SfssLinkDisplayOrder);
         }
 
         private FinanceConfiguration BuildConfiguration()
@@ -233,6 +233,15 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
             // Get the text for the alert notification and payment review message
             configuration.NotificationText = GetMiscText(sfDefaults.SfNotificationText);
             configuration.PaymentReviewMessage = GetMiscText(sfDefaults.SfConfirmText);
+
+            if (string.IsNullOrEmpty(sfDefaults.SfDisplayDueDates) || sfDefaults.SfDisplayDueDates == "Y")
+            {
+                configuration.DisplayDueDates = true;
+            }
+            else if (sfDefaults.SfDisplayDueDates == "N")
+            {
+                configuration.DisplayDueDates = false;
+            }
 
             // Student Statement Parameters
             configuration.IncludeSchedule = String.IsNullOrEmpty(sfDefaults.SfStmtInclSchedule) ? true : sfDefaults.SfStmtInclSchedule == "Y";

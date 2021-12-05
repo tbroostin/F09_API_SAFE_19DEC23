@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -990,7 +990,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     if (paymasterContract != null)
                     {
                         employerEin = paymasterContract.PmInstitutionEin;
-                        logger.Warn("Paymaster EIN: " + employerEin);
+                        logger.Debug("Paymaster EIN: " + employerEin);
                         if (!string.IsNullOrEmpty(employerEin))
                         {
                             usePaymaster = true;
@@ -999,14 +999,14 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 }
             }
 
-            logger.Warn("Use paymaster: " + usePaymaster.ToString());
+            logger.Debug("Use paymaster: " + usePaymaster.ToString());
 
             if (!usePaymaster)
             {
                 // If the EIN is not in this record, obtain the employer information from the Host Organization.
                 var defaultsContract = await GetDefaults();
                 hostOrganizationId = defaultsContract.DefaultHostCorpId;
-                logger.Warn("Default host corp ID: " + hostOrganizationId);
+                logger.Debug("Default host corp ID: " + hostOrganizationId);
 
                 // Read the CORP.FOUNDS record for the host organization ID to get the employer EIN.
                 if (string.IsNullOrEmpty(hostOrganizationId))
@@ -1679,7 +1679,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     Defaults coreDefaults = await DataReader.ReadRecordAsync<Defaults>("CORE.PARMS", "DEFAULTS");
                     if (coreDefaults == null)
                     {
-                        logger.Info("Unable to access DEFAULTS from CORE.PARMS table.");
+                        logger.Debug("Unable to access DEFAULTS from CORE.PARMS table.");
                         coreDefaults = new Defaults();
                     }
                     return coreDefaults;
@@ -1705,11 +1705,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             catch (System.FormatException fe)
             {
-                LogDataError("WebW2Online", recordId, dataContract, fe, fe.Message);
+                logger.Error(fe, "Could not convert to decimal.");
             }
             catch (System.OverflowException se)
             {
-                LogDataError("WebW2Online", recordId, dataContract, se, se.Message);
+                logger.Error(se, "Could not convert to decimal.");
             }
             return newAmount;
         }
@@ -1733,11 +1733,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             catch (System.FormatException fe)
             {
-                LogDataError("WebW2cOnline", recordId, dataContract, fe, fe.Message);
+                logger.Error(fe, "Could not convert to decimal.");
             }
             catch (System.OverflowException se)
             {
-                LogDataError("WebW2cOnline", recordId, dataContract, se, se.Message);
+                logger.Error(se, "Could not convert to decimal.");
             }
             return newAmount;
         }

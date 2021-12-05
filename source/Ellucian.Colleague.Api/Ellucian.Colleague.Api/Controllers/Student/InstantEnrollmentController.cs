@@ -2,6 +2,7 @@
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
+using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Colleague.Dtos.Student.InstantEnrollment;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
@@ -10,6 +11,7 @@ using slf4net;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -25,17 +27,50 @@ namespace Ellucian.Colleague.Api.Controllers
     public class InstantEnrollmentController : BaseCompressedApiController
     {
         private readonly IInstantEnrollmentService _instantEnrollmentService;
+        private readonly ICourseService _courseService;
         private readonly ILogger _logger;
 
         /// <summary>
         /// Initializes a new instance of the InstantEnrollmentController class.
         /// </summary>
+        /// <param name="courseService">Service of type <see cref="ICourseService">ICourseService</see></param>
         /// <param name="service">Service of type <see cref="IInstantEnrollmentService">IInstantEnrollmentService</see></param>
         /// <param name="logger">Logger of type <see cref="ILogger">ILogger</see></param>
-        public InstantEnrollmentController(IInstantEnrollmentService service, ILogger logger)
+        public InstantEnrollmentController(ICourseService courseService, IInstantEnrollmentService service, ILogger logger)
         {
             _instantEnrollmentService = service;
+            _courseService = courseService;
             _logger = logger;
+        }
+
+
+        /// <summary>
+        /// Performs a search of sections that are available for Instant Enrollment only.
+        /// The criteria supplied is keyword and various filters which may be used to search and narrow list of sections.
+        /// </summary>
+        /// <param name="criteria"></param>
+        /// <param name="pageSize"></param>
+        /// <param name="pageIndex"></param>
+        /// <returns></returns>
+        /// <accessComments>Any authenticated user can perform search on sections and view Instant Enrollment catalog.</accessComments>
+        public async Task<SectionPage2> PostInstantEnrollmentCourseSearch2Async([FromBody] InstantEnrollmentCourseSearchCriteria criteria, int pageSize = 10, int pageIndex = 0)
+        {
+            try
+            {
+                // Logging the timings for monitoring
+                _logger.Info("Call Course Search Service from Courses controller... ");
+                var watch = new Stopwatch();
+                watch.Start();
+                SectionPage2 sectionPage = await _courseService.InstantEnrollmentSearch2Async(criteria, pageSize, pageIndex);
+                watch.Stop();
+                _logger.Info("Course search returned in: " + watch.ElapsedMilliseconds.ToString());
+                return sectionPage;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.ToString() + ex.StackTrace);
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+            }
         }
 
         /// <summary>

@@ -17,12 +17,17 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Web.Http.Configuration;
+using Ellucian.Colleague.Domain.Base.Services;
+using System.Text;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class PersonHoldsRepository : BaseColleagueRepository, IPersonHoldsRepository
     {
+        const string AllStudentRestrictionsRecordsCache = "AllStudentRestrictionsRecordKeys";
+        const int AllStudentRestrictionsRecordsCacheTimeout = 20;
+        private RepositoryException exception = new RepositoryException();
         readonly int readSize;
 
         /// <summary>
@@ -44,25 +49,66 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<PersonRestriction>, int>> GetPersonHoldsAsync(int offset, int limit)
         {
-            var date = await GetUnidataFormatDateAsync(DateTime.Today);
-            var criteria =
-                string.Format("WITH STR.STUDENT NE '' AND WITH STR.RESTRICTION NE '' AND WITH STR.END.DATE EQ '' OR STR.END.DATE GE '{0}' AND WITH STR.CORP.INDICATOR NE 'Y'",
-                    date);
-        
-            var personHoldsIds = await DataReader.SelectAsync("STUDENT.RESTRICTIONS", criteria);
-            var totalCount = personHoldsIds.Count();
-            var studentHolds = new List<StudentRestrictions>();
+            string selectedRecordCacheKey = CacheSupport.BuildCacheKey(AllStudentRestrictionsRecordsCache);
 
-            Array.Sort(personHoldsIds);
-            var sublist = personHoldsIds.Skip(offset).Take(limit);
-            var newPersonHoldsIds = sublist.ToArray();
-            if (newPersonHoldsIds.Any())
+            int totalCount = 0;
+            var selectionCriteria = new StringBuilder();
+
+            var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                selectedRecordCacheKey,
+                "STUDENT.RESTRICTIONS",
+                offset,
+                limit,
+                AllStudentRestrictionsRecordsCacheTimeout,
+                async () =>
+                {
+                    var date = await GetUnidataFormatDateAsync(DateTime.Today);
+                    var criteria =
+                        string.Format("WITH STR.STUDENT NE '' AND WITH STR.RESTRICTION NE '' AND WITH STR.END.DATE EQ '' OR STR.END.DATE GE '{0}' AND WITH STR.CORP.INDICATOR NE 'Y'",
+                            date);
+                    selectionCriteria.Append(criteria);
+
+                    return new CacheSupport.KeyCacheRequirements()
+                    {
+                        criteria = selectionCriteria.ToString()
+                    };
+                });
+
+            if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
             {
-                var bulkData =
-                    await DataReader.BulkReadRecordAsync<StudentRestrictions>("STUDENT.RESTRICTIONS", newPersonHoldsIds);
-                studentHolds.AddRange(bulkData);
+                return new Tuple<IEnumerable<PersonRestriction>, int>(new List<PersonRestriction>(), 0);
             }
-            var personHoldsList = BuildPersonHolds(studentHolds);
+
+            totalCount = keyCacheObject.TotalCount.Value;
+
+            var subList = keyCacheObject.Sublist.ToArray();
+
+            if (subList == null || !subList.Any())
+            {
+                return new Tuple<IEnumerable<PersonRestriction>, int>(new List<PersonRestriction>(), 0);
+            }
+
+            var studentHolds = new Collection<StudentRestrictions>();
+            var personHoldsList = new List<PersonRestriction>();
+            try
+            {
+                studentHolds = await DataReader.BulkReadRecordAsync<StudentRestrictions>("STUDENT.RESTRICTIONS", subList);
+                personHoldsList = BuildPersonHolds(studentHolds);
+            }
+            catch (Exception ex)
+            {
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message));
+            }
+
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
 
             return new Tuple<IEnumerable<PersonRestriction>, int>(personHoldsList, totalCount);
         }
@@ -81,6 +127,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             var studentHold = await DataReader.ReadRecordAsync<StudentRestrictions>("STUDENT.RESTRICTIONS", personHoldId);
             var personHold = BuildPersonHold(studentHold);
+
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
 
             return personHold;
         }
@@ -116,6 +167,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 // If there is no STUDENT.RESTRICTIONS record for this person in Colleague returns no restrictions.
                 Collection<StudentRestrictions> personHolds = await DataReader.BulkReadRecordAsync<StudentRestrictions>(criteria);
                 holdsList = BuildPersonHolds(personHolds);
+
+                if (exception != null && exception.Errors != null && exception.Errors.Any())
+                {
+                    throw exception;
+                }
 
                 return holdsList;
             }
@@ -200,12 +256,18 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 var errorMessage = string.Empty;
                 errorMessage = string.Format("Error occurred updating person hold key '{0}', id '{1}'. ", request.Id, request.PersonHoldGuid);
+                exception = new RepositoryException(errorMessage);
                 foreach (var message in updateResponse.RestrictionErrorMessages)
                 {
                     errorMessage += string.Join(Environment.NewLine, message.ErrorMsg);
                     logger.Error(errorMessage.ToString());
+                    exception.AddError(new RepositoryError("Create.Update.Exception", string.Concat(message.ErrorCode, " ", message.ErrorMsg))
+                    {
+                        Id = request.PersonHoldGuid,
+                        SourceId = request.Id
+                    });
                 }
-                throw new InvalidOperationException(errorMessage);
+                throw exception;
             }
 
             PersonHoldResponse response = new PersonHoldResponse();
@@ -246,19 +308,58 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             PersonRestriction stuRestriction = null;
             if (studentHold != null)
             {
-
                 try
                 {
                     stuRestriction = new PersonRestriction(studentHold.RecordGuid, studentHold.Recordkey, studentHold.StrStudent, studentHold.StrRestriction, studentHold.StrStartDate, studentHold.StrEndDate, studentHold.StrSeverity, studentHold.StrPrtlDisplayFlag);
                     stuRestriction.Comment = string.IsNullOrEmpty(studentHold.StrComments) ? string.Empty : studentHold.StrComments;
                     stuRestriction.NotificationIndicator = studentHold.StrPrtlDisplayFlag;
-                    return stuRestriction;
                 }
-                catch (Exception e)
+                catch (Exception ex)
                 {
-                    var inString = "Student Restriction Id: " + studentHold.Recordkey + ", Student Id: " + studentHold.StrStudent + ", Restriction Id: " + studentHold.StrRestriction;
-                    LogDataError("Student Restriction", studentHold.Recordkey, studentHold, e, inString);
+                    if (!string.IsNullOrEmpty(studentHold.RecordGuid) && !string.IsNullOrEmpty(studentHold.StrStudent) && !string.IsNullOrEmpty(studentHold.StrRestriction))
+                    {
+                        exception.AddError(new RepositoryError("Bad.Data", string.Format("Invalid STUDENT.RESTRICTIONS record. {0}", ex.Message))
+                        {
+                            Id = studentHold.RecordGuid,
+                            SourceId = studentHold.Recordkey
+                        });
+                    }
                 }
+                
+                var message = "Invalid STUDENT.RESTRICTIONS record.";
+                if (string.IsNullOrEmpty(studentHold.RecordGuid))
+                {
+                    exception.AddError(new RepositoryError("Bad.Data", string.Format("{0} The GUID is missing.", message))
+                    {
+                        Id = studentHold.RecordGuid,
+                        SourceId = studentHold.Recordkey
+                    });
+                }
+                if (string.IsNullOrEmpty(studentHold.StrStudent))
+                {
+                    exception.AddError(new RepositoryError("Bad.Data", string.Format("{0} The STR.STUDENT of '' is invalid.", message))
+                    {
+                        Id = studentHold.RecordGuid,
+                        SourceId = studentHold.Recordkey
+                    });
+                }
+                if (string.IsNullOrEmpty(studentHold.StrRestriction))
+                {
+                    exception.AddError(new RepositoryError("Bad.Data", string.Format("{0} The STR.RESTRICTION of '' is invalid.", message))
+                    {
+                        Id = studentHold.RecordGuid,
+                        SourceId = studentHold.Recordkey
+                    });
+                }
+                if (studentHold.StrStartDate == null || !studentHold.StrStartDate.HasValue)
+                {
+                    exception.AddError(new RepositoryError("Bad.Data", string.Format("{0} The STR.START.DATE of '' is invalid.", message))
+                    {
+                        Id = studentHold.RecordGuid,
+                        SourceId = studentHold.Recordkey
+                    });
+                }
+                return stuRestriction;
             }
             return stuRestriction;
         }

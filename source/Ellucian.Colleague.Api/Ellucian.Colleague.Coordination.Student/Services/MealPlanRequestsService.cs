@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -14,8 +14,6 @@ using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Student;
 using System.Linq;
-using Ellucian.Colleague.Dtos.DtoProperties;
-using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Domain.Exceptions;
 
@@ -67,19 +65,37 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>List of <see cref="Dtos.MealPlanRequests">Dtos.MealPlanRequests</see></returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.MealPlanRequests>, int>> GetMealPlanRequestsAsync(int offset, int limit, bool bypassCache = false)
         {
-            CheckViewMealPlanRequestPermission();
+            var mealPlanRequestsCollection = new List<Ellucian.Colleague.Dtos.MealPlanRequests>();
 
-            var MealPlanRequestsCollection = new List<Ellucian.Colleague.Dtos.MealPlanRequests>();
-
-            var MealPlanRequestEntities = await _mealPlanRequestRepository.GetAsync(offset, limit, bypassCache);
-            var totalRecords = MealPlanRequestEntities.Item2;
-
-            foreach (var MealPlanRequestEntity in MealPlanRequestEntities.Item1)
+            Tuple<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.MealPlanReqsIntg>, int> mealPlanRequests = null;
+            try
             {
-                var MealPlanRequestsDto = await ConvertMealPlanRequestEntityToDtoAsync(MealPlanRequestEntity, bypassCache);
-                MealPlanRequestsCollection.Add(MealPlanRequestsDto);
+                mealPlanRequests = await _mealPlanRequestRepository.GetAsync(offset, limit, bypassCache);
             }
-            return new Tuple<IEnumerable<Ellucian.Colleague.Dtos.MealPlanRequests>, int>(MealPlanRequestsCollection, totalRecords);
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+
+            if (mealPlanRequests != null && mealPlanRequests.Item1.Any())
+            {
+                var mealPlanRequestEntities = mealPlanRequests.Item1;
+                if (mealPlanRequestEntities != null && mealPlanRequestEntities.Any())
+                {
+                    mealPlanRequestsCollection = (await ConvertMealPlanRequestEntitiesToDtoAsync(mealPlanRequestEntities, bypassCache)).ToList();
+                }
+                if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+                {
+                    throw IntegrationApiException;
+                }
+
+                return new Tuple<IEnumerable<Ellucian.Colleague.Dtos.MealPlanRequests>, int>(mealPlanRequestsCollection, mealPlanRequests.Item2);
+            }
+            else
+            {
+                return new Tuple<IEnumerable<Ellucian.Colleague.Dtos.MealPlanRequests>, int>(mealPlanRequestsCollection, 0);
+            }            
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -88,31 +104,35 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="guid">Guid</param>
         /// <returns><see cref="Dtos.MealPlanRequests">Dtos.MealPlanRequests object</see></returns>
-        public async Task<Ellucian.Colleague.Dtos.MealPlanRequests> GetMealPlanRequestsByGuidAsync(string guid)
+        public async Task<Ellucian.Colleague.Dtos.MealPlanRequests> GetMealPlanRequestsByGuidAsync(string guid, bool bypassCache)
         {
             if (string.IsNullOrEmpty(guid))
             {
-                throw new ArgumentNullException("guid", "A GUID is required to obtain an meal-plan-request.");
+                throw new ArgumentNullException("guid", "A GUID is required to obtain a meal-plan-request.");
             }
 
-            CheckViewMealPlanRequestPermission();
-
+            Dtos.MealPlanRequests mealPlanRequestDto = new Dtos.MealPlanRequests();
             try
             {
-                return await ConvertMealPlanRequestEntityToDtoAsync(await _mealPlanRequestRepository.GetByIdAsync(guid));
+                var mealPlanRequestEntities = new List<Domain.Student.Entities.MealPlanReqsIntg>();
+                var mealPlanRequestEntity = await _mealPlanRequestRepository.GetByIdAsync(guid);
+                mealPlanRequestEntities.Add(mealPlanRequestEntity);
+                mealPlanRequestDto = ((await ConvertMealPlanRequestEntitiesToDtoAsync(mealPlanRequestEntities, bypassCache)).ToList()).FirstOrDefault();       
             }
-            catch (KeyNotFoundException ex)
+            catch (RepositoryException ex)
             {
-                throw new KeyNotFoundException("meal plan requests not found for GUID " + guid, ex);
-            }
-            catch (InvalidOperationException ex)
-            {
-                throw new KeyNotFoundException("meal plan requests not found for GUID " + guid, ex);
+                IntegrationApiExceptionAddError(ex, guid: guid);
+                throw IntegrationApiException;
             }
             catch (Exception ex)
             {
                 throw ex;
             }
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+            return mealPlanRequestDto;
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN DATA MODEL</remarks>
@@ -131,11 +151,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     throw new ArgumentNullException("MealPlanRequests", "Must provide a MealPlanRequests for update");
                 if (string.IsNullOrEmpty(MealPlanRequestsDto.Id))
                     throw new ArgumentNullException("MealPlanRequests", "Must provide a guid for MealPlanRequests update");
-
-
-
-                // verify the user has the permission to update a MealPlanRequests
-                CheckCreateMealPlanRequestPermission();
 
                 _mealPlanRequestRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -181,10 +196,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     throw new ArgumentNullException("MealPlanRequests", "Must provide a guid for MealPlanRequests update");
                 Ellucian.Colleague.Domain.Student.Entities.MealPlanReqsIntg createdMealPlanRequests = null;
 
-
-                // verify the user has the permission to update a MealPlanRequests
-                CheckCreateMealPlanRequestPermission();
-
                 _mealPlanRequestRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
                 // map the DTO to entities
@@ -210,6 +221,122 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
 
+        }
+
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
+        /// <summary>
+        /// Converts a MealPlanRequest domain entity to its corresponding MealPlanRequests DTO
+        /// </summary>
+        /// <param name="source">MealPlanRequest domain entity</param>
+        /// <returns>MealPlanRequests DTO</returns>
+        private async Task<IEnumerable<Ellucian.Colleague.Dtos.MealPlanRequests>> ConvertMealPlanRequestEntitiesToDtoAsync(IEnumerable<MealPlanReqsIntg> sources, bool bypassCache = false)
+        {
+            var mealPlanRequests = new List<Dtos.MealPlanRequests>();
+
+            var personIds = sources                
+                 .Where(x => (!string.IsNullOrEmpty(x.PersonId)))
+                 .Select(x => x.PersonId).Distinct().ToList();
+            var personGuidCollection = await this._personRepository.GetPersonGuidsCollectionAsync(personIds);
+
+            foreach (var source in sources)
+            {
+                var mealPlanRequest = new Dtos.MealPlanRequests();
+
+                // convert person
+                if (string.IsNullOrEmpty(source.PersonId))
+                {
+                    IntegrationApiExceptionAddError(string.Format("Person is required."), "Bad.Data", source.Guid, source.Id);
+                }
+                else if (personGuidCollection == null)
+                {
+                    IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the person '{0}'", source.PersonId), "GUID.Not.Found", source.Guid, source.Id);
+                }
+                else
+                {
+                    var personGuid = string.Empty;
+                    personGuidCollection.TryGetValue(source.PersonId, out personGuid);
+                    if (string.IsNullOrEmpty(personGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the person '{0}'", source.PersonId), "GUID.Not.Found", source.Guid, source.Id);
+                    }
+                    else
+                    {
+                        mealPlanRequest.Person = new Dtos.GuidObject2(personGuid);
+                    }
+                }
+
+                //convert term
+                if (!string.IsNullOrEmpty(source.Term))
+                {
+                    try
+                    {
+                        var acadPeriod = await _termRepository.GetAcademicPeriodsGuidAsync(source.Term);
+
+                        if (!string.IsNullOrEmpty(acadPeriod))
+                        {
+                            mealPlanRequest.AcademicPeriod = new Dtos.GuidObject2(acadPeriod);
+                        }
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                            source.Guid, source.Id);
+                    }
+                }
+
+                //convert start date
+                if (source.StartDate != null)
+                {
+                    mealPlanRequest.StartOn = Convert.ToDateTime(source.StartDate);
+                }
+
+                //convert end date
+                if (source.EndDate != null)
+                {
+                    mealPlanRequest.EndOn = Convert.ToDateTime(source.EndDate);
+                }
+
+                //convert submitted 
+                if (source.SubmittedDate != null)
+                {
+                    mealPlanRequest.SubmittedOn = Convert.ToDateTime(source.SubmittedDate);
+                }
+
+                //assign guid
+                mealPlanRequest.Id = source.Guid;
+
+                //convert mealplan
+                if (!string.IsNullOrEmpty(source.MealPlan))
+                {
+                    try
+                    {
+                        var mealPlan = await _referenceDataRepository.GetMealPlanGuidAsync(source.MealPlan);
+
+                        if (!string.IsNullOrEmpty(mealPlan))
+                        {
+                            mealPlanRequest.MealPlan = new Dtos.GuidObject2(mealPlan);
+                        }
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                            source.Guid, source.Id);
+                    }
+                }        
+
+                //convert status
+                if (!string.IsNullOrEmpty(source.Status))
+                {
+                    var status = new Ellucian.Colleague.Dtos.EnumProperties.MealPlanRequestsStatus();
+                    status = ConvertStatusToMealPlanRequestsStatusDtoEnum(source.Status);
+                    mealPlanRequest.Status = status;
+
+                }
+
+                mealPlanRequests.Add(mealPlanRequest);
+            }
+
+            return mealPlanRequests;
         }
 
         /// <summary>
@@ -241,7 +368,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return _mealPlans;
         }
 
-         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Converts a MealPlanRequest domain entity to its corresponding MealPlanRequests DTO
         /// </summary>
@@ -251,7 +378,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             var MealPlanRequests = new Ellucian.Colleague.Dtos.MealPlanRequests();
 
-           //convert term
+            //convert term
             if (!string.IsNullOrEmpty(source.Term))
             {
                 _academicPeriods = null;
@@ -271,7 +398,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             }
 
-           //convert end date
+            //convert end date
             if (source.EndDate != null)
             {
                 MealPlanRequests.EndOn = Convert.ToDateTime(source.EndDate);
@@ -312,21 +439,20 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //convert start date
             if (source.StartDate != null)
             {
-            MealPlanRequests.StartOn = Convert.ToDateTime(source.StartDate);
+                MealPlanRequests.StartOn = Convert.ToDateTime(source.StartDate);
             }
             //convert status
-            
+
             if (!string.IsNullOrEmpty(source.Status))
             {
                 var status = new Ellucian.Colleague.Dtos.EnumProperties.MealPlanRequestsStatus();
-                status =  ConvertStatusToMealPlanRequestsStatusDtoEnum(source.Status);
+                status = ConvertStatusToMealPlanRequestsStatusDtoEnum(source.Status);
                 MealPlanRequests.Status = status;
 
             }
 
             return MealPlanRequests;
         }
-
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
@@ -466,36 +592,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
            
             return mealPlanRequests;
         }
-
-        
-        /// <summary>
-        /// Permissions code that allows an external system to do a READ operation. This API will integrate information related to meal plan assignments that 
-        /// could be deemed personal.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckViewMealPlanRequestPermission()
-        {
-            if (!HasPermission(StudentPermissionCodes.ViewMealPlanRequest) && !HasPermission(StudentPermissionCodes.CreateMealPlanRequest))
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view MEAL.PLAN.REQS.INTG.");
-            }
-        }
-
-        /// <summary>
-        /// Permissions code that allows an external system to do a UPDATE operation. This API will integrate information related to meal plan assignments that 
-        /// could be deemed personal.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckCreateMealPlanRequestPermission()
-        {
-            var hasPermission = HasPermission(StudentPermissionCodes.CreateMealPlanRequest);
-
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to update MEAL.PLAN.REQS.INTG.");
-            }
-        }
-
+              
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Converts a meal assignment status to its corresponding MealPlanRequestsStatus DTO enumeration value

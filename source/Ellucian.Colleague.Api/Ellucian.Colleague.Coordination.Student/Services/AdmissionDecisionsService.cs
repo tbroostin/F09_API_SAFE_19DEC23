@@ -64,11 +64,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             try
             {
                 // access is ok if the current user has the view, or create, permission
-                if ((!await CheckViewAdmissionDecisionsPermissionAsync()) && (!await CheckCreateAdmissionDecisionPermissionAsync()))
-                {
-                    logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view admission-decisions.");
-                    throw new PermissionsException("User '" + CurrentUser.UserId + "' does not have permission to view admission-decisions");
-                }
+                //if ((!await CheckViewAdmissionDecisionsPermissionAsync()) && (!await CheckCreateAdmissionDecisionPermissionAsync()))
+                //{
+                //    logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view admission-decisions.");
+                //    throw new PermissionsException("User '" + CurrentUser.UserId + "' does not have permission to view admission-decisions");
+                //}
 
                 var admissionDecisionsCollection = new List<Dtos.AdmissionDecisions>();
                 var newPersonFilter = string.Empty;
@@ -134,12 +134,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             try
             {
                 // access is ok if the current user has the view, or create, permission
-                if ((!await CheckViewAdmissionDecisionsPermissionAsync()) && (!await CheckCreateAdmissionDecisionPermissionAsync()))
-                {
-                    logger.Error("User " + CurrentUser.UserId + " does not have permission to view admission decisions.");
-                    throw new PermissionsException("User '" + CurrentUser.UserId + "' does not have permission to view admission-decisions");
+                //if ((!await CheckViewAdmissionDecisionsPermissionAsync()) && (!await CheckCreateAdmissionDecisionPermissionAsync()))
+                //{
+                //    logger.Error("User " + CurrentUser.UserId + " does not have permission to view admission decisions.");
+                //    throw new PermissionsException("User '" + CurrentUser.UserId + "' does not have permission to view admission-decisions");
 
-                }
+                //}
                 ApplicationStatus2 entity = null;
                 try
                 {
@@ -254,12 +254,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns></returns>
         public async Task<AdmissionDecisions> CreateAdmissionDecisionAsync(AdmissionDecisions admissionDecisions)
         {
-            if (!await CheckCreateAdmissionDecisionPermissionAsync())
-            {
-                logger.Error(string.Format("User '{0}' is not authorized to create admission-decisions.", CurrentUser.UserId));
-                throw new PermissionsException("User '" + CurrentUser.UserId + "' does not have permission to create admission-decisions");
+            //if (!await CheckCreateAdmissionDecisionPermissionAsync())
+            //{
+            //    logger.Error(string.Format("User '{0}' is not authorized to create admission-decisions.", CurrentUser.UserId));
+            //    throw new PermissionsException("User '" + CurrentUser.UserId + "' does not have permission to create admission-decisions");
 
-            }
+            //}
 
             _applicationStatusRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -323,11 +323,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             else
             {
-                if (decisionType.SpecialProcessingCode != null && decisionType.SpecialProcessingCode.Equals("MS", StringComparison.OrdinalIgnoreCase))
-                {
-                    IntegrationApiExceptionAddError("Admission decision type associated with 'move to students' is not permitted.");
-                }
-
                 if (string.IsNullOrEmpty(decisionType.SpecialProcessingCode))
                 {
                     IntegrationApiExceptionAddError("Admission decision type is not valid for a submitted application. This admission decision type is associated with a prospect status.");

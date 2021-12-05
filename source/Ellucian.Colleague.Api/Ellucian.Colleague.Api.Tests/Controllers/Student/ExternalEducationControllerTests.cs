@@ -1,18 +1,23 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -191,6 +196,93 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             await _externalEducationController.GetExternalEducationsAsync(paging, "");
         }
 
+
+        //GET v6
+        //Successful
+        //GetExternalEducationsAsync
+
+        [TestMethod]
+        public async Task ExternalEducationController_GetExternalEducationsAsync_Permissions()
+        {
+            var tuple = new Tuple<IEnumerable<Dtos.ExternalEducation>, int>(_externalEducationCollection, 1);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "ExternalEducation" },
+                    { "action", "GetExternalEducationsAsync" }
+                };
+            HttpRoute route = new HttpRoute("external-education", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _externalEducationController.Request.SetRouteData(data);
+            _externalEducationController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewExternalEducation);
+
+            var controllerContext = _externalEducationController.ControllerContext;
+            var actionDescriptor = _externalEducationController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _externalEducationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _externalEducationServiceMock.Setup(x => x.GetExternalEducationsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>())).ReturnsAsync(tuple);
+            var externalEducation = await _externalEducationController.GetExternalEducationsAsync(new Paging(10, 0));
+
+            Object filterObject;
+            _externalEducationController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewExternalEducation));
+
+        }
+
+        //GET v6
+        //Exception
+        //GetExternalEducationsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ExternalEducationController_GetExternalEducationsAsync_Invalid_Permissions()
+        {
+            var paging = new Paging(100, 0);
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "ExternalEducation" },
+                    { "action", "GetExternalEducationsAsync" }
+                };
+            HttpRoute route = new HttpRoute("external-education", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _externalEducationController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _externalEducationController.ControllerContext;
+            var actionDescriptor = _externalEducationController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _externalEducationServiceMock.Setup(x => x.GetExternalEducationsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>())).Throws<PermissionsException>();
+                _externalEducationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view external-education."));
+                await _externalEducationController.GetExternalEducationsAsync(paging, "");
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion GetExternalEducation
 
         #region GetExternalEducationByGuid
@@ -275,6 +367,91 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             _externalEducationServiceMock.Setup(x => x.GetExternalEducationByGuidAsync(It.IsAny<string>()))
                 .Throws<Exception>();
             await _externalEducationController.GetExternalEducationByGuidAsync(ExternalEducation1Guid);
+        }
+
+        //GET by id v6
+        //Successful
+        //GetExternalEducationByGuidAsync
+
+        [TestMethod]
+        public async Task ExternalEducationController_GetExternalEducationByGuidAsync_Permissions()
+        {
+            var expected = _externalEducationCollection.FirstOrDefault(x => x.Id.Equals(ExternalEducation1Guid, StringComparison.OrdinalIgnoreCase));
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "ExternalEducation" },
+                    { "action", "GetExternalEducationByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("external-education", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _externalEducationController.Request.SetRouteData(data);
+            _externalEducationController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewExternalEducation);
+
+            var controllerContext = _externalEducationController.ControllerContext;
+            var actionDescriptor = _externalEducationController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _externalEducationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _externalEducationServiceMock.Setup(x => x.GetExternalEducationByGuidAsync(It.IsAny<string>())).ReturnsAsync(expected);
+            var actual = await _externalEducationController.GetExternalEducationByGuidAsync(ExternalEducation1Guid);
+
+            Object filterObject;
+            _externalEducationController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewExternalEducation));
+
+        }
+
+        //GET by id v6
+        //Exception
+        //GetExternalEducationByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ExternalEducationController_GetExternalEducationByGuidAsync_Invalid_Permissions()
+        {
+            var paging = new Paging(100, 0);
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "ExternalEducation" },
+                    { "action", "GetExternalEducationByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("external-education", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _externalEducationController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _externalEducationController.ControllerContext;
+            var actionDescriptor = _externalEducationController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _externalEducationServiceMock.Setup(x => x.GetExternalEducationByGuidAsync(It.IsAny<string>())).Throws<PermissionsException>();
+                _externalEducationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view external-education."));
+                await _externalEducationController.GetExternalEducationByGuidAsync(ExternalEducation1Guid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
         }
 
         #endregion GetExternalEducationByGuid

@@ -1,6 +1,7 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Dtos.ColleagueFinance;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
@@ -23,5 +24,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>The document approval update response DTO.</returns>
         Task<DocumentApprovalResponse> UpdateDocumentApprovalRequestAsync(DocumentApprovalRequest documentApprovalUpdateRequest);
 
+        /// <summary>
+        /// Retrieve documents approved by the user.
+        /// </summary>
+        /// <param name="filterCriteria">Approved documents filter criteria.</param>
+        /// <returns>List of document approved DTOs</returns>
+        Task<IEnumerable<ApprovedDocument>> QueryApprovedDocumentsAsync(ApprovedDocumentFilterCriteria filterCriteria);
     }
 }

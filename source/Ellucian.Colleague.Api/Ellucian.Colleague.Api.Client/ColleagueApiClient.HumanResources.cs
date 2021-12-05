@@ -1,4 +1,4 @@
-﻿/*Copyright 2015-2020 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2015-2021 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.HumanResources;
 using Ellucian.Web.Utility;
@@ -496,9 +496,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
 
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-
-                headers.Add("Accept", "application/pdf");
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderPdfVerion1);
 
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
@@ -577,7 +575,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_personPositionsPath);
                 string queryString = string.Empty;
                 if (!string.IsNullOrEmpty(effectivePersonId))
-                {                    
+                {
                     if (lookupStartDate.HasValue)
                     {
                         queryString = UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId, "lookupStartDate", lookupStartDate.Value.ToShortDateString());
@@ -754,7 +752,6 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
-
         /// <summary>
         /// Get all HumanResourceDemographics data available for the effectivePerson
         /// NOTE: This method is an earlier version and has some performance issues, so it is not recommended
@@ -765,7 +762,6 @@ namespace Ellucian.Colleague.Api.Client
         /// performance on this is not ideal and therefore version 2 of this method is recommended
         /// </accessComents>
         /// <returns>A collection of HumanResourceDemographics</returns>
-
         public async Task<IEnumerable<HumanResourceDemographics>> GetHumanResourceDemographicsAsync(string effectivePersonId = null)
         {
             try
@@ -799,22 +795,29 @@ namespace Ellucian.Colleague.Api.Client
         /// 1. Must have the APPROVE.REJECT.TIME.ENTRY permission to retrieve supervisee HumanResourceDemographics
         /// </accessComents>
         /// <returns>A collection of HumanResourceDemographics</returns>
-
-        public async Task<IEnumerable<HumanResourceDemographics>> GetHumanResourceDemographics2Async(string effectivePersonId = null)
+        public async Task<IEnumerable<HumanResourceDemographics>> GetHumanResourceDemographics2Async(string effectivePersonId = null, DateTime? lookupStartDate = null)
         {
             try
             {
                 string urlPath = UrlUtility.CombineUrlPath(_humanResourceDemographicsPath);
-                string query;
+                Dictionary<string, string> urlArgCollection = new Dictionary<string, string>();
+                
+
                 if (effectivePersonId != null)
                 {
-                    query = UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId);
-                    urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, query);
+                    urlArgCollection.Add("effectivePersonId", effectivePersonId);
                 }
+
+                if (lookupStartDate.HasValue)
+                {
+                    urlArgCollection.Add("lookupStartDate", lookupStartDate.Value.ToShortDateString());
+                }
+
+                string urlPathWithArguments = UrlUtility.CombineEncodedUrlPathAndArguments(urlPath, urlArgCollection);
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderHumanResourceDemographicsVersion2);
-                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPathWithArguments, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<HumanResourceDemographics>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
@@ -825,18 +828,22 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
-
         /// <summary>
         /// Get specific HumanResourceDemographics data for a given ID
         /// </summary>
         /// <param name="id">The employees's ID for whom demographics are being requested</param>
+        /// <param name="effectivePersonId">Optional parameter for passing effective person Id</param>
         /// <accessComents>If requesting an ID other than the user's own, must have</accessComents>
         /// <returns></returns>
-        public async Task<HumanResourceDemographics> GetSpecificHumanResourceDemographicsAsync(string id)
+        public async Task<HumanResourceDemographics> GetSpecificHumanResourceDemographicsAsync(string id, string effectivePersonId = null)
         {
             try
             {
                 string urlPath = UrlUtility.CombineUrlPath(_humanResourceDemographicsPath, id);
+                if (!string.IsNullOrWhiteSpace(effectivePersonId))
+                {
+                    urlPath += "?" + UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId);
+                }
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderHumanResourceDemographics);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
@@ -944,6 +951,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_taxFormStatementsPath, personId, taxForm.ToString());
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<TaxFormStatement>>(await response.Content.ReadAsStringAsync());
@@ -1256,7 +1264,6 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
-
         /// <summary>
         ///  Returns the LeaveRequest information corresponding to the input id.
         /// </summary>
@@ -1287,7 +1294,6 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
-
 
         /// <summary>
         /// Gets the Approved Leave Requests for a timecard week based on the date range.
@@ -1540,6 +1546,7 @@ namespace Ellucian.Colleague.Api.Client
                 }
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(id, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<HumanResourceDemographics>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -1550,6 +1557,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// This end point returns all the supervisees for the currently authenticated leave approver.       
         /// The endpoint will not return the supervisees if:
@@ -1558,17 +1566,29 @@ namespace Ellucian.Colleague.Api.Client
         /// <accessComments>
         ///  Current user must be Leave Approver/supervisor (users with the permission APPROVE.REJECT.LEAVE.REQUEST) to fetch all of their supervisees
         /// </accessComments>
+        /// <param name="effectivePersonId">
+        ///  Optional parameter for passing effective person Id
+        /// </param>
         /// <returns><see cref="HumanResourceDemographics">List of HumanResourceDemographics DTOs</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned any unexpected error has occured.</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user is not allowed to fetch supervisees.</exception>
-
-        public async Task<IEnumerable<HumanResourceDemographics>> GetSuperviseesByPrimaryPositionForSupervisorAsync()
+        public async Task<IEnumerable<HumanResourceDemographics>> GetSuperviseesByPrimaryPositionForSupervisorAsync(string effectivePersonId = null)
         {
             try
             {
+                string urlPath;
+                if (effectivePersonId == null)
+                {
+                    urlPath = UrlUtility.CombineUrlPath(_leaveApprovalSuperviseesPath);
+                }
+                else
+                {
+                    urlPath = _leaveApprovalSuperviseesPath + "?" + UrlUtility.BuildEncodedQueryString("effectivePersonId", effectivePersonId);
+                }
+
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                var response = await ExecuteGetRequestWithResponseAsync(_leaveApprovalSuperviseesPath, headers: headers);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<HumanResourceDemographics>>(await response.Content.ReadAsStringAsync());
                 return resource;
             }
@@ -1578,6 +1598,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+      
         /// <summary>
         /// Queries employee information summary based on the specified criteria.
         /// Either a supervisor id or employee ids must be specified (or both)
@@ -1602,6 +1623,34 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception e)
             {
                 logger.Error(e, "Unable to retrieve employee summary data for specified criteria");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Queries employee leave plans based on the specified criteria.
+        /// Either a supervisor id or employee ids must be specified (or both)
+        /// </summary>
+        /// <param name="criteria">criteria to use for querying</param>
+        /// <returns>a list of EmployeeLeavePlan DTOs</returns>
+        public async Task<IEnumerable<EmployeeLeavePlan>> QueryEmployeeLeavePlanAsync(EmployeeLeavePlanQueryCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria");
+            }
+
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _employeeLeavePlansPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<IEnumerable<EmployeeLeavePlan>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to retrieve employee leave plan data for specified criteria");
                 throw;
             }
         }

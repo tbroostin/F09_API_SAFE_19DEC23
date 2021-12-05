@@ -1,4 +1,4 @@
-﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -191,21 +191,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 #region GETALL
 
                 [TestMethod]
-                [ExpectedException(typeof(PermissionsException))]
-                public async Task StudentFAAPSService_GetStudentFinancialAidAcademicProgressStatusesAsync_PermissionsException()
-                {
-                    roles = new List<Domain.Entities.Role>()
-                    {
-                        new Domain.Entities.Role(1,"ACAD.PROGRESS")
-                    };
-                    roleRepositoryMock.Setup(r => r.GetRolesAsync()).ReturnsAsync(roles);
-                    await studentFAAcademicProgressStatusesService.GetStudentFinancialAidAcademicProgressStatusesAsync(0, 100, null,false);
-                }
-
-                [TestMethod]
                 public async Task StudentFAAPSService_GetStudentFinancialAidAcademicProgressStatusesAsync_CriteriaAsNull()
                 {
-                    studentFAAcademicProgressStatusesRepositoryMock.Setup(g => g.GetSapResultsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                    studentFAAcademicProgressStatusesRepositoryMock.Setup(g => g.GetSapResultsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                     var result = await studentFAAcademicProgressStatusesService.GetStudentFinancialAidAcademicProgressStatusesAsync(0, 100, null, false);
                     Assert.IsNotNull(result);
                     Assert.AreEqual(result.Item2, 0);
@@ -217,7 +205,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                     var criteria = new StudentFinancialAidAcademicProgressStatuses() { Person = new GuidObject2("adcbf49c-f129-470c-aa31-272493846711") };
 
-                    personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                    personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                     
                     var result = await studentFAAcademicProgressStatusesService.GetStudentFinancialAidAcademicProgressStatusesAsync(0, 100, criteria, false);
                     Assert.IsNotNull(result);
@@ -319,18 +307,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                     #region GETBYID
                 [TestMethod]
-                [ExpectedException(typeof(PermissionsException))]
-                public async Task StudentFAAPSService_GetStudentFinancialAidAcademicProgressStatusesByGuidAsync_PermissionsException()
-                {
-                    roles = new List<Domain.Entities.Role>()
-                    {
-                        new Domain.Entities.Role(1,"ACAD.PROGRESS")
-                    };
-                    roleRepositoryMock.Setup(r => r.GetRolesAsync()).ReturnsAsync(roles);
-                    await studentFAAcademicProgressStatusesService.GetStudentFinancialAidAcademicProgressStatusesByGuidAsync(guid, false);
-                }
-
-                [TestMethod]
                 [ExpectedException(typeof(KeyNotFoundException))]
                 public async Task StudentFAAPSService_GetStudentFinancialAidAcademicProgressStatusesByGuidAsync_KeyNotFoundException()
                 {
@@ -351,7 +327,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 [TestMethod]
                 public async Task StudentFAAPSService_GetStudentFinancialAidAcademicProgressStatusesByGuidAsync_EntityAsNull()
                 {
-                    studentFAAcademicProgressStatusesRepositoryMock.Setup(s => s.GetSapResultByGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                    studentFAAcademicProgressStatusesRepositoryMock.Setup(s => s.GetSapResultByGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                     var result = await studentFAAcademicProgressStatusesService.GetStudentFinancialAidAcademicProgressStatusesByGuidAsync(guid, true);
                     Assert.IsNull(result.Id,null);
                 }

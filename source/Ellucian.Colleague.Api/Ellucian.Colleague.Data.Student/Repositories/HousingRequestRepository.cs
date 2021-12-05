@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 //using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
@@ -18,12 +18,18 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Base.Services;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class HousingRequestRepository : BaseColleagueRepository, IHousingRequestRepository
     {
+        readonly int readSize;
+        const string AllHousingRequestsRecordsCache = "AllHousingRequestsRecordKeys";
+        const int AllHousingRequestsRecordsCacheTimeout = 20;
+        RepositoryException exception = new RepositoryException();
         private static char _VM = Convert.ToChar(DynamicArray.VM);
 
         /// <summary>
@@ -37,7 +43,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
 
         }
-        
+
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Returns a tuple containing housing requests entities
@@ -48,94 +54,118 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<HousingRequest>, int>> GetHousingRequestsAsync(int offset, int limit, bool bypassCache)
         {
-            try
+
+            string selectedRecordCacheKey = CacheSupport.BuildCacheKey(AllHousingRequestsRecordsCache);
+            List<HousingRequest> housingRequests = new List<HousingRequest>();
+
+            if (limit == 0) limit = readSize;
+            int totalCount = 0;
+            var selectionCriteria = new StringBuilder();
+
+            var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                selectedRecordCacheKey,
+                "ROOM.ASSIGNMENT",
+                offset,
+                limit,
+                AllHousingRequestsRecordsCacheTimeout,
+                async () =>
+                {
+                    CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
+                    {                        
+                        criteria = "WITH RMAS.PERSON.ID NE '' AND WITH RMAS.START.DATE NE '' AND WITH RMAS.STATUS NE '' AND WITH RMAS.INTG.KEY.IDX NE '' BY.EXP RMAS.INTG.KEY.IDX"
+                    };
+                    return requirements;
+                });
+
+            if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
             {
-                List<HousingRequest> roomReqList = new List<HousingRequest>();
+                return new Tuple<IEnumerable<HousingRequest>, int>(new List<HousingRequest>(), 0);
+            }
 
-                string criteria = "WITH RMAS.PERSON.ID NE '' AND WITH RMAS.START.DATE NE '' AND WITH RMAS.STATUS NE '' AND WITH RMAS.INTG.KEY.IDX NE '' BY.EXP RMAS.INTG.KEY.IDX";
-                var rmAssignmentIds = await DataReader.SelectAsync("ROOM.ASSIGNMENT", criteria);
+            totalCount = keyCacheObject.TotalCount.Value;
 
-                var rmAssignmentIds2 = new List<string>();
-                foreach (var rmAssignmentId in rmAssignmentIds)
+            var subList = keyCacheObject.Sublist.ToArray();
+            if (subList == null || !subList.Any())
+            {
+                return new Tuple<IEnumerable<HousingRequest>, int>(new List<HousingRequest>(), 0);
+            }
+
+            var roomAssignmentContracts = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.RoomAssignment>("ROOM.ASSIGNMENT", subList);
+            if ((roomAssignmentContracts.InvalidKeys != null && roomAssignmentContracts.InvalidKeys.Any()) ||
+               roomAssignmentContracts.InvalidRecords != null && roomAssignmentContracts.InvalidRecords.Any())
+            {
+                if (roomAssignmentContracts.InvalidKeys.Any())
                 {
-                    var perposKey = rmAssignmentId.Split(_VM)[0];
-                    rmAssignmentIds2.Add(perposKey);
+                    exception.AddErrors(roomAssignmentContracts.InvalidKeys
+                        .Select(key => new RepositoryError("Bad.Data",
+                        string.Format("Unable to locate the following ROOM.ASSIGNMENT key '{0}'.", key.ToString()))));
                 }
-                var criteria2 = "WITH RMAS.PERSON.ID NE '' AND WITH RMAS.START.DATE NE '' AND WITH RMAS.STATUS NE '' AND WITH RMAS.INTG.KEY.IDX NE '' BY.EXP RMAS.INTG.KEY.IDX SAVING RMAS.INTG.KEY.IDX";     
-                var rmAssignmentIdxs = await DataReader.SelectAsync("ROOM.ASSIGNMENT", criteria2);
-
-                var keys = new List<string>();
-                var idx = 0;
-                foreach (var rmAssignmentId2 in rmAssignmentIds2)
+                if (roomAssignmentContracts.InvalidRecords.Any())
                 {
-                    keys.Add(String.Concat(rmAssignmentId2, "|", rmAssignmentIdxs.ElementAt(idx)));
-                    idx++;
+                    exception.AddErrors(roomAssignmentContracts.InvalidRecords
+                       .Select(r => new RepositoryError("Bad.Data",
+                       string.Format("Error: '{0}' ", r.Value))
+                       { SourceId = r.Key }));
                 }
-                
-                var totalCount = keys.Count();
-                keys.Sort();
-                var keysSubList = keys.Skip(offset).Take(limit).Distinct().ToArray();
+            }
 
-                if (keysSubList.Any())
+            if (roomAssignmentContracts.BulkRecordsRead != null)
+            {
+                var roomPreferencesList = roomAssignmentContracts.BulkRecordsRead.Select(i => i.RmasPreference).Distinct().ToArray();
+
+                //Then get all room preferences based on the Id's from room assignment.
+                var roomPreferences = await DataReader.BulkReadRecordAsync<RoomPreferences>("ROOM.PREFERENCES", roomPreferencesList);
+
+                Dictionary<string, string> dict = null;
+                try
                 {
-                    var subList = new List<string>();
+                    dict = await GetGuidsCollectionAsync(subList);
+                }
+                catch (Exception ex)
+                {
+                    // Suppress any possible exception with missing primary GUIDs.  We will report any missing GUIDs in a collection as
+                    // we process the list of room assignments                
+                }
+                if (dict == null || !dict.Any())
+                {
+                    exception.AddError(new RepositoryError("Bad.Data", "GUIDs not found for ROOM.ASSIGNMENT with RMAS.INTG.KEY.IDX."));
+                    throw exception;
+                }
 
-                    foreach (var key in keysSubList)
+                foreach (var roomAssignmentContract in roomAssignmentContracts.BulkRecordsRead)
+                {
+                    if (roomAssignmentContract != null)
                     {
-                        var applKey = key.Split('|')[0];
-                        subList.Add(applKey);
-                    }
-                    var rmAssignmentDataContracts = await DataReader.BulkReadRecordAsync<RoomAssignment>("ROOM.ASSIGNMENT", subList.Distinct().ToArray());
-                    if (rmAssignmentDataContracts == null || !rmAssignmentDataContracts.Any())
-                    {
-                        return new Tuple<IEnumerable<HousingRequest>, int>(roomReqList, 0);
-                    }
 
-                    var rmPrefList = rmAssignmentDataContracts.Select(i => i.RmasPreference).Distinct().ToArray();
-
-                    //Then get all room preferences based on the Id's from room assignment.
-                    var roomPreferences = await DataReader.BulkReadRecordAsync<RoomPreferences>("ROOM.PREFERENCES", rmPrefList);
-
-                    foreach (var key in keysSubList)
-                    {
-                        var splitKey = key.Split('|');
-                        var rmAssignmentKey = splitKey[0];
-                        var rmReqKey = splitKey[1];
-
-                        var rmAssignmentDataContract = rmAssignmentDataContracts.FirstOrDefault(ra => ra.Recordkey == rmAssignmentKey);
-                        if (rmAssignmentDataContract == null)
+                        try
                         {
-                            throw new KeyNotFoundException(string.Format("No housing request was found for id {0}.", rmAssignmentKey));
+                            housingRequests.Add(BuildHousingRequest(roomAssignmentContract, dict, roomPreferences));
                         }
-
-
-                        if (!string.IsNullOrEmpty(rmAssignmentDataContract.RmasIntgKeyIdx) && rmReqKey.Equals(rmAssignmentDataContract.RmasIntgKeyIdx))
+                        catch (Exception e)
                         {
-                            try
+                            exception.AddError(new RepositoryError("Bad.Data", e.Message)
                             {
-                                var rmRequestGuidInfo = await GetGuidFromRecordInfoAsync("ROOM.ASSIGNMENT", rmAssignmentKey, "RMAS.INTG.KEY.IDX", rmAssignmentDataContract.RmasIntgKeyIdx);
-                                if (string.IsNullOrEmpty(rmRequestGuidInfo))
-                                {
-                                    throw new KeyNotFoundException(string.Format("No housing request was found for id {0}.", rmAssignmentKey));
-                                }
-                                rmAssignmentDataContract.RecordGuid = rmRequestGuidInfo;
-                                HousingRequest roomRequest = BuildHousingRequest(rmAssignmentDataContract, roomPreferences);
-                                roomReqList.Add(roomRequest);
-                            }catch(RepositoryException e)
-                            {
-                                throw new ArgumentException(e.Message);
-                            }
+                                SourceId = roomAssignmentContract.Recordkey,
+                                Id = roomAssignmentContract.RecordGuid
+                            });
                         }
                     }
                 }
+            }
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
 
-                return roomReqList.Any() ? new Tuple<IEnumerable<HousingRequest>, int>(roomReqList, totalCount) :
-                                           new Tuple<IEnumerable<HousingRequest>, int>(roomReqList, 0);
-            }
-            catch (Exception)
-            {                
-                throw;
-            }
+            return housingRequests.Any() ?
+               new Tuple<IEnumerable<Domain.Student.Entities.HousingRequest>, int>(housingRequests, totalCount) :
+               new Tuple<IEnumerable<Domain.Student.Entities.HousingRequest>, int>(new List<Domain.Student.Entities.HousingRequest>(), 0);
+
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -146,56 +176,54 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns></returns>
         public async Task<HousingRequest> GetHousingRequestByGuidAsync(string guid)
         {
+            var entity = await this.GetRecordInfoFromGuidAsync(guid);
+
+            if (entity == null)
+            {
+                throw new KeyNotFoundException(string.Format("No housing-requests was found for id {0}", guid));
+            }
+            if (entity.Entity != "ROOM.ASSIGNMENT")
+            {
+                exception.AddError(new RepositoryError("GUID.Wrong.Type", "GUID '" + guid + "' has different entity, '" + entity.Entity + "', than expected, 'ROOM.ASSIGNMENT'"));
+                throw exception;
+            }
+            var roomAssignmentId = entity.PrimaryKey;
+            if (string.IsNullOrWhiteSpace(roomAssignmentId))
+            {
+                throw new KeyNotFoundException(string.Format("No housing-requests was found for id {0}", guid));
+            }
+            var roomAssignmentDataContract = await DataReader.ReadRecordAsync<DataContracts.RoomAssignment>("ROOM.ASSIGNMENT", roomAssignmentId);
+            if (roomAssignmentDataContract == null)
+            {
+                throw new KeyNotFoundException(string.Format("Unable to locate room assignment record with id of '{0}'", roomAssignmentId));
+            }
+            //Then get all room preferences based on the Id's from room assignment.
+            
+            var roomPreferencesDataContract = await DataReader.BulkReadRecordAsync<RoomPreferences>("ROOM.PREFERENCES", new string[] { roomAssignmentDataContract.RmasPreference });
+
+            Dictionary<string, string> dict = null;
             try
             {
-                if (string.IsNullOrEmpty(guid))
-                {
-                    throw new ArgumentNullException("Guid is required.");
-                }
-                var housingRequestId = await this.GetHousingRequestKeyAsync(guid);
-
-                if (string.IsNullOrEmpty(housingRequestId))
-                {
-                    throw new KeyNotFoundException(string.Format("No housing request was found for guid {0}.", guid));
-                }
-                RoomAssignment housingReqDataContract = null;
-                try
-                {
-                    housingReqDataContract = await DataReader.ReadRecordAsync<RoomAssignment>("ROOM.ASSIGNMENT", housingRequestId);
-                }
-                catch(Exception e)
-                {
-                    throw new KeyNotFoundException(string.Format("No housing request was found for guid {0}.", guid));
-                }
-
-                if (housingReqDataContract == null)
-                {
-                    throw new KeyNotFoundException(string.Format("No housing request was found for guid {0}.", guid));
-                }
-
-                var rmRequestGuidInfo = await GetGuidFromRecordInfoAsync("ROOM.ASSIGNMENT", housingReqDataContract.Recordkey, "RMAS.INTG.KEY.IDX", housingReqDataContract.RmasIntgKeyIdx);
-                if (string.IsNullOrEmpty(rmRequestGuidInfo))
-                {
-                    throw new KeyNotFoundException(string.Format("No housing request was found for guid {0}.", guid));
-                }
-
-                if (!rmRequestGuidInfo.Equals(guid, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new KeyNotFoundException(string.Format("No housing request was found for guid {0}.", guid));
-                }
-                housingReqDataContract.RecordGuid = rmRequestGuidInfo;
-
-                //Then get all room preferences based on the Id's from room assignment.
-                var roomPreferences = await DataReader.BulkReadRecordAsync<RoomPreferences>("ROOM.PREFERENCES", new string[] { housingReqDataContract.RmasPreference });                
-
-                HousingRequest housingRequest = BuildHousingRequest(housingReqDataContract, roomPreferences);
-
-                return housingRequest;
+                dict = await GetGuidsCollectionAsync(new List<string>() { entity.PrimaryKey });
             }
-            catch (Exception)
-            {                
-                throw;
+            catch (Exception ex)
+            { 
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message));
+                exception.AddError(new RepositoryError("Bad.Data", "Guids not found for ROOM.ASSIGNMENT with RMAS.INTG.KEY.IDX."));
+                throw exception;
             }
+            if (dict == null || !dict.Any())
+            {
+                exception.AddError(new RepositoryError("Bad.Data", "Guids not found for ROOM.ASSIGNMENT with RMAS.INTG.KEY.IDX."));
+                throw exception;
+            }
+
+            HousingRequest housingRequest = BuildHousingRequest(roomAssignmentDataContract, dict, roomPreferencesDataContract);
+            
+            if (exception != null && exception.Errors.Any())
+                throw exception;
+
+            return housingRequest;            
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -358,27 +386,37 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <param name="housingReqRec"></param>
         /// <param name="roomPreferences"></param>
         /// <returns></returns>
-        private HousingRequest BuildHousingRequest(RoomAssignment roomAssignmentDataContract, Collection<RoomPreferences> roomPreferences)
+        private HousingRequest BuildHousingRequest(RoomAssignment roomAssignmentDataContract, Dictionary<string, string> dict, Collection<RoomPreferences> roomPreferences)
         {
-            var roomPreference = roomPreferences.FirstOrDefault(i => i.Recordkey.Equals(roomAssignmentDataContract.RmasPreference, StringComparison.OrdinalIgnoreCase));
-
-            var status = BuildStatus(roomAssignmentDataContract.RmasStatusesEntityAssociation);
-
-            HousingRequest housingRequest = new HousingRequest(roomAssignmentDataContract.RecordGuid, roomAssignmentDataContract.Recordkey,
-                roomAssignmentDataContract.RmasStartDate.HasValue ? roomAssignmentDataContract.RmasStartDate : default(DateTime?), status)
+            HousingRequest housingRequest = null;
+            string guid = string.Empty;
+            string key = string.Concat(roomAssignmentDataContract.Recordkey, "|", roomAssignmentDataContract.Recordkey);
+            dict.TryGetValue(key, out guid);
+            if (string.IsNullOrEmpty(guid))
             {
-                EndDate = roomAssignmentDataContract.RmasEndDate,
-                LotteryNo = roomAssignmentDataContract.RmasLotteryNo,
-                PersonId = roomAssignmentDataContract.RmasPersonId,
-                Term = roomAssignmentDataContract.RmasTerm,
-                RoomPreferences = roomPreference == null ? null : BuildRoomPreferences(roomPreference),
-                RoomCharacerstics = roomPreference == null ? null : BuildRoomCharateristics(roomPreference),
-                RoommateCharacteristicPreferences = roomPreference == null ? null : BuildRoomateCharacteristicPreferences(roomPreference),
-                RoommatePreferences = roomPreference == null ? null : BuildRoommatePreference(roomPreference),
-                FloorCharacteristic = roomPreference == null ? null : roomPreference.RmprFloorPreference,
-                FloorCharacteristicReqd = roomPreference == null ? null : roomPreference.RmprFloorReqdFlag
-            };
+                exception.AddError(new RepositoryError("Bad.Data", string.Concat("Guid not found for ROOM.ASSIGNMENT " + roomAssignmentDataContract.Recordkey)));
+            }
+            else
+            {
+                var roomPreference = roomPreferences.FirstOrDefault(i => i.Recordkey.Equals(roomAssignmentDataContract.RmasPreference, StringComparison.OrdinalIgnoreCase));
 
+                var status = BuildStatus(roomAssignmentDataContract.RmasStatusesEntityAssociation);
+
+                housingRequest = new HousingRequest(guid, roomAssignmentDataContract.Recordkey,
+                    roomAssignmentDataContract.RmasStartDate.HasValue ? roomAssignmentDataContract.RmasStartDate : default(DateTime?), status)
+                {
+                    EndDate = roomAssignmentDataContract.RmasEndDate,
+                    LotteryNo = roomAssignmentDataContract.RmasLotteryNo,
+                    PersonId = roomAssignmentDataContract.RmasPersonId,
+                    Term = roomAssignmentDataContract.RmasTerm,
+                    RoomPreferences = roomPreference == null ? null : BuildRoomPreferences(roomPreference),
+                    RoomCharacerstics = roomPreference == null ? null : BuildRoomCharateristics(roomPreference),
+                    RoommateCharacteristicPreferences = roomPreference == null ? null : BuildRoomateCharacteristicPreferences(roomPreference),
+                    RoommatePreferences = roomPreference == null ? null : BuildRoommatePreference(roomPreference),
+                    FloorCharacteristic = roomPreference == null ? null : roomPreference.RmprFloorPreference,
+                    FloorCharacteristicReqd = roomPreference == null ? null : roomPreference.RmprFloorReqdFlag
+                };                
+            }
             return housingRequest;
         }
 
@@ -609,6 +647,53 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
 
             return rmmatePrefs.Any() ? rmmatePrefs : null;
+        }
+
+        /// <summary>
+        /// Using a collection of ids with guids
+        ///  get a dictionary collection of associated guids
+        /// </summary>
+        /// <param name="ids">collection of ids</param>
+        /// <returns>Dictionary consisting of a room.assignment.id with guids from secondary key</returns>
+        private async Task<Dictionary<string, string>> GetGuidsCollectionAsync(IEnumerable<string> ids)
+        {
+            if (ids == null || !ids.Any())
+            {
+                return new Dictionary<string, string>();
+            }
+            var guidCollection = new Dictionary<string, string>();
+            try
+            {
+                var guidLookup = ids
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct().ToList()
+                    .ConvertAll(key => new RecordKeyLookup("ROOM.ASSIGNMENT", key,
+                    "RMAS.INTG.KEY.IDX", key, false))
+                    .ToArray();
+
+                var recordKeyLookupResults = await DataReader.SelectAsync(guidLookup);
+
+                if ((recordKeyLookupResults != null) && (recordKeyLookupResults.Any()))
+                {
+                    foreach (var recordKeyLookupResult in recordKeyLookupResults)
+                    {
+                        if (recordKeyLookupResult.Value != null)
+                        {
+                            var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                            if (!guidCollection.ContainsKey(splitKeys[1]))
+                            {
+                                guidCollection.Add(string.Concat(splitKeys[1], "|", splitKeys[2]), recordKeyLookupResult.Value.Guid);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format("Error occured while getting guids for {0}.", "ROOM.ASSIGNMENT"), ex);
+            }
+
+            return guidCollection;
         }
     }
 }

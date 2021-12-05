@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -55,6 +55,22 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         {
             try
             {
+                // We need to exclude any AP Types where the source does not equal Regular Accounts Payable
+                // (ie - exclude Accounts Receivable and PayrollTax.Deductions)
+                var apTypesToInclude = string.Empty;
+                var apTypes = await GetValidApTypes();
+                if (apTypes != null || apTypes.Any())
+                {
+                    foreach (var type in apTypes)
+                    {
+                        apTypesToInclude = string.Concat(apTypesToInclude, "'", type, "'");
+                    }
+                }
+                else
+                {
+                    return new Tuple<IEnumerable<PaymentTransaction>, int>(new List<PaymentTransaction>(), 0);
+                }
+
                 int totalCount = 0;
                 string[] subList = null;
                 string paymentCacheKey = CacheSupport.BuildCacheKey(AllPaymentTransactionsFilterCache, documentId, invoiceOrRefund.ToString(), docNumber, refPoDoc, refBpoDoc, refRecDoc);
@@ -71,8 +87,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                        AllPaymentTransactionsCacheTimeout,
                        async () =>
                        {
-                           var checkCriteria = "";
-                           var voucherCriteria = "WITH VOU.PMT.TXN.INTG.IDX NE ''";
+                           var checkCriteria = string.Concat("WITH CHK.AP.TYPE = ", apTypesToInclude);
+                          // var voucherCriteria = "WITH VOU.PMT.TXN.INTG.IDX NE ''";
+                           var voucherCriteria = string.Concat("WITH VOU.PMT.TXN.INTG.IDX NE '' AND WITH VOU.AP.TYPE EQ ", apTypesToInclude);
+                          
                            var checkIds = new List<string>();
                            var voucherIds = new List<string>();
                            var checksLimitingKeys = new List<string>();
@@ -83,7 +101,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                            {
                                if (invoiceOrRefund == InvoiceOrRefund.Invoice)
                                {
-                                   checkCriteria = string.Format("WITH CHK.VOUCHERS.IDS = '{0}'", documentId);
+                                   checkCriteria = string.Format("{0} AND WITH CHK.VOUCHERS.IDS = '{1}'", checkCriteria, documentId);
 
                                }
                                else if (invoiceOrRefund == InvoiceOrRefund.Refund)
@@ -102,20 +120,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                            // PO Id filter
                            if ((refPoDoc != null && refPoDoc.Any()))
                            {
-                               //voucher criteria is commented out as there is no referenceDocument filter for refund.
-                               //var vouPoCriteria = string.Empty;
-                               //foreach (var value in refPoDoc)
-                               //{
-                               //    if (string.IsNullOrEmpty(vouPoCriteria))
-                               //    {
-                               //        vouPoCriteria = String.Format("WITH VOU.PO.NO EQ '{0}'", value);
-                               //    }
-                               //    else
-                               //    {
-                               //        vouPoCriteria = string.Format("{0} AND WITH VOU.PO.NO EQ '{1}'", vouPoCriteria, value);
-                               //    }
-                               //}
-                               //voucherCriteria = string.Format("{0} AND {1}", voucherCriteria, vouPoCriteria);
                                voucherLimitingKeys = new List<string>() { "x" };
                                //check criteria
                                var posCri = string.Format("WITH VOU.PO.NO EQ {0}", string.Join(" ", refPoDoc.Select(a => string.Format("'{0}'", a))));
@@ -140,20 +144,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                            // BPO Id filter
                            if ((refBpoDoc != null && refBpoDoc.Any()))
                            {
-                               //voucher criteria is commented out as there is no referenceDocument filter for refund.
-                               //var vouBpoCriteria = string.Empty;
-                               //foreach (var value in refBpoDoc)
-                               //{
-                               //    if (string.IsNullOrEmpty(vouBpoCriteria))
-                               //    {
-                               //        vouBpoCriteria = String.Format("WITH VOU.BPO.ID EQ '{0}'", value);
-                               //    }
-                               //    else
-                               //    {
-                               //        vouBpoCriteria = string.Format("{0} AND WITH VOU.BPO.ID EQ '{1}'", vouBpoCriteria, value);
-                               //    }
-                               //}
-                               //voucherCriteria = string.Format("{0} AND {1}", voucherCriteria, vouBpoCriteria);
                                voucherLimitingKeys = new List<string>() { "x" };
                                //check criteria
                                var bposCri = string.Format("WITH VOU.BPO.ID EQ {0}", string.Join(" ", refBpoDoc.Select(a => string.Format("'{0}'", a))));
@@ -179,20 +169,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                            // recurring voucher filter
                            if ((refRecDoc != null && refRecDoc.Any()))
                            {
-                               //voucher criteria is commented out as there is no referenceDocument filter for refund.
-                               //var vouRecCriteria = string.Empty;
-                               //foreach (var value in refRecDoc)
-                               //{
-                               //    if (string.IsNullOrEmpty(vouRecCriteria))
-                               //    {
-                               //        vouRecCriteria = String.Format("WITH VOU.RCVS.ID EQ '{0}'", value);
-                               //    }
-                               //    else
-                               //    {
-                               //        vouRecCriteria = string.Format("{0} AND WITH VOU.RCVS.ID EQ '{1}'", vouRecCriteria, value);
-                               //    }
-                               //}
-                               //voucherCriteria = string.Format("{0} AND {1}", voucherCriteria, vouRecCriteria);
                                voucherLimitingKeys = new List<string>() { "x" };
                                //check criteria
                                var recVouCri = string.Format("WITH VOU.RCVS.ID EQ {0}", string.Join(" ", refRecDoc.Select(a => string.Format("'{0}'", a))));
@@ -276,18 +252,22 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
         }
 
-        //private string ConvertArrayToString(List<string> values)
-        //{
-        //    string value = string.Empty;
-        //    if (values!= null && values.Any())
-        //    {
-        //        foreach(var val in values)
-        //        {
-        //            value = string.Concat(value, "'", val, "'");
-        //        }
-        //    }
-        //    return value;
-        //}
+
+        /// <summary>
+        /// returns a string of valid AP types
+        /// </summary>
+        /// <returns>list of valid AP Types for vouchers</returns>
+        private async Task<List<string>> GetValidApTypes()
+        {
+            var apTypes = new List<string>();
+            apTypes = await GetOrAddToCacheAsync<List<string>>("AllPaymentTypesValidAPTypes",
+               async () =>
+               {
+                   apTypes = (await DataReader.SelectAsync("AP.TYPES", "WITH APT.SOURCE EQ 'R'")).ToList();
+                   return apTypes;
+               }, Level1CacheTimeoutValue);
+            return apTypes;
+        }
 
         /// <summary>
         /// Get a single voucher using a GUID
@@ -366,6 +346,23 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 throw new RepositoryException(string.Concat("The GUID specified: ", guid, " for record key ", foundEntry.Value.PrimaryKey, " from file: VOUCHERS is not valid for payment-transactions. "));
             }
+            
+            if (foundEntry.Value.Entity.Equals("VOUCHERS", StringComparison.OrdinalIgnoreCase))
+            {
+                var voucher = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.ColleagueFinance.DataContracts.Vouchers>(foundEntry.Value.PrimaryKey);
+                if (voucher == null)
+                {
+                    throw new ArgumentException("The VOUCHERS specified for record key " + voucher.Recordkey + " is not found. ");
+                }
+                
+                var apTypesToInclude = await GetValidApTypes();
+
+                if ((apTypesToInclude != null) && (!(apTypesToInclude.ToList().Contains(voucher.VouApType))))
+                {
+                    throw new RepositoryException("The guid specified " + guid + " for record key " + voucher.Recordkey + " from file VOUCHERS is not valid for payment-transactions.");
+                }
+            }
+
             return new Tuple<string, string>(foundEntry.Value.PrimaryKey, foundEntry.Value.Entity);
         }
 
@@ -387,11 +384,17 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 throw new RepositoryException("ID is required to get a voucher.");
             }
 
+            var apTypes = await GetValidApTypes();
             if (entity == "VOUCHERS")
             {
                 // Now we have an ID, so we can read the record
                 var voucher = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.ColleagueFinance.DataContracts.Vouchers>(id);
                 if (voucher == null)
+                {
+                    throw new KeyNotFoundException(string.Concat("Record not found for voucher with ID ", id, "invalid."));
+                }
+                // Make sure the voucher has the proper AP type defined
+                if (string.IsNullOrEmpty(voucher.VouApType) || !apTypes.Contains(voucher.VouApType))
                 {
                     throw new KeyNotFoundException(string.Concat("Record not found for voucher with ID ", id, "invalid."));
                 }
@@ -433,6 +436,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     vouchers = (await DataReader.BulkReadRecordAsync<Vouchers>(check.ChkVouchersIds.ToArray())).ToList();
                     if (vouchers != null && vouchers.Any())
                     {
+                        // Make sure the voucher has the proper AP type defined
+                        foreach (var voucher in vouchers)
+                        {
+                            if (string.IsNullOrEmpty(voucher.VouApType) || !apTypes.Contains(voucher.VouApType))
+                            {
+                                throw new KeyNotFoundException(string.Concat("Record not found for check with ID ", id, "invalid."));
+                            }
+                        }
                         var itemsVouSubList = vouchers.Where(cv => cv.VouItemsId != null && cv.VouItemsId.Any())
                        .SelectMany(cv => cv.VouItemsId).Distinct();
                         itemsData = await DataReader.BulkReadRecordAsync<Items>(itemsVouSubList.ToArray());
@@ -1140,7 +1151,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         }
 
         /// <summary>
-        /// Using a collection of purchase-order guids, 
+        /// Get a collection of guids for parameter fileName 
         /// </summary>
         /// <param name="ids">collection of  ids</param>
         /// <returns>Dictionary consisting of a ids (key) and guids (value)</returns>

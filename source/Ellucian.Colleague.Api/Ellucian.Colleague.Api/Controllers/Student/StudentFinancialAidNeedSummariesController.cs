@@ -1,10 +1,11 @@
-﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
@@ -51,7 +52,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Return all StudentFinancialAidNeedSummaries
         /// </summary>
         /// <returns>List of StudentFinancialAidNeedSummaries</returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(StudentPermissionCodes.ViewStudentFinancialAidNeedSummaries)]
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
@@ -71,6 +72,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                StudentFinancialAidNeedSummaryService.ValidatePermissions(GetPermissionsMetaData());
                 var pageOfItems = await StudentFinancialAidNeedSummaryService.GetAsync(page.Offset, page.Limit, bypassCache);
 
                 AddEthosContextProperties(
@@ -117,7 +119,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="id">GUID to desired StudentFinancialAidNeedSummaries</param>
         /// <returns>A single StudentFinancialAidNeedSummaries object</returns>
-        [HttpGet,  CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        [HttpGet,  CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewStudentFinancialAidNeedSummaries)]
         public async Task<Dtos.StudentFinancialAidNeedSummary> GetStudentFinancialAidNeedSummariesByGuidAsync(string id)
         {
             var bypassCache = false;
@@ -136,6 +138,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                StudentFinancialAidNeedSummaryService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                  await StudentFinancialAidNeedSummaryService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                  await StudentFinancialAidNeedSummaryService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),

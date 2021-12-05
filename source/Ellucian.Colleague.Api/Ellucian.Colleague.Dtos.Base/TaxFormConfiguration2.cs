@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -36,5 +36,10 @@ namespace Ellucian.Colleague.Dtos.Base
         /// For this tax form type, define if the user may view their form online when they have not consented to ONLY viewing their form online.
         /// </summary>
         public bool IsBypassingConsentPermitted { get; set; }
+
+        /// <summary>
+        /// For the tax form, show or hide the consent information on the view.
+        /// </summary>
+        public bool HideConsent { get; set; }
     }
 }

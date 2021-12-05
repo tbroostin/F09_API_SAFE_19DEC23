@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Base.Exceptions;
@@ -253,10 +253,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             if (addAuthorizations == null)
             {
-                logger.Info(string.Format("No add authorizations retrieved for student {0}", studentId));
+                logger.Error(string.Format("No add authorizations retrieved for student {0}", studentId));
                 return new List<AddAuthorization>();
             }
-            logger.Info(string.Format("Retrieved {0} add authorizations for student {1}", addAuthorizations.Count(), studentId));
+            logger.Error(string.Format("Retrieved {0} add authorizations for student {1}", addAuthorizations.Count(), studentId));
             List<AddAuthorization> result = BuildAddAuthorizations(addAuthorizations.ToList());
             return result;
         }

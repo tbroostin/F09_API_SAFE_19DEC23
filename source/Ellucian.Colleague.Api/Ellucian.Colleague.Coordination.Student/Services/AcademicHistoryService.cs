@@ -1261,6 +1261,54 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
+        /// Retrieves the academic history for the student. 
+        /// This retrieves all the raw academic credits which includes:
+        /// academic credits that were imported directly without student being registered to existing section.
+        /// academic credits that were transfer, dropped, withdrawn or non-course credits based upon filter and includeDrop parameters.
+        /// This differs from earlier versions that we read STUDENT.ACAD.CRED file for a student whereas in other versions we read PERSON.ST file to retrieve 
+        /// pointers to STC record. Therefore earlier versions did not return the acad credits that were imported through any legacy system.
+        /// </summary>
+        /// <param name="studentId">Id of the student</param>
+        /// <param name="bestFit">If true, places all academic credits in a term</param>
+        /// <param name="filter">If true, filter academic credits for certain statuses</param>
+        /// <param name="term">(Optional) used to return only a specific term of data.</param>
+        /// <param name="includeDrops">If true, include dropped academic credits</param>
+        /// <returns><see cref="AcademicHistory4">Academic History</see> for the student.</returns>
+        public async Task<Ellucian.Colleague.Dtos.Student.AcademicHistory4> GetAcademicHistory5Async(string studentId, bool bestFit = false, bool filter = true, string term = null, bool includeDrops = false)
+        {
+            Dtos.Student.AcademicHistory4 academicHistory = null;
+            if (string.IsNullOrEmpty(studentId))
+            {
+                string message = "studentId must be provided in order to retrieve student's academic history";
+                logger.Error(message);
+                throw new ArgumentNullException("studentId", message);
+            }
+            try
+            {
+                Dictionary<string, List<AcademicCredit>> studentAcademicCreditsByStudentId = await _academicCreditRepository.GetAcademicCreditByStudentIdsAsync(new List<string>() { studentId }, bestFit, filter, includeDrops);
+                if(studentAcademicCreditsByStudentId==null || !studentAcademicCreditsByStudentId.ContainsKey(studentId))
+                {
+                    throw new Exception("Either student academic credits collection was empty or it did no have the student as a key in collection");
+                }
+                academicHistory = await ConvertAcademicCreditsToAcademicHistoryDto4Async(studentId, studentAcademicCreditsByStudentId[studentId]);
+
+                // Filter to return only one specific term of data if we have a term filter set
+                if (!string.IsNullOrEmpty(term) && academicHistory!=null && academicHistory.AcademicTerms!=null)
+                {
+                    List<Dtos.Student.AcademicTerm4> filteredTerms= academicHistory.AcademicTerms.Where(a => a.TermId != null && a.TermId == term).ToList();
+                    academicHistory.AcademicTerms = filteredTerms;
+                }
+            }
+            catch(Exception ex)
+            {
+                string message = string.Format("Couldn't retrieve student's academic history for the student - {0}", studentId);
+                logger.Error(ex, message);
+                throw;
+            }
+            return academicHistory;
+        }
+
+        /// <summary>
         /// Given student and academic credits, builds academic history dto
         /// </summary>
         /// <param name="student">Student entity, if needed for checking permissions</param>
@@ -1635,8 +1683,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// Also returns list of invalid academic credits Ids that are missing from STUDENT.ACAD.CRED file.
         /// </summary>
         /// <param name="criteria">Criteria that contains a list of sections and some other options</param>
+        /// <param name="useCache">Use cached course section data when retrieving academic credit records of specified section(s)</param>
         /// <returns><see cref="AcademicCreditsWithInvalidKeys">AcademicCreditsWithInvalidKeys</see> Dtos</returns>
-        public async Task<Dtos.Student.AcademicCreditsWithInvalidKeys> QueryAcademicCreditsWithInvalidKeysAsync(Dtos.Student.AcademicCreditQueryCriteria criteria)
+        public async Task<Dtos.Student.AcademicCreditsWithInvalidKeys> QueryAcademicCreditsWithInvalidKeysAsync(Dtos.Student.AcademicCreditQueryCriteria criteria, bool useCache = true)
         {
             if (criteria == null)
             {
@@ -1652,7 +1701,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             AcademicCreditsWithInvalidKeys academicCreditsWithInvalidKeys = new AcademicCreditsWithInvalidKeys(new List<Domain.Student.Entities.AcademicCredit>(), new List<string>());
 
             // Only include any sections for which the requestor is an assigned faculty.  There none return none instead of a permission exception.
-            var sections = (await _sectionRepository.GetCachedSectionsAsync(sectionIds, false));
+            IEnumerable<Section> sections = null;
+            if (useCache)
+            {
+                sections = (await _sectionRepository.GetCachedSectionsAsync(sectionIds, false));
+            } else
+            {
+                sections = (await _sectionRepository.GetNonCachedSectionsAsync(sectionIds, false));
+            }
             if (sections != null && sections.Any())
             {
                 string requestor = CurrentUser.PersonId;

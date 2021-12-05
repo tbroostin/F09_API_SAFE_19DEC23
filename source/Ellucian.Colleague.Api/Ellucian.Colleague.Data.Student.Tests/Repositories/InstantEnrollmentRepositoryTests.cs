@@ -542,7 +542,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
 
                 transManagerMock.Setup(transInv => transInv.ExecuteAsync<InstantEnrollmentPaymentGatewayRegRequest, InstantEnrollmentPaymentGatewayRegResponse>(It.Is<InstantEnrollmentPaymentGatewayRegRequest>(
-                    rq => rq.StudentId == "S1"))).ReturnsAsync(null);
+                    rq => rq.StudentId == "S1"))).ReturnsAsync(() => null);
                 InstantEnrollmentPaymentGatewayRegistration req = new InstantEnrollmentPaymentGatewayRegistration("S1", null, "PROG", "CAT",
                         new List<InstantEnrollmentRegistrationBaseSectionToRegister>() { new InstantEnrollmentRegistrationBaseSectionToRegister("SID1", 1) }, 100, "CC", "URL", "Gldistr", "provAcct", "ConvFee", 23.50m, "ConvGL");
                 await repository.StartInstantEnrollmentPaymentGatewayTransactionAsync(req);
@@ -678,7 +678,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task InstantEnrollmentRepository_GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync_null_ctx_response()
             {
                 transManagerMock.Setup(transInv => transInv.ExecuteAsync<InstantEnrollmentBuildAcknowledgementParagraphRequest, InstantEnrollmentBuildAcknowledgementParagraphResponse>(It.IsAny<InstantEnrollmentBuildAcknowledgementParagraphRequest>())).
-                    ReturnsAsync(null);
+                    ReturnsAsync(() => null);
                 var request = new InstantEnrollmentPaymentAcknowledgementParagraphRequest("0001234", "0004567");
                 var text = await repository.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
             }
@@ -1054,7 +1054,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 transManagerMock.Setup<Task<Transactions.GetPersonMatchInstEnrlResponse>>(
                     manager => manager.ExecuteAsync<Transactions.GetPersonMatchInstEnrlRequest, Transactions.GetPersonMatchInstEnrlResponse>(
                         It.IsAny<Transactions.GetPersonMatchInstEnrlRequest>())
-                    ).ReturnsAsync(null);
+                    ).ReturnsAsync(() => null);
 
                 repository = new InstantEnrollmentRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 

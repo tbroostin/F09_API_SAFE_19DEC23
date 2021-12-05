@@ -18,7 +18,6 @@ using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Base.Transactions;
 using Ellucian.Web.Http.Configuration;
-using Ellucian.Colleague.Domain.Base.Services;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 {
@@ -534,7 +533,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string>())).ReturnsAsync(voucherIds);
                 dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(voucherIds);
                 dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(voucherIds);
-                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Vouchers>("VOUCHERS", It.IsAny<string[]>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Vouchers>("VOUCHERS", It.IsAny<string[]>(), true)).ReturnsAsync(() => null);
 
                 dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
                 var purchaseOrder = new PurchaseOrders() { PoNo = "P0000001" };
@@ -607,7 +606,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
                 dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
                 var purchaseOrder = new PurchaseOrders() { PoNo = "P0000001" };
-                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<PurchaseOrders>("PURCHASE.ORDERS", It.IsAny<string[]>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<PurchaseOrders>("PURCHASE.ORDERS", It.IsAny<string[]>(), true)).ReturnsAsync(() => null);
                 dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Items>("ITEMS", It.IsAny<string[]>(), true)).ReturnsAsync(this.itemsDataContracts);
 
                 GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
@@ -677,7 +676,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
                 dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
                 var purchaseOrder = new RcVouSchedules() { Recordkey = "0000002", RcvsRcVoucher = "R0002" };
-                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<RcVouSchedules>("RC.VOU.SCHEDULES", It.IsAny<string[]>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<RcVouSchedules>("RC.VOU.SCHEDULES", It.IsAny<string[]>(), true)).ReturnsAsync(() => null);
                 dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Items>("ITEMS", It.IsAny<string[]>(), true)).ReturnsAsync(this.itemsDataContracts);
 
                 GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
@@ -720,7 +719,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             {
 
                 List<string> rcVouSchedulesIds = new List<string>();
-
+                string[] itemsId = { "1", "2" };
                 Collection<DataContracts.Vouchers> dataContractVouchers = new Collection<DataContracts.Vouchers>();
                 RcVouSchedules rcVouSched = new RcVouSchedules();
 
@@ -762,6 +761,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 var purchaseOrder = new PurchaseOrders() { PoNo = "P0000001" };
                 dataReaderMock.Setup(repo => repo.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).ReturnsAsync(purchaseOrder);
                 dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Items>("ITEMS", It.IsAny<string[]>(), true)).ReturnsAsync(this.itemsDataContracts);
+                dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Items>(itemsId, true)).ReturnsAsync(this.itemsDataContracts);
 
                 GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
                 {
@@ -804,12 +804,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         {
             dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string>())).ReturnsAsync(voucherIds);
             dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
-            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>("1", true)).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>("1", true)).ReturnsAsync(() => null);
 
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
 
             transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
             var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, "1");
             Assert.AreEqual(0, accountsPayables.Item1.Count());
@@ -829,7 +829,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
 
             transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
             var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, "1");
             Assert.AreEqual(0, accountsPayables.Item1.Count());
@@ -849,7 +849,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
 
             transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
             var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, "1");
             Assert.AreEqual(0, accountsPayables.Item1.Count());
@@ -870,7 +870,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
 
             transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
             var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, "1");
             Assert.AreEqual(0, accountsPayables.Item1.Count());
@@ -890,7 +890,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
 
             transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
             var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, "1");
             Assert.AreEqual(0, accountsPayables.Item1.Count());
@@ -908,10 +908,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             voucherDataContract.VouStatus = new List<string> { "O" };
             voucherDataContract.VouVendor = "123";
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
-            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Base.DataContracts.Person>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Base.DataContracts.Person>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(() => null);
 
             transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
             var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, "1");
             Assert.AreEqual(0, accountsPayables.Item1.Count());
@@ -931,10 +931,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
 
-            dataReaderMock.Setup(repo => repo.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<PurchaseOrders>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
 
             transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
             var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, "1");
             Assert.AreEqual(0, accountsPayables.Item1.Count());
@@ -955,10 +955,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
 
-            dataReaderMock.Setup(repo => repo.ReadRecordAsync<RcVouSchedules>(It.IsAny<string>(), true)).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<RcVouSchedules>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
 
             transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
             var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, "1");
             Assert.AreEqual(0, accountsPayables.Item1.Count());
@@ -970,12 +970,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         {
             dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string>())).ReturnsAsync(voucherIds);
             dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
-            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Vouchers>("VOUCHERS", It.IsAny<string[]>(), true)).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Vouchers>("VOUCHERS", It.IsAny<string[]>(), true)).ReturnsAsync(() => null);
 
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
 
             transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
             var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, It.IsAny<string>());
             Assert.AreEqual(0, accountsPayables.Item1.Count());
@@ -987,12 +987,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         {
             dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string>())).ReturnsAsync(voucherIds);
             dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[0]);
-            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Vouchers>("VOUCHERS", It.IsAny<string[]>(), true)).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Vouchers>("VOUCHERS", It.IsAny<string[]>(), true)).ReturnsAsync(() => null);
 
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), true)).ReturnsAsync(people);
 
             transactionInvoker.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
             var accountsPayables = await accountsPayableInvoicesRepo.GetAccountsPayableInvoices2Async(0, 100, It.IsAny<string>());
             Assert.AreEqual(0, accountsPayables.Item1.Count());
@@ -1003,7 +1003,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         [ExpectedException(typeof(ArgumentException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_Guid_Null()
         {
-            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
             dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
 
             var accountsPayable = await accountsPayableInvoicesRepo.GetAccountsPayableInvoicesByGuidAsync(null, false);
@@ -1012,7 +1012,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_GUID_RecordMissing()
         {
-            dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
             dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
 
             var accountsPayable = await accountsPayableInvoicesRepo.GetAccountsPayableInvoicesByGuidAsync(guid, false);
@@ -1031,7 +1031,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_PersonsRec_Is_Null()
         {
             string voucherId = "1";
@@ -1040,7 +1040,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
             voucherDataContract.VouStatus = new List<string> { "O" };
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
-            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Base.DataContracts.Person>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Base.DataContracts.Person>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(() => null);
             var accountsPayable = await accountsPayableInvoicesRepo.GetAccountsPayableInvoicesByGuidAsync(guid, false);
         }
 
@@ -1053,12 +1053,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             ConvertDomainEntitiesIntoDataContracts();
             dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
             voucherDataContract.VouStatus = new List<string> { "O" };
-            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
             var accountsPayable = await accountsPayableInvoicesRepo.GetAccountsPayableInvoicesByGuidAsync(guid, false);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_Status_X()
         {
             string voucherId = "1";
@@ -1071,7 +1071,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_Status_U()
         {
             string voucherId = "1";
@@ -1125,7 +1125,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             dataReaderMock.Setup(repo => repo.SelectAsync("VOUCHERS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(voucherIds);
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Vouchers>("VOUCHERS", voucherIds, true)).ReturnsAsync(dataContractVouchers);
             string[] personIds = { "0001234", "0000002" };
-            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", personIds, true)).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", personIds, true)).ReturnsAsync(() => null);
+
 
             GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
             {
@@ -1160,7 +1161,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_VoucherStatus_isNull()
         {
             string voucherId = "1";
@@ -1175,7 +1176,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_VoucherStatus_ContainsInvalidStatus()
         {
             string voucherId = "1";
@@ -1191,7 +1192,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_VoucherStatus_ContainsInProgressStatus()
         {
             string voucherId = "1";
@@ -1207,7 +1208,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_VoucherStatus_Contains_Cancelled()
         {
             string voucherId = "1";
@@ -1227,6 +1228,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
           public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_NameMissing()
         {
             string voucherId = "1";
+            string[] itemsId = { "1", "2" };
             this.voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, personId, GlAccessLevel.Full_Access, null, versionNumber);
             ConvertDomainEntitiesIntoDataContracts();
             purchaseOrders = new Collection<PurchaseOrders>()
@@ -1240,12 +1242,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             voucherDataContract.VouVendor = null;
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(voucherDataContract);
             dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
+            dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<DataContracts.Items>(itemsId, true)).ReturnsAsync(this.itemsDataContracts);
 
             var accountsPayable = await accountsPayableInvoicesRepo.GetAccountsPayableInvoicesByGuidAsync(guid, false);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ApplicationException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_MissingDate()
         {
             string voucherId = "1";
@@ -1267,7 +1270,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ApplicationException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_MissingInvoiceDate()
         {
             string voucherId = "1";
@@ -1289,7 +1292,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task AccountsPayableInvoices_GetAccountsPayableInvoicesByGuidAsync_MissingAPType()
         {
             string voucherId = "1";
@@ -2140,7 +2143,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task ActPayInvService_CreateAccountsPayableInvoices_Get_Result_Null()
         {
-            dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+            dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
             await accountsPayableInvoicesRepository.CreateAccountsPayableInvoicesAsync(accountsPayableInvoiceEntity);
         }
 
@@ -2172,20 +2175,20 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task ActPayInvService_CreateAccountsPayableInvoices_Get_Voucher_Null_KeyNotFoundException()
         {
-            dataReaderMock.Setup(r => r.ReadRecordAsync<Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(null);
+            dataReaderMock.Setup(r => r.ReadRecordAsync<Vouchers>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
             await accountsPayableInvoicesRepository.CreateAccountsPayableInvoicesAsync(accountsPayableInvoiceEntity);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task ActPayInvService_CreateAccountsPayableInvoices_Get_Vendor_Null_ArgumentException()
         {
-            dataReaderMock.Setup(r => r.ReadRecordAsync<Base.DataContracts.Person>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(null);
+            dataReaderMock.Setup(r => r.ReadRecordAsync<Base.DataContracts.Person>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(() => null);
             await accountsPayableInvoicesRepository.CreateAccountsPayableInvoicesAsync(accountsPayableInvoiceEntity);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task ActPayInvService_CreateAccountsPayableInvoices_Get_VoucherType_Null_RepositorytException()
         {
             voucher.VouApType = "2";
@@ -2193,7 +2196,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task ActPayInvService_CreateAccountsPayableInvoices_Get_VoucherStatus_Cancelled_OR_Voided_ArgumentException()
         {
             voucher.VouStatus = new List<string>() { "X", "V" };
@@ -2201,7 +2204,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ApplicationException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task ActPayInvService_CreateAccountsPayableInvoices_Get_Empty_VoucherStatus_Association()
         {
             voucher.VoucherStatusEntityAssociation = new List<VouchersVoucherStatus>();
@@ -2209,7 +2212,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ApplicationException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task ActPayInvService_CreateAccountsPayableInvoices_Get_Invalid_VoucherStatus()
         {
             voucher.VoucherStatusEntityAssociation.FirstOrDefault().VouStatusAssocMember = "A";
@@ -2217,18 +2220,18 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ApplicationException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task ActPayInvService_CreateAccountsPayableInvoices_Get_Empty_VoucherDate()
         {
             voucher.VouDate = null;
             await accountsPayableInvoicesRepository.CreateAccountsPayableInvoicesAsync(accountsPayableInvoiceEntity);
         }
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task ActPayInvService_CreateAccountsPayableInvoices_Get_ReccuringVoucher_NotFound()
         {
             voucher.VouRcvsId = "1";
-            dataReaderMock.Setup(d => d.ReadRecordAsync<RcVouSchedules>(It.IsAny<string>(), true)).ReturnsAsync(null);
+            dataReaderMock.Setup(d => d.ReadRecordAsync<RcVouSchedules>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
             await accountsPayableInvoicesRepository.CreateAccountsPayableInvoicesAsync(accountsPayableInvoiceEntity);
         }
 

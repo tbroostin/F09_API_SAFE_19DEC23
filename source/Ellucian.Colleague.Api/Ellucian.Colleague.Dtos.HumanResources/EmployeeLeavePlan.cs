@@ -1,5 +1,4 @@
-﻿
-/*Copyright 2017-2020 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2021 Ellucian Company L.P. and its affiliates.*/
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
@@ -34,7 +33,7 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         /// The end date of this employee leave plan. If null, leave plan has no end date.
         /// </summary>
         public DateTime? EndDate { get; set; }
-        
+
         /// <summary>
         /// The database id of the LeavePlan definition
         /// </summary>
@@ -64,6 +63,11 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         /// Indicates if this leave plan allows a negative balance
         /// </summary>
         public bool AllowNegativeBalance { get; set; }
+
+        /// <summary>
+        /// Indicates if this is a leave reporting plan
+        /// </summary>
+        public bool IsLeaveReportingPlan { get; set; }
 
         /// <summary>
         /// The category of the leave plan based on the leave plan definition's leave type. 
@@ -114,6 +118,16 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         public decimal CurrentPlanYearBalance { get; set; }
 
         /// <summary>
+        /// The Leave Plans start date in the current year. Only the Month and Day should be used from this date.
+        /// </summary>
+        public DateTime CurrentPlanYearStartDate { get; set; }
+        
+        /// <summary>
+        /// The Leave Plans end date.
+        /// </summary>
+        public DateTime CurrentPlanYearEndDate { get; set; }
+
+        /// <summary>
         /// Accrual Rate
         /// </summary>
         public Decimal? AccrualRate { get; set; }
@@ -129,10 +143,18 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         public Decimal? AccrualMaxCarryOver { get; set; }
 
         /// <summary>
+        ///  Accrual Method
+        /// </summary>
+        public string AccrualMethod { get; set; }
+
+        /// <summary>
         /// List of all Earning Type IDs associated with a Employee Leave Plan
         /// </summary>
         public IEnumerable<string> EarningTypeIDList { get; set; }
 
-
+        /// <summary>
+        /// Indicates whether or not this leave plan has a plan year start date defined in LEAD form. 
+        /// </summary>
+        public bool IsPlanYearStartDateDefined { get; set; }
     }
 }

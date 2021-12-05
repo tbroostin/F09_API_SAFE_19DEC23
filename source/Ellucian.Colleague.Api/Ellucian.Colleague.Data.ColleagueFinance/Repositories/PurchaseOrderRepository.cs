@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates
 
 using System;
 using System.Collections.Generic;
@@ -19,6 +19,9 @@ using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
 using Ellucian.Colleague.Domain.Base.Services;
 using System.Collections.ObjectModel;
+using System.Text;
+using Ellucian.Dmi.Runtime;
+using GlAccts = Ellucian.Colleague.Data.ColleagueFinance.DataContracts.GlAccts;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
@@ -32,6 +35,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         private const int PurchaseOrdersCacheTimeout = 20;
         private const string AllPurchaseOrdersCache = "AllPurchaseOrders";
         RepositoryException exception = null;
+        public static char _SM = Convert.ToChar(DynamicArray.SM);
 
         /// <summary>
         /// The constructor to instantiate a purchase order repository object
@@ -83,7 +87,16 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 throw new ArgumentNullException("purchaseOrdersEntity", "Must provide the guid of the purchaseOrdersEntity to update.");
 
             // verify the GUID exists to perform an update.  If not, perform a create instead
-            var purchaseOrderId = await this.GetPurchaseOrdersIdFromGuidAsync(purchaseOrdersEntity.Guid);
+            var purchaseOrderId = string.Empty;
+            if (purchaseOrdersEntity.Guid != Guid.Empty.ToString())
+            {
+                try
+                {
+                    purchaseOrderId = await this.GetPurchaseOrdersIdFromGuidAsync(purchaseOrdersEntity.Guid);
+                }
+                catch (KeyNotFoundException)
+                { }
+            }
 
             if (!string.IsNullOrEmpty(purchaseOrderId))
             {
@@ -100,8 +113,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 if ((!string.IsNullOrEmpty(updateResponse.Error) && updateResponse.Error != "0") || updateResponse.UpdatePOErrors.Any())
                 {
                     var errorMessage = string.Format("Error(s) occurred updating purchaseOrder '{0}':", purchaseOrdersEntity.Guid);
-                    var exception = new RepositoryException(errorMessage);
-                    updateResponse.UpdatePOErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
+                    var exception = new RepositoryException();
+                    updateResponse.UpdatePOErrors.ForEach(e => exception.AddError(new RepositoryError("Create.Update.Exception", string.Concat(!string.IsNullOrEmpty(e.ErrorCodes) ? e.ErrorCodes + ": " : "", e.ErrorMessages))
+                    {
+                        Id = purchaseOrdersEntity.Guid,
+                        SourceId = purchaseOrderId
+                    }));
                     logger.Error(errorMessage);
                     throw exception;
                 }
@@ -126,6 +143,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <exception cref="KeyNotFoundException">Thrown if no database records exist for the given id argument</exception>
         public async Task<PurchaseOrder> GetPurchaseOrderAsync(string id, string personId, GlAccessLevel glAccessLevel, IEnumerable<string> expenseAccounts)
         {
+            logger.Debug(string.Format("purchase order {0} ", id));
+            logger.Debug(string.Format("gl access level {0}", glAccessLevel));
+
             if (string.IsNullOrEmpty(id))
             {
                 throw new ArgumentNullException("id");
@@ -134,6 +154,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (expenseAccounts == null)
             {
                 expenseAccounts = new List<string>();
+                logger.Debug(string.Format("no GL accounts for purchase order {0} ", id));
             }
 
             var purchaseOrder = await DataReader.ReadRecordAsync<PurchaseOrders>(id);
@@ -287,6 +308,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var purchaseOrderDomainEntity = new PurchaseOrder(purchaseOrder.Recordkey, purchaseOrder.PoNo, purchaseOrderVendorName, purchaseOrderStatus, purchaseOrderStatusDate, purchaseOrder.PoDate.Value.Date);
 
             purchaseOrderDomainEntity.VendorId = purchaseOrder.PoVendor;
+
+            // Assign Vendor Address
+            await GetVendorAddress(purchaseOrder.PoVendor, purchaseOrderDomainEntity);
+
             if (!string.IsNullOrEmpty(initiatorName))
             {
                 purchaseOrderDomainEntity.InitiatorName = initiatorName;
@@ -427,8 +452,35 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             // Populate the line item domain entities and add them to the purchase order domain entity
             var lineItemIds = purchaseOrder.PoItemsId;
+            int documentFiscalYear = 0;
             if (lineItemIds != null && lineItemIds.Count() > 0)
             {
+                // determine the fiscal year from the requisition date or maintenance date
+                DateTime? transactionDate = purchaseOrder.PoDate;
+                if (purchaseOrder.PoMaintGlTranDate != null)
+                {
+                    transactionDate = purchaseOrder.PoMaintGlTranDate;
+                }
+                logger.Debug(string.Format("transaction date for funds avail {0} ", transactionDate));
+                if (transactionDate.HasValue)
+                {
+                    var transactionDateMonth = transactionDate.Value.Month;
+                    documentFiscalYear = transactionDate.Value.Year;
+
+                    var fiscalYearDataContract = await DataReader.ReadRecordAsync<Fiscalyr>("ACCOUNT.PARAMETERS", "FISCAL.YEAR", true);
+                    if (fiscalYearDataContract != null && fiscalYearDataContract.FiscalStartMonth.HasValue)
+                    {
+                        if (fiscalYearDataContract.FiscalStartMonth > 1)
+                        {
+                            if (transactionDateMonth >= fiscalYearDataContract.FiscalStartMonth)
+                            {
+                                documentFiscalYear += 1;
+                            }
+                        }
+                    }
+                }
+                logger.Debug(string.Format("purchase order fiscal year {0} ", documentFiscalYear));
+
                 // Read the item records for the list of IDs in the purchase order record
                 var lineItemRecords = await DataReader.BulkReadRecordAsync<Items>(lineItemIds.ToArray());
                 if ((lineItemRecords != null) && (lineItemRecords.Count > 0))
@@ -454,21 +506,24 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         {
                             // Put together a list of unique GL accounts for all the items
                             foreach (var lineItem in lineItemRecords)
-                        {
-                            if ((lineItem.ItemPoEntityAssociation != null) && (lineItem.ItemPoEntityAssociation.Count > 0))
                             {
-                                foreach (var glDist in lineItem.ItemPoEntityAssociation)
+                                if ((lineItem.ItemPoEntityAssociation != null) && (lineItem.ItemPoEntityAssociation.Count > 0))
                                 {
-                                    if (expenseAccounts.Contains(glDist.ItmPoGlNoAssocMember))
+                                    foreach (var glDist in lineItem.ItemPoEntityAssociation)
                                     {
-                                        hasGlAccess = true;
-                                        glAccountsAllowed.Add(glDist.ItmPoGlNoAssocMember);
+                                        if (expenseAccounts.Contains(glDist.ItmPoGlNoAssocMember))
+                                        {
+                                            hasGlAccess = true;
+                                            glAccountsAllowed.Add(glDist.ItmPoGlNoAssocMember);
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                    }
+
+                    // define a unique list of GL numbers to use for funds availability when the user has full GL access.
+                    List<string> availableFundsGlAccounts = new List<string>();
 
                     List<string> itemProjectIds = new List<string>();
                     List<string> itemProjectLineIds = new List<string>();
@@ -570,6 +625,16 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         {
                             foreach (var glDist in lineItem.ItemPoEntityAssociation)
                             {
+                                // build a list of unique list of GL numbers on the line item GL distributions
+                                // if the user has full GL access.
+                                if (glAccessLevel == GlAccessLevel.Full_Access || CanUserByPassGlAccessCheck(personId, purchaseOrder, purchaseOrderDomainEntity))
+                                {
+                                    if (!availableFundsGlAccounts.Contains(glDist.ItmPoGlNoAssocMember))
+                                    {
+                                        availableFundsGlAccounts.Add(glDist.ItmPoGlNoAssocMember);
+                                    }
+                                }
+
                                 // The GL Distribution always uses the local currency amount.
                                 decimal gldistGlQty = glDist.ItmPoGlQtyAssocMember.HasValue ? glDist.ItmPoGlQtyAssocMember.Value : 0;
                                 decimal gldistGlAmount = glDist.ItmPoGlAmtAssocMember.HasValue ? glDist.ItmPoGlAmtAssocMember.Value : 0;
@@ -670,20 +735,20 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                     // If the user has access to at least one GL account in the line item, add it to the domain
 
                                     if ((lineItemDomainEntity.GlDistributions != null) && (lineItemDomainEntity.GlDistributions.Count > 0))
-                                {
-                                    foreach (var glDististribution in lineItemDomainEntity.GlDistributions)
                                     {
-                                        if (glAccountsAllowed.Contains(glDististribution.GlAccountNumber))
+                                        foreach (var glDististribution in lineItemDomainEntity.GlDistributions)
                                         {
-                                            addItem = true;
-                                        }
-                                        else
-                                        {
-                                            glDististribution.Masked = true;
+                                            if (glAccountsAllowed.Contains(glDististribution.GlAccountNumber))
+                                            {
+                                                addItem = true;
+                                            }
+                                            else
+                                            {
+                                                glDististribution.Masked = true;
+                                            }
                                         }
                                     }
                                 }
-                            }
                             }
                             if (addItem)
                             {
@@ -739,10 +804,311 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             }
                         }
                     }
+
+                    // For each GL number that the user for which the user has access, get the funds availability 
+                    // information on disk and add the amounts that are on the purchase order if the purchase order
+                    // status is In Progress or Not Approved.
+                    if (glAccountsAllowed.Any() || ((glAccessLevel == GlAccessLevel.Full_Access || CanUserByPassGlAccessCheck(personId, purchaseOrder, purchaseOrderDomainEntity)) && availableFundsGlAccounts.Any()))
+                    {
+                        logger.Debug(string.Format("Calculating funds availability"));
+                        string[] fundsAvailabilityArray;
+                        if ((glAccessLevel == GlAccessLevel.Full_Access || CanUserByPassGlAccessCheck(personId, purchaseOrder, purchaseOrderDomainEntity)) && availableFundsGlAccounts.Any())
+                        {
+                            fundsAvailabilityArray = availableFundsGlAccounts.ToArray();
+                        }
+                        else
+                        {
+                            fundsAvailabilityArray = glAccountsAllowed.ToArray();
+                        }
+
+                        //Read GL Account records.
+                        var glAccountContracts = await DataReader.BulkReadRecordAsync<GlAccts>(fundsAvailabilityArray);
+
+                        GlAcctsMemos glAccountMemosForFiscalYear;
+                        string documentFiscalYr = documentFiscalYear.ToString();
+                        decimal accountBudgetAmount = 0m;
+                        decimal accountActualAmount = 0m;
+                        decimal accountEncumbranceAmount = 0m;
+                        decimal accountRequisitionAmount = 0m;
+
+                        // find out if split requisition is on or off
+                        var purchaseDefaults = await DataReader.ReadRecordAsync<PurDefaults>("CF.PARMS", "PUR.DEFAULTS");
+                        if (purchaseDefaults == null)
+                        {
+                            logger.Debug(string.Format("Cannot get split requisition parameter"));
+                        }
+                        else
+                        {
+                            logger.Debug(string.Format("Allow split requisition flag {0} ", purchaseDefaults.PurAllowSplitReqFlag));
+                        }
+
+                        // Get funds availability information for all GL numbers for which the user has access.
+                        string glpId = null;
+                        foreach (var glAccount in fundsAvailabilityArray)
+                        {
+                            // get GL account available funds.
+                            var glAccountContract = glAccountContracts.FirstOrDefault(x => x.Recordkey == glAccount);
+                            if (glAccountContract != null)
+                            {
+                                if (glAccountContract.MemosEntityAssociation != null)
+                                {
+                                    // Check that the GL account is available for the fiscal year.
+                                    glAccountMemosForFiscalYear = glAccountContract.MemosEntityAssociation.FirstOrDefault(x => x.AvailFundsControllerAssocMember == documentFiscalYr);
+                                    if (glAccountMemosForFiscalYear != null)
+                                    {
+                                        glpId = null;
+                                        if (string.IsNullOrEmpty(glAccountMemosForFiscalYear.GlPooledTypeAssocMember))
+                                        {
+                                            accountBudgetAmount = glAccountMemosForFiscalYear.GlBudgetPostedAssocMember.HasValue ? glAccountMemosForFiscalYear.GlBudgetPostedAssocMember.Value : 0m;
+                                            accountBudgetAmount += glAccountMemosForFiscalYear.GlBudgetMemosAssocMember.HasValue ? glAccountMemosForFiscalYear.GlBudgetMemosAssocMember.Value : 0m;
+                                            accountEncumbranceAmount = glAccountMemosForFiscalYear.GlEncumbrancePostedAssocMember.HasValue ? glAccountMemosForFiscalYear.GlEncumbrancePostedAssocMember.Value : 0m;
+                                            accountEncumbranceAmount += glAccountMemosForFiscalYear.GlEncumbranceMemosAssocMember.HasValue ? glAccountMemosForFiscalYear.GlEncumbranceMemosAssocMember.Value : 0m;
+                                            accountRequisitionAmount = glAccountMemosForFiscalYear.GlRequisitionMemosAssocMember.HasValue ? glAccountMemosForFiscalYear.GlRequisitionMemosAssocMember.Value : 0m;
+                                            accountActualAmount = glAccountMemosForFiscalYear.GlActualPostedAssocMember.HasValue ? glAccountMemosForFiscalYear.GlActualPostedAssocMember.Value : 0m;
+                                            accountActualAmount += glAccountMemosForFiscalYear.GlActualMemosAssocMember.HasValue ? glAccountMemosForFiscalYear.GlActualMemosAssocMember.Value : 0m;
+                                        }
+                                        //poolee gl accounts should be assigned with corresponding umbrella gl account amounts
+                                        else
+                                        {
+                                            if (glAccountMemosForFiscalYear.GlPooledTypeAssocMember.ToUpperInvariant() == "U")
+                                            {
+                                                glpId = glAccount;
+                                                PopulateGlAmountFromFaFields(glAccountMemosForFiscalYear, out accountBudgetAmount, out accountActualAmount, out accountEncumbranceAmount, out accountRequisitionAmount);
+                                            }
+                                            else if (glAccountMemosForFiscalYear.GlPooledTypeAssocMember.ToUpperInvariant() == "P")
+                                            {
+                                                // get umbrella for this poolee
+                                                var umbrellaGlAccount = glAccountMemosForFiscalYear.GlBudgetLinkageAssocMember;
+
+                                                // Read the GL.ACCTS record for the umbrella, and get the amounts for fiscal year.
+                                                var umbrellaAccount = await DataReader.ReadRecordAsync<GlAccts>(umbrellaGlAccount);
+                                                if (umbrellaAccount != null)
+                                                {
+                                                    var umbrellaGlAccountAmounts = umbrellaAccount.MemosEntityAssociation.FirstOrDefault(x => x.AvailFundsControllerAssocMember == documentFiscalYr);
+                                                    if (umbrellaGlAccountAmounts != null)
+                                                    {
+                                                        glpId = umbrellaGlAccount;
+                                                        PopulateGlAmountFromFaFields(umbrellaGlAccountAmounts, out accountBudgetAmount, out accountActualAmount, out accountEncumbranceAmount, out accountRequisitionAmount);
+                                                    }
+                                                    else
+                                                    {
+                                                        logger.Debug(string.Format("Cannot get budget pool account for funds availability"));
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    logger.Debug(string.Format("Cannot get budget pool account for fiscal year"));
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // if the purchase order status is In Progress or Not Approved, add the "unposted" amounts
+                                    // on the purchase order to the funds availability information that has already been posted. This
+                                    // logic will depend on whether the PO originated from one or more requisitions, and if it did,
+                                    // whether requisition split is allowed.
+                                    if (purchaseOrder.PoStatus.First().ToUpper() == "U" || purchaseOrder.PoStatus.First().ToUpper() == "N")
+                                    {
+                                        // If the GL account that the user has access to is a part of a budget pool, read the GLP record
+                                        // to get all of the GL numbers associated with the budget pool so that the funds availability can 
+                                        // updated for all of the GL numbers in the budget pool that are on the line items.
+                                        List<string> budgetPoolAccounts = new List<string>();
+                                        if (!string.IsNullOrEmpty(glpId))
+                                        {
+                                            string glpFyrFilename = "GLP." + documentFiscalYr;
+                                            var glpFyrDataContract = await DataReader.ReadRecordAsync<GlpFyr>(glpFyrFilename, glpId);
+                                            budgetPoolAccounts.Add(glpId);
+                                            if (glpFyrDataContract != null && glpFyrDataContract.GlpPooleeAcctsList != null && glpFyrDataContract.GlpPooleeAcctsList.Any())
+                                            {
+                                                foreach (var poolee in glpFyrDataContract.GlpPooleeAcctsList)
+                                                {
+                                                    budgetPoolAccounts.Add(poolee);
+                                                }
+                                            }
+                                        }
+
+                                        // list of line items to update funds availability.
+                                        List<string> itemsList = purchaseOrder.PoItemsId;
+                                        
+                                        if ((purchaseOrder.PoReqIds != null) && (purchaseOrder.PoReqIds.Any()))
+                                        {
+                                            // if the purchase order originated from one or more requisitions, then if requisition split is
+                                            // not allowed, add line items from the requisitions that are not on the purchase order so that
+                                            // memo requisition can be subtracted from the requisition funds availability amount.
+                                            if (purchaseDefaults != null)
+                                            {
+                                                if (purchaseDefaults.PurAllowSplitReqFlag != "Y")
+                                                {
+                                                    var requisitionIds = purchaseOrder.PoReqIds;
+                                                    var requisitions = await DataReader.BulkReadRecordAsync<DataContracts.Requisitions>("REQUISITIONS", requisitionIds.ToArray());
+                                                    if (requisitions != null)
+                                                    {
+                                                        foreach (var req in requisitions)
+                                                        {
+                                                            if (req.ReqItemsId != null && req.ReqItemsId.Any())
+                                                            {
+                                                                foreach (var item in req.ReqItemsId)
+                                                                {
+                                                                    if (!itemsList.Contains(item))
+                                                                    {
+                                                                        itemsList.Add(item);
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        // Read the item records needed to update funds availability. Use the PO line item GL distribution
+                                                        // amounts to update the encumbrance funds availability amount. Use the requisition line item GL
+                                                        // distribution amounts to update the requisition funds availability amount.
+                                                        var faLineItemRecords = await DataReader.BulkReadRecordAsync<Items>(itemsList.ToArray());
+                                                        if ((faLineItemRecords != null) && (faLineItemRecords.Any()))
+                                                        {
+                                                            foreach (var lineItem in faLineItemRecords)
+                                                            {
+                                                                if ((lineItem.ItemPoEntityAssociation != null) && (lineItem.ItemPoEntityAssociation.Any()))
+                                                                {
+                                                                    foreach (var glDist in lineItem.ItemPoEntityAssociation)
+                                                                    {
+                                                                        if (glDist != null)
+                                                                        {
+                                                                            if (glDist.ItmPoGlNoAssocMember == glAccount || budgetPoolAccounts.Contains(glDist.ItmPoGlNoAssocMember))
+                                                                            {
+                                                                                if (glDist.ItmPoGlAmtAssocMember.HasValue)
+                                                                                {
+                                                                                    accountEncumbranceAmount += glDist.ItmPoGlAmtAssocMember.Value;
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                                if ((lineItem.ItemReqEntityAssociation != null) && (lineItem.ItemReqEntityAssociation.Any()))
+                                                                {
+                                                                    foreach (var glDist in lineItem.ItemReqEntityAssociation)
+                                                                    {
+                                                                        if (glDist != null)
+                                                                        {
+                                                                            if (glDist.ItmReqGlNoAssocMember == glAccount || budgetPoolAccounts.Contains(glDist.ItmReqGlNoAssocMember))
+                                                                            {
+                                                                                if (glDist.ItmReqGlAmtAssocMember.HasValue)
+                                                                                {
+                                                                                    accountRequisitionAmount -= glDist.ItmReqGlAmtAssocMember.Value;
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    // if the purchase order originated from one or more requisitions and requisition split is allowed,
+                                                    // then use the data contracts for the line items on the purchase order to update the encumbrance funds
+                                                    // availability amount from the PO line item GL distributions, and update the requisition funds
+                                                    // availability amount from the requisition line item GL distributions.
+                                                    foreach (var lineItem in lineItemRecords)
+                                                    {
+                                                        if ((lineItem.ItemPoEntityAssociation != null) && (lineItem.ItemPoEntityAssociation.Any()))
+                                                        {
+                                                            foreach (var glDist in lineItem.ItemPoEntityAssociation)
+                                                            {
+                                                                if (glDist != null)
+                                                                {
+                                                                    if (glDist.ItmPoGlNoAssocMember == glAccount || budgetPoolAccounts.Contains(glDist.ItmPoGlNoAssocMember))
+                                                                    {
+                                                                        if (glDist.ItmPoGlAmtAssocMember.HasValue)
+                                                                        {
+                                                                            accountEncumbranceAmount += glDist.ItmPoGlAmtAssocMember.Value;
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        if ((lineItem.ItemReqEntityAssociation != null) && (lineItem.ItemReqEntityAssociation.Any()))
+                                                        {
+                                                            foreach (var glDist in lineItem.ItemReqEntityAssociation)
+                                                            {
+                                                                if (glDist != null)
+                                                                {
+                                                                    if (glDist.ItmReqGlNoAssocMember == glAccount || budgetPoolAccounts.Contains(glDist.ItmReqGlNoAssocMember))
+                                                                    {
+                                                                        if (glDist.ItmReqGlAmtAssocMember.HasValue)
+                                                                        {
+                                                                            accountRequisitionAmount -= glDist.ItmReqGlAmtAssocMember.Value;
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            // if the purchase order did not originate from requisitions, use the line item GL distribution
+                                            // amounts from the domain entity to update the encumbrance funds availability amount.
+                                            foreach (var lineItem in purchaseOrderDomainEntity.LineItems)
+                                            {
+                                                if (lineItem != null)
+                                                {
+                                                    foreach (var glDistribution in lineItem.GlDistributions)
+                                                    {
+                                                        if (glDistribution != null)
+                                                        {
+                                                            if (glDistribution.GlAccountNumber == glAccount || budgetPoolAccounts.Contains(glDistribution.GlAccountNumber))
+                                                            {
+                                                                accountEncumbranceAmount += glDistribution.Amount;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Update the funds availability information on the line item GL distributions, and
+                                    // update the line item to indicate that there is GL number on the line item that is
+                                    // overbudget.
+                                    foreach (var lineItem in purchaseOrderDomainEntity.LineItems)
+                                    {
+                                        foreach (var glDistribution in lineItem.GlDistributions)
+                                        {
+                                            if (glDistribution.GlAccountNumber == glAccount)
+                                            {
+                                                glDistribution.BudgetAmount = accountBudgetAmount;
+                                                glDistribution.ActualAmount = accountActualAmount;
+                                                glDistribution.EncumbranceAmount = accountEncumbranceAmount;
+                                                glDistribution.RequisitionAmount = accountRequisitionAmount;
+
+                                                if ((accountBudgetAmount - accountActualAmount - accountEncumbranceAmount - accountRequisitionAmount) < 0)
+                                                {
+                                                    lineItem.OverBudget = true;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        logger.Debug(string.Format("Completed calculating funds availability"));
+                    }
+
                 }
             }
 
             return purchaseOrderDomainEntity;
+        }
+
+        private static void PopulateGlAmountFromFaFields(GlAcctsMemos glAccountMemos, out decimal budgetAmount, out decimal actualAmount, out decimal encumbranceAmount, out decimal requisitionAmount)
+        {
+            budgetAmount = glAccountMemos.FaBudgetPostedAssocMember.HasValue ? glAccountMemos.FaBudgetPostedAssocMember.Value : 0m;
+            budgetAmount += glAccountMemos.FaBudgetMemoAssocMember.HasValue ? glAccountMemos.FaBudgetMemoAssocMember.Value : 0m;
+            encumbranceAmount = glAccountMemos.FaEncumbrancePostedAssocMember.HasValue ? glAccountMemos.FaEncumbrancePostedAssocMember.Value : 0m;
+            encumbranceAmount += glAccountMemos.FaEncumbranceMemoAssocMember.HasValue ? glAccountMemos.FaEncumbranceMemoAssocMember.Value : 0m;
+            requisitionAmount = glAccountMemos.FaRequisitionMemoAssocMember.HasValue ? glAccountMemos.FaRequisitionMemoAssocMember.Value : 0m;
+            actualAmount = glAccountMemos.FaActualPostedAssocMember.HasValue ? glAccountMemos.FaActualPostedAssocMember.Value : 0m;
+            actualAmount += glAccountMemos.FaActualMemoAssocMember.HasValue ? glAccountMemos.FaActualMemoAssocMember.Value : 0m;
         }
 
         /// <summary>
@@ -831,49 +1197,36 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns>PurchaseOrder entity object <see cref="PurchaseOrder"/></returns>
         public async Task<PurchaseOrder> GetPurchaseOrdersByGuidAsync(string guid)
         {
-
-            if (string.IsNullOrEmpty(guid))
+            exception = new RepositoryException();
+            string id = await GetPurchaseOrdersIdFromGuidAsync(guid);
+            if (string.IsNullOrEmpty(id))
             {
-                throw new ArgumentNullException("guid");
+                throw new KeyNotFoundException("No purchase-orders was found for guid " + guid);
             }
-
-            var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
-            if (idDict == null || idDict.Count == 0)
-            {
-                throw new KeyNotFoundException("No Purchase Orders was found for GUID " + guid);
-            }
-
-            var foundEntry = idDict.FirstOrDefault();
-            if (foundEntry.Value == null)
-            {
-                throw new KeyNotFoundException("No Purchase Orders was found for GUID " + guid);
-            }
-
-            if (foundEntry.Value.Entity != "PURCHASE.ORDERS")
-            {
-                throw new RepositoryException("GUID " + guid + " has different entity, " + foundEntry.Value.Entity + ", than expected, PURCHASE.ORDERS");
-            }
-  
-            var purchaseOrderDataContract = await DataReader.ReadRecordAsync<PurchaseOrders>(foundEntry.Value.PrimaryKey);
+            var purchaseOrderDataContract = await DataReader.ReadRecordAsync<PurchaseOrders>(id);
             // exclude those PO that are inprogress
 
             if (purchaseOrderDataContract == null)
             {
-                throw new KeyNotFoundException("No Purchase Orders was found for GUID " + guid);
+                throw new KeyNotFoundException("No purchase-orders was found for GUID " + guid);
             }
 
             if (purchaseOrderDataContract.PoStatus != null && purchaseOrderDataContract.PoStatus.Any() && purchaseOrderDataContract.PoStatus.FirstOrDefault().Equals("U", StringComparison.OrdinalIgnoreCase))
             {
-                throw new KeyNotFoundException("The GUID specified " + guid + " for record key " + purchaseOrderDataContract.Recordkey + " from file PURCHASE.ORDERS is not valid for purchase-orders.");
+                exception.AddError(new RepositoryError("Validation.Exception", string.Format("The GUID specified {0} for record key {1} from file PURCHASE.ORDERS is not valid for purchase-orders.", guid, purchaseOrderDataContract.Recordkey)));
+                throw exception;
+                //throw new KeyNotFoundException(string.Format("The GUID specified " + guid + " for record key " + purchaseOrderDataContract.Recordkey + " from file PURCHASE.ORDERS is not valid for purchase-orders.");
             }
 
             if ((purchaseOrderDataContract.PoItemsId == null) || (!purchaseOrderDataContract.PoItemsId.Any()))
             {
-                throw new KeyNotFoundException("The GUID specified " + guid + " for record key " + purchaseOrderDataContract.Recordkey + " from file PURCHASE.ORDERS is not valid for purchase-orders.");
+                exception.AddError(new RepositoryError("Validation.Exception", string.Format("The GUID specified {0} for record key {1} from file PURCHASE.ORDERS is not valid for purchase-orders.", guid, purchaseOrderDataContract.Recordkey)));
+                throw exception;
+                //throw new KeyNotFoundException("The GUID specified " + guid + " for record key " + purchaseOrderDataContract.Recordkey + " from file PURCHASE.ORDERS is not valid for purchase-orders.");
             }
 
             PurchaseOrder purchaseOrderDomainEntity = null;
-            
+
             purchaseOrderDomainEntity = await BuildPurchaseOrderAsync(purchaseOrderDataContract);
 
             if (exception != null && exception.Errors != null && exception.Errors.Any())
@@ -887,7 +1240,34 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
         public async Task<string> GetPurchaseOrdersIdFromGuidAsync(string guid)
         {
-            return await GetRecordKeyFromGuidAsync(guid);
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid");
+            }
+
+            var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
+            if (idDict == null || idDict.Count == 0)
+            {
+                throw new KeyNotFoundException("No purchase-orders was found for guid " + guid);
+            }
+
+            var foundEntry = idDict.FirstOrDefault();
+            if (foundEntry.Value == null)
+            {
+                throw new KeyNotFoundException("No purchase-orders was found for guid " + guid);
+            }
+
+            if (foundEntry.Value.Entity != "PURCHASE.ORDERS")
+            {
+                exception.AddError(new RepositoryError("GUID.Wrong.Type", string.Format("GUID {0} has different entity, {1}, than expected, PURCHASE.ORDERS", guid, foundEntry.Value.Entity))
+                {
+                    Id = guid
+                });
+                throw exception;
+
+            }
+
+            return foundEntry.Value.PrimaryKey;
         }
 
         /// <summary>
@@ -1076,6 +1456,40 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         }
 
         /// <summary>
+        /// Get a list of purchase order summary domain entity objects
+        /// </summary>
+        /// <param name="criteria">procurement filter criteria</param>
+        /// <returns>list of purchase order summary domain entity objects</returns>
+        public async Task<IEnumerable<PurchaseOrderSummary>> QueryPurchaseOrderSummariesAsync(ProcurementDocumentFilterCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("filterCriteria", "filter criteria must be specified.");
+            }
+
+            var personId = criteria.PersonId;
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId");
+            }
+            var cfWebDefaults = await DataReader.ReadRecordAsync<CfwebDefaults>("CF.PARMS", "CFWEB.DEFAULTS");
+            string queryCriteria = await BuildFilterCriteria(criteria, cfWebDefaults);
+            if (string.IsNullOrEmpty(queryCriteria))
+            {
+                throw new ApplicationException("Invalid query string.");
+            }
+            var filteredPurchaseOrderIds = await DataReader.SelectAsync("PURCHASE.ORDERS", queryCriteria);
+
+            if (filteredPurchaseOrderIds == null || !filteredPurchaseOrderIds.Any())
+            {
+                logger.Debug(string.Format("Purchase orders not found for query string: '{0}'.", queryCriteria));
+                return null;
+            }
+            logger.Debug(string.Format("Purchase orders count {0} found.", filteredPurchaseOrderIds.ToList().Count()));
+            return await BuildPurchaseOrderSummaryList(personId, filteredPurchaseOrderIds.ToList());
+        }
+
+        /// <summary>
         /// Create an TxUpdateWebPurchaseOrderRequest from a PurchaseOrder domain entity
         /// </summary>
         /// <param name="createUpdateRequest">create/update purchase order request entity</param>
@@ -1113,9 +1527,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 request.AApType = purchaseOrderEntity.ApType;
             }
 
-            request.AlPrintedComments = new List<string>() { purchaseOrderEntity.Comments };
+            request.AlPrintedComments = CommentsUtility.ConvertMultiLineTextToList(purchaseOrderEntity.Comments);
             request.AlInternalComments = new List<string>() { purchaseOrderEntity.InternalComments };
-            
+
             if (originalPurchaseOrder != null && originalPurchaseOrder.DefaultCommodityCode != null)
             {
                 request.APoCommodityCode = originalPurchaseOrder.DefaultCommodityCode;
@@ -1156,7 +1570,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                     if (addLineItemToModify)
                     {
-                        lineItem.AlLineItemDescs = apLineItem.Description;
+                        var descriptionList = CommentsUtility.ConvertMultiLineTextToList(apLineItem.Description);
+                        lineItem.AlLineItemDescs = string.Join(_SM.ToString(), descriptionList);
                         lineItem.AlLineItemQtys = apLineItem.Quantity.ToString();
                         lineItem.AlItemPrices = apLineItem.Price.ToString();
                         lineItem.AlItemUnitIssues = apLineItem.UnitOfIssue;
@@ -1253,7 +1668,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return request;
         }
 
-
         /// <summary>
         ///  Build collection of PurchaseOrder domain entities 
         /// </summary>
@@ -1261,6 +1675,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns>PurchaseOrder domain entity</returns>
         private async Task<IEnumerable<PurchaseOrder>> BuildPurchaseOrdersAsync(IEnumerable<DataContracts.PurchaseOrders> purchaseOrders)
         {
+            var upperLevelException = new RepositoryException();
+
             var purchaseOrderCollection = new List<PurchaseOrder>();
 
             if (purchaseOrders == null || !purchaseOrders.Any())
@@ -1272,13 +1688,17 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 try
                 {
+                    exception = null;
                     purchaseOrderCollection.Add(await BuildPurchaseOrderAsync(purchaseOrder));
+                }
+                catch (RepositoryException ex)
+                {
+                    exception = null;
+                    upperLevelException.AddErrors(ex.Errors);
                 }
                 catch (Exception ex)
                 {
-                    if (exception == null)
-                        exception = new RepositoryException();
-                    exception.AddError(new RepositoryError("Bad.Data", ex.Message)
+                    upperLevelException.AddError(new RepositoryError("Bad.Data", ex.Message)
                     {
                         SourceId = purchaseOrder.Recordkey,
                         Id = purchaseOrder.RecordGuid
@@ -1286,10 +1706,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
             }
 
-            if (exception != null && exception.Errors != null && exception.Errors.Any())
-            {
-                throw exception;
-            }
+            exception = upperLevelException;
 
             return purchaseOrderCollection.AsEnumerable();
         }
@@ -1519,7 +1936,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         purchaseOrderDomainEntity.VendorAddressId = "";
                 }
             }
-            
+
 
             purchaseOrderDomainEntity.DefaultInitiator = purchaseOrder.PoDefaultInitiator;
 
@@ -1574,7 +1991,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             return purchaseOrderDomainEntity;
         }
-
 
         private async Task GetLineItems(IEnumerable<string> expenseAccounts, PurchaseOrders purchaseOrder, PurchaseOrder purchaseOrderDomainEntity, List<string> lineItemIds)
         {
@@ -1952,6 +2368,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             return purchaseOrderStatus;
         }
+
         /// <summary>
         /// Get Host Country from international parameters
         /// </summary>
@@ -2148,7 +2565,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         }
                         lineItem.ItemsTaxCodes = string.Join("|", taxCodes);
                     }
-                    
+
                     lineItem.ItemsTaxForm = apLineItem.TaxForm;
                     lineItem.ItemsTaxFormBox = apLineItem.TaxFormCode;
                     lineItem.ItemsTaxFormLoc = apLineItem.TaxFormLocation;
@@ -2218,79 +2635,20 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns>collection of purchase order summary domain entity objects</returns>
         public async Task<IEnumerable<PurchaseOrderSummary>> GetPurchaseOrderSummaryByPersonIdAsync(string personId)
         {
-            List<string> filteredPurchaseOrder = new List<string>();
-             if (string.IsNullOrEmpty(personId))
+            if (string.IsNullOrEmpty(personId))
             {
                 throw new ArgumentNullException("personId");
             }
             var cWebDefaults = await DataReader.ReadRecordAsync<CfwebDefaults>("CF.PARMS", "CFWEB.DEFAULTS");
-            filteredPurchaseOrder = await ApplyFilterCriteria(personId, filteredPurchaseOrder, cWebDefaults);
+            var filteredPurchaseOrder = await ApplyFilterCriteria(personId, cWebDefaults);
 
             if (!filteredPurchaseOrder.Any())
                 return null;
 
-            var purchaseOrderData = await DataReader.BulkReadRecordAsync<DataContracts.PurchaseOrders>("PURCHASE.ORDERS", filteredPurchaseOrder.ToArray());
 
-            var purchaseOrderList = new List<PurchaseOrderSummary>();
-            if (purchaseOrderData != null && purchaseOrderData.Any())
-            {
-                Dictionary<string, string> hierarchyNameDictionary = GetPersonHierarchyNamesDictionary(purchaseOrderData);
-                var RequisitionNumbers = purchaseOrderData.Where(x => x.PoReqIds.Any()).Select(s => s.PoReqIds).ToList();
-                var requisitionIds = RequisitionNumbers.SelectMany(x => x).Distinct().ToList();
-                var requisitions = await DataReader.BulkReadRecordAsync<DataContracts.Requisitions>("REQUISITIONS", requisitionIds.ToArray());
-                var requistionDictionary = (requisitions != null && requisitions.Any()) ? requisitions.ToDictionary(x => x.Recordkey) : new Dictionary<string, Requisitions>();
-
-                // Read the OPERS records associated with the approval signatures and 
-                // next approvers on the purchase orders, and build approver objects.
-                var operators = new List<string>();
-                Collection<DataContracts.Opers> opersCollection = new Collection<DataContracts.Opers>();
-                // get list of Approvers and next approvers from the entire po records
-
-                var allPoDataApprovers = purchaseOrderData.SelectMany(poContract => poContract.PoAuthorizations).Distinct().ToList();
-                if (allPoDataApprovers != null && allPoDataApprovers.Any(x => x != null))
-                {
-                    operators.AddRange(allPoDataApprovers);
-                }
-
-                var allPoDataNextApprovers = purchaseOrderData.SelectMany(poContract => poContract.PoNextApprovalIds).Distinct().ToList();
-                if (allPoDataNextApprovers != null && allPoDataNextApprovers.Any(x => x != null))
-                {
-                    operators.AddRange(allPoDataNextApprovers);
-                }
-
-                var uniqueOperators = operators.Distinct().ToList();
-                if (uniqueOperators.Count > 0)
-                {
-                    opersCollection = await DataReader.BulkReadRecordAsync<DataContracts.Opers>("UT.OPERS", uniqueOperators.ToArray(), true);
-                }
-
-
-                foreach (PurchaseOrders purchaseOrder in purchaseOrderData)
-                {
-                    try
-                    {
-                        string initiatorName = string.Empty;
-                        hierarchyNameDictionary.TryGetValue(purchaseOrder.PoDefaultInitiator, out initiatorName);
-
-                        string requestorName = string.Empty;
-                        hierarchyNameDictionary.TryGetValue(purchaseOrder.PoRequestor, out requestorName);
-
-                        // If there is no vendor name and there is a vendor id, use the PO hierarchy to get the vendor name.
-                        var VendorName = purchaseOrder.PoMiscName.FirstOrDefault();
-                        if ((string.IsNullOrEmpty(VendorName)) && (!string.IsNullOrEmpty(purchaseOrder.PoVendor)))
-                        {
-                            hierarchyNameDictionary.TryGetValue(purchaseOrder.PoVendor, out VendorName);
-                        }
-                        purchaseOrderList.Add(BuildPurchaseOrderSummary(purchaseOrder, requistionDictionary, VendorName, initiatorName, requestorName, opersCollection));
-                    }
-                    catch (Exception ex)
-                    {
-                        throw ex;
-                    }
-                }
-            }
-            return purchaseOrderList.AsEnumerable();
+            return await BuildPurchaseOrderSummaryList(personId, filteredPurchaseOrder);
         }
+
 
         /// <summary>
         ///  BUild Purchase order for create Request
@@ -2330,7 +2688,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 request.AApType = purchaseOrderEntity.ApType;
             }
-            request.AlPrintedComments = new List<string>() { purchaseOrderEntity.Comments };
+
+            request.AlPrintedComments = CommentsUtility.ConvertMultiLineTextToList(purchaseOrderEntity.Comments);
             request.AlInternalComments = new List<string>() { purchaseOrderEntity.InternalComments };
 
             if (purchaseOrderEntity.Approvers != null && purchaseOrderEntity.Approvers.Any())
@@ -2373,9 +2732,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                 foreach (var apLineItem in purchaseOrderEntity.LineItems)
                 {
+                    var descriptionList = CommentsUtility.ConvertMultiLineTextToList(apLineItem.Description);
                     var lineItem = new Transactions.AlCreatePoLineItems()
                     {
-                        AlItemDescs = apLineItem.Description,
+                        AlItemDescs = string.Join(_SM.ToString(), descriptionList),
                         AlItemQtys = apLineItem.Quantity.ToString(),
                         AlItemPrices = apLineItem.Price.ToString(),
                         AlItemUnitIssues = apLineItem.UnitOfIssue,
@@ -2422,7 +2782,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var purchaseOrderId = voidRequest.PurchaseOrderId;
             var confirmationEmailAddresses = voidRequest.ConfirmationEmailAddresses;
             var internalComments = voidRequest.InternalComments;
-            
+
             if (!string.IsNullOrEmpty(personId))
             {
                 request.AStaffUserId = personId;
@@ -2623,54 +2983,58 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return purchaseOrderSummaryEntity;
         }
 
-        private async Task<List<string>> ApplyFilterCriteria(string personId, List<string> filteredPurchaseOrder, CfwebDefaults cfWebDefaults)
+        private async Task<List<string>> ApplyFilterCriteria(string personId, CfwebDefaults cfWebDefaults)
         {
+            List<string> filteredPurchaseOrder = new List<string>();
             string poStartEndTransDateQuery = string.Empty;
+            //where personId is Initiator OR requestor
+            string PurchaseOrderPersonIdQuery = string.Format("WITH PO.DEFAULT.INITIATOR EQ '{0}' OR WITH PO.REQUESTOR EQ '{0}' BY.DSND PO.NO", personId);
+            filteredPurchaseOrder = await ExecuteQueryStatementAsync(filteredPurchaseOrder, PurchaseOrderPersonIdQuery);
 
-            if (cfWebDefaults != null)
+            if (filteredPurchaseOrder != null && filteredPurchaseOrder.Any())
             {
-                //Filter by CfwebPoStartDate, CfwebPoEndDate values configured in CFWP form
-                //when CfwebPoStartDate & CfwebPoEndDate has a value
-                if (cfWebDefaults.CfwebPoStartDate.HasValue && cfWebDefaults.CfwebPoEndDate.HasValue)
+                if (cfWebDefaults != null)
                 {
-                    var startDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebPoStartDate.Value);
-                    var endDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebPoEndDate.Value);
-                    poStartEndTransDateQuery = string.Format("WITH (PO.MAINT.GL.TRAN.DATE GE '{0}' AND PO.MAINT.GL.TRAN.DATE LE '{1}') OR WITH (PO.DATE GE '{0}' AND PO.DATE LE '{1}') BY.DSND PO.NO", startDate, endDate);
-                }
-                //when CfwebPoStartDate has value but CfwebReqEndDate is null
-                else if (cfWebDefaults.CfwebPoStartDate.HasValue && !cfWebDefaults.CfwebPoEndDate.HasValue)
-                {
-                    var startDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebPoStartDate.Value);
-                    poStartEndTransDateQuery = string.Format("PO.MAINT.GL.TRAN.DATE GE '{0}' OR WITH PO.DATE GE '{0}' BY.DSND PO.NO", startDate);
-                }
-                //when CfwebPoStartDate is null but CfwebPoEndDate has value
-                else if (!cfWebDefaults.CfwebPoStartDate.HasValue && cfWebDefaults.CfwebPoEndDate.HasValue)
-                {
-                    var endDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebPoEndDate.Value);
-                    poStartEndTransDateQuery = string.Format("WITH ((PO.MAINT.GL.TRAN.DATE NE '') AND (PO.MAINT.GL.TRAN.DATE LE '{0}')) OR WITH ((PO.DATE NE '') AND (PO.DATE LE '{0}')) BY.DSND PO.NO", endDate);
-                }
+                    //Filter by CfwebPoStartDate, CfwebPoEndDate values configured in CFWP form
+                    //when CfwebPoStartDate & CfwebPoEndDate has a value
+                    if (cfWebDefaults.CfwebPoStartDate.HasValue && cfWebDefaults.CfwebPoEndDate.HasValue)
+                    {
+                        var startDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebPoStartDate.Value);
+                        var endDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebPoEndDate.Value);
+                        poStartEndTransDateQuery = string.Format("WITH (PO.MAINT.GL.TRAN.DATE GE '{0}' AND PO.MAINT.GL.TRAN.DATE LE '{1}') OR WITH (PO.DATE GE '{0}' AND PO.DATE LE '{1}') BY.DSND PO.NO", startDate, endDate);
+                    }
+                    //when CfwebPoStartDate has value but CfwebReqEndDate is null
+                    else if (cfWebDefaults.CfwebPoStartDate.HasValue && !cfWebDefaults.CfwebPoEndDate.HasValue)
+                    {
+                        var startDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebPoStartDate.Value);
+                        poStartEndTransDateQuery = string.Format("PO.MAINT.GL.TRAN.DATE GE '{0}' OR WITH PO.DATE GE '{0}' BY.DSND PO.NO", startDate);
+                    }
+                    //when CfwebPoStartDate is null but CfwebPoEndDate has value
+                    else if (!cfWebDefaults.CfwebPoStartDate.HasValue && cfWebDefaults.CfwebPoEndDate.HasValue)
+                    {
+                        var endDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebPoEndDate.Value);
+                        poStartEndTransDateQuery = string.Format("WITH ((PO.MAINT.GL.TRAN.DATE NE '') AND (PO.MAINT.GL.TRAN.DATE LE '{0}')) OR WITH ((PO.DATE NE '') AND (PO.DATE LE '{0}')) BY.DSND PO.NO", endDate);
+                    }
 
-                if (!string.IsNullOrEmpty(poStartEndTransDateQuery))
-                {
-                    filteredPurchaseOrder = await ExecuteQueryStatement(filteredPurchaseOrder, poStartEndTransDateQuery);
-                }
+                    if (!string.IsNullOrEmpty(poStartEndTransDateQuery))
+                    {
+                        filteredPurchaseOrder = await ExecuteQueryStatementAsync(filteredPurchaseOrder, poStartEndTransDateQuery);
+                    }
 
-                //query by CfwebPoStatuses if statuses are configured in CFWP form.
-                if (cfWebDefaults.CfwebPoStatuses != null && cfWebDefaults.CfwebPoStatuses.Any())
-                {
-                    var purchaseOrderStatusesCriteria = string.Join(" ", cfWebDefaults.CfwebPoStatuses.Select(x => string.Format("'{0}'", x.ToUpper())));
-                    purchaseOrderStatusesCriteria = "WITH PO.CURRENT.STATUS EQ " + purchaseOrderStatusesCriteria;
-                    filteredPurchaseOrder = await ExecuteQueryStatement(filteredPurchaseOrder, purchaseOrderStatusesCriteria);
+                    //query by CfwebPoStatuses if statuses are configured in CFWP form.
+                    if (cfWebDefaults.CfwebPoStatuses != null && cfWebDefaults.CfwebPoStatuses.Any())
+                    {
+                        var purchaseOrderStatusesCriteria = string.Join(" ", cfWebDefaults.CfwebPoStatuses.Select(x => string.Format("'{0}'", x.ToUpper())));
+                        purchaseOrderStatusesCriteria = "WITH PO.CURRENT.STATUS EQ " + purchaseOrderStatusesCriteria;
+                        filteredPurchaseOrder = await ExecuteQueryStatementAsync(filteredPurchaseOrder, purchaseOrderStatusesCriteria);
+                    }
                 }
             }
 
-            //where personId is Initiator OR requestor
-            string PurchaseOrderPersonIdQuery = string.Format("WITH PO.DEFAULT.INITIATOR EQ '{0}' OR WITH PO.REQUESTOR EQ '{0}' BY.DSND PO.NO", personId);
-            filteredPurchaseOrder = await ExecuteQueryStatement(filteredPurchaseOrder, PurchaseOrderPersonIdQuery);
             return filteredPurchaseOrder;
         }
 
-        private async Task<List<string>> ExecuteQueryStatement(List<string> filteredPurchaseOrders, string queryCriteria)
+        private async Task<List<string>> ExecuteQueryStatementAsync(List<string> filteredPurchaseOrders, string queryCriteria)
         {
             string[] filteredByQueryCriteria = null;
             if (string.IsNullOrEmpty(queryCriteria))
@@ -2686,5 +3050,274 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return filteredByQueryCriteria.ToList();
         }
 
+        private async Task<string> BuildFilterCriteria(ProcurementDocumentFilterCriteria criteria, CfwebDefaults cfWebDefaults)
+        {
+            bool skipCFWPDateRangeFilter = false;
+            bool skipCFWPStatusFilter = false;
+
+            StringBuilder queryCriteria = new StringBuilder();
+            //personID criteria
+            queryCriteria.Append(string.Format("WITH PO.DEFAULT.INITIATOR EQ '{0}' OR WITH PO.REQUESTOR EQ '{0}' ", criteria.PersonId));
+
+            //if SS criteria contains dateFrom or dateTo, CFWP date range filter should be skipped.
+            if (criteria.DateFrom.HasValue || criteria.DateTo.HasValue)
+            {
+                skipCFWPDateRangeFilter = true;
+            }
+            List<string> procurementFilterStatuses = new List<string>();
+            if (criteria.Statuses != null && criteria.Statuses.Any())
+            {
+                foreach (var item in criteria.Statuses)
+                {
+                    var status = ConvertPurchaseOrderStatus(item);
+                    if (!string.IsNullOrEmpty(status))
+                    {
+                        procurementFilterStatuses.Add(status);
+                    }
+                }
+            }
+            //if SS criteria contains statuses, CFWP status filter should be skipped
+            if (procurementFilterStatuses.Any())
+            {
+                skipCFWPStatusFilter = true;
+            }
+            if (cfWebDefaults != null)
+            {
+                if (!skipCFWPDateRangeFilter)
+                {
+                    //criteria set in cfWebDefaults - CfwebPoStartDate, CfwebPoEndDate
+                    var cfwpDateRangeCriteria = await BuildDateRangeQueryAsync(cfWebDefaults.CfwebPoStartDate, cfWebDefaults.CfwebPoEndDate);
+                    if (!string.IsNullOrEmpty(cfwpDateRangeCriteria))
+                    {
+                        logger.Debug(string.Format("QueryPurchaseOrderSummaries - CFWP date range - data reader - query string: '{0}'.", cfwpDateRangeCriteria));
+                        queryCriteria.Append(cfwpDateRangeCriteria);
+                    }
+                }
+                if (!skipCFWPStatusFilter)
+                {
+                    //criteria set in cfwebdefaults - CfwebPoStatuses (PO.CURRENT.STATUS).
+                    var statusesQuery = ProcurementFilterUtility.BuildListQuery(cfWebDefaults.CfwebPoStatuses, "PO.CURRENT.STATUS");
+                    if (!string.IsNullOrEmpty(statusesQuery))
+                    {
+                        logger.Debug(string.Format("QueryPurchaseOrderSummaries - CFWP statuses - data reader - query string: '{0}'.", statusesQuery));
+                        queryCriteria.Append(statusesQuery);
+                    }
+                }
+            }
+
+            //criteria sent from SS - VendorID's (PO.VENDOR).
+            var vendorIdCriteria = ProcurementFilterUtility.BuildListQuery(criteria.VendorIds, "PO.VENDOR");
+            if (!string.IsNullOrEmpty(vendorIdCriteria))
+            {
+                logger.Debug(string.Format("QueryPurchaseOrderSummaries - VendorId's - data reader - query string: '{0}'.", vendorIdCriteria));
+                queryCriteria.Append(!string.IsNullOrEmpty(vendorIdCriteria) ? vendorIdCriteria : string.Empty);
+            }
+            //criteria sent from SS - Min - Max Amount (PO.TOTAL.AMT).
+            var amountCriteria = ProcurementFilterUtility.BuildAmountRangeQuery(criteria, "PO.TOTAL.AMT");
+            if (!string.IsNullOrEmpty(amountCriteria))
+            {
+                logger.Debug(string.Format("QueryPurchaseOrderSummaries - Amount range - data reader - query string: '{0}'.", amountCriteria));
+                queryCriteria.Append(amountCriteria);
+            }
+            //criteria sent from SS - From - To date range
+            if (skipCFWPDateRangeFilter)
+            {
+                var procurementDateRangeCriteria = await BuildDateRangeQueryAsync(criteria.DateFrom, criteria.DateTo);
+                if (!string.IsNullOrEmpty(procurementDateRangeCriteria))
+                {
+                    logger.Debug(string.Format("QueryPurchaseOrderSummaries - SS procurement filter date range - data reader - query string: '{0}'.", procurementDateRangeCriteria));
+                    queryCriteria.Append(procurementDateRangeCriteria);
+                }
+            }
+
+            if (skipCFWPStatusFilter)
+            {
+                //criteria sent from SS - Statuses
+                var procurementStatusesCriteria = ProcurementFilterUtility.BuildListQuery(procurementFilterStatuses, "PO.CURRENT.STATUS");
+                if (!string.IsNullOrEmpty(procurementStatusesCriteria))
+                {
+                    logger.Debug(string.Format("QueryPurchaseOrderSummaries - SS procurement filter statuses - data reader - query string: '{0}'.", procurementStatusesCriteria));
+                    queryCriteria.Append(procurementStatusesCriteria);
+                }
+            }
+
+            queryCriteria.Append("BY.DSND PO.NO");
+            logger.Debug(string.Format("QueryPurchaseOrderSummaries - data reader - query string: '{0}'.", queryCriteria));
+            return queryCriteria.ToString();
+        }
+
+        private async Task<string> BuildDateRangeQueryAsync(DateTime? dateFrom, DateTime? dateTo)
+        {
+            string startEndTransDateQuery = string.Empty;
+            if (dateFrom != null || dateTo != null)
+            {
+                //when dateFrom & dateTo has a value
+                if (dateFrom.HasValue && dateTo.HasValue)
+                {
+                    var startDate = await GetUnidataFormatDateAsync(dateFrom.Value);
+                    var endDate = await GetUnidataFormatDateAsync(dateTo.Value);
+
+                    startEndTransDateQuery = string.Format("WITH (PO.MAINT.GL.TRAN.DATE GE '{0}' AND PO.MAINT.GL.TRAN.DATE LE '{1}') OR (PO.DATE GE '{0}' AND PO.DATE LE '{1}') ", startDate, endDate);
+                }
+                //when dateFrom has value but dateTo is null
+                else if (dateFrom.HasValue && !dateTo.HasValue)
+                {
+                    var startDate = await GetUnidataFormatDateAsync(dateFrom.Value);
+                    startEndTransDateQuery = string.Format("AND WITH (PO.MAINT.GL.TRAN.DATE GE '{0}' OR PO.DATE GE '{0}') ", startDate);
+                }
+                //when dateFrom is null but dateTo has value
+                else if (!dateFrom.HasValue && dateTo.HasValue)
+                {
+                    var endDate = await GetUnidataFormatDateAsync(dateTo.Value);
+                    startEndTransDateQuery = string.Format("AND WITH ((PO.MAINT.GL.TRAN.DATE NE '') AND (PO.MAINT.GL.TRAN.DATE LE '{0}')) OR ((PO.DATE NE '') AND (PO.DATE LE '{0}')) ", endDate);
+                }
+            }
+
+            return startEndTransDateQuery;
+        }
+
+        private async Task<IEnumerable<PurchaseOrderSummary>> BuildPurchaseOrderSummaryList(string personId, List<string> filteredPurchaseOrderIds)
+        {
+            var purchaseOrderList = new List<PurchaseOrderSummary>();
+
+            if (!filteredPurchaseOrderIds.Any())
+                return purchaseOrderList;
+
+            var purchaseOrderData = await DataReader.BulkReadRecordAsync<DataContracts.PurchaseOrders>("PURCHASE.ORDERS", filteredPurchaseOrderIds.ToArray());
+
+
+            if (purchaseOrderData != null && purchaseOrderData.Any())
+            {
+                Dictionary<string, string> hierarchyNameDictionary = GetPersonHierarchyNamesDictionary(purchaseOrderData);
+                var RequisitionNumbers = purchaseOrderData.Where(x => x.PoReqIds.Any()).Select(s => s.PoReqIds).ToList();
+                var requisitionIds = RequisitionNumbers.SelectMany(x => x).Distinct().ToList();
+                var requisitions = await DataReader.BulkReadRecordAsync<DataContracts.Requisitions>("REQUISITIONS", requisitionIds.ToArray());
+                var requistionDictionary = (requisitions != null && requisitions.Any()) ? requisitions.ToDictionary(x => x.Recordkey) : new Dictionary<string, Requisitions>();
+
+                // Read the OPERS records associated with the approval signatures and 
+                // next approvers on the purchase orders, and build approver objects.
+                var operators = new List<string>();
+                Collection<DataContracts.Opers> opersCollection = new Collection<DataContracts.Opers>();
+                // get list of Approvers and next approvers from the entire po records
+
+                var allPoDataApprovers = purchaseOrderData.SelectMany(poContract => poContract.PoAuthorizations).Distinct().ToList();
+                if (allPoDataApprovers != null && allPoDataApprovers.Any(x => x != null))
+                {
+                    operators.AddRange(allPoDataApprovers);
+                }
+
+                var allPoDataNextApprovers = purchaseOrderData.SelectMany(poContract => poContract.PoNextApprovalIds).Distinct().ToList();
+                if (allPoDataNextApprovers != null && allPoDataNextApprovers.Any(x => x != null))
+                {
+                    operators.AddRange(allPoDataNextApprovers);
+                }
+
+                var uniqueOperators = operators.Distinct().ToList();
+                if (uniqueOperators.Count > 0)
+                {
+                    opersCollection = await DataReader.BulkReadRecordAsync<DataContracts.Opers>("UT.OPERS", uniqueOperators.ToArray(), true);
+                }
+
+
+                foreach (PurchaseOrders purchaseOrder in purchaseOrderData)
+                {
+                    try
+                    {
+                        string initiatorName = string.Empty;
+                        hierarchyNameDictionary.TryGetValue(purchaseOrder.PoDefaultInitiator, out initiatorName);
+
+                        string requestorName = string.Empty;
+                        hierarchyNameDictionary.TryGetValue(purchaseOrder.PoRequestor, out requestorName);
+
+                        // If there is no vendor name and there is a vendor id, use the PO hierarchy to get the vendor name.
+                        var VendorName = purchaseOrder.PoMiscName.FirstOrDefault();
+                        if ((string.IsNullOrEmpty(VendorName)) && (!string.IsNullOrEmpty(purchaseOrder.PoVendor)))
+                        {
+                            hierarchyNameDictionary.TryGetValue(purchaseOrder.PoVendor, out VendorName);
+                        }
+                        purchaseOrderList.Add(BuildPurchaseOrderSummary(purchaseOrder, requistionDictionary, VendorName, initiatorName, requestorName, opersCollection));
+                    }
+                    catch (Exception ex)
+                    {
+                        throw ex;
+                    }
+                }
+            }
+
+            return purchaseOrderList;
+        }
+
+        private static string ConvertPurchaseOrderStatus(string status)
+        {
+            string purchaseOrderStatus = null;
+            if (!string.IsNullOrEmpty(status))
+            {
+                switch (status.ToUpper())
+                {
+                    case "ACCEPTED":
+                        purchaseOrderStatus = "A";
+                        break;
+                    case "BACKORDERED":
+                        purchaseOrderStatus = "B";
+                        break;
+                    case "CLOSED":
+                        purchaseOrderStatus = "C";
+                        break;
+                    case "INPROGRESS":
+                        purchaseOrderStatus = "U";
+                        break;
+                    case "INVOICED":
+                        purchaseOrderStatus = "I";
+                        break;
+                    case "NOTAPPROVED":
+                        purchaseOrderStatus = "N";
+                        break;
+                    case "OUTSTANDING":
+                        purchaseOrderStatus = "O";
+                        break;
+                    case "PAID":
+                        purchaseOrderStatus = "P";
+                        break;
+                    case "RECONCILED":
+                        purchaseOrderStatus = "R";
+                        break;
+                    case "VOIDED":
+                        purchaseOrderStatus = "V";
+                        break;
+                }
+            }
+            return purchaseOrderStatus;
+        }
+
+        #region Get VendorAddress
+        private async Task GetVendorAddress(string vendorID, PurchaseOrder purchaseOrderDomainEntity)
+        {
+            if (!string.IsNullOrEmpty(vendorID))
+            {
+                GetActiveVendorResultsRequest searchRequest = new GetActiveVendorResultsRequest();
+                searchRequest.ASearchCriteria = vendorID;
+                searchRequest.AApType = string.Empty;
+                try
+                {
+                    GetActiveVendorResultsResponse searchResponse = await transactionInvoker.ExecuteAsync<GetActiveVendorResultsRequest, GetActiveVendorResultsResponse>(searchRequest);
+
+                    if (searchResponse != null && searchResponse.VendorSearchResults != null && searchResponse.VendorSearchResults.Any())
+                    {
+                        purchaseOrderDomainEntity.VendorAddress = searchResponse.VendorSearchResults.FirstOrDefault().AlVendorAddresses;
+                        purchaseOrderDomainEntity.VendorAddressTypeCode = searchResponse.VendorSearchResults.FirstOrDefault().AlVendAddrTypeCodes;
+                        purchaseOrderDomainEntity.VendorAddressTypeDesc = searchResponse.VendorSearchResults.FirstOrDefault().AlVendAddrTypeDesc;
+                    }
+                }
+                catch (Exception)
+                {
+                    var message = string.Format("{0} Unable to get Vendor address.", vendorID);
+                    logger.Error(message);
+                }
+
+            }
+        }
+        #endregion
+
     }
+
 }

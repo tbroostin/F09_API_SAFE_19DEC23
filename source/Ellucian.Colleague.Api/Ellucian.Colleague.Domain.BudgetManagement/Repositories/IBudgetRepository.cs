@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.BudgetManagement.Entities;
 using System;
@@ -89,5 +89,14 @@ namespace Ellucian.Colleague.Domain.BudgetManagement.Repositories
         /// <param name="guid">The GUID</param>
         /// <returns></returns>
         Task<BudgetWork> GetBudgetPhaseLineItemsByGuidAsync(string guid);
+
+        /// <summary>
+        /// Gets a dictionary of guids for Budget records.
+        /// </summary>
+        /// <param name="budgetIds"></param>
+        /// <returns></returns>
+        Task<IDictionary<string, string>> GetBudgetGuidCollectionAsync(IEnumerable<string> budgetIds);
+
+
     }
 }

@@ -115,6 +115,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             _sectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
             var entity = await ConvertSectionCrosslistDtoToEntity(sectionCrosslist);
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
             var createdEntity = await _sectionRepository.CreateSectionCrosslistAsync(entity);
             var ids = createdEntity.SectionIds.ToList();
             var sectionGuidCollection = await _sectionRepository.GetSectionGuidsCollectionAsync(ids);
@@ -133,6 +137,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             _sectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
             var entity = await ConvertSectionCrosslistDtoToEntity(sectionCrosslist);
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
             var updatedEntity = await _sectionRepository.UpdateSectionCrosslistAsync(entity);
 
             var ids = updatedEntity.SectionIds.ToList();                 
@@ -174,20 +182,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="dtoSectionCrosslist">SectionCrosslist DTO</param>
         /// <returns>SectionCrosslist Entity</returns>
         private async Task<Domain.Student.Entities.SectionCrosslist> ConvertSectionCrosslistDtoToEntity(SectionCrosslist dtoSectionCrosslist)
-        {
-            var sectionIdList = new List<string>();
-            var primarySectionId = string.Empty;
-
-            foreach (var sectionId in dtoSectionCrosslist.Sections)
-            {
-                var secId = await _sectionRepository.GetSectionIdFromGuidAsync(sectionId.Section.Id);
-                if (sectionId.Type == SectionTypeForCrosslist.Primary)
-                {
-                    primarySectionId = secId;
-                }
-                sectionIdList.Add(secId);
-            }
-
+        {         
             var sectionCrosslistGuid = string.Empty;
             var sectionCrosslistId = string.Empty;
 
@@ -208,10 +203,45 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             }
 
+            var sectionIdList = new List<string>();
+            var primarySectionId = string.Empty;
+            var primaryFound = false;
+            foreach (var sectionId in dtoSectionCrosslist.Sections)
+            {
+                var secId = await _sectionRepository.GetSectionIdFromGuidAsync(sectionId.Section.Id);
+                if (sectionId.Type == SectionTypeForCrosslist.Primary)
+                {
+                    if (primaryFound == false)
+                    {
+                        primarySectionId = secId;
+                        primaryFound = true;
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError("Only one section can be primary.", "Validation.Exception", sectionCrosslistGuid, sectionCrosslistId); ;
+                    }
+                }
+                sectionIdList.Add(secId);
+            }
+
             var sectionCrosslistEntity = new Domain.Student.Entities.SectionCrosslist(sectionCrosslistId, primarySectionId, sectionIdList, sectionCrosslistGuid);
-            
-            sectionCrosslistEntity.Capacity = dtoSectionCrosslist.MaxEnrollment;
-            sectionCrosslistEntity.WaitlistMax = dtoSectionCrosslist.MaxWaitlist;
+
+            if (dtoSectionCrosslist.MaxEnrollment != null && dtoSectionCrosslist.MaxEnrollment < 0)
+            {
+                IntegrationApiExceptionAddError("Maximum enrollment cannot be less than zero.", "Validation.Exception", sectionCrosslistGuid, sectionCrosslistId);
+            }
+            else
+            {
+                sectionCrosslistEntity.Capacity = dtoSectionCrosslist.MaxEnrollment;
+            }
+            if (dtoSectionCrosslist.MaxWaitlist != null && dtoSectionCrosslist.MaxWaitlist < 0)
+            {
+                IntegrationApiExceptionAddError("Maximum waitlist cannot be less than zero.", "Validation.Exception", sectionCrosslistGuid, sectionCrosslistId);
+            }
+            else
+            {
+                sectionCrosslistEntity.WaitlistMax = dtoSectionCrosslist.MaxWaitlist;
+            }
 
             if (dtoSectionCrosslist.Waitlist != null)
             {

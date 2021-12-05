@@ -115,7 +115,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
                 if (extendedDataEntity == null)
                 {
-                    throw new KeyNotFoundException(string.Format("{0} id {1} not found.", configuration.ResourceName, id));
+                    throw new KeyNotFoundException(string.Format("Invalid GUID for {0}: '{1}'", configuration.ResourceName, id));
                 }
 
                 Dtos.EthosApiBuilder extendedDataDto = ConvertEthosApiBuilderEntityToDtoAsync(extendedDataEntity, false);
@@ -123,7 +123,15 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             catch (KeyNotFoundException ex)
             {
-                throw ex;
+                if (!string.IsNullOrEmpty(configuration.PrimaryKeyName))
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "Key.Not.Found", httpStatusCode: System.Net.HttpStatusCode.NotFound);
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", httpStatusCode: System.Net.HttpStatusCode.NotFound);
+                }
+                throw IntegrationApiException;
             }
             catch (IntegrationApiException ex)
             {
@@ -189,7 +197,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if (!userHasPermission)
             {
                 logger.Error(string.Format("User '" + CurrentUser.UserId + "' is not authorized to view {0}.", configuration.ResourceName));
-                throw new PermissionsException(string.Format("User is not authorized to view {0}.", configuration.ResourceName));
+                throw new PermissionsException(string.Format("User '" + CurrentUser.UserId + "' is not authorized to view {0}.", configuration.ResourceName));
             }
         }
 
@@ -213,36 +221,81 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             if (extendedData == null || string.IsNullOrEmpty(extendedData.Id))
             {
-                throw new KeyNotFoundException("person id is a required property for extendedData");
+                throw new KeyNotFoundException(string.Format("id is a required property for {0}", resourceName));
             }
 
-            var extendedDataLookUpResult = await _ethosApiBuilderRepository.GetRecordInfoFromGuidAsync(id);
-            var personLookUpResult = await _ethosApiBuilderRepository.GetRecordInfoFromGuidAsync(extendedData.Id);          
-
-            if (personLookUpResult == null)
+            string primaryKey = id;
+            string primaryEntity = configuration.PrimaryEntity;
+            if (!string.IsNullOrEmpty(configuration.PrimaryKeyName))
             {
-                throw new KeyNotFoundException("Person id associated to id " + extendedData.Id + " not found.");
+                if (!id.Equals(extendedData.Id, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new KeyNotFoundException(string.Format("Request Id '{0}' doesn't match request body Id '{2}'.  Invalid Id for {1}: '{2}'",id,  resourceName, extendedData.Id));
+                }
+                if (!string.IsNullOrEmpty(configuration.PrimaryKeyName))
+                {
+                    var idSplit = _configurationRepository.UnEncodePrimaryKey(id).Split('+');
+                    if (idSplit.Count() > 1)
+                    {
+                        primaryEntity = idSplit[0];
+                        primaryKey = idSplit[1];
+                    }
+                    else
+                    {
+                        primaryKey = idSplit[0];
+                    }
+                }
             }
-
-            if (extendedDataLookUpResult != null && !extendedDataLookUpResult.PrimaryKey.Equals(personLookUpResult.PrimaryKey, StringComparison.InvariantCultureIgnoreCase))
+            else
             {
-                throw new InvalidOperationException("The person id is for a different person than the id of the extendedData.");
-            }
+                var extendedDataLookUpResult = await _ethosApiBuilderRepository.GetRecordInfoFromGuidAsync(id);
+                var personLookUpResult = await _ethosApiBuilderRepository.GetRecordInfoFromGuidAsync(extendedData.Id);
 
-            if ((extendedDataLookUpResult != null && string.IsNullOrEmpty(extendedDataLookUpResult.PrimaryKey)) || string.IsNullOrEmpty(personLookUpResult.PrimaryKey))
-            {
-                throw new KeyNotFoundException("Person id or extendedData id were not found.");
+                if (personLookUpResult == null)
+                {
+                    throw new KeyNotFoundException(string.Format("Invalid GUID for {0}: '{1}'", resourceName, extendedData.Id));
+                }
+
+                if (extendedDataLookUpResult != null && !extendedDataLookUpResult.PrimaryKey.Equals(personLookUpResult.PrimaryKey, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    throw new KeyNotFoundException(string.Format("Invalid GUID for {0}: '{1}'", resourceName, id));
+                }
+
+                if (extendedDataLookUpResult != null && !extendedDataLookUpResult.Entity.Equals(configuration.PrimaryGuidFileName, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    throw new InvalidOperationException(string.Format("The id is for a different resource than {0}.", resourceName));
+                }
+
+                if ((extendedDataLookUpResult != null && string.IsNullOrEmpty(extendedDataLookUpResult.PrimaryKey)) || string.IsNullOrEmpty(personLookUpResult.PrimaryKey))
+                {
+                    throw new KeyNotFoundException(string.Format("Invalid GUID for {0}: '{1}'", resourceName, id));
+                }
+                primaryKey = extendedDataLookUpResult.PrimaryKey;
             }
 
             _ethosApiBuilderRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
-            EthosApiBuilder extendedDataRequest = ConvertEthosApiBuilderDtoToRequestAsync(personLookUpResult.PrimaryKey, extendedData);
+            EthosApiBuilder extendedDataRequest = ConvertEthosApiBuilderDtoToRequestAsync(primaryKey, extendedData, primaryEntity);
 
             EthosApiBuilder extendedDataResponse = await _ethosApiBuilderRepository.UpdateEthosApiBuilderAsync(extendedDataRequest, configuration);
 
-            Dtos.EthosApiBuilder extendedDataDto = await GetEthosApiBuilderByIdAsync(extendedDataResponse.Guid, configuration.ResourceName);
-
-            return extendedDataDto;
+            try
+            {
+                Dtos.EthosApiBuilder extendedDataDto = await GetEthosApiBuilderByIdAsync(extendedDataResponse.Guid, configuration.ResourceName);
+                return extendedDataDto;
+            }
+            catch (IntegrationApiException ex)
+            {
+                var messages = ex.Errors;
+                IntegrationApiException = new IntegrationApiException();
+                foreach (var message in messages)
+                {
+                    var guid = string.IsNullOrEmpty(message.Guid) ? extendedDataRequest.Guid : message.Guid;
+                    var primaryId = string.IsNullOrEmpty(message.Id) ? primaryKey : message.Id;
+                    IntegrationApiExceptionAddError(message.Message, "Create.Update.Success.Exception", guid, primaryId, System.Net.HttpStatusCode.NotFound);
+                }
+                throw IntegrationApiException;
+            }
         }
 
         /// <summary>
@@ -273,7 +326,159 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if (!userHasPermission)
             {
                 logger.Error(string.Format("User '" + CurrentUser.UserId + "' is not authorized to update {0}.", configuration.ResourceName));
-                throw new PermissionsException(string.Format("User is not authorized to update {0}.", configuration.ResourceName));
+                throw new PermissionsException(string.Format("User '" + CurrentUser.UserId + "' is not authorized to update {0}.", configuration.ResourceName));
+            }
+        }
+
+        #endregion
+
+        #region POST Method
+        /// <summary>
+        /// Updates existing extended data record
+        /// </summary>
+        /// <param name="id">the guid for extended data record</param>
+        /// <param name="extendedData">Dtos.EthosApiBuilder</param>
+        /// <returns>Dtos.EthosApiBuilder</returns>
+        public async Task<Dtos.EthosApiBuilder> PostEthosApiBuilderAsync(Dtos.EthosApiBuilder extendedData, string resourceName)
+        {
+            var configuration = await _configurationRepository.GetEthosApiConfigurationByResource(resourceName);
+            CheckUserEthosApiBuilderCreatePermissions(configuration);
+
+            if (extendedData == null || string.IsNullOrEmpty(extendedData.Id))
+            {
+                throw new KeyNotFoundException(string.Format("id is a required property for {0}", resourceName));
+            }
+
+            _ethosApiBuilderRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+            _configurationRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+
+            if (!string.IsNullOrEmpty(configuration.PrimaryGuidSource) || !string.IsNullOrEmpty(configuration.PrimaryKeyName))
+            {
+                EthosApiBuilder extendedDataRequest = ConvertEthosApiBuilderDtoToRequestAsync("$NEW", extendedData, configuration.PrimaryEntity);
+
+                EthosApiBuilder extendedDataResponse = await _ethosApiBuilderRepository.UpdateEthosApiBuilderAsync(extendedDataRequest, configuration);
+                try
+                { 
+                    return await GetEthosApiBuilderByIdAsync(extendedDataResponse.Guid, configuration.ResourceName);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    var messages = ex.Errors;
+                    IntegrationApiException = new IntegrationApiException();
+                    foreach (var message in messages)
+                    {
+                        var guid = string.IsNullOrEmpty(message.Guid) ? extendedDataRequest.Guid : message.Guid;
+                        var primaryId = string.IsNullOrEmpty(message.Id) ? string.Empty : message.Id;
+                        IntegrationApiExceptionAddError(message.Message, "Create.Update.Success.Exception", guid, primaryId, System.Net.HttpStatusCode.NotFound);
+                    }
+                    throw IntegrationApiException;
+                }
+            }
+            else
+            {
+                return extendedData;
+            }
+        }
+
+        /// <summary>
+        /// Verifies if the user has the correct permissions to update a person's guardian.
+        /// </summary>
+        private void CheckUserEthosApiBuilderCreatePermissions(EthosApiConfiguration configuration)
+        {
+            // access is ok if the current user has the view or update permission
+            bool userHasPermission = false;
+            foreach (var method in configuration.HttpMethods)
+            {
+                if (string.IsNullOrEmpty(method.Permission) && method.Method == "POST")
+                {
+                    userHasPermission = true;
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(method.Permission) && !userHasPermission)
+                    {
+                        if (method.Method == "POST")
+                        {
+                            userHasPermission = HasPermission(method.Permission);
+                        }
+                    }
+                }
+            }
+
+            if (!userHasPermission)
+            {
+                var message = string.Format("User '" + CurrentUser.UserId + "' is not authorized to create {0}.", configuration.ResourceName);
+                if (string.IsNullOrEmpty(configuration.PrimaryGuidSource))
+                    message = string.Format("User '" + CurrentUser.UserId + "' is not authorized to access the subroutine {0}.", configuration.PrimaryEntity);
+                logger.Error(message);
+                throw new PermissionsException(message);
+            }
+        }
+
+        #endregion
+
+        #region DELETE Method
+        /// <summary>
+        /// Updates existing extended data record
+        /// </summary>
+        /// <param name="id">the guid for extended data record</param>
+        /// <param name="resourceName">Resource Name being processed for delete</param>
+        /// <returns>Dtos.EthosApiBuilder</returns>
+        public async Task DeleteEthosApiBuilderAsync(string id, string resourceName)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException(string.Format("Must provide an id for the {0} resource", resourceName));
+            }
+
+            var configuration = await _configurationRepository.GetEthosApiConfigurationByResource(resourceName);
+            CheckUserEthosApiBuilderDeletePermissions(configuration);
+
+            if (string.IsNullOrEmpty(configuration.PrimaryKeyName))
+            {
+                var extendedDataLookUpResult = await _ethosApiBuilderRepository.GetRecordInfoFromGuidAsync(id);
+                if (extendedDataLookUpResult == null)
+                {
+                    throw new KeyNotFoundException(string.Format("Invalid GUID for {0}: '{1}'", resourceName, id));
+                }
+                if (extendedDataLookUpResult != null && !extendedDataLookUpResult.Entity.Equals(configuration.PrimaryGuidFileName, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    throw new InvalidOperationException(string.Format("The id is for a different resource than {0}.", resourceName));
+                }
+            }
+
+            await _ethosApiBuilderRepository.DeleteEthosApiBuilderAsync(id, configuration);
+        }
+
+        /// <summary>
+        /// Verifies if the user has the correct permissions to delete.
+        /// </summary>
+        private void CheckUserEthosApiBuilderDeletePermissions(EthosApiConfiguration configuration)
+        {
+            // access is ok if the current user has the view or update permission
+            bool userHasPermission = false;
+            foreach (var method in configuration.HttpMethods)
+            {
+                if (string.IsNullOrEmpty(method.Permission) && method.Method == "DELETE")
+                {
+                    userHasPermission = true;
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(method.Permission) && !userHasPermission)
+                    {
+                        if (method.Method == "DELETE")
+                        {
+                            userHasPermission = HasPermission(method.Permission);
+                        }
+                    }
+                }
+            }
+
+            if (!userHasPermission)
+            {
+                logger.Error(string.Format("User '" + CurrentUser.UserId + "' is not authorized to delete {0}.", configuration.ResourceName));
+                throw new PermissionsException(string.Format("User '" + CurrentUser.UserId + "' is not authorized to delete {0}.", configuration.ResourceName));
             }
         }
 
@@ -286,10 +491,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="entityId">entityId</param>
         /// <param name="extendedData">Dtos.EthosApiBuilder</param>
         /// <returns>EthosApiBuilderRequest</returns>
-        private EthosApiBuilder ConvertEthosApiBuilderDtoToRequestAsync(string entityId, Dtos.EthosApiBuilder extendedData)
+        private EthosApiBuilder ConvertEthosApiBuilderDtoToRequestAsync(string entityId, Dtos.EthosApiBuilder extendedData, string entity)
         {
 
-            var extendedDataRequest = new EthosApiBuilder(extendedData.Id, entityId, "");        
+            var extendedDataRequest = new EthosApiBuilder(extendedData.Id, entityId, entity);        
 
             return extendedDataRequest;
         }
@@ -321,6 +526,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     var row = new EthosExtensibleDataFilter(filterRow.ColleagueColumnName, filterRow.ColleagueFileName,
                         filterRow.JsonTitle, filterRow.JsonPath, jsonPropertyType, filterRow.FilterValue)
                     {
+                        DatabaseUsageType = filterRow.DatabaseUsageType,
                         GuidColumnName = filterRow.GuidColumnName,
                         GuidDatabaseUsageType = filterRow.GuidDatabaseUsageType,
                         GuidFileName = filterRow.GuidFileName,
@@ -334,10 +540,40 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         TransFileName = filterRow.TransFileName,
                         TransTableName = filterRow.TransTableName,
                         SelectRules = filterRow.SelectRules,
+                        ValidFilterOpers = filterRow.ValidFilterOpers,
                         SelectionCriteria = new List<EthosApiSelectCriteria>(),
                         SortColumns = new List<EthosApiSortCriteria>(),
                         Enumerations = new List<EthosApiEnumerations>()
                     };
+
+                    // Validate Filter Operators and convert
+                    if (!string.IsNullOrEmpty(filterRow.FilterOper))
+                    {
+                        switch (filterRow.FilterOper)
+                        {
+                            case "$lte":
+                                row.FilterOper = "LE";
+                                break;
+                            case "$gte":
+                                row.FilterOper = "GE";
+                                break;
+                            case "$lt":
+                                row.FilterOper = "LT";
+                                break;
+                            case "$gt":
+                                row.FilterOper = "GT";
+                                break;
+                            case "$ne":
+                                row.FilterOper = "NE";
+                                break;
+                            case "$eq":
+                                row.FilterOper = "EQ";
+                                break;
+                            default:
+                                row.FilterOper = "EQ";
+                                break;
+                        }
+                    }
 
                     foreach (var selectionCriteria in filterRow.SelectionCriteria)
                     {

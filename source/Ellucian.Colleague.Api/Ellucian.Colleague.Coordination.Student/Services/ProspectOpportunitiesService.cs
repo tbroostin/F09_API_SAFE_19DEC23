@@ -77,11 +77,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             try
             {
                 // access is ok if the current user has the view, or create, permission
-                if ((!await CheckViewProspectOpportunitiesPermissionAsync()) && (!await CheckUpdateProspectOpportunitiesPermissionAsync()))
-                {
-                    logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view prospect-opportunities.");
-                    throw new PermissionsException("User '" + CurrentUser.UserId + "' does not have permission to view prospect-opportunities.");
-                }
+                //if ((!await CheckViewProspectOpportunitiesPermissionAsync()) && (!await CheckUpdateProspectOpportunitiesPermissionAsync()))
+                //{
+                //    logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view prospect-opportunities.");
+                //    throw new PermissionsException("User '" + CurrentUser.UserId + "' does not have permission to view prospect-opportunities.");
+                //}
 
                 //convert criteria values.
                 if (criteria != null)
@@ -198,11 +198,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
 
                 // access is ok if the current user has the view, or create, permission
-                if ((!await CheckViewProspectOpportunitiesPermissionAsync()) && (!await CheckUpdateProspectOpportunitiesPermissionAsync()))
-                {
-                    logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view prospect-opportunities.");
-                    throw new PermissionsException("User '" + CurrentUser.UserId + "' does not have permission to view prospect-opportunities.");
-                }
+                //if ((!await CheckViewProspectOpportunitiesPermissionAsync()) && (!await CheckUpdateProspectOpportunitiesPermissionAsync()))
+                //{
+                //    logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view prospect-opportunities.");
+                //    throw new PermissionsException("User '" + CurrentUser.UserId + "' does not have permission to view prospect-opportunities.");
+                //}
 
                 var entity = await _prospectOpportunitiesRepository.GetProspectOpportunityByIdAsync(guid);
 

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 
@@ -46,5 +46,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// Faculty Advsior type
         /// </summary>
         public string ProfileAdvsiorType { get; set; }
+
+        /// <summary>
+        /// Display Faculty office hours
+        /// </summary>
+        public bool IsDisplayOfficeHours { get; set; }
     }
 }

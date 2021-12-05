@@ -93,7 +93,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         public async Task VendorCommodityRepository_GetVendorCommodityAsync_SelectAsyncReturnsNull()
         {
             string query = string.Format("WITH VENDOR.COMMODITIES.VEND.ID EQ '{0}' AND WITH VENDOR.COMMODITIES.CODE EQ '{1}'", vendorId, commodityCode);
-            _dataReaderMock.Setup(repo => repo.SelectAsync("VENDOR.COMMODITIES", query)).ReturnsAsync(null);
+            _dataReaderMock.Setup(repo => repo.SelectAsync("VENDOR.COMMODITIES", query)).ReturnsAsync(() => null);
             _dataReaderMock.Setup(repo => repo.ReadRecordAsync<VendorCommodities>(expectedRecordKey, true)).ReturnsAsync(vendorCommodityCommodtiyDataContract);
 
             var result = await vendorCommodityRepository.GetVendorCommodityAsync(vendorId, commodityCode);
@@ -103,7 +103,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         [TestMethod]        
         public async Task VendorCommodityRepository_GetVendorCommodityAsync_ReadRecordAsyncReturnsNull()
         {
-            _dataReaderMock.Setup(repo => repo.ReadRecordAsync<VendorCommodities>(expectedRecordKey, true)).ReturnsAsync(null);
+            _dataReaderMock.Setup(repo => repo.ReadRecordAsync<VendorCommodities>(expectedRecordKey, true)).ReturnsAsync(() => null);
             var result = await vendorCommodityRepository.GetVendorCommodityAsync(vendorId, commodityCode);
             Assert.IsNull(result);
         }

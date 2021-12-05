@@ -1,4 +1,4 @@
-﻿// Copyright 2013-2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2013-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,33 +16,46 @@ namespace Ellucian.Colleague.Domain.Planning.Entities
         public string Description { get { return _Description; } }
 
         /// <summary>
-        /// List of Ids in this course block
+        /// List of Course Ids in this course block
         /// </summary>
         private List<string> _CourseIds = new List<string>();
         public List<string> CourseIds { get { return _CourseIds; } }
+
+        /// <summary>
+        /// List of Course Placeholder Ids in this course block
+        /// </summary>
+        private List<string> _CoursePlaceholderIds = new List<string>();
+        public List<string> CoursePlaceholderIds { get { return _CoursePlaceholderIds; } }
 
         /// <summary>
         /// Course Block constructor.
         /// </summary>
         /// <param name="description"></param>
         /// <param name="courseIds">List of courses in this block</param>
-        /// <param name="termCode">Optional term to add these courses to in degree plan</param>
-        public CourseBlocks(string description, IEnumerable<string> courseIds)
+        /// <param name="coursePlaceholderIds">Optional list of course placeholders in this block </param>
+        public CourseBlocks(string description, IEnumerable<string> courseIds, IEnumerable<string> coursePlaceholderIds)
         {
             if (string.IsNullOrEmpty(description))
             {
                 throw new ArgumentNullException("description");
             }
+
             if (courseIds != null)
             {
-                courseIds = courseIds.Where(c => (!string.IsNullOrEmpty(c)));
+                _CourseIds = courseIds.Where(c => (!string.IsNullOrWhiteSpace(c))).ToList();
             }
-            if (courseIds == null || courseIds.Count() == 0)
+
+            if (coursePlaceholderIds != null)
             {
-                throw new ArgumentNullException("courseIds");
+                _CoursePlaceholderIds = coursePlaceholderIds.Where(cp => (!string.IsNullOrWhiteSpace(cp))).ToList();
             }
+
+            if (_CourseIds.Count == 0 && _CoursePlaceholderIds.Count == 0)
+            {
+                throw new ArgumentNullException("courseIds", "Either courseIds or coursePlaceholderIds are required, both cannot both be empty.");
+            }
+
             _Description = description;
-            _CourseIds = courseIds.ToList();
         }
     }
 }

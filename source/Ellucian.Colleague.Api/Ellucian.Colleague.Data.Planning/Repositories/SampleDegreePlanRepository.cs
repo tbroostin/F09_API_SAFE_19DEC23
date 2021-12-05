@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -23,6 +23,71 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
             : base(cacheProvider, transactionFactory, logger)
         {
             CacheTimeout = Level1CacheTimeoutValue;
+        }
+
+        /// <summary>
+        /// Retrieve all curriculum track codes available for a student for a given academic program code.
+        /// </summary>
+        /// <param name="programCode">The code for the program for which the curriculum tracks should be returned.</param>
+        /// <param name="catalogCode">The code for the catalog for which the curriculum tracks should be returned.</param>
+        /// <returns>A collection of <see cref="CurriculumTrack">curriculum tracks</see> for a given program code and catalog code.</returns>
+        public async Task<IEnumerable<CurriculumTrack>> GetProgramCatalogCurriculumTracksAsync(string programCode, string catalogCode)
+        {
+            var curriculumTracks = new List<CurriculumTrack>();
+
+            //return curriculum track ids for the given program code and catalog code that are in the academic requirements list
+            string fileKey = programCode + "*" + catalogCode;
+            var acadProgramReqmt = await DataReader.ReadRecordAsync<AcadProgramReqmts>("ACAD.PROGRAM.REQMTS", fileKey);
+
+            //No academic program was found for the given program code and catalog code (year)
+            if (acadProgramReqmt == null)
+            {
+                logger.Info("Program '" + programCode + "' for catalog '" + catalogCode + "'" + " is missing an ACAD.PROGRAM.REQMTS record.");
+                return curriculumTracks;
+            }
+
+            //An academic program was found for the given program code and catalog code (year), but no curriculum tracks have been assigned
+            if (acadProgramReqmt.AcprCurriculumTrackIds == null || acadProgramReqmt.AcprCurriculumTrackIds.Count == 0)
+            {
+                logger.Info("No curriculum tracks have been assigned to the academic program '" + programCode + "' for the catalog '" + catalogCode + "'.");
+                return curriculumTracks;
+            }
+
+            //Retrieve the curriculum track descriptions for the program/catalog curriculum track ids
+            var bulkCurriculumTracksReadOutput = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<CurriculumTracks>("CURRICULUM.TRACKS", acadProgramReqmt.AcprCurriculumTrackIds.ToArray());
+
+            //Log any invalid curriculum track pointers
+            if (bulkCurriculumTracksReadOutput.InvalidKeys != null && bulkCurriculumTracksReadOutput.InvalidKeys.Length > 0)
+            {
+                logger.Info("Curriculum track records are missing for the following curriculum track ids: " +
+                    string.Join(", ", bulkCurriculumTracksReadOutput.InvalidKeys));
+            }
+
+            var curriculumTracksData = bulkCurriculumTracksReadOutput.BulkRecordsRead;
+            if (curriculumTracksData == null || !curriculumTracksData.Any())
+            {
+                logger.Info("No curriculum track records where found for the following curriculum track ids: " + 
+                    string.Join(", ", acadProgramReqmt.AcprCurriculumTrackIds));
+                return curriculumTracks;
+            }
+
+            foreach (var track in curriculumTracksData)
+            {
+                //filter out curriculum tracks that are not active (only include active tracks where start date is null or in the past and end date is null or in the future)
+                if ((!track.CtkStartDate.HasValue || track.CtkStartDate.Value <= DateTime.Today) &&
+                    (!track.CtkEndDate.HasValue || track.CtkEndDate.Value >= DateTime.Today))
+                {
+                    curriculumTracks.Add(new CurriculumTrack(track.Recordkey, track.CtkDesc));
+                }
+                else
+                {
+                    logger.Info(string.Format("Curriculum track with Id: {0} Start Date: {1} and End Date: {2} is not active and will not be returned.",
+                        track.Recordkey,
+                        track.CtkStartDate.HasValue ? track.CtkStartDate.Value.ToShortDateString() : "",
+                        track.CtkEndDate.HasValue ? track.CtkEndDate.Value.ToShortDateString() : ""));
+                }
+            }
+            return curriculumTracks;
         }
 
         public async Task<SampleDegreePlan> GetAsync(string curriculumTrackCode)
@@ -75,7 +140,11 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
                         {
                             try
                             {
-                                var currBlock = new Ellucian.Colleague.Domain.Planning.Entities.CourseBlocks(courseBlockData.CblDesc, courseBlockData.CblCourses.Where(c => (!string.IsNullOrEmpty(c))));
+                                var currBlock = new Ellucian.Colleague.Domain.Planning.Entities.CourseBlocks(
+                                    description: courseBlockData.CblDesc,
+                                    courseIds: courseBlockData.CblCourses.Where(c => (!string.IsNullOrEmpty(c))),
+                                    coursePlaceholderIds: courseBlockData.CblCoursePlaceholders.Where(cp => (!string.IsNullOrEmpty(cp)))
+                                    );
                                 courseBlocks.Add(currBlock);
                             }
                             catch (Exception ex)

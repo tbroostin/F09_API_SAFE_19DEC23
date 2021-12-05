@@ -4,19 +4,24 @@ using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -190,6 +195,94 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             await _studentFinancialAidAcademicProgressStatusesController.GetStudentFinancialAidAcademicProgressStatusesAsync(paging, queryStringFilter);
         }
 
+        //Get
+        //Version 15
+        //GetStudentFinancialAidAcademicProgressStatusesAsync
+
+        //Example success 
+        [TestMethod]
+        public async Task StudentFinancialAidAcademicProgressStatusesController_GetStudentFinancialAidAcademicProgressStatusesAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAcademicProgressStatuses" },
+                    { "action", "GetStudentFinancialAidAcademicProgressStatusesAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-financial-aid-academic-progress-statuses", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _studentFinancialAidAcademicProgressStatusesController.Request.SetRouteData(data);
+            _studentFinancialAidAcademicProgressStatusesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentFinancialAidAcadProgress);
+
+            var controllerContext = _studentFinancialAidAcademicProgressStatusesController.ControllerContext;
+            var actionDescriptor = _studentFinancialAidAcademicProgressStatusesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAcademicProgressStatuses>, int>(_studentFinancialAidAcademicProgressStatusesCollection, 1);
+            _studentFinancialAidAcademicProgressStatusesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _studentFinancialAidAcademicProgressStatusesServiceMock.Setup(x => x.GetStudentFinancialAidAcademicProgressStatusesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.StudentFinancialAidAcademicProgressStatuses>(), It.IsAny<bool>())).ReturnsAsync(tuple); 
+            var studentFinancialAidAcademicProgressStatuses = await _studentFinancialAidAcademicProgressStatusesController.GetStudentFinancialAidAcademicProgressStatusesAsync(new Paging(10, 0), new QueryStringFilter("criteria", "{'person':{'id':'123'}}"));
+
+            Object filterObject;
+            _studentFinancialAidAcademicProgressStatusesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentFinancialAidAcadProgress));
+
+        }
+
+        //Example exception
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentFinancialAidAcademicProgressStatusesController_GetStudentFinancialAidAcademicProgressStatusesAsync_Invalid_Permissions()
+        {
+            var paging = new Paging(100, 0);
+            var queryStringFilter = new QueryStringFilter("", "");
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "FinancialAidApplications" },
+                    { "action", "GetFinancialAidApplicationOutcomesAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-financial-aid-academic-progress-statuses", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _studentFinancialAidAcademicProgressStatusesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _studentFinancialAidAcademicProgressStatusesController.ControllerContext;
+            var actionDescriptor = _studentFinancialAidAcademicProgressStatusesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAcademicProgressStatuses>, int>(_studentFinancialAidAcademicProgressStatusesCollection, 1);
+                _studentFinancialAidAcademicProgressStatusesServiceMock.Setup(x => x.GetStudentFinancialAidAcademicProgressStatusesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.StudentFinancialAidAcademicProgressStatuses>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                _studentFinancialAidAcademicProgressStatusesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view student-financial-aid-academic-progress-statuses."));
+                await _studentFinancialAidAcademicProgressStatusesController.GetStudentFinancialAidAcademicProgressStatusesAsync(paging, queryStringFilter);
+
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion
 
         #region GETBYID
@@ -300,6 +393,92 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 .Throws<Exception>();
             await _studentFinancialAidAcademicProgressStatusesController.GetStudentFinancialAidAcademicProgressStatusesByGuidAsync(StudentFinancialAidAcademicProgressStatusesGuid);
         }
+
+        //Get by Id
+        //Version 9.0.0 / 9.1.0
+        //GetStudentFinancialAidAcademicProgressStatusesByGuidAsync
+
+        //Example success 
+        [TestMethod]
+        public async Task financialAidApplicationsController_GetByIdAsync_Permissions()
+        {
+            var expected = _studentFinancialAidAcademicProgressStatusesCollection.FirstOrDefault(x => x.Id.Equals(StudentFinancialAidAcademicProgressStatusesGuid, StringComparison.OrdinalIgnoreCase));
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "FinancialAidApplications" },
+                    { "action", "GetStudentFinancialAidAcademicProgressStatusesByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-financial-aid-academic-progress-statuses", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _studentFinancialAidAcademicProgressStatusesController.Request.SetRouteData(data);
+            _studentFinancialAidAcademicProgressStatusesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentFinancialAidAcadProgress);
+
+            var controllerContext = _studentFinancialAidAcademicProgressStatusesController.ControllerContext;
+            var actionDescriptor = _studentFinancialAidAcademicProgressStatusesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _studentFinancialAidAcademicProgressStatusesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _studentFinancialAidAcademicProgressStatusesServiceMock.Setup(x => x.GetStudentFinancialAidAcademicProgressStatusesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(expected);
+            var actual = await _studentFinancialAidAcademicProgressStatusesController.GetStudentFinancialAidAcademicProgressStatusesByGuidAsync(StudentFinancialAidAcademicProgressStatusesGuid);
+
+
+            Object filterObject;
+            _studentFinancialAidAcademicProgressStatusesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentFinancialAidAcadProgress));
+
+        }
+
+        //Example exception
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task financialAidApplicationsController_GetByIdAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "FinancialAidApplications" },
+                    { "action", "GetStudentFinancialAidAcademicProgressStatusesByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-financial-aid-academic-progress-statuses", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _studentFinancialAidAcademicProgressStatusesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _studentFinancialAidAcademicProgressStatusesController.ControllerContext;
+            var actionDescriptor = _studentFinancialAidAcademicProgressStatusesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                _studentFinancialAidAcademicProgressStatusesServiceMock.Setup(x => x.GetStudentFinancialAidAcademicProgressStatusesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                _studentFinancialAidAcademicProgressStatusesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view student-financial-aid-academic-progress-statuses."));
+                await _studentFinancialAidAcademicProgressStatusesController.GetStudentFinancialAidAcademicProgressStatusesByGuidAsync(StudentFinancialAidAcademicProgressStatusesGuid);
+
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
 
         #endregion
 

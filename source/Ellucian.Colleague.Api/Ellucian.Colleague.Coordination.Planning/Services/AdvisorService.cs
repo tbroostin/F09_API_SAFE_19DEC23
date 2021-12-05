@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Diagnostics;
@@ -74,7 +74,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             }
             catch (Exception)
             {
-                logger.Info("Advisor Id " + advisorId + " is neither a Faculty nor a Staff");
+                logger.Error("Advisor Id " + advisorId + " is neither a Faculty nor a Staff");
                 var message = "Cannot retrieve information for Advisor Id " + advisorId;
                 throw new KeyNotFoundException(message);
             }
@@ -737,7 +737,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
 
             List<Dtos.Planning.Advisee> adviseeDtos = new List<Dtos.Planning.Advisee>();
             var adviseeAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.PlanningStudent, Dtos.Planning.Advisee>();
-            var completedAdvisementsAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.CompletedAdvisement, Dtos.Planning.CompletedAdvisement>();
+            var completedAdvisementsAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.CompletedAdvisement, Dtos.Student.CompletedAdvisement>();
 
             // Before doing anything, check the current advisor's privacy code settings (on their staff record)
             // against any privacy code on the student's record
@@ -761,7 +761,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 };
                 if (adviseeStudentEntity.CompletedAdvisements != null && adviseeStudentEntity.CompletedAdvisements.Any())
                 {
-                    List<Dtos.Planning.CompletedAdvisement> completedAdvisements = new List<Dtos.Planning.CompletedAdvisement>();
+                    List<Dtos.Student.CompletedAdvisement> completedAdvisements = new List<Dtos.Student.CompletedAdvisement>();
                     foreach(var completedAdvisement in adviseeStudentEntity.CompletedAdvisements)
                     {
                         completedAdvisements.Add(completedAdvisementsAdapter.MapToType(completedAdvisement));
@@ -1373,12 +1373,12 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
         }
 
         /// <summary>
-        /// Posts a <see cref="Dtos.Planning.CompletedAdvisement">completed advisement</see>
+        /// Posts a <see cref="Dtos.Student.CompletedAdvisement">completed advisement</see>
         /// </summary>
         /// <param name="studentId">ID of the student whose advisement is being marked complete</param>
-        /// <param name="completeAdvisement">A <see cref="Dtos.Planning.CompletedAdvisement">completed advisement</see></param>
+        /// <param name="completeAdvisement">A <see cref="Dtos.Student.CompletedAdvisement">completed advisement</see></param>
         /// <returns>An <see cref="Dtos.Planning.Advisee">advisee</see></returns>
-        public async Task<PrivacyWrapper<Dtos.Planning.Advisee>> PostCompletedAdvisementAsync(string studentId, Dtos.Planning.CompletedAdvisement completeAdvisement)
+        public async Task<PrivacyWrapper<Dtos.Planning.Advisee>> PostCompletedAdvisementAsync(string studentId, Dtos.Student.CompletedAdvisement completeAdvisement)
         {
             if (string.IsNullOrEmpty(studentId))
             {

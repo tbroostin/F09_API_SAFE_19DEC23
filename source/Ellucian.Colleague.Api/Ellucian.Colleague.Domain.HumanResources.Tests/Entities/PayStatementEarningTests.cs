@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -22,6 +22,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         public decimal inputAmount;
 
         public List<PayrollRegisterEarningsEntry> ytdEarnings;
+        public bool isAdj;
 
         public void InitializePayStatementEarningsTests()
         {
@@ -34,8 +35,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
 
             ytdEarnings = new List<PayrollRegisterEarningsEntry>()
             {
-                new PayrollRegisterEarningsEntry("REG", 360, 360, 0, 40, 9, HourlySalaryIndicator.Hourly),
-                new PayrollRegisterEarningsEntry("REG", 360, 360, 0, 40, 9, HourlySalaryIndicator.Hourly)
+                new PayrollRegisterEarningsEntry("REG", 360, 360, 0, 40, 9, HourlySalaryIndicator.Hourly, isAdj),
+                new PayrollRegisterEarningsEntry("REG", 360, 360, 0, 40, 9, HourlySalaryIndicator.Hourly, isAdj)
             };
         }
 
@@ -89,6 +90,55 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             {
                 Assert.AreEqual(ytdEarnings.Sum(ytd => ytd.TotalPeriodEarningsAmount), actual.YearToDatePaymentAmount);
             }
+
+            [TestMethod]
+            public void OvertimeEarningsType_RateIsCalculatedCorrectlyTest()
+            {
+                var rate = 50m;
+                var factor = 1;
+                var earningsType = new EarningsType("OVT", "Overtime", true, EarningsCategory.Overtime, EarningsMethod.Accrued, null, null);
+                var earnings = new PayStatementEarnings(earningsType, 60, rate, 3000, new List<PayrollRegisterEarningsEntry>()
+                {
+                    new PayrollRegisterEarningsEntry("OVT", 360, 360, 0, 40, 9, HourlySalaryIndicator.Hourly, false),
+                    new PayrollRegisterEarningsEntry("OVT", 400, 60, 0, 40, 9, HourlySalaryIndicator.Hourly, false)
+                });
+
+                var expectedRate = rate * factor;
+                var actualRate = earnings.Rate;
+                Assert.AreEqual(expectedRate, actualRate);
+            }
+
+            [TestMethod]
+            public void OvertimeEarningsType_RateCalculation_MathCheckMismatchTest()
+            {
+                var rate = 50m;
+                var factor = 1;
+                var earningsType = new EarningsType("OVT", "Overtime", true, EarningsCategory.Overtime, EarningsMethod.Accrued, null, null);
+                var earnings = new PayStatementEarnings(earningsType, 60, rate, 1000, new List<PayrollRegisterEarningsEntry>()
+                {
+                    new PayrollRegisterEarningsEntry("OVT", 360, 360, 0, 40, 9, HourlySalaryIndicator.Hourly, false),
+                    new PayrollRegisterEarningsEntry("OVT", 400, 60, 0, 40, 9, HourlySalaryIndicator.Hourly, false)
+                });
+
+                var expectedRate = rate * factor;
+                var actualRate = earnings.Rate;
+                Assert.AreNotEqual(expectedRate, actualRate);
+                Assert.IsNull(actualRate);
+            }
+
+            [TestMethod]
+            public void YearToDatePaymentAmount_IncludesAnyAdjustmentAmountsTest()
+            {
+                ytdEarnings.Add(new PayrollRegisterEarningsEntry("REG", 100, 0, 0, 0, 0, HourlySalaryIndicator.Hourly, true));
+                ytdEarnings.Add(new PayrollRegisterEarningsEntry("REG", 200, 0, 0, 0, 0, HourlySalaryIndicator.Hourly, true));
+
+                var expectedYTDAmount = ytdEarnings.Where(e => e.EarningsTypeId == "REG").Sum(ytd => ytd.BasePeriodEarningsAmount 
+                + ytd.EarningsFactorPeriodAmount + ytd.EarningsAdjustmentAmount);
+
+                var actualYTDAmount = actual.YearToDatePaymentAmount;
+
+                Assert.AreEqual(expectedYTDAmount, actualYTDAmount);
+            }
         }
 
         [TestClass]
@@ -141,6 +191,20 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             public void YearToDateTest()
             {
                 Assert.AreEqual(ytdEarnings.Sum(ytd => ytd.TotalPeriodEarningsAmount), actual.YearToDatePaymentAmount);
+            }
+
+            [TestMethod]
+            public void YearToDatePaymentAmount_IncludesAnyAdjustmentAmountsTest()
+            {
+                ytdEarnings.Add(new PayrollRegisterEarningsEntry("REG", 100, 0, 0, 0, 0, HourlySalaryIndicator.Hourly, true));
+                ytdEarnings.Add(new PayrollRegisterEarningsEntry("REG", 200, 0, 0, 0, 0, HourlySalaryIndicator.Hourly, true));
+
+                var expectedYTDAmount = ytdEarnings.Where(e => e.EarningsTypeId == "REG").Sum(ytd => ytd.BasePeriodEarningsAmount
+                + ytd.EarningsFactorPeriodAmount + ytd.EarningsAdjustmentAmount);
+
+                var actualYTDAmount = actual.YearToDatePaymentAmount;
+
+                Assert.AreEqual(expectedYTDAmount, actualYTDAmount);
             }
 
         }   
@@ -264,6 +328,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 Assert.AreEqual(ytdEarnings.Sum(ytd => ytd.DifferentialPeriodEarningsAmount), actual.YearToDatePaymentAmount);
             }
         }
+
+        
     }
 }
 

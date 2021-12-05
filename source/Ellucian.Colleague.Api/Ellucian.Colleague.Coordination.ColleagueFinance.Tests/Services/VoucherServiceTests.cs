@@ -62,6 +62,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private Ellucian.Colleague.Dtos.ColleagueFinance.VoucherCreateUpdateRequest voucherCreateUpdateRequest;
         private VoucherCreateUpdateRequest voucherCreateUpdateRequestEntity;
 
+        private Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria filterCriteria;
+        private ProcurementDocumentFilterCriteria filterCriteriaDomainEntity;
+
         [TestInitialize]
         public void Initialize()
         {
@@ -1345,7 +1348,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [TestMethod]
         public async Task VoucherService_GetReimbursePersonAddressForVoucherAsync_ReturnsNull()
         {
-            mockVoucherRepository.Setup(i => i.GetReimbursePersonAddressForVoucherAsync(It.IsAny<string>())).ReturnsAsync(null);
+            mockVoucherRepository.Setup(i => i.GetReimbursePersonAddressForVoucherAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             var resultDto = await service2.GetReimbursePersonAddressForVoucherAsync();
             Assert.IsNull(resultDto.VendorId);
             Assert.IsNull(resultDto.AddressId);
@@ -1438,6 +1441,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             var reimburseMyselfDtoAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult, Dtos.ColleagueFinance.VendorsVoucherSearchResult>(adapterRegistry.Object, loggerObject);
             adapterRegistry.Setup(x => x.GetAdapter<Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult, Dtos.ColleagueFinance.VendorsVoucherSearchResult>()).Returns(reimburseMyselfDtoAdapter);
+
+            var procurementCriteria_Adapter = new AutoMapperAdapter<Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria, Domain.ColleagueFinance.Entities.ProcurementDocumentFilterCriteria>(adapterRegistry.Object, loggerObject);
+            adapterRegistry.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria, Domain.ColleagueFinance.Entities.ProcurementDocumentFilterCriteria>()).Returns(procurementCriteria_Adapter);
 
             // Set up the current user with a subset of projects and set up the service.
             service = new VoucherService(testVoucherRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository, testGeneralLedgerAccountRepository, adapterRegistry.Object, currentUserFactory, roleRepository, staffRepositoryMock.Object, loggerObject);
@@ -1537,8 +1543,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             };
             mockVoucherRepository.Setup(r => r.CreateVoucherAsync(voucherCreateUpdateRequestEntity)).ReturnsAsync(voucherCreateUpdateResponse);
 
+            filterCriteria = new Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria();
+            filterCriteria.PersonId = currentUserFactory.CurrentUser.PersonId;
+            filterCriteria.VendorIds = new List<string>() { "0001234" };
 
-
+            filterCriteriaDomainEntity = new ProcurementDocumentFilterCriteria();
+            filterCriteriaDomainEntity.PersonId = currentUserFactory.CurrentUser.PersonId;
+            filterCriteriaDomainEntity.VendorIds = new List<string>() { "0001234" };
         }
         #endregion
 
@@ -1706,7 +1717,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             GeneralLedgerAccountStructure accountStructure = await testGeneralLedgerConfigurationRepository.GetAccountStructureAsync();
             this.mockGlConfigurationRepository.Setup(repo => repo.GetAccountStructureAsync()).Returns(Task.FromResult(accountStructure));
 
-            this.mockVoucherRepository.Setup(repo => repo.GetVouchersByVendorAndInvoiceNoAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
+            this.mockVoucherRepository.Setup(repo => repo.GetVouchersByVendorAndInvoiceNoAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(() => null);
 
 
             var voucher2Dtos = await service2.GetVouchersByVendorAndInvoiceNoAsync(vendorId, invoiceNumber);
@@ -1729,5 +1740,81 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         #endregion
 
+        #region QueryVoucherSummariesAsync
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task QueryVoucherSummariesAsync_EmptyCriteria_ArgumentNullException()
+        {
+            await service2.QueryVoucherSummariesAsync(new Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task QueryVoucherSummariesAsync_NullCriteria_ArgumentNullException()
+        {
+            await service2.QueryVoucherSummariesAsync(null);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task QueryVoucherSummariesAsync_CurrentUserDifferentFromRequest()
+        {
+            filterCriteria = new Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria();
+            filterCriteria.PersonId = "0016357";
+
+            await service2.QueryVoucherSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task QueryVoucherSummariesAsync_MissingPermissionException()
+        {
+            await serviceForNoPermission.QueryVoucherSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task QueryVoucherSummariesAsync_StaffRecordMissingException()
+        {
+            Domain.Base.Entities.Staff nullStaff = null;
+            staffRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>())).Returns(Task.FromResult(nullStaff));
+            await service2.QueryVoucherSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        public async Task QueryVoucherSummariesAsync()
+        {
+            var voucherId = "31";
+            var personId = currentUserFactory.CurrentUser.PersonId;
+            staffRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<string>())).Returns(Task.FromResult(new Domain.Base.Entities.Staff("0000001", "Test LastName")));
+            var voucherSummaryListDto = await service.QueryVoucherSummariesAsync(filterCriteria);
+
+            // Get the requisition domain entity from the test repository
+            var voucherSummaryListDomainEntity = await testVoucherRepository.QueryVoucherSummariesAsync(filterCriteriaDomainEntity);
+
+            Assert.IsNotNull(voucherSummaryListDto);
+            Assert.AreEqual(voucherSummaryListDto.ToList().Count, voucherSummaryListDomainEntity.ToList().Count);
+
+            var voucherDto = voucherSummaryListDto.Where(x => x.Id == voucherId).FirstOrDefault();
+            var voucherDomainEntity = voucherSummaryListDomainEntity.Where(x => x.Id == voucherId).FirstOrDefault();
+
+            // Confirm that the data in the DTO matches the domain entity
+            Assert.AreEqual(voucherDto.Id, voucherDomainEntity.Id);
+            Assert.AreEqual(voucherDto.InvoiceNumber, voucherDomainEntity.InvoiceNumber);
+            Assert.AreEqual(voucherDto.Amount, voucherDomainEntity.Amount);
+            Assert.AreEqual(voucherDto.Date, voucherDomainEntity.Date);
+            Assert.AreEqual(voucherDto.RequestorName, voucherDomainEntity.RequestorName);
+            Assert.AreEqual(voucherDto.Status.ToString(), voucherDomainEntity.Status.ToString());
+            Assert.AreEqual(voucherDto.VendorId, voucherDomainEntity.VendorId);
+            Assert.AreEqual(voucherDto.VendorName, voucherDomainEntity.VendorName);
+
+            // Confirm that the data in the list of purchase order DTOs matches the domain entity
+            for (int i = 0; i < voucherDto.PurchaseOrders.Count(); i++)
+            {
+                Assert.AreEqual(voucherDto.PurchaseOrders[i].Id, voucherDomainEntity.PurchaseOrders[i].Id);
+                Assert.AreEqual(voucherDto.PurchaseOrders[i].Number, voucherDomainEntity.PurchaseOrders[i].Number);
+            }
+        }
+        #endregion
     }
 }

@@ -163,7 +163,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             [TestMethod]
             public async Task NullPerstatRecordsFromReadLoggedTest()
             {
-                dataReaderMock.Setup(d => d.BulkReadRecordAsync<Perstat>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.BulkReadRecordAsync<Perstat>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 await getActual();
                 // loggerMock.Verify(l => l.Error(It.IsAny<string>()), Times.Once);
                 // this error will be logged for each perstat key, which may be multiple -- it is unreasonable to expect it to be logged once

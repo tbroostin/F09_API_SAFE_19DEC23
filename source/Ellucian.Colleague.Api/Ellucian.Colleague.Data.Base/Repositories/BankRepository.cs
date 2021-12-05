@@ -92,7 +92,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// </summary>
         /// <returns></returns>    
         private async Task<Dictionary<string, Bank>> GetBankDictionary()
-        {           
+        {
             return await BuildBankDictionary();
         }
 
@@ -184,7 +184,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         private async Task<Dictionary<string, Bank>> BuildFederalDirectoryBankDictionary()
         {
             var bankDictionary = new Dictionary<string, Bank>();
-            
+
             var parameters = await DataReader.ReadRecordAsync<BankInfoParms>("CORE.PARMS", "BANK.INFO.PARMS");
             if (parameters == null)
             {
@@ -216,7 +216,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                 }
             }
-            
+
 
             return bankDictionary;
         }
@@ -271,16 +271,27 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         retryCount++;
                     }
 
-                    var responseStream = response.GetResponseStream();
-                    using (var reader = new StreamReader(responseStream))
+                    Stream responseStream = null;
+                    try
                     {
-                        try
+                        responseStream = response.GetResponseStream();
+                        using (var reader = new StreamReader(responseStream))
                         {
-                            return await reader.ReadToEndAsync();
+                            try
+                            {
+                                return await reader.ReadToEndAsync();
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.Error(ex, "Error reading FedACHdir response stream");
+                            }
                         }
-                        catch (Exception ex)
+                    }
+                    finally
+                    {
+                        if (!Object.ReferenceEquals(null, responseStream))
                         {
-                            logger.Error(ex, "Error reading FedACHdir response stream");
+                            responseStream.Dispose();
                         }
                     }
                 }

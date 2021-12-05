@@ -36,6 +36,8 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
                             return LoanType.UnsubsidizedLoan;
                         case "GPLUS":
                             return LoanType.GraduatePlusLoan;
+                        case "PLUS":
+                            return LoanType.PlusLoan;
                         default:
                             return LoanType.OtherLoan;
                     }

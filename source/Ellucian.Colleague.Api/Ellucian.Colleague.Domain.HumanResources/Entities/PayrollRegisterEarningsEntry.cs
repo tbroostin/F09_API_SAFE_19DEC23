@@ -1,9 +1,5 @@
-﻿/*Copyright 2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2021 Ellucian Company L.P. and its affiliates.*/
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Domain.HumanResources.Entities
 {
@@ -101,6 +97,10 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
                 return !string.IsNullOrEmpty(StipendId);
             }
         }
+        /// <summary>
+        /// Adjustment amount if associated PAYTODAT is an adjustment
+        /// </summary>
+        public decimal EarningsAdjustmentAmount { get; private set; }
 
 
         /// <summary>
@@ -118,14 +118,22 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             decimal earningsFactorPeriodAmount,
             decimal? unitsWorked, 
             decimal? rate, 
-            HourlySalaryIndicator hourlySalaryIndication)
+            HourlySalaryIndicator hourlySalaryIndication,
+            bool isAdjustment)
         {
             if (string.IsNullOrEmpty(earningsTypeId))
             {
                 throw new ArgumentNullException("earningsTypeId");
             }
             EarningsTypeId = earningsTypeId;
-            TotalPeriodEarningsAmount = totalPeriodEarningsAmount;
+            if (!isAdjustment)
+            {
+                TotalPeriodEarningsAmount = totalPeriodEarningsAmount;                
+            }
+            else
+            {
+                EarningsAdjustmentAmount = totalPeriodEarningsAmount;
+            }
             BasePeriodEarningsAmount = basePeriodEarningsAmount;
             EarningsFactorPeriodAmount = earningsFactorPeriodAmount;
             StandardUnitsWorked = unitsWorked;
@@ -148,14 +156,22 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             decimal earningsFactorPeriodAmount,
             decimal? unitsWorked, 
             decimal? rate, 
-            HourlySalaryIndicator hourlySalaryIndication)
+            HourlySalaryIndicator hourlySalaryIndication,
+            bool isAdjustment)
         {
             if (string.IsNullOrEmpty(earningsTypeId))
             {
                 throw new ArgumentNullException("earningsTypeId");
             }
             EarningsTypeId = earningsTypeId;
-            TotalPeriodEarningsAmount = totalPeriodEarningsAmount;
+            if (!isAdjustment)
+            {
+                TotalPeriodEarningsAmount = totalPeriodEarningsAmount;
+            }
+            else
+            {
+                EarningsAdjustmentAmount = totalPeriodEarningsAmount;
+            }
             BasePeriodEarningsAmount = basePeriodEarningsAmount;
             EarningsFactorPeriodAmount = earningsFactorPeriodAmount;
             StandardUnitsWorked = unitsWorked;

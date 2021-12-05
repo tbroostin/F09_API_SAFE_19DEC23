@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
-    public class BaseStudentRepository : BaseColleagueRepository
+    public class BaseStudentRepository : BaseApiRepository
     {
         public BaseStudentRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
@@ -73,7 +73,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                   }
                                   catch (Exception ex)
                                   {
-                                      logger.Info(ex, string.Format("Unable to add termCode '{0}' to list of quick registration terms.", termCode));
+                                      logger.Debug(ex, string.Format("Unable to add termCode '{0}' to list of quick registration terms.", termCode));
                                   }
                               }
                           }

@@ -1,4 +1,4 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -20,6 +20,7 @@ using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
 using System.Linq;
+using Ellucian.Colleague.Domain.HumanResources;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
@@ -50,7 +51,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <returns>List of JobApplications <see cref="Dtos.JobApplications"/> objects representing matching jobApplications</returns>
-        [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(HumanResourcesPermissionCodes.ViewJobApplications)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetJobApplicationsAsync(Paging page)
@@ -65,6 +67,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                _jobApplicationsService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -86,7 +89,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -115,7 +118,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="guid">GUID to desired jobApplications</param>
         /// <returns>A jobApplications object <see cref="Dtos.JobApplications"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(HumanResourcesPermissionCodes.ViewJobApplications)]
         public async Task<Dtos.JobApplications> GetJobApplicationsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -133,6 +137,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                _jobApplicationsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                     await _jobApplicationsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await _jobApplicationsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -147,7 +152,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {

@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Student.Adapters;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -78,6 +78,42 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw;
             }
             return studentPetitionsDto;
+        }
+
+        /// <summary>
+        /// retrieves student overload petitions asynchronously
+        /// </summary>
+        /// <param name="studentId">Student Id</param>
+        /// <returns>A collection of <see cref="Dtos.Student.StudentOverloadPetition"></see> object.</returns>
+        public async Task<IEnumerable<Dtos.Student.StudentOverloadPetition>> GetStudentOverloadPetitionsAsync(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("StudentId", "studentId cannot be null or empty.");
+            }
+            if (!UserIsSelf(studentId) && !(await UserIsAdvisorAsync(studentId)))
+            {
+                var message = "Current user is not the student of requested overload petitions and therefore cannot access it.";
+                logger.Error(message);
+                throw new PermissionsException(message);
+            }
+            List<Dtos.Student.StudentOverloadPetition> studentOverloadPetitionsDto = new List<Dtos.Student.StudentOverloadPetition>();
+            try
+            {
+                IEnumerable<Ellucian.Colleague.Domain.Student.Entities.StudentOverloadPetition> studentPetitionsEntity = await _studentPetitionRepository.GetStudentOverloadPetitionsAsync(studentId);
+                if (studentPetitionsEntity != null && studentPetitionsEntity.Any())
+                {
+                    var studentPetitionDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.StudentOverloadPetition, Ellucian.Colleague.Dtos.Student.StudentOverloadPetition>();
+                    studentOverloadPetitionsDto.AddRange(studentPetitionsEntity.Select(s => studentPetitionDtoAdapter.MapToType(s)));
+                }
+            }
+            catch (Exception ex)
+            {
+                var message = "Exception occurred while trying to read student overload petitions from repository using student id " + studentId;
+                logger.Error(ex, message);
+                throw;
+            }
+            return studentOverloadPetitionsDto;
         }
     }
 }

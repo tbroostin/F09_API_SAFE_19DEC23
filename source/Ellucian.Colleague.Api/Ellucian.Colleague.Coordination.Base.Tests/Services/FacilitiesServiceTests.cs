@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -700,8 +700,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         [ExpectedException(typeof (ArgumentNullException))]
         public async Task FacilitiesService_CheckRoomAvailability2_InvalidRooms()
         {
-            _roomRepositoryMock.Setup(x => x.RoomsAsync()).ReturnsAsync(null);
-            _roomRepositoryMock.Setup(x => x.GetRoomsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            _roomRepositoryMock.Setup(x => x.RoomsAsync()).ReturnsAsync(() => null);
+            _roomRepositoryMock.Setup(x => x.GetRoomsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
             var timePeriod = new RepeatTimePeriod2
             {
@@ -2455,8 +2455,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         [ExpectedException(typeof(Exception))]
         public async Task FacilitiesService_CheckRoomAvailability4_InvalidRooms()
         {
-            _roomRepositoryMock.Setup(x => x.RoomsAsync()).ReturnsAsync(null);
-            _roomRepositoryMock.Setup(x => x.GetRoomsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            _roomRepositoryMock.Setup(x => x.RoomsAsync()).ReturnsAsync(() => null);
+            _roomRepositoryMock.Setup(x => x.GetRoomsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
             var timePeriod = new RepeatTimePeriod2
             {

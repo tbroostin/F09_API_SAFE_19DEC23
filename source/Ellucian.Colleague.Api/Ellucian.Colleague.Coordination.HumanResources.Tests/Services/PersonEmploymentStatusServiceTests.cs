@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Tests;
@@ -121,7 +121,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 .Returns<IEnumerable<string>, DateTime?>((personIds, date) => testPersonEmploymentStatusRepository.GetPersonEmploymentStatusesAsync(personIds, date));
 
             proxyPersonEmploymentStatusRepositoryMock.Setup(r => r.GetPersonEmploymentStatusesAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<DateTime?>()))
-                .Returns<IEnumerable<string>>((personIds) => proxyTestPersonEmploymentStatusRepository.GetPersonEmploymentStatusesAsync(personIds));
+                .Returns<IEnumerable<string>, DateTime?>((personIds, date) => proxyTestPersonEmploymentStatusRepository.GetPersonEmploymentStatusesAsync(personIds, date));
 
             adapterRegistryMock.Setup(r => r.GetAdapter<Domain.HumanResources.Entities.PersonEmploymentStatus, PersonEmploymentStatus>())
                 .Returns(personEmploymentStatusEntityToDtoAdapter);
@@ -200,7 +200,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             public async Task RepositoryReturnsNullTest()
             {
                 personEmploymentStatusRepositoryMock.Setup(r => r.GetPersonEmploymentStatusesAsync(It.IsAny<IEnumerable<string>>(), null))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 try
                 {

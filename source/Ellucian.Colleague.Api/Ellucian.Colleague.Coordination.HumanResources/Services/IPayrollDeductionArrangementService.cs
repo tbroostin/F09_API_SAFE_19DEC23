@@ -44,39 +44,42 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns>Addresses DTO Object</returns>
         Task<Dtos.PayrollDeductionArrangements> CreatePayrollDeductionArrangementsAsync(Dtos.PayrollDeductionArrangements payrollDeductionArrangementDto);
 
-        /// <summary>
-        /// Gets all payroll-deduction-arrangements
-        /// </summary>
-        /// <param name="offset">Offset for paging results</param>
-        /// <param name="limit">Limit for paging results</param>
-        /// <param name="bypassCache">Flag to bypass cache</param>
-        /// <param name="person">Person GUID filter.</param>
-        /// <param name="contribution">Contribution ID filter.</param>
-        /// <param name="deductionType">Deduction Type filter.</param>
-        /// <param name="statusType">Status Type filter.</param>
-        /// <returns>Collection of <see cref="PayrollDeductionArrangements">payrollDeductionArrangements</see> objects</returns>          
-        Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.PayrollDeductionArrangements>, int>> GetPayrollDeductionArrangements2Async(int offset, int limit, bool bypassCache = false, string person = "", string contribution = "", string deductionType = "", string status = "");
+        #region version 11
+        // the following code is not used but may be added back in eventually...
+        ///// <summary>
+        ///// Gets all payroll-deduction-arrangements
+        ///// </summary>
+        ///// <param name="offset">Offset for paging results</param>
+        ///// <param name="limit">Limit for paging results</param>
+        ///// <param name="bypassCache">Flag to bypass cache</param>
+        ///// <param name="person">Person GUID filter.</param>
+        ///// <param name="contribution">Contribution ID filter.</param>
+        ///// <param name="deductionType">Deduction Type filter.</param>
+        ///// <param name="statusType">Status Type filter.</param>
+        ///// <returns>Collection of <see cref="PayrollDeductionArrangements">payrollDeductionArrangements</see> objects</returns>          
+        //Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.PayrollDeductionArrangements>, int>> GetPayrollDeductionArrangements2Async(int offset, int limit, bool bypassCache = false, string person = "", string contribution = "", string deductionType = "", string status = "");
 
-        /// <summary>
-        /// Get a payrollDeductionArrangements by guid.
-        /// </summary>
-        /// <param name="id">Guid of the payrollDeductionArrangements in Colleague.</param>
-        /// <param name="bypassCache">Flag to bypass cache</param>
-        /// <returns>The <see cref="PayrollDeductionArrangements">payrollDeductionArrangements</see></returns>
-        Task<Ellucian.Colleague.Dtos.PayrollDeductionArrangements> GetPayrollDeductionArrangements2ByIdAsync(string id, bool bypassCache = false);
+        ///// <summary>
+        ///// Get a payrollDeductionArrangements by guid.
+        ///// </summary>
+        ///// <param name="id">Guid of the payrollDeductionArrangements in Colleague.</param>
+        ///// <param name="bypassCache">Flag to bypass cache</param>
+        ///// <returns>The <see cref="PayrollDeductionArrangements">payrollDeductionArrangements</see></returns>
+        //Task<Ellucian.Colleague.Dtos.PayrollDeductionArrangements> GetPayrollDeductionArrangements2ByIdAsync(string id, bool bypassCache = false);
 
-        /// <summary>
-        /// Update a payrollDeductionArrangements.
-        /// </summary>
-        /// <param name="payrollDeductionArrangements">The <see cref="PayrollDeductionArrangements">payrollDeductionArrangements</see> entity to update in the database.</param>
-        /// <returns>The newly updated <see cref="PayrollDeductionArrangements">payrollDeductionArrangements</see></returns>
-        Task<Ellucian.Colleague.Dtos.PayrollDeductionArrangements> UpdatePayrollDeductionArrangements2Async(string id, Ellucian.Colleague.Dtos.PayrollDeductionArrangements payrollDeductionArrangements);
+        ///// <summary>
+        ///// Update a payrollDeductionArrangements.
+        ///// </summary>
+        ///// <param name="payrollDeductionArrangements">The <see cref="PayrollDeductionArrangements">payrollDeductionArrangements</see> entity to update in the database.</param>
+        ///// <returns>The newly updated <see cref="PayrollDeductionArrangements">payrollDeductionArrangements</see></returns>
+        //Task<Ellucian.Colleague.Dtos.PayrollDeductionArrangements> UpdatePayrollDeductionArrangements2Async(string id, Ellucian.Colleague.Dtos.PayrollDeductionArrangements payrollDeductionArrangements);
 
-        /// <summary>
-        /// Create a payrollDeductionArrangements.
-        /// </summary>
-        /// <param name="payrollDeductionArrangements">The <see cref="PayrollDeductionArrangements">payrollDeductionArrangements</see> entity to create in the database.</param>
-        /// <returns>The newly created <see cref="PayrollDeductionArrangements">payrollDeductionArrangements</see></returns>
-        Task<Ellucian.Colleague.Dtos.PayrollDeductionArrangements> CreatePayrollDeductionArrangements2Async(Ellucian.Colleague.Dtos.PayrollDeductionArrangements payrollDeductionArrangements);
+        ///// <summary>
+        ///// Create a payrollDeductionArrangements.
+        ///// </summary>
+        ///// <param name="payrollDeductionArrangements">The <see cref="PayrollDeductionArrangements">payrollDeductionArrangements</see> entity to create in the database.</param>
+        ///// <returns>The newly created <see cref="PayrollDeductionArrangements">payrollDeductionArrangements</see></returns>
+        //Task<Ellucian.Colleague.Dtos.PayrollDeductionArrangements> CreatePayrollDeductionArrangements2Async(Ellucian.Colleague.Dtos.PayrollDeductionArrangements payrollDeductionArrangements);
+        #endregion
     }
 }

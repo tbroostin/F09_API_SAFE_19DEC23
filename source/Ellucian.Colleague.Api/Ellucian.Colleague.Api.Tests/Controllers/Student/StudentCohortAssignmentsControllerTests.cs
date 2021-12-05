@@ -19,6 +19,11 @@ using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Models;
+using System.Web.Http.Routing;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Colleague.Domain.Student;
+using System.Web.Http.Controllers;
+using System.Collections;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -312,5 +317,179 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         {
             await studentCohortAssignmentsController.DeleteStudentCohortAssignmentsAsync(studentCohortAssignmentsCollection.FirstOrDefault().Id);
         }
+
+        //GET v1.0.0
+        //Successful
+        //GetStudentCohortAssignmentsAsync
+
+        [TestMethod]
+        public async Task StudentCohortAssignmentsController_GetStudentCohortAssignmentsAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentCohortAssignments" },
+                    { "action", "GetStudentCohortAssignmentsAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-cohort-assignments", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentCohortAssignmentsController.Request.SetRouteData(data);
+            studentCohortAssignmentsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentCohortAssignments);
+
+            var controllerContext = studentCohortAssignmentsController.ControllerContext;
+            var actionDescriptor = studentCohortAssignmentsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var tuple = new Tuple<IEnumerable<Dtos.StudentCohortAssignments>, int>(studentCohortAssignmentsCollection, 5);
+
+            studentCohortAssignmentsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            studentCohortAssignmentsServiceMock.Setup(s => s.GetStudentCohortAssignmentsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<StudentCohortAssignments>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            var result = await studentCohortAssignmentsController.GetStudentCohortAssignmentsAsync(null, It.IsAny<QueryStringFilter>());
+
+            Object filterObject;
+            studentCohortAssignmentsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentCohortAssignments));
+
+        }
+
+        //GET v1.0.0
+        //Exception
+        //GetStudentCohortAssignmentsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentCohortAssignmentsController_GetStudentCohortAssignmentsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentCohortAssignments" },
+                    { "action", "GetStudentCohortAssignmentsAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-cohort-assignments", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentCohortAssignmentsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = studentCohortAssignmentsController.ControllerContext;
+            var actionDescriptor = studentCohortAssignmentsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+
+
+                studentCohortAssignmentsServiceMock.Setup(s => s.GetStudentCohortAssignmentsAsync(It.IsAny<int>(), It.IsAny<int>(),
+                                It.IsAny<StudentCohortAssignments>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>()))
+                                .Throws<PermissionsException>();
+                studentCohortAssignmentsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view student-cohort-assignments."));
+                await studentCohortAssignmentsController.GetStudentCohortAssignmentsAsync(null, It.IsAny<QueryStringFilter>());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET BY ID v1.0.0
+        //Successful
+        //GetStudentCohortAssignmentsByGuidAsync
+
+        [TestMethod]
+        public async Task StudentCohortAssignmentsController_GetStudentCohortAssignmentsByGuidAsync_Permissions()
+        {
+            var expected = studentCohortAssignmentsCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentCohortAssignments" },
+                    { "action", "GetStudentCohortAssignmentsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-cohort-assignments", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentCohortAssignmentsController.Request.SetRouteData(data);
+            studentCohortAssignmentsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentCohortAssignments);
+
+            var controllerContext = studentCohortAssignmentsController.ControllerContext;
+            var actionDescriptor = studentCohortAssignmentsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            studentCohortAssignmentsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            studentCohortAssignmentsServiceMock.Setup(x => x.GetStudentCohortAssignmentsByGuidAsync(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
+            var actual = await studentCohortAssignmentsController.GetStudentCohortAssignmentsByGuidAsync(expected.Id);
+
+            Object filterObject;
+            studentCohortAssignmentsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentCohortAssignments));
+
+        }
+
+        //GET BY ID v1.0.0
+        //Exception
+        //GetStudentCohortAssignmentsByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentCohortAssignmentsController_GetStudentCohortAssignmentsByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentCohortAssignments" },
+                    { "action", "GetStudentCohortAssignmentsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-cohort-assignments", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentCohortAssignmentsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = studentCohortAssignmentsController.ControllerContext;
+            var actionDescriptor = studentCohortAssignmentsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                studentCohortAssignmentsServiceMock.Setup(x => x.GetStudentCohortAssignmentsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                studentCohortAssignmentsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view student-cohort-assignments."));
+                await studentCohortAssignmentsController.GetStudentCohortAssignmentsByGuidAsync(expectedGuid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
     }
 }

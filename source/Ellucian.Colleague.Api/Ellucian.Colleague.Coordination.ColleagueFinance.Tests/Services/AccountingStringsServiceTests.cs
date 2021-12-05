@@ -555,7 +555,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 },
                 Grants = new List<GuidObject2>() { new GuidObject2("1f5e7bdb-7998-456c-9436-c77eaca180db") }
             };
-            _grantRepositoryMock.Setup(i => i.GetProjectCFIdsAsync(It.IsAny<string[]>())).ReturnsAsync(null);
+            _grantRepositoryMock.Setup(i => i.GetProjectCFIdsAsync(It.IsAny<string[]>())).ReturnsAsync(() => null);
 
             var actualsTuple =
                 await

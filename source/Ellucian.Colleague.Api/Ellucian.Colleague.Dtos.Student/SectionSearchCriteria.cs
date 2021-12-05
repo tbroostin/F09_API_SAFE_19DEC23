@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 
@@ -148,6 +148,14 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Sort Direction
         /// </summary>
         public CatalogSortDirection SortDirection { get; set; }
-       
+
+        /// <summary>
+        /// Course search first determines if there is a search subject provided. If there is are SearchSubjects, 
+        /// the search will be performed for those search subjects and also by keyword when the keyword has a value.
+        /// Search by subjects is different than other criteria when only SearchSubjects exist a search is done for those subjects
+        /// however when SearchSubjects AND the Keyword both have values, two searches will be prefromed (by SearchSubject and also by Keyword)
+        /// </summary>
+        public IEnumerable<string> SearchSubjects { get; set; }
+
     }
 }

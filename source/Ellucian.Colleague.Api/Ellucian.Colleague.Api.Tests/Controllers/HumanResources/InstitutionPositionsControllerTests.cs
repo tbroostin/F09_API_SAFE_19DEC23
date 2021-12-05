@@ -1,23 +1,28 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Controllers.HumanResources;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 {
@@ -501,8 +506,186 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
                 };
                 institutionPositionDtoTuple = new Tuple<IEnumerable<InstitutionPosition>, int>(institutionPositionDtoList, institutionPositionDtoList.Count());
             }
+
+            //Permissions
+
+            //Success
+            //Get 7
+            //GetInstitutionPositionsAsync
+
+            [TestMethod]
+            public async Task InstitutionPositionsController_GetInstitutionPositionsAsync_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionPositions" },
+                    { "action", "GetInstitutionPositionsAsync" }
+                };
+                HttpRoute route = new HttpRoute("institution-positions", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                institutionPositionsController.Request.SetRouteData(data);
+                institutionPositionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.ViewInstitutionPosition);
+
+                var controllerContext = institutionPositionsController.ControllerContext;
+                var actionDescriptor = institutionPositionsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                var tuple = new Tuple<IEnumerable<Dtos.InstitutionPosition>, int>(institutionPositionDtoList, 4);
+                institutionPositionsService.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                institutionPositionsService.Setup(x => x.GetInstitutionPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(institutionPositionDtoTuple);
+                var actuals = await institutionPositionsController.GetInstitutionPositionsAsync(It.IsAny<Paging>());
+
+                Object filterObject;
+                institutionPositionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewInstitutionPosition));
+            }
+
+            //Exception
+            //Get 7
+            //GetInstitutionPositionsAsync
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task InstitutionPositionsController_GetInstitutionPositionsAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionPositions" },
+                    { "action", "GetInstitutionPositionsAsync" }
+                };
+                HttpRoute route = new HttpRoute("institution-positions", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                institutionPositionsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = institutionPositionsController.ControllerContext;
+                var actionDescriptor = institutionPositionsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                    var tuple = new Tuple<IEnumerable<Dtos.InstitutionPosition>, int>(institutionPositionDtoList, 5);
+
+                    institutionPositionsService.Setup(x => x.GetInstitutionPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                                                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                                                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException()); 
+                    institutionPositionsService.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view institution-positions."));
+                    var actuals = await institutionPositionsController.GetInstitutionPositionsAsync(It.IsAny<Paging>());
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+            //Success
+            //Get By Id 7
+            //GetInstitutionPositionsByGuidAsync
+
+            [TestMethod]
+            public async Task InstitutionPositionsController_GetInstitutionPositionsByGuidAsync_Permissions()
+            {
+                var expected = institutionPositionDtoList[0];
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionPositions" },
+                    { "action", "GetInstitutionPositionsByGuidAsync" }
+                };
+                HttpRoute route = new HttpRoute("institution-positions", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                institutionPositionsController.Request.SetRouteData(data);
+                institutionPositionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.ViewInstitutionPosition);
+
+                var controllerContext = institutionPositionsController.ControllerContext;
+                var actionDescriptor = institutionPositionsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                var tuple = new Tuple<IEnumerable<Dtos.InstitutionPosition>, int>(institutionPositionDtoList, 4);
+                institutionPositionsService.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                institutionPositionsService.Setup(x => x.GetInstitutionPositionByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(expected);
+                var actual = await institutionPositionsController.GetInstitutionPositionsByGuidAsync(It.IsAny<string>());
+
+                Object filterObject;
+                institutionPositionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewInstitutionPosition));
+            }
+
+            //Exception
+            //Get By Id 7
+            //GetInstitutionPositionsByGuidAsync
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task InstitutionPositionsController_GetInstitutionPositionsByGuidAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionPositions" },
+                    { "action", "GetInstitutionPositionsByGuidAsync" }
+                };
+                HttpRoute route = new HttpRoute("institution-positions", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                institutionPositionsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = institutionPositionsController.ControllerContext;
+                var actionDescriptor = institutionPositionsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                    var tuple = new Tuple<IEnumerable<Dtos.InstitutionPosition>, int>(institutionPositionDtoList, 5);
+
+                    institutionPositionsService.Setup(x => x.GetInstitutionPositionByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                    institutionPositionsService.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view institution-positions."));
+                    var actuals = await institutionPositionsController.GetInstitutionPositionsByGuidAsync(It.IsAny<string>());
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
         }
-        
+
         [TestClass]
         public class InstitutionPositionsControllerGetV11
         {
@@ -913,6 +1096,185 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
                 };
                 institutionPositionDtoTuple = new Tuple<IEnumerable<InstitutionPosition>, int>(institutionPositionDtoList, institutionPositionDtoList.Count());
             }
+
+            //Permissions
+
+            //Success
+            //Get 11
+            //GetInstitutionPositions2Async
+
+            [TestMethod]
+            public async Task InstitutionPositionsController_GetInstitutionPositions2Async_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionPositions" },
+                    { "action", "GetInstitutionPositions2Async" }
+                };
+                HttpRoute route = new HttpRoute("institution-positions", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                institutionPositionsController.Request.SetRouteData(data);
+                institutionPositionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.ViewInstitutionPosition);
+
+                var controllerContext = institutionPositionsController.ControllerContext;
+                var actionDescriptor = institutionPositionsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                var tuple = new Tuple<IEnumerable<Dtos.InstitutionPosition>, int>(institutionPositionDtoList, 4);
+                institutionPositionsService.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                institutionPositionsService.Setup(x => x.GetInstitutionPositions2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
+                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(institutionPositionDtoTuple);
+                var actuals = await institutionPositionsController.GetInstitutionPositions2Async(It.IsAny<Paging>(), criteriaFilter);
+
+                Object filterObject;
+                institutionPositionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewInstitutionPosition));
+            }
+
+            //Exception
+            //Get 11
+            //GetInstitutionPositions2Async
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task InstitutionPositionsController_GetInstitutionPositions2Async_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionPositions" },
+                    { "action", "GetInstitutionPositions2Async" }
+                };
+                HttpRoute route = new HttpRoute("institution-positions", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                institutionPositionsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = institutionPositionsController.ControllerContext;
+                var actionDescriptor = institutionPositionsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                    var tuple = new Tuple<IEnumerable<Dtos.InstitutionPosition>, int>(institutionPositionDtoList, 5);
+
+                    institutionPositionsService.Setup(x => x.GetInstitutionPositions2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),
+                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
+                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                    institutionPositionsService.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view institution-positions."));
+                    var actuals = await institutionPositionsController.GetInstitutionPositions2Async(It.IsAny<Paging>(), criteriaFilter);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+            //Success
+            //Get By Id 11
+            //GetInstitutionPositionsByGuid2Async
+
+            [TestMethod]
+            public async Task InstitutionPositionsController_GetInstitutionPositionsByGuid2Async_Permissions()
+            {
+                var expected = institutionPositionDtoList[0];
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionPositions" },
+                    { "action", "GetInstitutionPositionsByGuid2Async" }
+                };
+                HttpRoute route = new HttpRoute("institution-positions", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                institutionPositionsController.Request.SetRouteData(data);
+                institutionPositionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.ViewInstitutionPosition);
+
+                var controllerContext = institutionPositionsController.ControllerContext;
+                var actionDescriptor = institutionPositionsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                var tuple = new Tuple<IEnumerable<Dtos.InstitutionPosition>, int>(institutionPositionDtoList, 4);
+                institutionPositionsService.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                institutionPositionsService.Setup(x => x.GetInstitutionPositionByGuid2Async(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(expected);
+                var actual = await institutionPositionsController.GetInstitutionPositionsByGuid2Async(It.IsAny<string>());
+
+                Object filterObject;
+                institutionPositionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewInstitutionPosition));
+            }
+
+            //Exception
+            //Get By Id 11
+            //GetInstitutionPositionsByGuid2Async
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task InstitutionPositionsController_GetInstitutionPositionsByGuid2Async_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionPositions" },
+                    { "action", "GetInstitutionPositionsByGuid2Async" }
+                };
+                HttpRoute route = new HttpRoute("institution-positions", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                institutionPositionsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = institutionPositionsController.ControllerContext;
+                var actionDescriptor = institutionPositionsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                    var tuple = new Tuple<IEnumerable<Dtos.InstitutionPosition>, int>(institutionPositionDtoList, 5);
+
+                    institutionPositionsService.Setup(x => x.GetInstitutionPositionByGuid2Async(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                    institutionPositionsService.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view institution-positions."));
+                    var actuals = await institutionPositionsController.GetInstitutionPositionsByGuid2Async(It.IsAny<string>());
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
         }
 
         [TestClass]
@@ -1324,6 +1686,186 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
                 };
                 institutionPositionDtoTuple = new Tuple<IEnumerable<InstitutionPosition2>, int>(institutionPositionDtoList, institutionPositionDtoList.Count());
             }
+
+            //Permissions
+
+            //Success
+            //Get 12
+            //GetInstitutionPositions3Async
+
+            [TestMethod]
+            public async Task InstitutionPositionsController_GetInstitutionPositions3Async_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionPositions" },
+                    { "action", "GetInstitutionPositions3Async" }
+                };
+                HttpRoute route = new HttpRoute("institution-positions", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                institutionPositionsController.Request.SetRouteData(data);
+                institutionPositionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.ViewInstitutionPosition);
+
+                var controllerContext = institutionPositionsController.ControllerContext;
+                var actionDescriptor = institutionPositionsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                var tuple = new Tuple<IEnumerable<Dtos.InstitutionPosition2>, int>(institutionPositionDtoList, 4);
+                institutionPositionsService.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                institutionPositionsService.Setup(x => x.GetInstitutionPositions3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
+                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
+                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(institutionPositionDtoTuple);
+                var actuals = await institutionPositionsController.GetInstitutionPositions3Async(It.IsAny<Paging>(), criteriaFilter);
+
+                Object filterObject;
+                institutionPositionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewInstitutionPosition));
+            }
+
+            //Exception
+            //Get 12
+            //GetInstitutionPositions3Async
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task InstitutionPositionsController_GetInstitutionPositions3Async_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionPositions" },
+                    { "action", "GetInstitutionPositions3Async" }
+                };
+                HttpRoute route = new HttpRoute("institution-positions", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                institutionPositionsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = institutionPositionsController.ControllerContext;
+                var actionDescriptor = institutionPositionsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                    var tuple = new Tuple<IEnumerable<Dtos.InstitutionPosition2>, int>(institutionPositionDtoList, 5);
+
+                    institutionPositionsService.Setup(x => x.GetInstitutionPositions3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
+                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
+                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                    institutionPositionsService.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view institution-positions."));
+                    var actuals = await institutionPositionsController.GetInstitutionPositions3Async(It.IsAny<Paging>(), criteriaFilter);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+            //Success
+            //Get By Id 12
+            //GetInstitutionPositionsByGuid3Async
+
+            [TestMethod]
+            public async Task InstitutionPositionsController_GetInstitutionPositionsByGuid3Async_Permissions()
+            {
+                var expected = institutionPositionDtoList[0];
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionPositions" },
+                    { "action", "GetInstitutionPositionsByGuid3Async" }
+                };
+                HttpRoute route = new HttpRoute("institution-positions", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                institutionPositionsController.Request.SetRouteData(data);
+                institutionPositionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.ViewInstitutionPosition);
+
+                var controllerContext = institutionPositionsController.ControllerContext;
+                var actionDescriptor = institutionPositionsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                var tuple = new Tuple<IEnumerable<Dtos.InstitutionPosition2>, int>(institutionPositionDtoList, 4);
+                institutionPositionsService.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                institutionPositionsService.Setup(x => x.GetInstitutionPositionByGuid3Async(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(expected);
+                var actual = await institutionPositionsController.GetInstitutionPositionsByGuid3Async(It.IsAny<string>());
+
+                Object filterObject;
+                institutionPositionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewInstitutionPosition));
+            }
+
+            //Exception
+            //Get By Id 12
+            //GetInstitutionPositionsByGuid3Async
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task InstitutionPositionsController_GetInstitutionPositionsByGuid3Async_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "InstitutionPositions" },
+                    { "action", "GetInstitutionPositionsByGuid3Async" }
+                };
+                HttpRoute route = new HttpRoute("institution-positions", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                institutionPositionsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = institutionPositionsController.ControllerContext;
+                var actionDescriptor = institutionPositionsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                    var tuple = new Tuple<IEnumerable<Dtos.InstitutionPosition2>, int>(institutionPositionDtoList, 5);
+
+                    institutionPositionsService.Setup(x => x.GetInstitutionPositionByGuid3Async(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                    institutionPositionsService.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view institution-positions."));
+                    var actuals = await institutionPositionsController.GetInstitutionPositionsByGuid3Async(It.IsAny<string>());
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
+
         }
     }
 }

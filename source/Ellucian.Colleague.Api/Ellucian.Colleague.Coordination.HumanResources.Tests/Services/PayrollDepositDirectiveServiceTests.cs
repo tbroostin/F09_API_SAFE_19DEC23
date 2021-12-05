@@ -302,7 +302,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             public async Task AuthenticateCurrentUserAsync_ThrowsExceptionWithoutBankInfoConfig()
             {
                 bankingInformationConfigurationRepoMock.Setup(r => r.GetBankingInformationConfigurationAsync())
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
                 var result = await serviceUnderTest.AuthenticateCurrentUserAsync(inputDirectiveId, "raboof");
             }
 

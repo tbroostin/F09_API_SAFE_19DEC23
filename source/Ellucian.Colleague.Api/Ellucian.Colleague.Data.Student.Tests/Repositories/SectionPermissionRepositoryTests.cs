@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Runtime.Caching;
@@ -1137,6 +1137,297 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 // These would be all the comments associated to the specific student petition and they will all have same student but there could be different sections.
 
+                var repoStuPetitionCmntsData = new Collection<StuPetitionCmnts>();
+
+                petitionMultiLineComment = "Student 0000123 ART-101 Petition comment. Line1" + Convert.ToChar(DynamicArray.VM) + "comment line2" + Convert.ToChar(DynamicArray.VM) + "comment line3 the end";
+                consentMultiLineComment = "Student 0000123 ART-101 Consent comment. Line1" + Convert.ToChar(DynamicArray.VM) + "comment line2" + Convert.ToChar(DynamicArray.VM) + "comment line3 the end";
+
+                repoStuPetitionCmntsData.Add(new StuPetitionCmnts()
+                {
+                    Recordkey = "1",
+                    StpcPetitionComments = petitionMultiLineComment,
+                    StpcConsentComments = consentMultiLineComment
+                });
+
+                repoStuPetitionCmntsData.Add(new StuPetitionCmnts()
+                {
+                    Recordkey = "2",
+                    StpcPetitionComments = string.Empty,
+                    StpcConsentComments = "Student 0000123 ART-102 Consent comment."
+                });
+
+                return repoStuPetitionCmntsData;
+            }
+        }
+
+
+        [TestClass]
+        public class SectionPermissionRepository_UpdateStudentPetition
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<IColleagueTransactionInvoker> mockManager;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<ObjectCache> localCacheMock;
+            Mock<ILogger> loggerMock;
+            StudentPetitions petitionResponseData;
+            Collection<StuPetitionCmnts> commentResponseData;
+            ApiSettings apiSettings;
+            SectionPermissionRepository sectionPermissionRepo;
+            string multiLineComment;
+            StudentPetition petitionToUpdate;
+            CreateStudentPetitionRequest createRequest;
+            string petitionId;
+            string studentId;
+            string sectionId;
+            string reason;
+            string statusCode;
+            string termCode;
+            string petitionMultiLineComment;
+            string consentMultiLineComment;
+            string consentAddedBy;
+            DateTime consentChangedDate;
+            DateTime consentChangedTime;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+                apiSettings = new ApiSettings("TEST");
+
+                petitionId = "2";
+                studentId = "0000123";
+                sectionId = "SEC1";
+                reason = "OVHM";
+                statusCode = "D";
+                multiLineComment = "Student 0000123 ART-101 Consent comment. Line1\ncomment line2\ncomment line3 the end";
+                termCode = "2016/SP";
+                consentAddedBy = "FacultyConcentAddedBy";
+                consentChangedDate = DateTime.Now.AddDays(-20);
+                consentChangedTime = DateTime.Now.AddHours(1);
+                petitionResponseData = BuildPetitionResponse();
+                commentResponseData = BuildStudentPetitionCommentResponse();
+                sectionPermissionRepo = BuildValidSectionPermissionRepository();
+
+                petitionToUpdate = new StudentPetition(null, null, sectionId, studentId, StudentPetitionType.FacultyConsent, statusCode) { Comment = multiLineComment, ReasonCode = reason, TermCode = termCode };
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                localCacheMock = null;
+                petitionResponseData = null;
+                sectionPermissionRepo = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task ThrowsExceptionIfIncomingPetitionIsNull()
+            {
+                StudentPetition nullPetition = null;
+                await sectionPermissionRepo.UpdateStudentPetitionAsync(nullPetition);
+            }
+
+            [TestMethod]
+            public async Task BuildsValidCreateRequest_Success()
+            {
+                await sectionPermissionRepo.UpdateStudentPetitionAsync(petitionToUpdate);
+                Assert.AreEqual(petitionToUpdate.StudentId, createRequest.StudentId);
+                Assert.AreEqual(petitionToUpdate.SectionId, createRequest.SectionId);
+                Assert.AreEqual(petitionToUpdate.ReasonCode, createRequest.ReasonCode);
+                Assert.AreEqual(petitionToUpdate.StatusCode, createRequest.StatusCode);
+                Assert.IsTrue(createRequest.IsFacultyConsent);
+            }
+
+            [TestMethod]
+            public async Task BuildsValidCreateRequest_Comment()
+            {
+                // Verifies that various types of carriage returns and line feeds are all properly converted to value marks
+                await sectionPermissionRepo.UpdateStudentPetitionAsync(petitionToUpdate);
+                char newLineCharacter = '\n';
+                string alternateNewLineCharacter = "\r\n";
+                string carriageReturnCharacter = "\r";
+                string expectedCommentText = petitionToUpdate.Comment.Replace(alternateNewLineCharacter, newLineCharacter.ToString());
+                expectedCommentText = expectedCommentText.Replace(carriageReturnCharacter, newLineCharacter.ToString());
+                var expectedCommentLines = expectedCommentText.Split(newLineCharacter);
+                Assert.AreEqual(3, expectedCommentLines.Count());
+                for (int i = 0; i < expectedCommentLines.Count(); i++)
+                {
+                    Assert.IsTrue(expectedCommentLines[i].Length > 0);
+                    Assert.AreEqual(expectedCommentLines[i], createRequest.Comment.ElementAt(i));
+                }
+            }
+
+            [TestMethod]
+            public async Task ReturnsPetitionWhenAddIsSuccessful()
+            {
+                var updatePetition = await sectionPermissionRepo.UpdateStudentPetitionAsync(petitionToUpdate);
+                Assert.AreEqual(petitionToUpdate.StudentId, updatePetition.StudentId);
+                Assert.AreEqual(petitionToUpdate.SectionId, updatePetition.SectionId);
+                Assert.AreEqual("ART-101", updatePetition.CourseId);
+                Assert.AreEqual(petitionToUpdate.EndDate, updatePetition.EndDate);
+                Assert.AreEqual(petitionToUpdate.StartDate, updatePetition.StartDate);
+                Assert.AreEqual(petitionToUpdate.TermCode, updatePetition.TermCode);
+                Assert.AreEqual(petitionToUpdate.ReasonCode, updatePetition.ReasonCode);
+                Assert.AreEqual(petitionToUpdate.StatusCode, updatePetition.StatusCode);
+                Assert.AreEqual(petitionToUpdate.Type, updatePetition.Type);
+                Assert.AreEqual(new DateTime(consentChangedDate.Year, consentChangedDate.Month, consentChangedDate.Day, consentChangedTime.Hour, consentChangedTime.Minute, consentChangedTime.Second), new DateTime(updatePetition.DateTimeChanged.Year, updatePetition.DateTimeChanged.Month, updatePetition.DateTimeChanged.Day, updatePetition.DateTimeChanged.Hour, updatePetition.DateTimeChanged.Minute, updatePetition.DateTimeChanged.Second));
+                Assert.AreEqual(multiLineComment, updatePetition.Comment);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task ThrowsExceptionWhenGetDoesNotReturnPetitionForGivenStudent()
+            {
+                petitionToUpdate = new StudentPetition(null, null, sectionId, "99999", StudentPetitionType.FacultyConsent, statusCode) { Comment = multiLineComment, ReasonCode = reason, TermCode = termCode };
+                var updatePetition = await sectionPermissionRepo.UpdateStudentPetitionAsync(petitionToUpdate);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task ThrowsExceptionWhenGetDoesNotReturnPetitionForGivenSection()
+            {
+                petitionToUpdate = new StudentPetition(null, null, "9999", studentId, StudentPetitionType.FacultyConsent, statusCode) { Comment = multiLineComment, ReasonCode = reason, TermCode = termCode };
+                var updatePetition = await sectionPermissionRepo.UpdateStudentPetitionAsync(petitionToUpdate);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task ThrowsKeyNotFoundExceptionWhenGetReadRecordReturnsNull()
+            {
+                // Set up repo response for null Get request
+                petitionResponseData = null;
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<StudentPetitions>(It.IsAny<string>(), true)).Returns(Task.FromResult(petitionResponseData));
+                var updatePetition = await sectionPermissionRepo.UpdateStudentPetitionAsync(petitionToUpdate);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task ThrowsSimpleExceptionForAllOtherErrors()
+            {
+                CreateStudentPetitionResponse createResponse = new CreateStudentPetitionResponse();
+                createResponse.ErrorOccurred = true;
+                createResponse.ErrorMessage = "Problem in Colleague";
+                createResponse.ExistingPetitionId = null;
+                mockManager.Setup(mgr => mgr.ExecuteAsync<CreateStudentPetitionRequest, CreateStudentPetitionResponse>(It.Is<CreateStudentPetitionRequest>(r => !string.IsNullOrEmpty(r.SectionId)))).Returns(Task.FromResult(createResponse)).Callback<CreateStudentPetitionRequest>(req => createRequest = req);
+                var updatePetition = await sectionPermissionRepo.UpdateStudentPetitionAsync(petitionToUpdate);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task ThrowsExceptionWhenSuccessfulFlagWithNoIdReturned()
+            {
+                CreateStudentPetitionResponse createResponse = new CreateStudentPetitionResponse();
+                mockManager.Setup(mgr => mgr.ExecuteAsync<CreateStudentPetitionRequest, CreateStudentPetitionResponse>(It.Is<CreateStudentPetitionRequest>(r => !string.IsNullOrEmpty(r.SectionId)))).Returns(Task.FromResult(createResponse)).Callback<CreateStudentPetitionRequest>(req => createRequest = req);
+                var updatePetition = await sectionPermissionRepo.UpdateStudentPetitionAsync(petitionToUpdate);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task ThrowsExceptionWhenTransactionRequestThrowsException()
+            {
+                CreateStudentPetitionResponse createResponse = new CreateStudentPetitionResponse();
+                mockManager.Setup(mgr => mgr.ExecuteAsync<CreateStudentPetitionRequest, CreateStudentPetitionResponse>(It.Is<CreateStudentPetitionRequest>(r => !string.IsNullOrEmpty(r.SectionId)))).Throws(new Exception());
+                var updatePetition = await sectionPermissionRepo.UpdateStudentPetitionAsync(petitionToUpdate);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task ThrowsExceptionWhenTransactionResponseIsNull()
+            {
+                CreateStudentPetitionResponse createResponse = null;
+                mockManager.Setup(mgr => mgr.ExecuteAsync<CreateStudentPetitionRequest, CreateStudentPetitionResponse>(It.Is<CreateStudentPetitionRequest>(r => !string.IsNullOrEmpty(r.SectionId)))).Returns(Task.FromResult(createResponse)).Callback<CreateStudentPetitionRequest>(req => createRequest = req);
+                var updatePetition = await sectionPermissionRepo.UpdateStudentPetitionAsync(petitionToUpdate);
+            }
+
+            private SectionPermissionRepository BuildValidSectionPermissionRepository()
+            {
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                mockManager = new Mock<IColleagueTransactionInvoker>();
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+                cacheProviderMock = new Mock<ICacheProvider>();
+                localCacheMock = new Mock<ObjectCache>();
+
+                // Set up data accessor for the transaction factory 
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                // Set up successful response to a transaction request, capturing the completed request for verification
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(mockManager.Object);
+                CreateStudentPetitionResponse createResponse = new CreateStudentPetitionResponse();
+                createResponse.ErrorOccurred = false;
+                createResponse.ErrorMessage = null;
+                createResponse.ExistingPetitionId = "";
+                createResponse.StudentPetitionsId = petitionId;
+                mockManager.Setup(mgr => mgr.ExecuteAsync<CreateStudentPetitionRequest, CreateStudentPetitionResponse>(It.Is<CreateStudentPetitionRequest>(r => !string.IsNullOrEmpty(r.SectionId)))).Returns(Task.FromResult(createResponse)).Callback<CreateStudentPetitionRequest>(req => createRequest = req);
+
+                // Set up repo response for petition Get request
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<StudentPetitions>(It.IsAny<string>(), true)).Returns(Task.FromResult(petitionResponseData));
+
+                dataAccessorMock.Setup<Task<Collection<StuPetitionCmnts>>>(acc => acc.BulkReadRecordAsync<StuPetitionCmnts>(It.IsAny<string[]>(), true)).Returns(Task.FromResult<Collection<StuPetitionCmnts>>(commentResponseData));
+
+                SectionPermissionRepository repository = new SectionPermissionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                return repository;
+            }
+
+            private StudentPetitions BuildPetitionResponse()
+            {
+                // This student has reason codes but does not have a petition comment or consent comment
+                var studentPetitionsData1 = new StudentPetitions();
+                studentPetitionsData1.Recordkey = "1";
+                studentPetitionsData1.StpeStudent = "0000123";
+                studentPetitionsData1.StpeTerm = "2016/SP";
+                studentPetitionsData1.StudentPetitionsChgdate = new DateTime(2015, 01, 14);
+                var chTime1 = DateTime.MinValue;
+                chTime1.AddHours(14);
+                chTime1.AddMinutes(01);
+                chTime1.AddSeconds(15);
+                studentPetitionsData1.StudentPetitionsChgtime = chTime1;
+                studentPetitionsData1.StudentPetitionsChgopr = "SSS";
+                studentPetitionsData1.PetitionsEntityAssociation = new List<StudentPetitionsPetitions>();
+
+                studentPetitionsData1.PetitionsEntityAssociation.Add(new StudentPetitionsPetitions()
+                {
+                    StpeCoursesAssocMember = "ART-101",
+                    StpeSectionAssocMember = "SEC1",
+                    StpePetitionStatusAssocMember = "A",
+                    StpeFacultyConsentAssocMember = "D",
+                    StpePetitionReasonCodeAssocMember = "ICHI",
+                    StpeConsentReasonCodeAssocMember = "OVHM",
+                    StpeStuPetitionCmntsIdAssocMember = "1",
+                    StpePetitionStatusSetByAssocMember = "FacultyId1",
+                    StpePetitionStatusDateAssocMember = DateTime.Today.AddDays(-10),
+                    StpePetitionStatusTimeAssocMember = DateTime.Now.AddHours(-1),
+                    StpeFacultyConsentSetByAssocMember = "FacultyId2",
+                    StpeFacultyConsentDateAssocMember = consentChangedDate,
+                    StpeFacultyConsentTimeAssocMember = consentChangedTime
+
+                });
+                studentPetitionsData1.PetitionsEntityAssociation.Add(new StudentPetitionsPetitions()
+                {
+                    StpeCoursesAssocMember = "ART-102",
+                    StpeSectionAssocMember = "SEC2",
+                    StpePetitionStatusAssocMember = "C",
+                    StpeFacultyConsentAssocMember = "D",
+                    StpePetitionReasonCodeAssocMember = "ICHI",
+                    StpeConsentReasonCodeAssocMember = "OVHM",
+                    StpeStuPetitionCmntsIdAssocMember = "2",
+                    StpePetitionStatusSetByAssocMember = "FacultyId3",
+                    StpePetitionStatusDateAssocMember = DateTime.Today.AddDays(-30),
+                    StpePetitionStatusTimeAssocMember = DateTime.Now.AddHours(-1),
+                    StpeFacultyConsentSetByAssocMember = "FacultyId4",
+                    StpeFacultyConsentDateAssocMember = DateTime.Today.AddDays(-4),
+                    StpeFacultyConsentTimeAssocMember = DateTime.Now.AddHours(1)
+                });
+
+                return studentPetitionsData1;
+            }
+
+            private Collection<StuPetitionCmnts> BuildStudentPetitionCommentResponse()
+            {
+                // These would be all the comments associated to the specific student petition and they will all have same student but there could be different sections.
                 var repoStuPetitionCmntsData = new Collection<StuPetitionCmnts>();
 
                 petitionMultiLineComment = "Student 0000123 ART-101 Petition comment. Line1" + Convert.ToChar(DynamicArray.VM) + "comment line2" + Convert.ToChar(DynamicArray.VM) + "comment line3 the end";

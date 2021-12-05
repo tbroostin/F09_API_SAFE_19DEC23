@@ -1,9 +1,10 @@
-﻿/* Copyright 2017-2019 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.Base.Reports;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Services;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos.HumanResources;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
@@ -39,6 +40,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         private readonly IPersonBenefitDeductionRepository personBenefitDeductionRepository;
         private readonly IPersonEmploymentStatusRepository personEmploymentStatusRepository;
         private readonly IPositionRepository positionRepository;
+        private readonly IStudentReferenceDataRepository studentReferenceDataRepository;
 
         /// <summary>
         /// Constructor
@@ -60,6 +62,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             IPersonBenefitDeductionRepository personBenefitDeductionRepository,
             IPersonEmploymentStatusRepository personEmploymentStatusRepository,
             IPositionRepository positionRepository,
+            IStudentReferenceDataRepository studentReferenceDataRepository,
             IAdapterRegistry adapterRegistry,
             ICurrentUserFactory currentUserFactory,
             IRoleRepository roleRepository,
@@ -76,6 +79,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             this.personBenefitDeductionRepository = personBenefitDeductionRepository;
             this.personEmploymentStatusRepository = personEmploymentStatusRepository;
             this.positionRepository = positionRepository;
+            this.studentReferenceDataRepository = studentReferenceDataRepository;
         }
 
         /// <summary>
@@ -91,12 +95,22 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 throw new ArgumentNullException("id");
             }
 
+            string currentUserId = CurrentUser.PersonId;
+
             var payStatementSource = await payStatementRepository.GetPayStatementSourceDataAsync(id);
             if (payStatementSource == null)
             {
                 throw new KeyNotFoundException(string.Format("PayStatement {0} does not exist", id));
             }
 
+            //check if the statement belongs to the user or if they have a permission to view all pay statements
+            string payStatementEmployeeId = payStatementSource.EmployeeId;
+            if (payStatementEmployeeId != currentUserId && !HasPermission(Domain.HumanResources.HumanResourcesPermissionCodes.ViewAllEarningsStatements))
+            {
+                var message = string.Format("User {0} does not have permission to access pay statements for other employees", currentUserId);
+                logger.Error(message);
+                throw new PermissionsException(message);
+            }
 
             var fileName = string.Format("ADVICE_{0}_{1}.pdf", payStatementSource.EmployeeId, payStatementSource.PayDate.ToString("ddMMMyyyy"));
 
@@ -122,16 +136,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 pathToLogo = string.Empty;
             }
 
-
-
-
+            var hostCountry = await studentReferenceDataRepository.GetHostCountryAsync();
             var configuration = await hrReferenceDataRepository.GetPayStatementConfigurationAsync();
             var reportParameters = new List<ReportParameter>();
             var shouldDisplaySocialSecurityNumber = configuration.SocialSecurityNumberDisplay != Domain.HumanResources.Entities.SSNDisplay.Hidden;
             reportParameters.Add(new ReportParameter("ShouldDisplaySocialSecurityNumber", shouldDisplaySocialSecurityNumber.ToString(), false));
             reportParameters.Add(new ReportParameter("ShouldDisplayWithholdingStatus", configuration.DisplayWithholdingStatusFlag.ToString(), false));
             reportParameters.Add(new ReportParameter("LogoPath", pathToLogo));
-
+            reportParameters.Add(new ReportParameter("HostCountry", hostCountry, false));
 
             var referenceDataUtility = await getReferenceDataUtility();
 
@@ -259,20 +271,20 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                         internalStopWatch.Start();
                     }
                     var byteArray = reportService.RenderReport();
-                    
+
                     if (logger.IsErrorEnabled)
                     {
                         internalStopWatch.Stop();
                         internalTimingList.Add(string.Format("RenderReport: {0}", internalStopWatch.ElapsedMilliseconds));
                     }
 
-                    var pdfStream = PdfReader.Open(new MemoryStream(byteArray), PdfDocumentOpenMode.Import);
-                    foreach (PdfPage page in pdfStream.Pages)
+                    using (var pdfStream = PdfReader.Open(new MemoryStream(byteArray), PdfDocumentOpenMode.Import))
                     {
-                        outputDocument.AddPage(page);
+                        foreach (PdfPage page in pdfStream.Pages)
+                        {
+                            outputDocument.AddPage(page);
+                        }
                     }
-
-                    pdfStream.Dispose();
                 }
                 catch (Exception e)
                 {
@@ -310,15 +322,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
 
 
-            var outputStream = new MemoryStream();
-            outputDocument.Save(outputStream);
+            using (var outputStream = new MemoryStream())
+            {
+                outputDocument.Save(outputStream);
 
-            var reportByteArray = outputStream.ToArray();
-            outputStream.Close();
-
-            return reportByteArray;
-
-
+                var reportByteArray = outputStream.ToArray();
+                outputStream.Close();
+                return reportByteArray;
+            }
 
         }
 
@@ -339,6 +350,21 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             DateTime? startDateFilter = null,
             DateTime? endDateFilter = null)
         {
+            //check for permissions 
+            if (employeeIdsFilter == null || !employeeIdsFilter.Any() || employeeIdsFilter.Any(id => id != CurrentUser.PersonId))
+            {
+                //requesting access to someone else's data, verify that permissions are correct
+                if (!HasPermission(Domain.HumanResources.HumanResourcesPermissionCodes.ViewAllEarningsStatements))
+                {
+                    var message = string.Format(
+                        "User {0} does not have permission to access pay statements for other employees",
+                        CurrentUser.PersonId
+                    );
+                    logger.Error(message);
+                    throw new PermissionsException(message);
+                }
+            }
+
             var stopWatch = new Stopwatch();
             var timingList = new List<string>();
 
@@ -406,21 +432,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 stopWatch.Start();
             }
 
-            //now that all the items have been retreived that could be cached
-            //check for permissions exceptions
-            if (employeeIdsFilter == null || !employeeIdsFilter.Any() || employeeIdsFilter.Any(id => id != CurrentUser.PersonId))
-            {
-                //requesting access to someone else's data, verify that permissions are correct
-                if (!HasPermission(Domain.HumanResources.HumanResourcesPermissionCodes.ViewAllEarningsStatements))
-                {
-                    var message = string.Format(
-                        "User {0} does not have permission to access pay statements for other employees",
-                        CurrentUser.PersonId
-                    );
-                    logger.Error(message);
-                    throw new PermissionsException(message);
-                }
-            }
 
             //filter the payrollRegister to the given paycycle (or all if no payCycle specified)
             var payrollRegisterLookup = payrollRegister

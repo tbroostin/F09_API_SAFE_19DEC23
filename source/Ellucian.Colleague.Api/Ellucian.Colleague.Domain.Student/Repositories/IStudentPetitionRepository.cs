@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Student.Entities;
 using System;
 using System.Collections.Generic;
@@ -19,5 +19,13 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <param name="studentId"></param>
         /// <returns><IEnumerable<StudentPetition>></returns>
         Task<IEnumerable<StudentPetition>> GetStudentPetitionsAsync(string studentId);
+
+        /// <summary>
+        /// get overload petitions for a given student asynchronously
+        /// </summary>
+        /// <param name="studentId">Student Id</param>
+        /// <returns>A collection of <see cref="StudentOverloadPetition">StudentOverloadPetition</see> object.</returns>
+        Task<IEnumerable<StudentOverloadPetition>> GetStudentOverloadPetitionsAsync(string studentId);
+
     }
 }

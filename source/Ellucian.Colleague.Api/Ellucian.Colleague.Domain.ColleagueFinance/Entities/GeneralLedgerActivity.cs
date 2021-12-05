@@ -50,8 +50,15 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
             {
                 throw new ArgumentException(string.Format("Transaction date is required. GUID: '{0}'", guid));
             }
-            //if (debit == 0) debit = null;
-            //if (credit == 0) credit = null;
+            // If either credit or debit fields have a value of zero, then null it out
+            // If they both have zero, then leave zero in the credit field and let the transaction go through
+            // This is really bad data but we don't want to report on it as such because some Colleague
+            // processes are causing the data to have a zero transaction and we can't remove them or do anything
+            // to modify then, therefore, we don't want to issue an error response to something that they cannot fix or change.
+            // SRM - 03/29/2021
+            if (credit.HasValue && credit.Value == 0 && debit.HasValue && debit.Value != 0) credit = null;
+            if (debit.HasValue && debit.Value == 0 && credit.HasValue && credit.Value != 0) debit = null;
+            if (debit.HasValue && debit.Value == 0 && credit.HasValue && credit.Value == 0) debit = null;
             if ((!debit.HasValue && !credit.HasValue) || (debit == 0 && credit == 0))
             {
                 throw new ArgumentException(string.Format("Credit/Debit value is required. GUID: '{0}'", guid));

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliatesusing System;
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliatesusing System;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos;
@@ -198,8 +198,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>Tuple<IEnumerable<Dtos.PersonContactSubject>, int></returns>
         public async Task<Tuple<IEnumerable<Dtos.PersonContactSubject>, int>> GetPersonEmergencyContactsAsync(int offset, int limit, bool bypassCache, string person = "")
         {
-            CheckUserPersonContactsViewPermissions();
-
+          
             string newPerson = string.Empty;
             if (!string.IsNullOrEmpty(person))
             {
@@ -216,7 +215,16 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     return new Tuple<IEnumerable<Dtos.PersonContactSubject>, int>(new List<Dtos.PersonContactSubject>(), 0);
             }
 
-            var personContactEntites = await _emergencyInformationRepository.GetPersonContactsAsync(offset, limit, bypassCache, newPerson);
+            Tuple<IEnumerable<Domain.Base.Entities.PersonContact>, int> personContactEntites = null;
+            try
+            {
+                personContactEntites = await _emergencyInformationRepository.GetPersonContactsAsync(offset, limit, bypassCache, newPerson);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
 
             var personContactDtos = await ConvertPersonContactEntitesToDto(personContactEntites.Item1);
 
@@ -235,7 +243,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             try
             {
-                CheckUserPersonEmergencyContactsViewPermissions();
+                //CheckUserPersonEmergencyContactsViewPermissions();
 
                 string[] filterPersonIds = new List<string>().ToArray();
                 string personId = string.Empty;
@@ -331,7 +339,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>Dtos.PersonContactSubject</returns>
         public async Task<Dtos.PersonContactSubject> GetPersonEmergencyContactByIdAsync(string id)
         {
-            CheckUserPersonContactsViewPermissions();
+            //CheckUserPersonContactsViewPermissions();
 
             if (string.IsNullOrEmpty(id))
             {
@@ -352,8 +360,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             try
             {
-                CheckUserPersonEmergencyContactsViewPermissions();
-
+            
                 if (string.IsNullOrEmpty(id))
                 {
                     IntegrationApiExceptionAddError("GUID is required to get a person emergency contact.", "guid");
@@ -790,18 +797,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                    HasPermission(BasePermissionCodes.ViewPersonHealthConditions);
         }
 
-        /// <summary>
-        /// Verifies if the user has the correct permissions to view a person's contact.
-        /// </summary>
-        private void CheckUserPersonContactsViewPermissions()
-        {
-            // access is ok if the current user has the view person contacts permission
-            if (!HasPermission(BasePermissionCodes.ViewAnyPersonContact))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view person-contacts.");
-                throw new PermissionsException("User is not authorized to view person-contacts.");
-            }
-        }
+       
 
         /// <summary>
         /// Verifies if the user has the correct permissions to view a person's emergency contacts. 
@@ -871,7 +867,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     IntegrationApiExceptionAddError("Must provide a non nil person emergency contact id for update.", "Missing.Request.ID");
                     throw IntegrationApiException;
                 }
-                CheckUserPersonEmergencyContactsUpdatePermissions();
+                //CheckUserPersonEmergencyContactsUpdatePermissions();
                 _emergencyInformationRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
                 // get the ID associated with the incoming guid
@@ -962,7 +958,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     throw IntegrationApiException;
                 }
 
-                CheckUserPersonEmergencyContactsUpdatePermissions();
+                //CheckUserPersonEmergencyContactsUpdatePermissions();
                 _emergencyInformationRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
                 // map the DTO to entities
                 Domain.Base.Entities.PersonContact personEmergencyContactsEntity
@@ -1016,7 +1012,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
         public async Task DeletePersonEmergencyContactsAsync(string guid)
         {
-            CheckUserPersonEmergencyContactsDeletePermissions();
+            //CheckUserPersonEmergencyContactsDeletePermissions();
             // get the ID associated with the incoming guid
 
             if (string.IsNullOrEmpty(guid))

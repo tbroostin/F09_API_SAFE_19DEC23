@@ -167,5 +167,10 @@ namespace Ellucian.Colleague.Dtos.Finance
         /// Total amount currently due, equal to the total amount due minus any overdue amounts 
         /// </summary>
         public decimal CurrentAmountDue { get; set; }
+
+        /// <summary>
+        /// Adheres to flag on STFP
+        /// </summary>
+        public bool DisplayDueDate { get; set; }
     }
 }

@@ -66,5 +66,12 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         /// <returns>List of <see cref="Voucher2">Vouchers</see></returns> 
         Task<IEnumerable<Voucher>> GetVouchersByVendorAndInvoiceNoAsync(string vendorId, string invoiceNo);
 
+        /// <summary>
+        /// Get Voucher summary list for the given user
+        /// </summary>
+        /// <param name="criteria">procurement filter criteria</param>      
+        /// <returns>list of voucher summary domain entity objects</returns>
+        Task<IEnumerable<VoucherSummary>> QueryVoucherSummariesAsync(ProcurementDocumentFilterCriteria criteria);
+
     }
 }

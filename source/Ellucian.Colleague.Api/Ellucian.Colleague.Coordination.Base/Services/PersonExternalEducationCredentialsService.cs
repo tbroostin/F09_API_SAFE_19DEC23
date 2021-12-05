@@ -1,4 +1,4 @@
-//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+//Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -12,7 +12,6 @@ using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Web.Http.Exceptions;
 
@@ -123,9 +122,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             var personExternEducationCredentialsCollection = new List<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials>();
             int totalCount = 0;
-            List<PersonExternalEducationCredentials> dtos = new List<PersonExternalEducationCredentials>();
-
-            ViewPersonExternalEducationCredentialsPermission();
+            var dtos = new List<PersonExternalEducationCredentials>();
 
             string[] filterPersonIds = null;
             var personId = string.Empty;
@@ -242,9 +239,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>PersonExternalEducationCredentials DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.PersonExternalEducationCredentials> GetPersonExternalEducationCredentialsByGuidAsync(string guid, bool bypassCache = false)
         {
-
-            ViewPersonExternalEducationCredentialsPermission();
-
             try
             {
                 var externalEducationEntity = await _personExternalEducationCredentialsRepository.GetExternalEducationCredentialsByGuidAsync(guid);
@@ -310,9 +304,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             if (!string.IsNullOrEmpty(entityId))
             {
-                // verify the user has the permission to update a personExternalEducationCredentials
-                UpdateCreatePersonExternalEducationCredentialsPermission();
-
+                
                 _personExternalEducationCredentialsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
                 
                 try
@@ -365,9 +357,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if (string.IsNullOrEmpty(personExternalEducationCredentials.Id))
                 throw new ArgumentNullException("PersonExternalEducationCredentials", "Must provide a guid for PersonExternalEducationCredentials update.");
 
-            // verify the user has the permission to create a personExternalEducationCredentials
-            UpdateCreatePersonExternalEducationCredentialsPermission();
-
+            
             _personExternalEducationCredentialsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
             try
@@ -1036,36 +1026,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
 
             return ccdDictionary;
-        }
-
-        /// <summary>
-        /// Helper method to determine if the user has permission to create/update PersonExternalEducationCredentials.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void ViewPersonExternalEducationCredentialsPermission()
-        {
-            bool hasPermission = (HasPermission(BasePermissionCodes.ViewPersonExternalEducationCredentials) || HasPermission(BasePermissionCodes.UpdatePersonExternalEducationCredentials));
-
-            // User is not allowed to create or update PersonExternalEducationCredentials without the appropriate permissions
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view person-external-education-credentials.");
-            }
-        }
-
-        /// <summary>
-        /// Helper method to determine if the user has permission to create/update PersonExternalEducationCredentials.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void UpdateCreatePersonExternalEducationCredentialsPermission()
-        {
-            bool hasPermission = HasPermission(BasePermissionCodes.UpdatePersonExternalEducationCredentials);
-
-            // User is not allowed to create or update PersonExternalEducationCredentials without the appropriate permissions
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to create/update person-external-education-credentials.");
-            }
-        }
+        }      
    }
 }

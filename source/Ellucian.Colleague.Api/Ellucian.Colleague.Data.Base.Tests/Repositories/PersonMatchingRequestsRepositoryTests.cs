@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -53,7 +53,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         [TestMethod]
         public async Task GetPersonMatchRequestsAsync_CriteriaObj_WithOutcomes()
         {
-            dataReaderMock.Setup(repo => repo.SelectAsync("PERSON.MATCH.REQUEST", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.SelectAsync("PERSON.MATCH.REQUEST", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(() => null);
             criteriaObj = new Domain.Base.Entities.PersonMatchRequest();
             criteriaObj.AddPersonMatchRequestOutcomes(
                 new Domain.Base.Entities.PersonMatchRequestOutcomes(

@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,6 +18,12 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json.Linq;
 using slf4net;
+using System.Web.Http.Routing;
+using System.Collections;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Colleague.Domain.Base;
+using System.Web.Http.Controllers;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -109,6 +115,86 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             mealPlanRequestsServiceMock = null;
             mealPlanRequestsTuple = null;
             TestContext = null;
+        }
+
+
+        //Example permission success 
+        [TestMethod]
+        public async Task mealPlanRequestsController_GetMealPlanRequestsAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "MealPlanRequests" },
+                { "action", "GetMealPlanRequestsAsync" }
+            };
+            HttpRoute route = new HttpRoute("meal-plan-requests", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            mealPlanRequestsController.Request.SetRouteData(data);
+            mealPlanRequestsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.ViewMealPlanRequest, StudentPermissionCodes.CreateMealPlanRequest});
+
+            var controllerContext = mealPlanRequestsController.ControllerContext;
+            var actionDescriptor = mealPlanRequestsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.MealPlanRequests>, int>(mealPlanRequestDtosCollection, 3);
+            mealPlanRequestsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            mealPlanRequestsServiceMock.Setup(s => s.GetMealPlanRequestsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            var resp = await mealPlanRequestsController.GetMealPlanRequestsAsync(new Paging(10, 0));
+
+            Object filterObject;
+            mealPlanRequestsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewMealPlanRequest));
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateMealPlanRequest));
+
+        }
+
+        //Example permission exception
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task mealPlanRequestsController_GetMealPlanRequestsAsync_Invalid_Permissionsn()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "MealPlanRequests" },
+                { "action", "GetMealPlanRequestsAsync" }
+            };
+            HttpRoute route = new HttpRoute("meal-plan-requests", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            mealPlanRequestsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = mealPlanRequestsController.ControllerContext;
+            var actionDescriptor = mealPlanRequestsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                mealPlanRequestsServiceMock.Setup(s => s.GetMealPlanRequestsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
+                mealPlanRequestsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view meal-plan-requests."));
+                var resp = await mealPlanRequestsController.GetMealPlanRequestsAsync(new Paging(10, 10));
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
         }
 
         [TestMethod]
@@ -229,7 +315,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task MealPlanRequestsController_GetMealPlanRequestsByGuidAsync_NullId()
         {
-            mealPlanRequestsServiceMock.Setup(x => x.GetMealPlanRequestsByGuidAsync(It.IsAny<string>())).Throws<Exception>();
+            mealPlanRequestsServiceMock.Setup(x => x.GetMealPlanRequestsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<Exception>();
             await mealPlanRequestsController.GetMealPlanRequestsByGuidAsync(string.Empty);
         }
 
@@ -237,7 +323,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task MealPlanRequestsController_GetMealPlanRequestsByGuidAsync_KeyNotFoundException()
         {
-            mealPlanRequestsServiceMock.Setup(x => x.GetMealPlanRequestsByGuidAsync(It.IsAny<string>())).Throws<KeyNotFoundException>();
+            mealPlanRequestsServiceMock.Setup(x => x.GetMealPlanRequestsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<KeyNotFoundException>();
             await mealPlanRequestsController.GetMealPlanRequestsByGuidAsync("1");
         }
 
@@ -245,7 +331,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task MealPlanRequestsController_GetMealPlanRequestsByGuidAsync_PermissionsException()
         {
-            mealPlanRequestsServiceMock.Setup(x => x.GetMealPlanRequestsByGuidAsync(It.IsAny<string>())).Throws<PermissionsException>();
+            mealPlanRequestsServiceMock.Setup(x => x.GetMealPlanRequestsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
             await mealPlanRequestsController.GetMealPlanRequestsByGuidAsync("1");
         }
 
@@ -253,7 +339,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task MealPlanRequestsController_GetMealPlanRequestsByGuidAsync_ArgumentException()
         {
-            mealPlanRequestsServiceMock.Setup(x => x.GetMealPlanRequestsByGuidAsync(It.IsAny<string>())).Throws<ArgumentException>();
+            mealPlanRequestsServiceMock.Setup(x => x.GetMealPlanRequestsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<ArgumentException>();
             await mealPlanRequestsController.GetMealPlanRequestsByGuidAsync("1");
         }
 
@@ -261,7 +347,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task MealPlanRequestsController_GetMealPlanRequestsByGuidAsync_RepositoryException()
         {
-            mealPlanRequestsServiceMock.Setup(x => x.GetMealPlanRequestsByGuidAsync(It.IsAny<string>())).Throws<RepositoryException>();
+            mealPlanRequestsServiceMock.Setup(x => x.GetMealPlanRequestsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<RepositoryException>();
             await mealPlanRequestsController.GetMealPlanRequestsByGuidAsync("1");
         }
 
@@ -269,7 +355,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task MealPlanRequestsController_GetMealPlanRequestsByGuidAsync_IntegrationApiException()
         {
-            mealPlanRequestsServiceMock.Setup(x => x.GetMealPlanRequestsByGuidAsync(It.IsAny<string>())).Throws<IntegrationApiException>();
+            mealPlanRequestsServiceMock.Setup(x => x.GetMealPlanRequestsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<IntegrationApiException>();
             await mealPlanRequestsController.GetMealPlanRequestsByGuidAsync("1");
         }
 
@@ -277,7 +363,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task MealPlanRequestsController_GetMealPlanRequestsByGuidAsync_Exception()
         {
-            mealPlanRequestsServiceMock.Setup(x => x.GetMealPlanRequestsByGuidAsync(It.IsAny<string>())).Throws<Exception>();
+            mealPlanRequestsServiceMock.Setup(x => x.GetMealPlanRequestsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<Exception>();
             await mealPlanRequestsController.GetMealPlanRequestsByGuidAsync("1");
         }
 
@@ -388,7 +474,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             MealPlanRequests record = mealPlanRequestDtosCollection.FirstOrDefault();
             string guid = record.Id;
             mealPlanRequestsServiceMock.Setup(x => x.PutMealPlanRequestsAsync(guid, It.IsAny<MealPlanRequests>())).ReturnsAsync(record);
-            mealPlanRequestsServiceMock.Setup(x => x.GetMealPlanRequestsByGuidAsync(guid)).ReturnsAsync(record);
+            mealPlanRequestsServiceMock.Setup(x => x.GetMealPlanRequestsByGuidAsync(guid, It.IsAny<bool>())).ReturnsAsync(record);
             var result = await mealPlanRequestsController.PutMealPlanRequestsAsync(guid, record);
             Assert.AreEqual(result.Id, record.Id);
             Assert.AreEqual(result.AcademicPeriod, record.AcademicPeriod);

@@ -48,6 +48,10 @@ namespace Ellucian.Colleague.Domain.Base.Services
                     List<Tuple<string,string>>list = t as List<Tuple<string, string>>;
                     return string.Join(",", list.Select(x => string.Format("{0}{1}", x.Item1, x.Item2)));
                 } },
+                 { typeof(List<Tuple<string, DateTime?>>), (object t) => {
+                    List<Tuple<string,DateTime?>>list = t as List<Tuple<string, DateTime?>>;
+                    return string.Join(",", list.Select(x => string.Format("{0}{1}", x.Item1, x.Item2)));
+                } },
                 { typeof(Dictionary<string,string>), (object t) => {
                     Dictionary<string,string> list = t as Dictionary<string, string>;
                     return string.Join(",", list.Select(x => string.Format("{0}{1}", x.Key, x.Value)));

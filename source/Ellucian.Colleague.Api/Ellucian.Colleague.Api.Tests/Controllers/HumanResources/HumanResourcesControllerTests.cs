@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Api.Controllers.HumanResources;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Adapters;
@@ -47,7 +47,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             //mock up the Service
             humanResourceDemographicsServiceMock.Setup(r => r.GetHumanResourceDemographicsAsync(null))
                  .ReturnsAsync(testPersonBaseRepository.GetPersonBaseEntities().Select(x => personBaseEntityToHumanResourceDemographicsDtoAdapter.MapToType(x)).ToList());
-            humanResourceDemographicsServiceMock.Setup(r => r.GetSpecificHumanResourceDemographicsAsync(It.IsAny<string>()))
+            humanResourceDemographicsServiceMock.Setup(r => r.GetSpecificHumanResourceDemographicsAsync(It.IsAny<string>(), null))
                  .ReturnsAsync(testPersonBaseRepository.GetPersonBaseEntities().Select(x => personBaseEntityToHumanResourceDemographicsDtoAdapter.MapToType(x)).FirstOrDefault());
             humanResourceDemographicsServiceMock.Setup(r => r.QueryHumanResourceDemographicsAsync(It.IsAny<Dtos.Base.HumanResourceDemographicsQueryCriteria>(), It.IsAny<string>()))
                  .ReturnsAsync(testPersonBaseRepository.GetPersonBaseEntities().Select(x => personBaseEntityToHumanResourceDemographicsDtoAdapter.MapToType(x)).ToList());
@@ -168,7 +168,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         [ExpectedException(typeof(HttpResponseException))]
         public async Task CatchPermissionsExceptionTest()
         {
-            humanResourceDemographicsServiceMock.Setup(r => r.GetSpecificHumanResourceDemographicsAsync(It.IsAny<string>())).Throws(new PermissionsException());
+            humanResourceDemographicsServiceMock.Setup(r => r.GetSpecificHumanResourceDemographicsAsync(It.IsAny<string>(), null)).Throws(new PermissionsException());
             try
             {
                 await controllerUnderTest.GetSpecificHumanResourceDemographicsAsync("555");
@@ -185,7 +185,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         [ExpectedException(typeof(HttpResponseException))]
         public async Task CatchNotFoundExceptionTest()
         {
-            humanResourceDemographicsServiceMock.Setup(r => r.GetSpecificHumanResourceDemographicsAsync(It.IsAny<string>())).Throws(new KeyNotFoundException());
+            humanResourceDemographicsServiceMock.Setup(r => r.GetSpecificHumanResourceDemographicsAsync(It.IsAny<string>(), null)).Throws(new KeyNotFoundException());
             try
             {
                 await controllerUnderTest.GetSpecificHumanResourceDemographicsAsync("111");

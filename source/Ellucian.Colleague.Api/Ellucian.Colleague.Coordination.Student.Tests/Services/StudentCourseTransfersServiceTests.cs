@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 using StudentCourseTransferEntity = Ellucian.Colleague.Domain.Student.Entities.StudentCourseTransfer;
 using Ellucian.Colleague.Domain.Student.Tests;
 
+
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
     [TestClass]
@@ -50,6 +51,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         private ICollection<Ellucian.Colleague.Domain.Student.Entities.GradeScheme> _gradeSchemeCollection;
         private ICollection<Ellucian.Colleague.Domain.Student.Entities.AcademicProgram> _academicProgramCollection;
         private ICollection<Ellucian.Colleague.Domain.Student.Entities.CreditCategory> _creditCategoryCollection;
+        private ICollection<Ellucian.Colleague.Domain.Student.Entities.AcademicPeriod> _academicPeriodCollection;
+        private ICollection<Ellucian.Colleague.Domain.Student.Entities.Term> _termCollection;
+        private ICollection<Ellucian.Colleague.Domain.Student.Entities.SectionRegistrationStatusItem> _statusCollection;
 
         private string personGuid;
         private string institutionGuid;
@@ -98,12 +102,49 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             _academicCreditRepositoryMock.Setup(repo => repo.GetStudentCourseTransferByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
                 .ReturnsAsync(_studentCourseTransfersCollection[0]);
 
+            _termRepositoryMock.Setup(repo => repo.GetAsync())
+                     .ReturnsAsync(_termCollection);
+
+            _termRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<bool>()))
+                    .ReturnsAsync(_termCollection);
 
             _referenceRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync(It.IsAny<bool>())).ReturnsAsync(_academicLevelCollection);
+            foreach (var record in _academicLevelCollection)
+            {
+                _referenceRepositoryMock.Setup(r => r.GetAcademicLevelsGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
             _referenceRepositoryMock.Setup(repo => repo.GetGradeSchemesAsync(It.IsAny<bool>())).ReturnsAsync(_gradeSchemeCollection);
+            foreach (var record in _gradeSchemeCollection)
+            {
+                _referenceRepositoryMock.Setup(r => r.GetGradeSchemeGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
             _referenceRepositoryMock.Setup(repo => repo.GetAcademicProgramsAsync(It.IsAny<bool>())).ReturnsAsync(_academicProgramCollection);
+            foreach (var record in _academicProgramCollection)
+            {
+                _referenceRepositoryMock.Setup(r => r.GetAcademicProgramsGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
             _referenceRepositoryMock.Setup(repo => repo.GetCreditCategoriesAsync(It.IsAny<bool>())).ReturnsAsync(_creditCategoryCollection);
+            _referenceRepositoryMock.Setup(repo => repo.GetCreditCategoriesAsync()).ReturnsAsync(_creditCategoryCollection);
+            foreach (var record in _creditCategoryCollection)
+            {
+                _referenceRepositoryMock.Setup(r => r.GetCreditCategoriesGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
+
+            _referenceRepositoryMock.Setup(repo => repo.GetStudentAcademicCreditStatusesAsync(It.IsAny<bool>())).ReturnsAsync(_statusCollection);
+            foreach (var record in _statusCollection)
+            {
+                _referenceRepositoryMock.Setup(r => r.GetStudentAcademicCreditStatusesGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
             _gradeRepositoryMock.Setup(repo => repo.GetHedmAsync(It.IsAny<bool>())).ReturnsAsync(_gradeCollection);
+            foreach (var record in _gradeCollection)
+            {
+                _gradeRepositoryMock.Setup(r => r.GetGradesGuidAsync(record.Id)).ReturnsAsync(record.Guid);
+            }
+            _termRepositoryMock.Setup(repo => repo.GetAcademicPeriods(_termCollection)).Returns(_academicPeriodCollection);
+            foreach (var record in _gradeCollection)
+            {
+                _termRepositoryMock.Setup(r => r.GetAcademicPeriodsGuidAsync(record.Id)).ReturnsAsync(record.Guid);
+            }
 
             var personGuidDictionary = new Dictionary<string, string>() { };
             personGuidDictionary.Add("0003977", personGuid);
@@ -123,7 +164,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             _gradeSchemeCollection = new TestStudentReferenceDataRepository().GetGradeSchemesAsync().Result.ToList();
             _gradeCollection = new TestGradeRepository().GetHedmAsync().Result.ToList();
             _creditCategoryCollection = new TestStudentReferenceDataRepository().GetCreditCategoriesAsync().Result.ToList();
-          
+            _academicProgramCollection = new TestAcademicProgramRepository().GetAsync().Result.ToList();
+            _academicPeriodCollection = new TestAcademicPeriodRepository().Get().ToList();
+            _termCollection = new TestTermRepository().Get().ToList();
+            _statusCollection = new TestStudentReferenceDataRepository().GetStudentAcademicCreditStatusesAsync().Result.ToList();
+
             _studentCourseTransferDtoCollection = new List<Dtos.StudentCourseTransfer>()
             {   
                 new Dtos.StudentCourseTransfer()
@@ -141,7 +186,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     {
                         AcademicLevel = "UG",
                         AcademicPrograms = new List<string>() { "BA.ENGL", "BS.MATH" },
-                        AcademicPeriod = "2018/FA",
+                        AcademicPeriod = "2000RSU",
                         AwardedCredit = 2.00m,
                         Course = "12345",
                         //DetailGuid = "2a6cbd21-bb2f-433a-ac95-cb4dc1f29c18",
@@ -151,9 +196,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                         Guid = "84f2c406-3741-4098-a454-e27fb5d2f9a1",
                         Id = studentCourseTransfersGuid,
                         QualityPoints = 10.00m,
-                        CreditType = "I",
+                        CreditType = "CE",
                         Student = "0003977",
-                        TransferredFromInstitution = "0000043"
+                        TransferredFromInstitution = "0000043",
+                        Status = "N"
 
                     }
                 };
@@ -202,13 +248,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             Assert.AreEqual(expected.TransferredFrom.Id, actual.TransferredFrom.Id);
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task StudentCourseTransfersService_GetStudentCourseTransfersAsync_PermissionException()
-        {
-            viewStudentCourseTransfer.RemovePermission(perm);
-            var results = await _studentCourseTransfersService.GetStudentCourseTransfersAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
-        }
+
 
         [TestMethod]
         [ExpectedException(typeof(KeyNotFoundException))]
@@ -259,13 +299,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             Assert.AreEqual(expected.TransferredFrom.Id, actual.TransferredFrom.Id);
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task StudentCourseTransfersService_GetStudentCourseTransfers2Async_PermissionException()
-        {
-            viewStudentCourseTransfer.RemovePermission(perm);
-            var results = await _studentCourseTransfersService.GetStudentCourseTransfers2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
-        }
+
 
         [TestMethod]
         [ExpectedException(typeof(KeyNotFoundException))]

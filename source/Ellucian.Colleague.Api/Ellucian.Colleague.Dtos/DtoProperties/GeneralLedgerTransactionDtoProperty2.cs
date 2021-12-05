@@ -23,13 +23,13 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         /// <summary>
         /// A source reference number/document number for the transaction.
         /// </summary>
-        [JsonProperty("referenceNumber", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [JsonProperty("referenceNumber", DefaultValueHandling = DefaultValueHandling.Ignore, NullValueHandling = NullValueHandling.Ignore)]
         public string ReferenceNumber { get; set; }
 
         /// <summary>
         /// A sequential number associated with the transaction.
         /// </summary>
-        [JsonProperty("transactionNumber", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [JsonProperty("transactionNumber", DefaultValueHandling = DefaultValueHandling.Ignore, NullValueHandling = NullValueHandling.Ignore)]
         public string TransactionNumber { get; set; }
 
         /// <summary>
@@ -41,13 +41,13 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         /// <summary>
         /// A supplementary date assigned to the transaction based on the transaction type.
         /// </summary>
-        [JsonProperty("transactionTypeReferenceDate", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [JsonProperty("transactionTypeReferenceDate", DefaultValueHandling = DefaultValueHandling.Ignore, NullValueHandling = NullValueHandling.Ignore)]
         public DateTimeOffset? TransactionTypeReferenceDate { get; set; }
 
         /// <summary>
         /// The person or organization associated with the transaction.
         /// </summary>
-        [JsonProperty("reference", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [JsonProperty("reference", DefaultValueHandling = DefaultValueHandling.Ignore, NullValueHandling = NullValueHandling.Ignore)]
         public GeneralLedgerReferenceDtoProperty Reference { get; set; }
 
         /// <summary>

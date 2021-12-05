@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -109,7 +109,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Collection of External Education DTO objects</returns>
         public async Task<Tuple<IEnumerable<Dtos.ExternalEducation>, int>> GetExternalEducationsAsync(int offset, int limit, bool bypassCache = false, string personGuid = "")
         {
-            this.CheckViewExternalEducationPermission();
+            //this.CheckViewExternalEducationPermission();
 
             var externalEducationsCollection = new List<Dtos.ExternalEducation>();
             // Convert and validate all input parameters
@@ -161,7 +161,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {          
             try
             {
-                this.CheckViewExternalEducationPermission();
+                //this.CheckViewExternalEducationPermission();
 
                 var acadCredentialId = await _externalEducationRepository.GetExternalEducationIdFromGuidAsync(guid);
                 if (string.IsNullOrEmpty(acadCredentialId))

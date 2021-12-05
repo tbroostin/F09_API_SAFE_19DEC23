@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -260,7 +260,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task InstructorsService_GetInstructorsAsync_WithLocationGuid_ArgumentNullException()
             {
-                _referenceRepositoryMock.Setup(i => i.GetLocationsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+                _referenceRepositoryMock.Setup(i => i.GetLocationsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
                 _instructorRepositoryMock.Setup(i => i.GetInstructorsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), locationId, It.IsAny<bool>()))
                     .ReturnsAsync(_instructorTuple);
                 var results = await _instructorsService.GetInstructorsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), locationId, It.IsAny<bool>());
@@ -700,7 +700,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task InstructorsService_GetInstructorsAsync_WithLocationGuid_ArgumentNullException()
             {
-                _referenceRepositoryMock.Setup(i => i.GetLocationsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+                _referenceRepositoryMock.Setup(i => i.GetLocationsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
                 _instructorRepositoryMock.Setup(i => i.GetInstructorsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), locationId, It.IsAny<bool>()))
                     .ReturnsAsync(_instructorTuple);
                 var results = await _instructorsService.GetInstructorsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), locationId, It.IsAny<bool>());

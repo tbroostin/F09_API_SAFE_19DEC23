@@ -1,8 +1,6 @@
-﻿/*Copyright 2018 Ellucian Company L.P. and its affiliates.*/
-using Ellucian.Colleague.Data.Base.Tests.Repositories;
+﻿/*Copyright 2018-2021 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Data.HumanResources.Repositories;
-using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Tests;
 using Ellucian.Data.Colleague;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -10,9 +8,6 @@ using Moq;
 using slf4net;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -34,7 +29,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             cacheProviderMock = new Mock<Web.Cache.ICacheProvider>();
             dataAccessorMock = new Mock<IColleagueDataReader>();
             transFactoryMock = new Mock<IColleagueTransactionFactory>();
-            leaveBalanceConfigurationRepository = await BuildLeaveBalanceConfigurationlanRepository();
+            leaveBalanceConfigurationRepository = await BuildLeaveBalanceConfigurationRepository();
 
             cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                    x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
@@ -51,7 +46,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             leaveBalanceConfigurationRepository = null;
         }
 
-        private async Task<LeaveBalanceConfigurationRepository> BuildLeaveBalanceConfigurationlanRepository()
+        private async Task<LeaveBalanceConfigurationRepository> BuildLeaveBalanceConfigurationRepository()
         {
             // Set up data accessor for mocking (needed for get)
             transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
@@ -61,7 +56,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             List<string> list = new List<string>();
             list.Add("INAC");
             list.Add("CMPS");
-            HrssDefaults value = new HrssDefaults() { HrssExcludeLeavePlanIds = list };
+            HrssDefaults value = new HrssDefaults() { HrssExcludeLeavePlanIds = list, HrssLeaveLkbk = testLeaveBalanceConfigurationItems.LeaveRequestLookbackDays };
             dataAccessorMock.Setup(acc => acc.ReadRecordAsync<DataContracts.HrssDefaults>("HR.PARMS", "HRSS.DEFAULTS", true)).ReturnsAsync(value);
 
             leaveBalanceConfigurationRepository = new LeaveBalanceConfigurationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
@@ -74,6 +69,22 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             var leaveBalanceConfiguration = await leaveBalanceConfigurationRepository.GetLeaveBalanceConfigurationAsync();
             Assert.IsNotNull(leaveBalanceConfiguration);
             Assert.AreEqual("INAC", leaveBalanceConfiguration.ExcludedLeavePlanIds[0]);
+        }
+
+        [TestMethod]
+        public async Task LeaveBalanceConfigurationRepository_LeaveRequestLookbackDaysAreSetCorrectlyTest()
+        {
+            var leaveBalanceConfiguration = await leaveBalanceConfigurationRepository.GetLeaveBalanceConfigurationAsync();
+            var expectedDefaultValue = 60;
+            Assert.AreEqual(expectedDefaultValue, leaveBalanceConfiguration.LeaveRequestLookbackDays);
+        }
+
+        [TestMethod]
+        public async Task LeaveBalanceConfigurationRepository_LeaveRequestLookbackDaysSetToNullTest()
+        {
+            dataAccessorMock.Setup(acc => acc.ReadRecordAsync<DataContracts.HrssDefaults>("HR.PARMS", "HRSS.DEFAULTS", true)).ReturnsAsync(new HrssDefaults());
+            var leaveBalanceConfiguration = await leaveBalanceConfigurationRepository.GetLeaveBalanceConfigurationAsync();
+            Assert.IsNull(leaveBalanceConfiguration.LeaveRequestLookbackDays);
         }
 
         [TestMethod]

@@ -4960,7 +4960,7 @@
         <Width>6.3674in</Width>
         <ZIndex>18</ZIndex>
         <Visibility>
-          <Hidden>=Not Parameters!IsPellEntitlementActive.Value Or Not Parameters!PellEntitlementFull.Value &lt;&gt; " "</Hidden>
+          <Hidden>=Not Parameters!IsPellEntitlementActive.Value Or Not Parameters!PellEntitlementFull.Value &lt;&gt; "" Or Not Parameters!PellEntitlementFull.Value &lt;&gt; "0" Or Not Parameters!PellEntitlementFull.Value &lt;&gt; " "</Hidden>
         </Visibility>
         <Style>
           <Border>
@@ -5127,6 +5127,7 @@
                           <TextRuns>
                             <TextRun>
                               <Value>=Fields!AwRenewableText.Value</Value>
+                              <MarkupType>HTML</MarkupType>
                               <Style />
                             </TextRun>
                           </TextRuns>
@@ -6707,6 +6708,9 @@ Fields!CostType.Value = "Indirect Costs", "Total Indirect Costs"
         <Height>0.25in</Height>
         <Width>6.29794in</Width>
         <ZIndex>30</ZIndex>
+        <Visibility>
+          <Hidden>=True</Hidden>
+        </Visibility>
         <Style>
           <Border>
             <Style>None</Style>
@@ -6728,7 +6732,7 @@ Fields!CostType.Value = "Indirect Costs", "Total Indirect Costs"
   <Width>6.5026in</Width>
   <Page>
     <LeftMargin>1in</LeftMargin>
-    <RightMargin>1in</RightMargin>
+    <RightMargin>.5in</RightMargin>
     <TopMargin>1in</TopMargin>
     <BottomMargin>1in</BottomMargin>
     <Style />

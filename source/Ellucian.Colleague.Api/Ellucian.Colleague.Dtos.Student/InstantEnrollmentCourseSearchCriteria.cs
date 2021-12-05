@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 
@@ -92,6 +92,16 @@ namespace Ellucian.Colleague.Dtos.Student
         /// If provided, this indicates the latest last meeting date for qualifying sections. Any section with an last meeting date that is greater than or equal to this date will not be included.
         /// </summary>
         public DateTime? SectionEndDate { get; set; }
+
+        /// <summary>
+        /// Subject Filter: Used to filter returned results to specific subjects.
+        /// </summary>
+        public IEnumerable<string> Subjects { get; set; }
+
+        /// <summary>
+        /// Synonym Filter: Used to filter returned results to specific Synonyms.
+        /// </summary>
+        public IEnumerable<string> Synonyms { get; set; }
 
         /// <summary>
         /// display sections that are open Only - have seats available

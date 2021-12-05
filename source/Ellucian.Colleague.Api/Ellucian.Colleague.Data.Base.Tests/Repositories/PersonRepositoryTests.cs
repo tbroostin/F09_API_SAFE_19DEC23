@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -1697,7 +1697,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             public async Task NullRecordsReturned_ExceptionThrownTest()
             {
                 dataReaderMock.Setup<Task<Collection<DataContracts.Person>>>(accessor => accessor.BulkReadRecordAsync<DataContracts.Person>(It.IsAny<string[]>(), true))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
 
                 await personRepository.GetPersonsAsync(personRecords.Keys, person => new Staff(person.Recordkey, person.LastName));
             }

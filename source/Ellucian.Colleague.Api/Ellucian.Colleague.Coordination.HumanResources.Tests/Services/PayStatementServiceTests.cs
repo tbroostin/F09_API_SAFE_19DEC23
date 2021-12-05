@@ -1,4 +1,4 @@
-﻿/* Copyright 2017-2019 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.Base.Reports;
 using Ellucian.Colleague.Coordination.HumanResources.Adapters;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
@@ -8,6 +8,7 @@ using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Services;
 using Ellucian.Colleague.Domain.HumanResources.Tests;
+using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.TestUtil;
 using Ellucian.Web.Security;
@@ -38,6 +39,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         public Mock<IPersonBenefitDeductionRepository> personBenefitDeductionRepositoryMock;
         public Mock<IPersonEmploymentStatusRepository> personEmploymentStatusRepositoryMock;
         public Mock<IPositionRepository> positionRepositoryMock;
+        public Mock<IStudentReferenceDataRepository> studentReferenceDataRepositoryMock;
         public ITypeAdapter<PayStatementSourceData, Dtos.HumanResources.PayStatementSummary> summaryEntityToDtoAdapter;
         public ITypeAdapter<PayStatementReport, Dtos.HumanResources.PayStatementReport> reportEntityToDtoAdapter;
 
@@ -56,6 +58,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         public TestPositionRepository testPositionData;
 
         public PayStatementConfiguration testPayStatementConfigurationData;
+        public string hostCountry;
         public FunctionEqualityComparer<Dtos.HumanResources.PayStatementSummary> summaryEqualityComparer;
 
         public IEnumerable<ReportParameter> actualReportParameters;
@@ -74,8 +77,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             personEmploymentStatusRepositoryMock = new Mock<IPersonEmploymentStatusRepository>();
             employeeRepositoryMock = new Mock<IEmployeeRepository>();
             positionRepositoryMock = new Mock<IPositionRepository>();
+            studentReferenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
             testData = new TestPayStatementRepository();
-            //testData.CreatePayStatementRecords(employeeCurrentUserFactory.CurrentUser.PersonId);
             testBenDedData = new TestBenefitDeductionTypeRepository();
             testEarningsTypeData = new TestEarningsTypeRepository();
             testEarningsDifferentialData = new TestEarningsDifferentialRepository();
@@ -94,6 +97,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 SocialSecurityNumberDisplay = SSNDisplay.LastFour,
             };
 
+            hostCountry = "USA";
             summaryEntityToDtoAdapter = new AutoMapperAdapter<PayStatementSourceData, Dtos.HumanResources.PayStatementSummary>(adapterRegistryMock.Object, loggerMock.Object);
             adapterRegistryMock.Setup(r => r.GetAdapter<PayStatementSourceData, Dtos.HumanResources.PayStatementSummary>())
                 .Returns(() => summaryEntityToDtoAdapter);
@@ -174,6 +178,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             positionRepositoryMock.Setup(r => r.GetPositionsAsync())
                 .Returns(() => testPositionData.GetPositionsAsync());
 
+            studentReferenceDataRepositoryMock.Setup(r => r.GetHostCountryAsync()).ReturnsAsync(hostCountry);
+
             payStatementRepositoryMock.Setup(r => r.GetPayStatementSourceDataAsync(It.IsAny<string>()))
                 .Returns<string>((id) =>
                     testData.GetPayStatementSourceDataAsync(id));
@@ -207,7 +213,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
             personEmploymentStatusRepositoryMock.Setup(r => r.GetPersonEmploymentStatusesAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<DateTime?>()))
                 //.Callback<IEnumerable<string>, DateTime?>(ids => testPersonEmploymentStatusData.personEmploymentStatusRecords.ForEach(r => r.personId = ids.First()))
-                .Returns<IEnumerable<string>>(ids => testPersonEmploymentStatusData.GetPersonEmploymentStatusesAsync(ids, null));
+                .Returns<IEnumerable<string>, DateTime?>((ids, date) => testPersonEmploymentStatusData.GetPersonEmploymentStatusesAsync(ids, null));
 
             loggerMock.Setup(l => l.IsErrorEnabled).Returns(true);
 
@@ -222,6 +228,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 personBenefitDeductionRepositoryMock.Object,
                 personEmploymentStatusRepositoryMock.Object,
                 positionRepositoryMock.Object,
+                studentReferenceDataRepositoryMock.Object,
                 adapterRegistryMock.Object,
                 employeeCurrentUserFactory,
                 roleRepositoryMock.Object,
@@ -239,7 +246,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         private PayStatementReportDataContext createReportDataContext(PayStatementSourceData source)
         {
             return new PayStatementReportDataContext(source,
-                new PayrollRegisterEntry(source.Id, source.EmployeeId, source.PeriodEndDate.AddMonths(-1).AddDays(1), source.PeriodEndDate, "BW", 1, source.PaycheckReferenceId, source.StatementReferenceId, false),
+                new PayrollRegisterEntry(source.Id, source.EmployeeId, source.PeriodEndDate.AddMonths(-1).AddDays(1), source.PeriodEndDate, "BW", 
+                1, source.PaycheckReferenceId, source.StatementReferenceId, false, null),
                 testPersonBenefitDeductionData.GetPersonBenefitDeductions(source.EmployeeId),
                 testPersonEmploymentStatusData.GetPersonEmploymentStatuses(new string[1] { source.EmployeeId }));
         }
@@ -383,6 +391,15 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
                 var shouldDisplaySSN = actualReportParameters.FirstOrDefault(p => p.Name == "ShouldDisplaySocialSecurityNumber");
                 Assert.IsTrue(shouldDisplaySSN.Values[0].Equals("false", StringComparison.InvariantCultureIgnoreCase));
+            }
+
+            [TestMethod]
+            public async Task HostCountryIsUSA()
+            {
+                await getActual();
+
+                var hostCountry = actualReportParameters.FirstOrDefault(p => p.Name == "HostCountry");
+                Assert.IsTrue(hostCountry.Values[0].Equals("USA", StringComparison.InvariantCultureIgnoreCase));
             }
 
             [TestMethod]
@@ -532,11 +549,11 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             {
                 roleRepositoryMock.Setup(r => r.Roles)
                     .Returns(() => employeeCurrentUserFactory.CurrentUser.Roles.Select(r =>
-                        {
-                            var role = new Role(r.GetHashCode(), r);
-                            role.AddPermission(new Permission(HumanResourcesPermissionCodes.ViewAllEarningsStatements));
-                            return role;
-                        }));
+                    {
+                        var role = new Role(r.GetHashCode(), r);
+                        role.AddPermission(new Permission(HumanResourcesPermissionCodes.ViewAllEarningsStatements));
+                        return role;
+                    }));
 
                 testData.CreatePayStatementRecords("foobar");
 
@@ -549,14 +566,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
 
-            [TestMethod]
-            public async Task EmptyListOfDtosTest()
-            {
-                testData.payStatementRecords = new List<TestPayStatementRepository.PayStatementRecord>();
-                inputPersonIds = new List<string>();
-                var actual = await getActual();
-                Assert.AreEqual(0, actual.Count());
-            }
+            //[TestMethod]
+            //public async Task EmptyListOfDtosTest()
+            //{
+            //    testData.payStatementRecords = new List<TestPayStatementRepository.PayStatementRecord>();
+            //    inputPersonIds = new List<string>() { employeeCurrentUserFactory.CurrentUser.PersonId };
+            //    var actual = await getActual();
+            //    Assert.AreEqual(0, actual.Count());
+            //}
 
             [TestMethod]
             public async Task StatementMustHaveAssociatedPayrollRegisterTest()

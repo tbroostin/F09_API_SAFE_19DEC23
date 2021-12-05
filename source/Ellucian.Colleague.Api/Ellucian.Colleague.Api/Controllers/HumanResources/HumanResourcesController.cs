@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
@@ -86,6 +86,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Gets a list filled with all of the HumanResourceDemographics the current user/user with proxy is able to access
         /// </summary>
         /// <param name="effectivePersonId">Optional parameter for effective person Id</param>
+        /// <param name="lookupStartDate">Optional lookback date to limit returned results</param>
         /// <returns></returns>
         ///<accessComments>
         /// 1. Any user can get a human-resources resource that represents their self.
@@ -96,11 +97,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// 4. Admin can access human-resources resource of anyone. 
         /// </accessComments>         
         [HttpGet]
-        public async Task<IEnumerable<HumanResourceDemographics>> GetHumanResourceDemographics2Async(string effectivePersonId = null)
+        public async Task<IEnumerable<HumanResourceDemographics>> GetHumanResourceDemographics2Async(string effectivePersonId = null, DateTime? lookupStartDate = null)
         {
             try
             {
-                return await humanResourceDemographicsService.GetHumanResourceDemographics2Async(effectivePersonId);
+                return await humanResourceDemographicsService.GetHumanResourceDemographics2Async(effectivePersonId, lookupStartDate);
             }
             catch (PermissionsException pe)
             {
@@ -119,21 +120,22 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <summary>
         /// Gets a HumanResourceDemographics object for the person id in the route.
         /// </summary>
-        /// <returns></returns>
+        /// <param name="id">Id of the peron whose HumanResourceDemographics information requested</param>
+        /// <param name="effectivePersonId">Optional parameter for passing effective person Id</param>
+        /// <returns>HumanResourceDemographics informaion of the requested person.</returns>
         ///  <accessComments>
         /// 1. Any user can get a human-resources resource that represents their self.
-        /// 2. Users who have the permission - ACCEPT.REJECT.TIME.ENTRY - are considered supervisors and can get resources owned by their
-        /// supervisees. If a supervisor user attempts to get a resource owned by a non-supervisee, this endpoint will throw a 403.
-        /// 3. This endpoint does not support proxy access. Use <code>GET /human-resources</code> instead.
-        /// 4. Users who have the permission - APPROVE.REJECT.LEAVE.REQUEST - are considered leave approvers and you have access to 
-        /// the Human Resource Demographics of the employees whose leave requests you handle.
+        /// 2. Users who have the permission - ACCEPT.REJECT.TIME.ENTRY - are considered supervisors. These supervisors and their proxies can 
+        /// get resources owned by their supervisees. If a supervisor attempts to get a resource owned by a non-supervisee, this endpoint will throw a 403.
+        /// 3. Users who have the permission - APPROVE.REJECT.LEAVE.REQUEST - are considered leave approvers. These leave approvers and their proxies can
+        /// get resources owned by their supervisees. If a leave approver attempts to get a resource owned by a non-supervisee, this endpoint will throw a 403.
         /// </accessComments> 
         [HttpGet]
-        public async Task<HumanResourceDemographics> GetSpecificHumanResourceDemographicsAsync(string id)
+        public async Task<HumanResourceDemographics> GetSpecificHumanResourceDemographicsAsync(string id, string effectivePersonId = null)
         {
             try
             {
-                return await humanResourceDemographicsService.GetSpecificHumanResourceDemographicsAsync(id);
+                return await humanResourceDemographicsService.GetSpecificHumanResourceDemographicsAsync(id, effectivePersonId);
             }
             catch (PermissionsException pe)
             {

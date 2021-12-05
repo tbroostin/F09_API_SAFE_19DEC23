@@ -17,6 +17,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Domain.Base.Transactions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -68,13 +69,15 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
-        public async Task MealPlanRequestsRepository_GET_KeyNotFoundException()
+        public async Task MealPlanRequestsRepository_GET_ExpectedEmptySet()
         {
             dataAccessorMock.Setup(repo => repo.SelectAsync("MEAL.PLAN.REQS.INTG", It.IsAny<string>())).ReturnsAsync(ids);
-            dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.MealPlanReqsIntg>("MEAL.PLAN.REQS.INTG", It.IsAny<string[]>(), true)).ReturnsAsync(null);
+            dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.MealPlanReqsIntg>("MEAL.PLAN.REQS.INTG", It.IsAny<string[]>(), true)).ReturnsAsync(() => null);
 
             var results = await _mealPlanRequestsRepository.GetAsync(offset, limit, It.IsAny<bool>());
+            Assert.IsNotNull(results);
+            Assert.AreEqual(results.Item2, 0);
+
         }
 
         [TestMethod]
@@ -97,7 +100,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task MealPlanRequestsRepository_GET_ById_MealPlanReq_Null()
         {
-            dataAccessorMock.Setup(repo => repo.ReadRecordAsync<DataContracts.MealPlanReqsIntg>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+            dataAccessorMock.Setup(repo => repo.ReadRecordAsync<DataContracts.MealPlanReqsIntg>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
             var result = await _mealPlanRequestsRepository.GetByIdAsync("2cb5e697-8168-4203-b48b-c667556cfb8a");
         }
 
@@ -111,6 +114,37 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     new MealPlanReqsIntg("64d2c15e-e771-4639-81ab-2c01ad00e294", "3", "13", "CU"){ Status = "S"},
                     new MealPlanReqsIntg("e4d2c15e-e771-4639-81ab-2c01ad00e29t", "4", "14", "CU"){ Status = "W"}
                 };
+
+            string[] requestedIds1 = { "1", "2", "3" };
+
+            GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+            {
+                Offset = 0,
+                Limit = 100,
+                CacheName = "AllMealPlanRequestsRecordKeys",
+                Entity = "MEAL.PLAN.REQS.INTG",
+                Sublist = requestedIds1.ToList(),
+                TotalCount = 3,
+                KeyCacheInfo = new List<KeyCacheInfo>()
+               {
+                   new KeyCacheInfo()
+                   {
+                       KeyCacheMax = 5905,
+                       KeyCacheMin = 1,
+                       KeyCachePart = "000",
+                       KeyCacheSize = 5905
+                   },
+                   new KeyCacheInfo()
+                   {
+                       KeyCacheMax = 7625,
+                       KeyCacheMin = 5906,
+                       KeyCachePart = "001",
+                       KeyCacheSize = 1720
+                   }
+               }
+            };
+            transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                .ReturnsAsync(resp);
         }
 
         private MealPlanReqsIntgRepository BuildMealPlanRequestsRepository()
@@ -160,6 +194,13 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 }
                 return Task.FromResult(result);
             });
+
+            // Set up transaction manager for mocking 
+            var transManagerMock = new Mock<IColleagueTransactionInvoker>();
+            var transManager = transManagerMock.Object;
+            // Set up transManagerMock as the object for the transaction manager
+            transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager);
+
 
             // Construct repository
             _mealPlanRequestsRepository = new MealPlanReqsIntgRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
@@ -299,7 +340,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<GuidLookup[]>()))
                    .Returns(Task.FromResult(new Dictionary<string, GuidLookupResult>() { { "KEY", new GuidLookupResult() { Entity = "MEAL.PLAN.REQS.INTG", PrimaryKey = "KEY" } } }));
 
-                dataAccessorMock.Setup(repo => repo.ReadRecordAsync<DataContracts.MealPlanReqsIntg>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataAccessorMock.Setup(repo => repo.ReadRecordAsync<DataContracts.MealPlanReqsIntg>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
 
                 var response = new CreateUpdateMealPlanReqResponse() { Guid = Guid.NewGuid().ToString() };
 
@@ -452,7 +493,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataAccessorMock.Setup(acc => acc.SelectAsync(It.IsAny<GuidLookup[]>()))
                     .Returns(Task.FromResult(new Dictionary<string, GuidLookupResult>() { { "KEY", new GuidLookupResult() { Entity = "MEAL.PLAN.REQS.INTG", PrimaryKey = "KEY" } } }));
 
-                dataAccessorMock.Setup(repo => repo.ReadRecordAsync<DataContracts.MealPlanReqsIntg>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null); 
+                dataAccessorMock.Setup(repo => repo.ReadRecordAsync<DataContracts.MealPlanReqsIntg>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null); 
 
                 var response = new CreateUpdateMealPlanReqResponse() { Guid = Guid.NewGuid().ToString() };
 

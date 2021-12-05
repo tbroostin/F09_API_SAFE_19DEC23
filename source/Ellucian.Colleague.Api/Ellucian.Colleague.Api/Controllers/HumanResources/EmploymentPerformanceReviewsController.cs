@@ -1,4 +1,4 @@
-//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -24,6 +24,7 @@ using System.Net.Http;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using System.Web.Http.ModelBinding;
 using Ellucian.Web.Http.ModelBinding;
+using Ellucian.Colleague.Domain.HumanResources;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
@@ -55,7 +56,9 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="page">Page of items for Paging</param>
         /// <returns>List of EmploymentPerformanceReviews <see cref="Dtos.EmploymentPerformanceReviews"/> objects representing matching employmentPerformanceReviews</returns>
-        [HttpGet]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewEmploymentPerformanceReview,
+            HumanResourcesPermissionCodes.CreateUpdateEmploymentPerformanceReview })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetEmploymentPerformanceReviewsAsync(Paging page)
@@ -75,6 +78,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
+                _employmentPerformanceReviewsService.ValidatePermissions(GetPermissionsMetaData());
                 var pageOfItems = await _employmentPerformanceReviewsService.GetEmploymentPerformanceReviewsAsync(page.Offset, page.Limit, bypassCache);
 
                 AddEthosContextProperties(
@@ -121,7 +125,9 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="guid">GUID to desired employmentPerformanceReviews</param>
         /// <returns>A employmentPerformanceReviews object <see cref="Dtos.EmploymentPerformanceReviews"/> in EEDM format</returns>
-        [HttpGet]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewEmploymentPerformanceReview,
+            HumanResourcesPermissionCodes.CreateUpdateEmploymentPerformanceReview })]
         [EedmResponseFilter]
         public async Task<Dtos.EmploymentPerformanceReviews> GetEmploymentPerformanceReviewsByGuidAsync(string guid)
         {
@@ -140,6 +146,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                _employmentPerformanceReviewsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                     await _employmentPerformanceReviewsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await _employmentPerformanceReviewsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -186,7 +193,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="employmentPerformanceReviews">DTO of the new employmentPerformanceReviews</param>
         /// <returns>An EmploymentPerformanceReviews DTO object <see cref="Dtos.EmploymentPerformanceReviews"/> in EEDM format</returns>
-        [HttpPost, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpPost, EedmResponseFilter,PermissionsFilter(HumanResourcesPermissionCodes.CreateUpdateEmploymentPerformanceReview) ]
         public async Task<Dtos.EmploymentPerformanceReviews> PostEmploymentPerformanceReviewsAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.EmploymentPerformanceReviews employmentPerformanceReviews)
         {
 
@@ -198,7 +206,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
-
+                _employmentPerformanceReviewsService.ValidatePermissions(GetPermissionsMetaData());
                 ValidateEmploymentPerformanceReviews(employmentPerformanceReviews);
 
                 //call import extend method that needs the extracted extension data and the config
@@ -231,10 +239,6 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (RepositoryException e)
             {
                 _logger.Error(e.ToString());
-                if (e.Errors == null || e.Errors.Count <= 0)
-                {
-                    throw CreateHttpResponseException(e.Message);
-                }
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (IntegrationApiException e)
@@ -263,7 +267,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="guid">GUID of the employmentPerformanceReviews to update</param>
         /// <param name="employmentPerformanceReviews">DTO of the updated employmentPerformanceReviews</param>
         /// <returns>An EmploymentPerformanceReviews DTO object <see cref="Dtos.EmploymentPerformanceReviews"/> in EEDM format</returns>
-        [HttpPut, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(HumanResourcesPermissionCodes.CreateUpdateEmploymentPerformanceReview)]
         public async Task<Dtos.EmploymentPerformanceReviews> PutEmploymentPerformanceReviewsAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.EmploymentPerformanceReviews employmentPerformanceReviews)
         {
             if (string.IsNullOrEmpty(guid))
@@ -293,6 +298,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
+                _employmentPerformanceReviewsService.ValidatePermissions(GetPermissionsMetaData());
                 await DoesUpdateViolateDataPrivacySettings(employmentPerformanceReviews, await _employmentPerformanceReviewsService.GetDataPrivacyListByApi(GetRouteResourceName(), true), _logger);
 
                 ValidateEmploymentPerformanceReviews(employmentPerformanceReviews);
@@ -332,10 +338,6 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (RepositoryException e)
             {
                 _logger.Error(e.ToString());
-                if (e.Errors == null || e.Errors.Count <= 0)
-                {
-                    throw CreateHttpResponseException(e.Message);
-                }
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (IntegrationApiException e)
@@ -362,11 +364,13 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="guid">id</param>
         /// <returns></returns>
-        [HttpDelete]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpDelete, PermissionsFilter(HumanResourcesPermissionCodes.DeleteEmploymentPerformanceReview)]
         public async Task DeleteEmploymentPerformanceReviewsAsync(string guid)
         {
             try
             {
+                _employmentPerformanceReviewsService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(guid))
                 {
                     throw new ArgumentNullException("Employment performance review guid cannot be null or empty");

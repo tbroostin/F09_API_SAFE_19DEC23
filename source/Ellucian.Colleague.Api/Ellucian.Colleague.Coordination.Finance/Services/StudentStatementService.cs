@@ -142,7 +142,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                 report.ReportPath = pathToReport;
                 report.SetBasePermissionsForSandboxAppDomain(new System.Security.PermissionSet(System.Security.Permissions.PermissionState.Unrestricted));
                 report.EnableExternalImages = true;
-            
+
                 // Specify the report parameters
                 var utility = new ReportUtility();
                 var parameters = utility.BuildReportParametersFromResourceFiles(new List<string>() { pathToResourceFile });
@@ -160,7 +160,14 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                 parameters.Add(utility.BuildReportParameter("StudentId", statementDto.StudentId));
                 parameters.Add(utility.BuildReportParameter("StudentName", statementDto.StudentName));
                 parameters.Add(utility.BuildReportParameter("StudentAddress", statementDto.StudentAddress));
-                parameters.Add(utility.BuildReportParameter("DueDate", statementDto.DueDate));
+                if (statementDto.DisplayDueDate)
+                {
+                    parameters.Add(utility.BuildReportParameter("DueDate", statementDto.DueDate));
+                }
+                else
+                {
+                    parameters.Add(utility.BuildReportParameter("DueDate", ""));
+                }
                 parameters.Add(utility.BuildReportParameter("Overdue", statementDto.Overdue));
                 parameters.Add(utility.BuildReportParameter("CurrentAmountDue", statementDto.CurrentAmountDue));
                 parameters.Add(utility.BuildReportParameter("OverdueAmount", statementDto.OverdueAmount));
@@ -182,6 +189,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                 parameters.Add(utility.BuildReportParameter("DateGenerated", statementDto.Date.ToShortDateString()));
                 parameters.Add(utility.BuildReportParameter("DateFormat", System.Threading.Thread.CurrentThread.CurrentCulture.DateTimeFormat.ShortDatePattern));
                 parameters.Add(utility.BuildReportParameter("DisplayByTerm", statementDto.ActivityDisplay == Dtos.Finance.Configuration.ActivityDisplay.DisplayByTerm));
+                parameters.Add(utility.BuildReportParameter("DisplayDueDates", statementDto.DisplayDueDate));
 
                 // Set the report parameters
                 report.SetParameters(parameters);
@@ -238,10 +246,10 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                     out fileNameExtension,
                     out streams,
                     out warnings);
-                
+
                 return renderedBytes;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 logger.Error(e, "Unable to generate student statement.");
                 throw;
@@ -251,7 +259,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                 report.DataSources.Clear();
                 report.ReleaseSandboxAppDomain();
                 report.Dispose();
-            }            
+            }
         }
 
         /// <summary>
@@ -264,59 +272,60 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
         /// <returns>A StudentStatement</returns>
         private async Task<StudentStatement> GenerateStatementAsync(string accountHolderId, string timeframeId, DateTime? startDate, DateTime? endDate)
         {
-                var accountHolder = _accountsReceivableRepository.GetAccountHolder(accountHolderId);
-                var depositTypes = _accountsReceivableRepository.DepositTypes;
-                var terms = _termRepository.Get();
-                var financeConfiguration = _financeConfigurationRepository.GetFinanceConfiguration();
-                var termPeriods = _accountActivityRepository.GetAccountPeriods(accountHolderId).ToList();
-                var nonTermPeriod = _accountActivityRepository.GetNonTermAccountPeriod(accountHolderId);
-                var financialPeriods = _financeConfigurationRepository.GetFinancialPeriods().ToList();
-                var statementProcessor = new StudentStatementProcessor(timeframeId, financeConfiguration.ActivityDisplay,
-                    financeConfiguration.PaymentDisplay, depositTypes, terms, termPeriods, financialPeriods);
-                var timeframeTermIds = statementProcessor.GetTermIdsForTimeframe().ToList();
+            var accountHolder = await _accountsReceivableRepository.GetAccountHolderAsync(accountHolderId);
+            var depositTypes = _accountsReceivableRepository.DepositTypes;
+            var terms = _termRepository.Get();
+            var financeConfiguration = _financeConfigurationRepository.GetFinanceConfiguration();
+            var termPeriods = _accountActivityRepository.GetAccountPeriods(accountHolderId).ToList();
+            var nonTermPeriod = _accountActivityRepository.GetNonTermAccountPeriod(accountHolderId);
+            var financialPeriods = _financeConfigurationRepository.GetFinancialPeriods().ToList();
+            var statementProcessor = new StudentStatementProcessor(timeframeId, financeConfiguration.ActivityDisplay,
+                financeConfiguration.PaymentDisplay, depositTypes, terms, termPeriods, financialPeriods);
+            var timeframeTermIds = statementProcessor.GetTermIdsForTimeframe().ToList();
 
-                var detailedAccountPeriod = GetAccountDetails(accountHolderId, financeConfiguration.ActivityDisplay, timeframeTermIds, startDate, endDate);
-                statementProcessor.SortAndConsolidateAccountDetails(detailedAccountPeriod);
-                if (detailedAccountPeriod.Refunds != null)
-                {
-                    statementProcessor.UpdateRefundDatesAndReferenceNumbers(detailedAccountPeriod.Refunds.Refunds);
-                }
-                var depositsDue = statementProcessor.FilterAndUpdateDepositsDue(accountHolder.DepositsDue, timeframeTermIds, startDate, endDate);
-                var accountTerms = GetAccountTerms(accountHolderId, financeConfiguration.PaymentDisplay);
-                var dueDate = statementProcessor.CalculateDueDate(accountTerms, accountHolder.DepositsDue);
-                var currentBalance = statementProcessor.CalculateCurrentBalance(detailedAccountPeriod);
-                var previousBalance = statementProcessor.CalculatePreviousBalance();
-                var futureBalance = statementProcessor.CalculateFutureBalance();
-                var otherBalance = statementProcessor.CalculateOtherBalance(nonTermPeriod);
-                var payPlanAdjustments = statementProcessor.CalculatePaymentPlanAdjustments(accountTerms);
-                var currentDepositsDue = statementProcessor.CalculateCurrentDepositsDue(accountHolder.DepositsDue);
-                var overdueAmount = statementProcessor.CalculateOverdueAmount(accountTerms, accountHolder.DepositsDue);
-                var futureOverdueAmounts = statementProcessor.CalculateFutureOverdueAmounts(accountTerms);
-                var totalAmountDue = statementProcessor.CalculateTotalAmountDue(previousBalance, currentBalance, payPlanAdjustments,
-                    currentDepositsDue, futureOverdueAmounts);
-                var statementSummary = statementProcessor.BuildStatementSummary(detailedAccountPeriod, accountTerms,
-                    currentDepositsDue, startDate, endDate);
-                var statementSchedule = await BuildStatementScheduleAsync(accountHolderId, timeframeId, financeConfiguration, terms, financialPeriods);
-                var totalBalance = previousBalance + currentBalance + futureBalance + otherBalance;
-                var previousBalanceDescription = statementProcessor.BuildPreviousBalanceDescription(startDate);
-                var futureBalanceDescription = statementProcessor.BuildFutureBalanceDescription(endDate);
-                var statement = new Ellucian.Colleague.Domain.Finance.Entities.StudentStatement(accountHolder, timeframeId, DateTime.Today,
-                    dueDate, financeConfiguration, currentBalance, totalAmountDue, totalBalance, statementSummary, detailedAccountPeriod,
-                    statementSchedule, overdueAmount)
-                {
-                    PreviousBalance = previousBalance,
-                    PreviousBalanceDescription = previousBalanceDescription,
-                    FutureBalance = futureBalance,
-                    FutureBalanceDescription = futureBalanceDescription,
-                    OtherBalance = otherBalance,
-                    DisclosureStatement = null,
-                };
+            var detailedAccountPeriod = GetAccountDetails(accountHolderId, financeConfiguration.ActivityDisplay, timeframeTermIds, startDate, endDate);
+            statementProcessor.SortAndConsolidateAccountDetails(detailedAccountPeriod);
+            if (detailedAccountPeriod.Refunds != null)
+            {
+                statementProcessor.UpdateRefundDatesAndReferenceNumbers(detailedAccountPeriod.Refunds.Refunds);
+            }
+            var depositsDue = statementProcessor.FilterAndUpdateDepositsDue(accountHolder.DepositsDue, timeframeTermIds, startDate, endDate);
+            var accountTerms = GetAccountTerms(accountHolderId, financeConfiguration.PaymentDisplay);
+            var dueDate = statementProcessor.CalculateDueDate(accountTerms, accountHolder.DepositsDue);
+            var currentBalance = statementProcessor.CalculateCurrentBalance(detailedAccountPeriod);
+            var previousBalance = statementProcessor.CalculatePreviousBalance();
+            var futureBalance = statementProcessor.CalculateFutureBalance();
+            var otherBalance = statementProcessor.CalculateOtherBalance(nonTermPeriod);
+            var payPlanAdjustments = statementProcessor.CalculatePaymentPlanAdjustments(accountTerms);
+            var currentDepositsDue = statementProcessor.CalculateCurrentDepositsDue(accountHolder.DepositsDue);
+            var overdueAmount = statementProcessor.CalculateOverdueAmount(accountTerms, accountHolder.DepositsDue);
+            var futureOverdueAmounts = statementProcessor.CalculateFutureOverdueAmounts(accountTerms);
+            var totalAmountDue = statementProcessor.CalculateTotalAmountDue(previousBalance, currentBalance, payPlanAdjustments,
+                currentDepositsDue, futureOverdueAmounts);
+            var statementSummary = statementProcessor.BuildStatementSummary(detailedAccountPeriod, accountTerms,
+                currentDepositsDue, startDate, endDate);
+            var statementSchedule = await BuildStatementScheduleAsync(accountHolderId, timeframeId, financeConfiguration, terms, financialPeriods);
+            var totalBalance = previousBalance + currentBalance + futureBalance + otherBalance;
+            var previousBalanceDescription = statementProcessor.BuildPreviousBalanceDescription(startDate);
+            var futureBalanceDescription = statementProcessor.BuildFutureBalanceDescription(endDate);
+            var statement = new Ellucian.Colleague.Domain.Finance.Entities.StudentStatement(accountHolder, timeframeId, DateTime.Today,
+                dueDate, financeConfiguration, currentBalance, totalAmountDue, totalBalance, statementSummary, detailedAccountPeriod,
+                statementSchedule, overdueAmount)
+            {
+                PreviousBalance = previousBalance,
+                PreviousBalanceDescription = previousBalanceDescription,
+                FutureBalance = futureBalance,
+                FutureBalanceDescription = futureBalanceDescription,
+                OtherBalance = otherBalance,
+                DisclosureStatement = null,
+                DisplayDueDate = financeConfiguration.DisplayDueDates
+            };
 
-                StudentStatement statementDto = new StudentStatementEntityAdapter(_adapterRegistry, logger).MapToType(statement);
-                statementDto.DepositsDue = ConvertDepositsDueToStatementDepositsDue(depositsDue);
-                CleanStatementForDisplay(statementDto);
-            
-                return statementDto;
+            StudentStatement statementDto = new StudentStatementEntityAdapter(_adapterRegistry, logger).MapToType(statement);
+            statementDto.DepositsDue = ConvertDepositsDueToStatementDepositsDue(depositsDue);
+            CleanStatementForDisplay(statementDto);
+
+            return statementDto;
         }
 
         /// <summary>
@@ -496,6 +505,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                         logger.Warn(string.Format("Student academic credit {0} does not have an associated course section", studentAcademicCredit.Id));
                     }
                 }
+                sections.RemoveAll(sec => sec == null || (sec.BillingPeriodType == "T"));
             }
             schedule = schedule.OrderBy(sch => TermPeriodProcessor.GetTermSortOrder(TermPeriodProcessor.GetTermIdForTermDescription(sch.SectionTerm, terms), terms)).ThenBy(sc => sc.SectionId).ToList();
             return schedule;

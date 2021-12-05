@@ -11,6 +11,9 @@ using Ellucian.Colleague.Dtos.Converters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Controllers;
+using System.Collections.Generic;
+using System.Net.Http.Headers;
+using System.Text;
 
 namespace Ellucian.Web.Http.Filters
 {
@@ -20,10 +23,12 @@ namespace Ellucian.Web.Http.Filters
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
     public class QueryStringFilterFilter : System.Web.Http.Filters.ActionFilterAttribute
-    {     
+    {
+        private const string CustomMediaType = "X-Media-Type";
+        
         /// <summary>
-        /// Gets & Sets the filter group name
-        /// </summary>
+                                                              /// Gets & Sets the filter group name
+                                                              /// </summary>
         public string FilterGroupName;
     
         /// <summary>
@@ -130,6 +135,21 @@ namespace Ellucian.Web.Http.Filters
                                     ex.Message.Replace(Environment.NewLine, " ").Replace("\n", " ")));
                                 var serialized = JsonConvert.SerializeObject(exceptionObject);
                                 actionExecutedContext.Response = new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest) { Content = new StringContent(serialized) };
+
+                                actionExecutedContext.Response.Content.Headers.Remove(CustomMediaType);
+
+                                IEnumerable<string> customMediaTypeValue = null;
+                                if (!actionExecutedContext.Response.Content.Headers.TryGetValues(CustomMediaType, out customMediaTypeValue))
+                                    actionExecutedContext.Response.Content.Headers.Add(CustomMediaType, BaseCompressedApiController.IntegrationErrors2);
+
+                                actionExecutedContext.Response.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json")
+                                {
+                                    CharSet = Encoding.UTF8.WebName
+                                };
+                                IEnumerable<string> contentTypeValue = null;
+                                if (!actionExecutedContext.Response.Content.Headers.TryGetValues("Content-Type", out contentTypeValue))
+                                    actionExecutedContext.Response.Content.Headers.Add("Content-Type", "application/json;charset=UTF-8");
+
                                 return base.OnActionExecutingAsync(actionExecutedContext, cancellationToken);
                             }
                             throw new Exception(ex.Message, ex.InnerException);

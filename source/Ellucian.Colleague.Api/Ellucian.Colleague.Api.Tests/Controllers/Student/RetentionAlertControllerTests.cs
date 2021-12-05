@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
@@ -440,7 +440,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.IsNotNull(response);
                 Assert.AreEqual(1, response.Count());
 
-                for ( var i = 0; i < responseList.Count; i++)
+                for (var i = 0; i < responseList.Count; i++)
                 {
                     Assert.AreEqual(caseCategoryOrgRolesList[i].CaseCategoryId, responseList[i].CaseCategoryId);
                     Assert.AreEqual(caseCategoryOrgRolesList[i].CaseCategoryOrgRoles, responseList[i].CaseCategoryOrgRoles);
@@ -642,6 +642,107 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 retentionAlertServiceMock.Setup(s => s.GetRetentionAlertCasesAsync(retentionAlertQueryCriteria)).ReturnsAsync(retentionAlertWorkCase);
                 var casesDtos = await retentionAlertController.QueryRetentionAlertWorkCasesByPostAsync(retentionAlertQueryCriteria);
                 Assert.AreEqual(1, casesDtos.Count());
+            }
+        }
+
+        [TestClass]
+        public class RetentionAlertController_QueryRetentionAlertWorkCases2_Tests
+        {
+            #region Test Context
+
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+
+            #endregion
+
+            private RetentionAlertController retentionAlertController;
+            private Mock<IRetentionAlertService> retentionAlertServiceMock;
+            private IRetentionAlertService retentionAlertService;
+            private ILogger logger;
+
+            private List<RetentionAlertWorkCase2> retentionAlertWorkCase;
+
+            private RetentionAlertQueryCriteria retentionAlertQueryCriteria;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                retentionAlertServiceMock = new Mock<IRetentionAlertService>();
+                retentionAlertService = retentionAlertServiceMock.Object;
+                logger = new Mock<ILogger>().Object;
+
+                retentionAlertWorkCase = new List<RetentionAlertWorkCase2>()
+                {
+                    new RetentionAlertWorkCase2()
+                    {
+                        CaseId = "31",
+                        StudentId = "0000011",
+                        CaseOwner = "case owner",
+                        Category = "Early.Alert",
+                        Priority = "Medium",
+                        DateCreated = DateTime.Now.AddDays(-10),
+                        Status = "New",
+                        CategoryDescription = "Category Description"
+                    }
+                };
+
+                retentionAlertQueryCriteria = new RetentionAlertQueryCriteria() { CaseIds = new List<string> { "31" }, StudentSearchKeyword = "000011", IsIncludeClosedCases = false };
+
+                // controller that will be tested using mock objects
+                retentionAlertController = new RetentionAlertController(retentionAlertService, logger);
+                retentionAlertController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                retentionAlertController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                retentionAlertController = null;
+                retentionAlertService = null;
+            }
+
+            [TestMethod]
+            public async Task QueryRetentionAlertWorkCases2_ReturnsSuccess()
+            {
+                retentionAlertServiceMock.Setup(s => s.GetRetentionAlertCases2Async(retentionAlertQueryCriteria)).ReturnsAsync(retentionAlertWorkCase);
+                var casesDtos = await retentionAlertController.QueryRetentionAlertWorkCasesByPost2Async(retentionAlertQueryCriteria);
+                Assert.AreEqual(1, casesDtos.Count());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task QueryRetentionAlertWorkCases2_PermissionsException()
+            {
+                retentionAlertServiceMock.Setup(x => x.GetRetentionAlertCases2Async(retentionAlertQueryCriteria))
+                    .ThrowsAsync(new PermissionsException());
+                var casesDtos = await retentionAlertController.QueryRetentionAlertWorkCasesByPost2Async(retentionAlertQueryCriteria);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task QueryRetentionAlertWorkCases2_Exception()
+            {
+                retentionAlertServiceMock.Setup(x => x.GetRetentionAlertCases2Async(retentionAlertQueryCriteria))
+                    .ThrowsAsync(new Exception());
+                var casesDtos = await retentionAlertController.QueryRetentionAlertWorkCasesByPost2Async(retentionAlertQueryCriteria);
             }
         }
 
@@ -1080,7 +1181,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     Status = "New",
                     CaseOwner = "case owner",
                     CaseType = "Case Type",
-                    CategoryName = "EARLY.ALERT",                    
+                    CategoryName = "EARLY.ALERT",
                     CategoryId = "1",
                     CreatedBy = "0000010",
                     Priority = "Medium",
@@ -1444,7 +1545,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             public async Task RetentionAlertController_PostManageRetentionAlertCaseRemindersAsync_Success1()
-            {                
+            {
                 RetentionAlertWorkCaseManageReminders reminders = new RetentionAlertWorkCaseManageReminders()
                 {
                     UpdatedBy = "1234567",
@@ -1649,11 +1750,11 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 var response = await retentionAlertController.GetRetentionAlertCaseOwnerSummaryAsync("");
             }
 
-            [TestMethod]            
+            [TestMethod]
             public async Task RetentionAlertController_QueryRetentionAlertGroupOfCasesSummaryByPostAsync_Success()
             {
                 retentionAlertServiceMock.Setup(s => s.GetRetentionAlertCaseOwnerSummaryAsync(It.IsAny<string>())).ReturnsAsync(groupOfCasesSummary);
-                var response = await retentionAlertController.GetRetentionAlertCaseOwnerSummaryAsync( "1"  );
+                var response = await retentionAlertController.GetRetentionAlertCaseOwnerSummaryAsync("1");
 
                 Assert.AreEqual(groupOfCasesSummary.Summary, response.Summary);
                 for (var i = 0; i < response.EntityCases.Count; i++)
@@ -1663,7 +1764,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     for (var j = 0; j < response.EntityCases[i].CaseIds.Count; j++)
                     {
                         Assert.AreEqual(groupOfCasesSummary.EntityCases[i].CaseIds[j], response.EntityCases[i].CaseIds[j]);
-                    }                    
+                    }
                 }
 
                 for (var i = 0; i < response.RoleCases.Count; i++)

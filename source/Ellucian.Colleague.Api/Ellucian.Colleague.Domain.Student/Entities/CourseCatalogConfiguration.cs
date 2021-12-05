@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -59,6 +59,12 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         private readonly List<CatalogFilterOption> _catalogFilterOptions = new List<CatalogFilterOption>();
 
         /// <summary>
+        /// The parameters controls how to display headers on the course catalog search result.
+        /// </summary>
+        public ReadOnlyCollection<CatalogSearchResultHeaderOption> CatalogSearchResultHeaderOptions { get; private set; }
+        private readonly List<CatalogSearchResultHeaderOption> _catalogSearchResultHeaderOptions = new List<CatalogSearchResultHeaderOption>();
+
+        /// <summary>
         /// Indicates whether or not course section fee information should be visible in the course catalog
         /// </summary>
         public bool ShowCourseSectionFeeInformation { get; set; }
@@ -79,6 +85,12 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public SelfServiceCourseCatalogSearchResultView DefaultSelfServiceCourseCatalogSearchResultView { get; set; }
 
         /// <summary>
+        /// Indicates whether or not section availablity (Avaliable Seats, Capacity, and Waitlist counts) will use cached section data for the section listing.
+        /// Blank or No values will default to false
+        /// </summary>
+        public bool BypassApiCacheForAvailablityData { get; set; }
+
+        /// <summary>
         /// Constructor for CourseCatalogConfiguration
         /// </summary>
         public CourseCatalogConfiguration(DateTime? earliestSearchDate, DateTime? latestSearchDate)
@@ -91,6 +103,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             this.LatestSearchDate = latestSearchDate;
             this.EarliestSearchDate = earliestSearchDate;
             CatalogFilterOptions = _catalogFilterOptions.AsReadOnly();
+            CatalogSearchResultHeaderOptions = _catalogSearchResultHeaderOptions.AsReadOnly();
+            BypassApiCacheForAvailablityData = false;
         }
 
         public void AddCatalogFilterOption(CatalogFilterType type, bool isHidden)
@@ -103,6 +117,16 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             }
         }
 
+        //Add Catalog Search Result Header Options
+        public void AddCatalogSearchResultHeaderOption(CatalogSearchResultHeaderType type, bool isHidden)
+        {
+            // Can only have one filter option in the list with a specific type
+            if (!CatalogSearchResultHeaderOptions.Any(a => a.Type.Equals(type)))
+            {
+                CatalogSearchResultHeaderOption newOption = new CatalogSearchResultHeaderOption(type, isHidden);
+                _catalogSearchResultHeaderOptions.Add(newOption);
+            }
+        }
 
     }
 }

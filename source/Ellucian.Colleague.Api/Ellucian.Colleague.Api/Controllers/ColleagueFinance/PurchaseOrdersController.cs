@@ -24,6 +24,7 @@ using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 
 namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 {
@@ -94,7 +95,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 throw CreateHttpResponseException("Unable to get the purchase order.", HttpStatusCode.BadRequest);
             }
         }
-        
+
         #region EEDM V11
         /// <summary>
         /// Return all purchaseOrders
@@ -102,7 +103,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <param name="criteria">Criteria Filter (orderNumber)</param>
         /// <returns>List of PurchaseOrders <see cref="Dtos.PurchaseOrders2"/> objects representing matching purchaseOrders</returns>
-        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewPurchaseOrders, ColleagueFinancePermissionCodes.UpdatePurchaseOrders })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         [QueryStringFilterFilter("criteria", typeof(Dtos.PurchaseOrders2))]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
@@ -118,6 +119,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                purchaseOrderService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -172,7 +174,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="guid">GUID to desired purchaseOrders</param>
         /// <returns>A purchaseOrders object <see cref="Dtos.PurchaseOrders"/> in EEDM format</returns>
-        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter, PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewPurchaseOrders, ColleagueFinancePermissionCodes.UpdatePurchaseOrders })]
         public async Task<Dtos.PurchaseOrders2> GetPurchaseOrdersByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -191,6 +193,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                purchaseOrderService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                     await purchaseOrderService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await purchaseOrderService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -235,7 +238,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="purchaseOrders">DTO of the new purchaseOrders</param>
         /// <returns>A purchaseOrders object <see cref="Dtos.PurchaseOrders"/> in EEDM format</returns>
-        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter, PermissionsFilter(ColleagueFinancePermissionCodes.UpdatePurchaseOrders)]
         public async Task<Dtos.PurchaseOrders2> PostPurchaseOrdersAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.PurchaseOrders2 purchaseOrders)
         {
             if (purchaseOrders == null)
@@ -243,14 +246,15 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 throw CreateHttpResponseException(new IntegrationApiException("Null purchaseOrders argument",
                     IntegrationApiUtility.GetDefaultApiError("The request body is required.")));
             }
-            
+
             try
             {
+                purchaseOrderService.ValidatePermissions(GetPermissionsMetaData());
                 if (purchaseOrders.Id != Guid.Empty.ToString())
                 {
                     throw new ArgumentNullException("purchaseOrdersDto", "Nil GUID must be used in POST operation.");
                 }
-               
+
                 //call import extend method that needs the extracted extension data and the config
                 await purchaseOrderService.ImportExtendedEthosData(await ExtractExtendedData(await purchaseOrderService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), logger));
 
@@ -306,7 +310,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="guid">GUID of the purchaseOrders to update</param>
         /// <param name="purchaseOrders">DTO of the updated purchaseOrders</param>
         /// <returns>A purchaseOrders object <see cref="Dtos.PurchaseOrders"/> in EEDM format</returns>
-        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter, PermissionsFilter(ColleagueFinancePermissionCodes.UpdatePurchaseOrders)]
         public async Task<Dtos.PurchaseOrders2> PutPurchaseOrdersAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.PurchaseOrders2 purchaseOrders)
         {
             if (string.IsNullOrEmpty(guid))
@@ -336,6 +340,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
             try
             {
+                purchaseOrderService.ValidatePermissions(GetPermissionsMetaData());
                 // get Data Privacy List
                 var dpList = await purchaseOrderService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
@@ -396,7 +401,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
         }
 
-      
+
 
         #endregion
 
@@ -448,6 +453,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// Requires permission VIEW.PURCHASE.ORDER, and requires access to at least one of the
         /// general ledger numbers on the purchase order line items.
         /// </accessComments>
+        [Obsolete("Obsolete as of Colleague Web API 1.30. Use QueryPurchaseOrderSummariesAsync.")]
         [HttpGet]
         public async Task<IEnumerable<PurchaseOrderSummary>> GetPurchaseOrderSummaryByPersonIdAsync(string personId)
         {
@@ -483,9 +489,9 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(ex, ex.Message);
                 throw CreateHttpResponseException("Unable to get the purchase order.", HttpStatusCode.BadRequest);
-            }           
+            }
         }
-                
+
         /// <summary>
         /// Void a purchase order.
         /// </summary>
@@ -513,7 +519,49 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
         }
 
-        
+        /// <summary>
+        /// Retrieves list of purchase order summary
+        /// </summary>
+        /// <param name="filterCriteria">procurement filter criteria</param>
+        /// <returns>list of purchase order Summary DTO</returns>
+        /// <accessComments>
+        /// Requires Staff record, requires permission VIEW.PURCHASE.ORDER or CREATE.UPDATE.PURCHASE.ORDER.
+        /// </accessComments>
+        [HttpPost]
+        public async Task<IEnumerable<PurchaseOrderSummary>> QueryPurchaseOrderSummariesAsync([FromBody] Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria filterCriteria)
+        {
+            if (filterCriteria == null)
+            {
+                throw CreateHttpResponseException("Request body must contain a valid search criteria.", HttpStatusCode.BadRequest);
+            }
+
+            try
+            {
+                return await purchaseOrderService.QueryPurchaseOrderSummariesAsync(filterCriteria);
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex.Message);
+                throw CreateHttpResponseException("Insufficient permissions to search purchase order.", HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException anex)
+            {
+                logger.Error(anex, anex.Message);
+                throw CreateHttpResponseException("Invalid argument to search purchase order.", HttpStatusCode.BadRequest);
+            }
+            catch (KeyNotFoundException knfex)
+            {
+                logger.Error(knfex, knfex.Message);
+                throw CreateHttpResponseException("Record not found to search purchase order.", HttpStatusCode.NotFound);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message);
+                throw CreateHttpResponseException("Unable to search purchase order.", HttpStatusCode.BadRequest);
+            }
+        }
+
+
 
     }
 }

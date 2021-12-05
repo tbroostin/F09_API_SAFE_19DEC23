@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Student.Entities;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -80,6 +80,7 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// </returns>
         Task<IEnumerable<AcademicCredit>> FilterAcademicCreditsAsync(IEnumerable<AcademicCredit> acadCredits, string criteria);
 
-
+        Task<IEnumerable<StudentAnonymousGrading>> GetAnonymousGradingIdsAsync(AnonymousGradingType anonymousGradingType,
+            string studentId, List<string> termIds, List<string> sectionIds);
     }
 }

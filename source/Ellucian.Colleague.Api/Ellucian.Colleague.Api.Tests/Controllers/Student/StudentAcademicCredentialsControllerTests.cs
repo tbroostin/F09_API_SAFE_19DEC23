@@ -4,21 +4,26 @@ using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -365,5 +370,173 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         {
             await studentAcademicCredentialsController.DeleteStudentAcademicCredentialsAsync(dtos.FirstOrDefault().Id);
         }
+
+        //GET v1.0.0
+        //Successful
+        //GetStudentAcademicCredentialsAsync
+
+        [TestMethod]
+        public async Task StudentAcademicCredentialsController_GetStudentAcademicCredentialsAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentAcademicCredentials" },
+                    { "action", "GetStudentAcademicCredentialsAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-academic-credentials", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentAcademicCredentialsController.Request.SetRouteData(data);
+            studentAcademicCredentialsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentAcademicCredentials);
+
+            var controllerContext = studentAcademicCredentialsController.ControllerContext;
+            var actionDescriptor = studentAcademicCredentialsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var tuple = new Tuple<IEnumerable<Dtos.StudentAcademicCredentials>, int>(dtos, 5);
+
+            studentAcademicCredentialsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            studentAcademicCredentialsServiceMock.Setup(x => x.GetStudentAcademicCredentialsAsync(0, 100, It.IsAny<Dtos.StudentAcademicCredentials>(), It.IsAny<Dtos.Filters.PersonFilterFilter2>(), It.IsAny<Dtos.Filters.AcademicProgramsFilter>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>())) .ReturnsAsync(tuple);
+            var sourceContexts = await studentAcademicCredentialsController.GetStudentAcademicCredentialsAsync(null, It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>());
+            Object filterObject;
+            studentAcademicCredentialsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentAcademicCredentials));
+
+        }
+
+        //GET v1.0.0
+        //Exception
+        //GetStudentAcademicCredentialsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentAcademicCredentialsController_GetStudentAcademicCredentialsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentAcademicCredentials" },
+                    { "action", "GetStudentAcademicCredentialsAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-academic-credentials", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentAcademicCredentialsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = studentAcademicCredentialsController.ControllerContext;
+            var actionDescriptor = studentAcademicCredentialsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                studentAcademicCredentialsServiceMock.Setup(x => x.GetStudentAcademicCredentialsAsync(0, 100, It.IsAny<Dtos.StudentAcademicCredentials>(), It.IsAny<Dtos.Filters.PersonFilterFilter2>(), It.IsAny<Dtos.Filters.AcademicProgramsFilter>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<bool>())) .ThrowsAsync(new PermissionsException());
+                studentAcademicCredentialsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view student-academic-credentials."));
+                var sourceContexts = await studentAcademicCredentialsController.GetStudentAcademicCredentialsAsync(null, It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET BY ID v1.0.0
+        //Successful
+        //GetStudentAcademicCredentialsByGuidAsync
+
+        [TestMethod]
+        public async Task StudentAcademicCredentialsController_GetStudentAcademicCredentialsByGuidAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentAcademicCredentials" },
+                    { "action", "GetStudentAcademicCredentialsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-academic-credentials", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentAcademicCredentialsController.Request.SetRouteData(data);
+            studentAcademicCredentialsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentAcademicCredentials);
+
+            var controllerContext = studentAcademicCredentialsController.ControllerContext;
+            var actionDescriptor = studentAcademicCredentialsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var tuple = new Tuple<IEnumerable<Dtos.StudentAcademicCredentials>, int>(dtos, 4);
+
+            studentAcademicCredentialsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            //studentAcademicCredentialsServiceMock.Setup(x => x.GetStudentAcademicCredentialsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<IntegrationApiException>(); ;
+            await studentAcademicCredentialsController.GetStudentAcademicCredentialsByGuidAsync(expectedGuid);
+
+            Object filterObject;
+            studentAcademicCredentialsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentAcademicCredentials));
+
+        }
+
+        //GET BY ID v1.0.0
+        //Exception
+        //GetStudentAcademicCredentialsByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentAcademicCredentialsController_GetStudentAcademicCredentialsByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentAcademicCredentials" },
+                    { "action", "GetStudentAcademicCredentialsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-academic-credentials", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentAcademicCredentialsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = studentAcademicCredentialsController.ControllerContext;
+            var actionDescriptor = studentAcademicCredentialsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                
+                studentAcademicCredentialsServiceMock.Setup(x => x.GetStudentAcademicCredentialsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())) .Throws<PermissionsException>(); 
+                studentAcademicCredentialsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view student-academic-credentials."));
+                await studentAcademicCredentialsController.GetStudentAcademicCredentialsByGuidAsync(expectedGuid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
     }
 }

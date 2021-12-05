@@ -1,4 +1,4 @@
-﻿/*Copyright 2016 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2016-2021 Ellucian Company L.P. and its affiliates.*/
 
 using System;
 using System.Collections.Generic;
@@ -16,6 +16,8 @@ using slf4net;
 using Ellucian.Web.Dependency;
 using Ellucian.Colleague.Domain.Exceptions;
 using System.Text;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Base.Services;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
@@ -23,6 +25,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     public class ExternalEmploymentsRepository : BaseColleagueRepository, IExternalEmploymentsRepository
     {
         private readonly int _readSize;
+        const string AllExternalEmploymentsRecordsCache = "AllExternalEmploymentsRecordKeys";
+        const int AllExternalEmploymentsRecordsCacheTimeout = 20;
+        private RepositoryException exception = new RepositoryException();
 
         public ExternalEmploymentsRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)
@@ -42,29 +47,78 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>Collection of ExternalEmployments domain entities</returns>
         public async Task<Tuple<IEnumerable<ExternalEmployments>, int>> GetExternalEmploymentsAsync(int offset, int limit)
         {
-            var externalEmploymentsEntities = new List<ExternalEmployments>();
-            var criteria = new StringBuilder();
+            string selectedRecordCacheKey = CacheSupport.BuildCacheKey(AllExternalEmploymentsRecordsCache);
+            List<ExternalEmployments> externalEmployments = new List<ExternalEmployments>();
 
-            string select = criteria.ToString();
-            string[] externalEmploymentsIds = await DataReader.SelectAsync("EMPLOYMT", select);
-            var totalCount = externalEmploymentsIds.Count();
+            if (limit == 0) limit = _readSize;
+            int totalCount = 0;
+            var selectionCriteria = new StringBuilder();
 
-            Array.Sort(externalEmploymentsIds);
-
-            var subList = externalEmploymentsIds.Skip(offset).Take(limit).ToArray();
-            var externalEmployments = await DataReader.BulkReadRecordAsync<DataContracts.Employmt>("EMPLOYMT", subList);
-            {
-                if (externalEmployments == null)
+            var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                selectedRecordCacheKey,
+                "EMPLOYMT",
+                offset,
+                limit,
+                AllExternalEmploymentsRecordsCacheTimeout,
+                async () =>
                 {
-                    throw new KeyNotFoundException("No records selected from EMPLOYMT in Colleague.");
+                    return new CacheSupport.KeyCacheRequirements();
+                });
+
+            if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
+            {
+                return new Tuple<IEnumerable<ExternalEmployments>, int>(new List<ExternalEmployments>(), 0);
+            }
+
+            totalCount = keyCacheObject.TotalCount.Value;
+
+            var subList = keyCacheObject.Sublist.ToArray();
+
+            if (subList == null || !subList.Any())
+            {
+                return new Tuple<IEnumerable<ExternalEmployments>, int>(new List<ExternalEmployments>(), 0);
+            }
+
+            var externalEmploymentsData = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.Employmt>("EMPLOYMT", subList);
+            if ((externalEmploymentsData.InvalidKeys != null && externalEmploymentsData.InvalidKeys.Any()) ||
+                externalEmploymentsData.InvalidRecords != null && externalEmploymentsData.InvalidRecords.Any())
+            {
+                if (externalEmploymentsData.InvalidKeys.Any())
+                {
+                    exception.AddErrors(externalEmploymentsData.InvalidKeys
+                        .Select(key => new RepositoryError("Bad.Data",
+                        string.Format("Unable to locate the following EMPLOYMT key '{0}'.", key.ToString()))));
+                }
+                if (externalEmploymentsData.InvalidRecords.Any())
+                {
+                    exception.AddErrors(externalEmploymentsData.InvalidRecords
+                       .Select(r => new RepositoryError("Bad.Data",
+                       string.Format("Error: '{0}' ", r.Value))
+                       { SourceId = r.Key }));
                 }
             }
 
-            foreach (var externalEmplyEntity in externalEmployments)
+            foreach (var externalEmployment in externalEmploymentsData.BulkRecordsRead)
             {
-                externalEmploymentsEntities.Add(await BuildExternalEmploymentsAsync(externalEmplyEntity));
+                if (externalEmployment != null)
+                {
+                    externalEmployments.Add(await BuildExternalEmploymentsAsync(externalEmployment));
+                }
             }
-            return new Tuple<IEnumerable<ExternalEmployments>, int>(externalEmploymentsEntities, totalCount);
+
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+
+            return externalEmployments.Any() ?
+               new Tuple<IEnumerable<Domain.Base.Entities.ExternalEmployments>, int>(externalEmployments, totalCount) :
+               new Tuple<IEnumerable<Domain.Base.Entities.ExternalEmployments>, int>(new List<Domain.Base.Entities.ExternalEmployments>(), 0);
         }
 
 
@@ -167,38 +221,64 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 throw new ArgumentNullException("source", "source required to build employmt entity.");
             }
             ExternalEmployments externalEmployments = null;
-            
-            externalEmployments = new ExternalEmployments(source.RecordGuid, source.Recordkey, source.EmpEmployee, source.EmpTitle, source.EmpStatus)
+            //var repositoryException = new RepositoryException();
+            if (string.IsNullOrEmpty(source.RecordGuid))
             {
-                OrganizationId = source.EmpEmployer,
-                PositionId = source.EmpPosition,
-                StartDate = source.EmpStartDate,
-                EndDate = source.EmpEndDate,
-                PrincipalEmployment = source.EmpPrincipalEmploymtInd,
-                Status = source.EmpStatus,
-                HoursWorked = source.EmpHoursPerWeek,
-                Vocations = source.EmpVocations,
-                comments = source.EmpComments,
-                selfEmployed = source.EmpSelfEmployedFlag,
-                unknownEmployer = source.EmpUnknownEmployerFlag
-            };
-            // get org name
-            if (!string.IsNullOrEmpty(externalEmployments.OrganizationId))
-            {
-                var corpContract = await DataReader.ReadRecordAsync<Corp>("PERSON", externalEmployments.OrganizationId);
-                externalEmployments.OrgName = String.Join(" ", corpContract.CorpName.Where(x => !string.IsNullOrEmpty(x)));
-
-            }
-            //get supervisors
-            if (source.EmpSpvsrEntityAssociation != null && source.EmpSpvsrEntityAssociation.Any())
-            {
-                var supervisors = new List<ExternalEmploymentSupervisors>();
-                foreach (var super in source.EmpSpvsrEntityAssociation)
+                exception.AddError(new RepositoryError("GUID.Not.Found", "No GUID found for sourceId.")
                 {
-                    var supervisor = new ExternalEmploymentSupervisors(super.EmpSpvsrFirstNameAssocMember, super.EmpSpvsrLastNameAssocMember, super.EmpSpvsrPhoneAssocMember, super.EmpSpvsrEmailAssocMember);
-                    supervisors.Add(supervisor);
+                    SourceId = source != null ? source.Recordkey : ""
+                });
+            }
+            if (string.IsNullOrEmpty(source.Recordkey))
+            {
+                exception.AddError(new RepositoryError("Bad.Data", "Missing record key")
+                {
+                    Id = source != null ? source.RecordGuid : ""
+                });
+            }
+            if (string.IsNullOrEmpty(source.EmpEmployee))
+            {
+                exception.AddError(new RepositoryError("Bad.Data", "Missing person Id")
+                {
+                    SourceId = source != null ? source.Recordkey : "",
+                    Id = source != null ? source.RecordGuid : ""
+                });
+            }
+
+            if (!string.IsNullOrEmpty(source.RecordGuid) && !string.IsNullOrEmpty(source.Recordkey) && !string.IsNullOrEmpty(source.EmpEmployee))
+            {
+                externalEmployments = new ExternalEmployments(source.RecordGuid, source.Recordkey, source.EmpEmployee, source.EmpTitle, source.EmpStatus)
+                {
+                    OrganizationId = source.EmpEmployer,
+                    PositionId = source.EmpPosition,
+                    StartDate = source.EmpStartDate,
+                    EndDate = source.EmpEndDate,
+                    PrincipalEmployment = source.EmpPrincipalEmploymtInd,
+                    Status = source.EmpStatus,
+                    HoursWorked = source.EmpHoursPerWeek,
+                    Vocations = source.EmpVocations,
+                    comments = source.EmpComments,
+                    selfEmployed = source.EmpSelfEmployedFlag,
+                    unknownEmployer = source.EmpUnknownEmployerFlag
+                };
+                // get org name
+                if (!string.IsNullOrEmpty(externalEmployments.OrganizationId))
+                {
+                    var corpContract = await DataReader.ReadRecordAsync<Corp>("PERSON", externalEmployments.OrganizationId);
+                    externalEmployments.OrgName = String.Join(" ", corpContract.CorpName.Where(x => !string.IsNullOrEmpty(x)));
+
                 }
-                externalEmployments.Supervisors = supervisors;
+                //get supervisors
+                if (source.EmpSpvsrEntityAssociation != null && source.EmpSpvsrEntityAssociation.Any())
+                {
+                    var supervisors = new List<ExternalEmploymentSupervisors>();
+                    foreach (var super in source.EmpSpvsrEntityAssociation)
+                    {
+                        var supervisor = new ExternalEmploymentSupervisors(super.EmpSpvsrFirstNameAssocMember, super.EmpSpvsrLastNameAssocMember, super.EmpSpvsrPhoneAssocMember, super.EmpSpvsrEmailAssocMember);
+                        supervisors.Add(supervisor);
+                    }
+                    externalEmployments.Supervisors = supervisors;
+                }
             }
             return externalEmployments;
         }

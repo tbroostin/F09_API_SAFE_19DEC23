@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -6,6 +6,7 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
@@ -53,7 +54,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="id">Guid of the employee to retrieve</param>
         /// <returns>Returns a single Employee object. <see cref="Dtos.Employee"/></returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewEmployeeData, HumanResourcesPermissionCodes.UpdateEmployee })]
         public async Task<Dtos.Employee> GetEmployeeByIdAsync([FromUri] string id)
         {
             bool bypassCache = false;
@@ -67,6 +68,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
+                employeeService.ValidatePermissions(GetPermissionsMetaData());
                 var employee = await employeeService.GetEmployeeByGuidAsync(id);
 
                 if (employee != null)
@@ -84,7 +86,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -101,6 +103,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
+            catch (IntegrationApiException e)
+            {
+                logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unknown error getting employee");
@@ -113,7 +120,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="id">Guid of the employee to retrieve</param>
         /// <returns>Returns a single Employee object. <see cref="Dtos.Employee2"/></returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewEmployeeData, HumanResourcesPermissionCodes.UpdateEmployee })]
         public async Task<Dtos.Employee2> GetEmployee2ByIdAsync([FromUri] string id)
         {
             bool bypassCache = false;
@@ -127,6 +134,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
+                employeeService.ValidatePermissions(GetPermissionsMetaData());
                 var employee = await employeeService.GetEmployee2ByIdAsync(id);
 
                 if (employee != null)
@@ -144,7 +152,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -161,6 +169,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
+            catch (IntegrationApiException e)
+            {
+                logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (Exception e)
             {
                 logger.Error(e, "Unknown error getting employee");
@@ -173,7 +186,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="id">Guid of the employee to retrieve</param>
         /// <returns>Returns a single Employee object. <see cref="Dtos.Employee2"/></returns>
-        [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewEmployeeData, HumanResourcesPermissionCodes.UpdateEmployee })]
         public async Task<Dtos.Employee2> GetEmployee3ByIdAsync([FromUri] string id)
         {
             bool bypassCache = false;
@@ -187,6 +201,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
+                employeeService.ValidatePermissions(GetPermissionsMetaData());
                 var employee = await employeeService.GetEmployee3ByIdAsync(id);
 
                 if (employee != null)
@@ -204,7 +219,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -217,6 +232,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (RepositoryException e)
+            {
+                logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
             {
                 logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
@@ -240,7 +260,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="rehireableStatusEligibility">Rehireable status ("eligible" or "ineligible") filter.</param>
         /// <param name="rehireableStatusType">Rehireable code filter.</param>
         /// <returns>Returns a list of Employee objects using paging.  <see cref="Dtos.Employee"/></returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewEmployeeData, HumanResourcesPermissionCodes.UpdateEmployee })]
         [ValidateQueryStringFilter(new string[] { "person", "campus", "status", "startOn", "endOn", "rehireableStatusEligibility", "rehireableStatusType" }, false, true)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         public async Task<IHttpActionResult> GetEmployeesAsync(Paging page,
@@ -274,6 +294,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                employeeService.ValidatePermissions(GetPermissionsMetaData());
                 var pageOfItems = await employeeService.GetEmployeesAsync(page.Offset, page.Limit, bypassCache, person, campus, status, startOn, endOn, rehireableStatusEligibility, rehireableStatusType);
 
                 AddEthosContextProperties(await employeeService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -286,7 +307,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -294,6 +315,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (RepositoryException e)
+            {
+                logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
             {
                 logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
@@ -311,13 +337,14 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="page">Paging offset and limit.</param>
         /// <param name="criteria">Filter Criteria, includes person, campus, status, startOn, endOn, rehireableStatus.eligibility, and rehireableStatus.type.</param>
         /// <returns>Returns a list of Employee objects using paging.  <see cref="Dtos.Employee2"/></returns>
-        [HttpGet, ValidateQueryStringFilter()]
+        [HttpGet, ValidateQueryStringFilter(), PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewEmployeeData, HumanResourcesPermissionCodes.UpdateEmployee })]
         [QueryStringFilterFilter("criteria", typeof(Dtos.Employee2)), FilteringFilter(IgnoreFiltering = true)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         public async Task<IHttpActionResult> GetEmployees2Async(Paging page, QueryStringFilter criteria)
         {
             try
             {
+                employeeService.ValidatePermissions(GetPermissionsMetaData());
                 bool bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {
@@ -377,7 +404,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -402,7 +429,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="page">Paging offset and limit.</param>
         /// <param name="criteria">Filter Criteria, includes person, campus, status, startOn, endOn, rehireableStatus.eligibility, and rehireableStatus.type.</param>
         /// <returns>Returns a list of Employee objects using paging.  <see cref="Dtos.Employee2"/></returns>
-        [HttpGet, ValidateQueryStringFilter()]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, ValidateQueryStringFilter(), PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewEmployeeData, HumanResourcesPermissionCodes.UpdateEmployee })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         [QueryStringFilterFilter("criteria", typeof(Dtos.Employee2)), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetEmployees3Async(Paging page,
@@ -413,6 +441,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
+                employeeService.ValidatePermissions(GetPermissionsMetaData());
                 bool bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {
@@ -467,10 +496,15 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 return new PagedHttpActionResult<IEnumerable<Dtos.Employee2>>(pageOfItems.Item1, page, pageOfItems.Item2, this.Request);
 
             }
+            catch (KeyNotFoundException e)
+            {
+                logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -478,6 +512,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (RepositoryException e)
+            {
+                logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
             {
                 logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
@@ -519,7 +558,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="employeeDto">Employee DTO request for update</param>
         /// <returns>Currently not implemented.  Returns default not supported API error message.</returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(HumanResourcesPermissionCodes.UpdateEmployee)]
         public async Task<Dtos.Employee2> PostEmployee3Async([ModelBinder(typeof(EedmModelBinder))] Dtos.Employee2 employeeDto)
         {
             if (employeeDto == null)
@@ -533,6 +572,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                employeeService.ValidatePermissions(GetPermissionsMetaData());
                 await employeeService.ImportExtendedEthosData(await ExtractExtendedData(await employeeService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), logger));
                 var employee = await employeeService.PostEmployee2Async(employeeDto);
                 AddEthosContextProperties(await employeeService.GetDataPrivacyListByApi(GetRouteResourceName(), true),
@@ -547,7 +587,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -586,7 +626,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="id">Employee GUID for update.</param>
         /// <param name="employeeDto">Employee DTO request for update</param>
         /// <returns>A employeeDto object <see cref="Dtos.Employee2"/> in EEDM format</returns>
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(HumanResourcesPermissionCodes.UpdateEmployee )]
         public async Task<Dtos.Employee2> PutEmployee3Async([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.Employee2 employeeDto)
         {
             if (string.IsNullOrEmpty(id))
@@ -619,6 +659,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                employeeService.ValidatePermissions(GetPermissionsMetaData());
                 if (employeeDto.HomeOrganization != null && !string.IsNullOrEmpty(employeeDto.HomeOrganization.Id))
                 {
                     throw new ArgumentNullException("The Home Organization Id is not allowed for a PUT or POST request. ", "employee.homeOrganization.id");
@@ -652,7 +693,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -710,12 +751,14 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <exception cref="HttpResponseException">Http Response Exception</exception>
         /// <accessComments>
         /// Users with the following permission codes can query employee names:
-        /// 
-        /// ViewAllEarningsStatements
+        /// VIEW.ALL.EARNINGS.STATEMENTS
         /// VIEW.EMPLOYEE.DATA
         /// APPROVE.REJECT.TIME.ENTRY
         /// VIEW.EMPLOYEE.W2
         /// VIEW.EMPLOYEE.1095C
+        /// VIEW.ALL.TIME.HISTORY
+        /// VIEW.ALL.TOTAL.COMPENSATION
+        /// APPROVE.REJECT.LEAVE.REQUEST
         /// </accessComments>
         [HttpPost]
         public async Task<IEnumerable<Dtos.Base.Person>> QueryEmployeeNamesByPostAsync([FromBody] Dtos.Base.EmployeeNameQueryCriteria criteria)

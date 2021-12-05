@@ -395,7 +395,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 throw new RepositoryException("No PERSON information for FOREIGN.PERSON id '" + foreignPersonContract != null ? foreignPersonContract.Recordkey : "" + "'.");
             }
-
+            if (foreignPersonContract != null && string.IsNullOrEmpty(foreignPersonContract.RecordGuid))
+            {
+                throw new RepositoryException("No GUID found for FOREIGN.PERSON id '" + foreignPersonContract.Recordkey + "'.");
+            }
             try
             {
                 return new PersonVisa(personContract.Recordkey, personContract.VisaType)

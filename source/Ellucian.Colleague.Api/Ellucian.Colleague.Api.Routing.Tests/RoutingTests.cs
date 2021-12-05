@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -8,7 +8,7 @@ using System.Net.Http;
 using System.Web;
 using System.Web.Routing;
 
-namespace Ellucian.Colleague.Api.Routing.Testsc
+namespace Ellucian.Colleague.Api.Routing.Tests
 {
     [TestClass]
     [System.Runtime.InteropServices.Guid("0A0EF901-E9E6-4593-ACE4-1962D0F97E49")]
@@ -85,8 +85,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/academic-catalogs", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("AcademicCatalog", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -128,8 +128,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/academic-catalogs/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("AcademicCatalog", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -857,8 +857,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/academic-periods", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("AcademicPeriods", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -867,8 +867,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/academic-periods/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("AcademicPeriods", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -1567,8 +1567,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/accounting-strings", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("accounting-strings", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -1593,15 +1593,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("GetAccountingStringByFilterAsync", routeData.Values["Action"]);
         }
 
-        [TestMethod]
-        public void Route_AccountingStrings_GetAccountingStringsByType_UnsupportedVersion()
-        {
-            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/accounting-strings?accountingString=accountingString", "application/vnd.hedtech.integration.v2+json");
-            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
-            Assert.IsNotNull(routeData);
-            Assert.AreEqual("accounting-strings", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
-        }
+       
 
         [TestMethod]
         public void Route_AccountingStrings_GetAccountingStringsByType_7()
@@ -1615,6 +1607,28 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
         }
 
         [TestMethod]
+        public void Default_Route_AccountingStringsByGuid()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/accounting-strings/guid");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("accounting-strings/{guid}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AccountingStrings", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAccountingStringsByGuidAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AccountingStringsByGuid_V7()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/accounting-strings/guid", "application/vnd.hedtech.integration.v7+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("accounting-strings/{guid}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AccountingStrings", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAccountingStringsByGuidAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
         public void Route_AccountingStrings_PostAccountingStrings_7()
         {
             var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/accounting-strings", "application/vnd.hedtech.integration.v7+json");
@@ -1623,6 +1637,38 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("accounting-strings", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("AccountingStrings", routeData.Values["Controller"]);
             Assert.AreEqual("PostAccountingStringsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AccountingStrings_PutAccountingStrings_7()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Put, "~/accounting-strings/guid", "application/vnd.hedtech.integration.v7+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("accounting-strings/{guid}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AccountingStrings", routeData.Values["Controller"]);
+            Assert.AreEqual("PutAccountingStringsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Default_Route_AccountingStrings_Delete()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Delete, "~/accounting-strings/guid");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("accounting-strings/{guid}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("AccountingStrings", routeData.Values["Controller"]);
+            Assert.AreEqual("DeleteAccountingStringsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_AccountingStrings_GetAccountingStringsByType_UnsupportedVersion()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/accounting-strings?accountingString=accountingString", "application/vnd.hedtech.integration.v2+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         #endregion
@@ -2050,8 +2096,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/accounting-string-formats", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("accounting-string-formats", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -2082,8 +2128,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/accounting-string-formats/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("accounting-string-formats", routeData.Values["Controller"]);
-            Assert.AreEqual("guid", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -2622,7 +2668,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/accounts-payable-invoices", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -2914,7 +2960,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/addresses", "application/vnd.hedtech.integration.v4+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -2957,7 +3003,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -3210,8 +3256,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/administrative-periods", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("AdministrativePeriods", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -3242,8 +3288,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/administrative-periods/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("AdministrativePeriods", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -3323,8 +3369,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/admission-applications", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("AdmissionApplications", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -3333,8 +3379,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/admission-applications/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("AdmissionApplications", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         //Addmission Applications V6
@@ -3561,7 +3607,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
                 "application/vnd.hedtech.integration.admission-applications-submissions.v1.1.0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -3571,7 +3617,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
                 "application/vnd.hedtech.integration.admission-applications-submissions.v1.0.0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
         #endregion
 
@@ -3594,8 +3640,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/admission-application-sources", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("AdmissionApplicationSources", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -3625,8 +3671,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/admission-application-sources/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("AdmissionApplicationSources", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -3694,8 +3740,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/admission-application-supporting-items", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("AdmissionApplicationSupportingItems", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -3726,8 +3772,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/admission-application-supporting-items/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("AdmissionApplicationSupportingItems", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -3964,8 +4010,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/admission-decision-types", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("AdmissionDecisionTypes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -3996,8 +4042,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/admission-decision-types/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("AdmissionDecisionTypes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -4065,8 +4111,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/admission-decisions", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("AdmissionDecisions", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -4108,8 +4154,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/admission-decisions/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("AdmissionDecisions", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -4681,8 +4727,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/admission-application-influences", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("ApplicationInfluences", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -4713,8 +4759,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/admission-application-influences/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("ApplicationInfluences", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -4941,8 +4987,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/aptitude-assessment-sources", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("AptitudeAssessmentSources", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -4973,8 +5019,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/aptitude-assessment-sources/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("AptitudeAssessmentSources", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -5997,7 +6043,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.IsNotNull(routeData);
             Assert.AreEqual("awards", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("Awards", routeData.Values["Controller"]);
-            Assert.AreEqual("GetAwards2", routeData.Values["Action"]);
+            Assert.AreEqual("GetAwards3", routeData.Values["Action"]);
         }
 
         #endregion Awards
@@ -6362,8 +6408,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/blanket-purchase-orders", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("BlanketPurchaseOrders", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -6394,8 +6440,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/blanket-purchase-orders/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("BlanketPurchaseOrders", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -6507,6 +6553,107 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("students/{studentId}/book-spending", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("BookSpending", routeData.Values["Controller"]);
             Assert.AreEqual("GetBookSpendingAsync", routeData.Values["Action"]);
+        }
+        #endregion
+
+        #region BudgetCodes
+
+        [TestMethod]
+        public void Default_Route_BudgetCodes()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/budget-codes");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("budget-codes", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("BudgetCodes", routeData.Values["Controller"]);
+            Assert.AreEqual("GetBudgetCodesAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_GetBudgetCodes_UnsupportedVersion()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/budget-codes", "application/vnd.hedtech.integration.v1+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_GetBudgetCodes_V12()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/budget-codes", "application/vnd.hedtech.integration.v12+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("budget-codes", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("BudgetCodes", routeData.Values["Controller"]);
+            Assert.AreEqual("GetBudgetCodesAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Default_Route_BudgetCodesByGuid()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/budget-codes/guid");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("budget-codes/{guid}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("BudgetCodes", routeData.Values["Controller"]);
+            Assert.AreEqual("GetBudgetCodesByGuidAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Default_Route_BudgetCodesByGuid_UnsupportedVersion()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/budget-codes/guid", "application/vnd.hedtech.integration.v2+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_BudgetCodesByGuid_V12()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/budget-codes/guid", "application/vnd.hedtech.integration.v12+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("budget-codes/{guid}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("BudgetCodes", routeData.Values["Controller"]);
+            Assert.AreEqual("GetBudgetCodesByGuidAsync", routeData.Values["Action"]);
+        }
+
+
+        [TestMethod]
+        public void Route_BudgetCodes_Put_V12()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Put, "~/budget-codes/guid", "application/vnd.hedtech.integration.v12+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("budget-codes/{guid}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("BudgetCodes", routeData.Values["Controller"]);
+            Assert.AreEqual("PutBudgetCodesAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_BudgetCodes_Post_V12()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/budget-codes", "application/vnd.hedtech.integration.v12+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("budget-codes", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("BudgetCodes", routeData.Values["Controller"]);
+            Assert.AreEqual("PostBudgetCodesAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Default_Route_BudgetCodes_Delete()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Delete, "~/budget-codes/guid");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("budget-codes/{guid}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("BudgetCodes", routeData.Values["Controller"]);
+            Assert.AreEqual("DeleteBudgetCodesAsync", routeData.Values["Action"]);
         }
         #endregion
 
@@ -7030,8 +7177,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/buyers", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("buyers", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -7062,8 +7209,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/buyers/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("buyers", routeData.Values["Controller"]);
-            Assert.AreEqual("guid", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -7137,6 +7284,16 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
         }
 
         [TestMethod]
+        public void Route_GetCampusInvolvements_UnsupportedVersion()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/campus-involvements", "application/vnd.hedtech.integration.v2+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
         public void Default_Route_GetCampusInvolvementById()
         {
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/campus-involvements/id");
@@ -7156,6 +7313,16 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("campus-involvements/{id}", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("CampusInvolvements", routeData.Values["Controller"]);
             Assert.AreEqual("GetCampusInvolvementByIdAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_GetCampusInvolvementsById_UnsupportedVersion()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/campus-involvements/id", "application/vnd.hedtech.integration.v2+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -7529,8 +7696,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/career-goals", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("CareerGoals", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -7561,8 +7728,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/career-goals/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("CareerGoals", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -7746,8 +7913,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/cip-codes", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("CipCodes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -7778,8 +7945,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/cip-codes/id", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("CipCodes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -7994,8 +8161,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("collection-configuration-settings/{id}", GetRouteTemplate(routeData.Route));
-            Assert.AreEqual("CollectionConfigurationSettings", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -8005,8 +8172,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("collection-configuration-settings/{id}", GetRouteTemplate(routeData.Route));
-            Assert.AreEqual("CollectionConfigurationSettings", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -8049,8 +8216,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("collection-configuration-settings/{id}", GetRouteTemplate(routeData.Route));
-            Assert.AreEqual("CollectionConfigurationSettings", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -8366,8 +8533,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/commerce-tax-code-rates", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("CommerceTaxCodes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -8398,8 +8565,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/commerce-tax-code-rates/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("CommerceTaxCodes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -8478,8 +8645,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/commerce-tax-codes", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("CommerceTaxCodes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -8510,8 +8677,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/commerce-tax-codes/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("CommerceTaxCodes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -8619,8 +8786,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("compound-configuration-settings/{id}", GetRouteTemplate(routeData.Route));
-            Assert.AreEqual("CompoundConfigurationSettings", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -8630,8 +8797,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("compound-configuration-settings/{id}", GetRouteTemplate(routeData.Route));
-            Assert.AreEqual("CompoundConfigurationSettings", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -8674,8 +8841,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("compound-configuration-settings/{id}", GetRouteTemplate(routeData.Route));
-            Assert.AreEqual("CompoundConfigurationSettings", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -8781,6 +8948,17 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
         }
 
         [TestMethod]
+        public void DefaultRoute_Configuration_GetMyProgressConfiguration()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/configuration/my-progress", _mediaTypeHeaderVersion1);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("configuration/my-progress", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
+            Assert.AreEqual("GetMyProgressConfigurationAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
         public void DefaultRoute_Configuration_GetProxyConfiguration()
         {
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/configuration/proxy", _mediaTypeHeaderVersion1);
@@ -8812,7 +8990,6 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
             Assert.AreEqual("GetFacultyGradingConfigurationAsync", routeData.Values["Action"]);
         }
-
 
         [TestMethod]
         public void DefaultRoute_Configuration_GetStudentProfileConfigurationAsync_v1()
@@ -8978,6 +9155,27 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
             Assert.AreEqual("GetCourseCatalogConfiguration3Async", routeData.Values["Action"]);
         }
+        [TestMethod]
+        public void Route_Configuration_GetCourseCatalogConfiguration4()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/configuration/course-catalog", _mediaTypeHeaderVersion4);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("configuration/course-catalog", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
+            Assert.AreEqual("GetCourseCatalogConfiguration4Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_Configuration_GetCourseCatalogConfiguration4Default()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/configuration/course-catalog");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("configuration/course-catalog", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
+            Assert.AreEqual("GetCourseCatalogConfiguration4Async", routeData.Values["Action"]);
+        }
 
         [TestMethod]
         public void DefaultRoute_Configuration_GetOrganizationalRelationshipConfigurationAsync()
@@ -9139,6 +9337,52 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
             Assert.AreEqual("GetInstantEnrollmentConfigurationAsync", routeData.Values["Action"]);
         }
+
+        [TestMethod]
+        public void DefaultRoute_GetSectionCensusConfigurationAsync_GET()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/configuration/section-census");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("configuration/section-census", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
+            Assert.AreEqual("GetSectionCensusConfigurationAsync", routeData.Values["Action"]);
+        }
+
+
+        [TestMethod]
+        public void Route_GetSectionCensusConfigurationAsync_GET_V1()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/configuration/section-census", _mediaTypeHeaderVersion1);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("configuration/section-census", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
+            Assert.AreEqual("GetSectionCensusConfigurationAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_GetAcademicRecordConfigurationAsync_GET()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/configuration/academic-record");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("configuration/academic-record", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAcademicRecordConfigurationAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_GetAcademicRecordConfigurationAsync_GET_V1()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/configuration/academic-record", _mediaTypeHeaderVersion1);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("configuration/academic-record", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("StudentConfiguration", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAcademicRecordConfigurationAsync", routeData.Values["Action"]);
+        }
+
         #endregion Configuration
 
         #region ConfigurationSettings
@@ -9161,8 +9405,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("configuration-settings/{id}", GetRouteTemplate(routeData.Route));
-            Assert.AreEqual("ConfigurationSettings", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -9172,8 +9416,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("configuration-settings/{id}", GetRouteTemplate(routeData.Route));
-            Assert.AreEqual("ConfigurationSettings", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -9216,8 +9460,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("configuration-settings/{id}", GetRouteTemplate(routeData.Route));
-            Assert.AreEqual("ConfigurationSettings", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -9418,8 +9662,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/contribution-payroll-deductions", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("contribution-payroll-deductions", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -9450,8 +9694,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/contribution-payroll-deductions/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("contribution-payroll-deductions", routeData.Values["Controller"]);
-            Assert.AreEqual("id", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -9719,8 +9963,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/countries", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Countries", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -9751,8 +9995,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/countries/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Countries", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -9820,8 +10064,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/country-iso-codes", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Countries", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -9852,8 +10096,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/country-iso-codes/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Countries", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -10302,6 +10546,32 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
         }
 
         #endregion Courses
+
+        #region CoursePlaceholders
+
+        [TestMethod]
+        public void DefaultRoute_CoursePlaceholders_QueryByPost()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/course-placeholders");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("qapi/course-placeholders", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("CoursePlaceholders", routeData.Values["Controller"]);
+            Assert.AreEqual("QueryCoursePlaceholdersByIdsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_CoursePlaceholders_QueryByPost_V1()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/course-placeholders", "application/vnd.ellucian.v1+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("qapi/course-placeholders", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("CoursePlaceholders", routeData.Values["Controller"]);
+            Assert.AreEqual("QueryCoursePlaceholdersByIdsAsync", routeData.Values["Action"]);
+        }
+
+        #endregion
 
         #region CourseStatuses
 
@@ -10815,8 +11085,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/currencies", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Currencies", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -10847,8 +11117,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/currencies/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Currencies", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -10916,8 +11186,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/currency-iso-codes", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Currencies", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -10948,8 +11218,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/currency-iso-codes/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Currencies", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -10995,6 +11265,30 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("currency-iso-codes/{guid}", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("Currencies", routeData.Values["Controller"]);
             Assert.AreEqual("DeleteCurrencyIsoCodesAsync", routeData.Values["Action"]);
+        }
+        #endregion
+
+        #region Curriculum Tracks (Sample Plans)
+        [TestMethod]
+        public void Route_DegreePlans_QueryCurriculumTracksForStudentByProgram()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/curriculum-tracks", _mediaTypeHeaderVersion1);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("qapi/curriculum-tracks", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("DegreePlans", routeData.Values["Controller"]);
+            Assert.AreEqual("QueryCurriculumTracksForStudentByProgramAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_DegreePlans_QueryCurriculumTracksForStudentByProgram()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/curriculum-tracks");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("qapi/curriculum-tracks", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("DegreePlans", routeData.Values["Controller"]);
+            Assert.AreEqual("QueryCurriculumTracksForStudentByProgramAsync", routeData.Values["Action"]);
         }
         #endregion
 
@@ -11242,8 +11536,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("default-settings/{id}", GetRouteTemplate(routeData.Route));
-            Assert.AreEqual("DefaultSettings", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -11253,8 +11547,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("default-settings/{id}", GetRouteTemplate(routeData.Route));
-            Assert.AreEqual("DefaultSettings", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -11264,8 +11558,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("default-settings/{id}", GetRouteTemplate(routeData.Route));
-            Assert.AreEqual("DefaultSettings", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -11319,8 +11613,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("default-settings/{id}", GetRouteTemplate(routeData.Route));
-            Assert.AreEqual("DefaultSettings", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -11701,7 +11995,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
 
 
         [TestMethod]
-        public void DefaultRoute_DegreePlans_GetSamplePlanPreview4()
+        public void Route_DegreePlans_GetSamplePlanPreview4()
         {
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/degree-plans/degreePlanId/preview-sample?programCode=programCode&firstTermCode=firstTermCode", _mediaTypeHeaderVersion4);
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
@@ -11713,7 +12007,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
         }
 
         [TestMethod]
-        public void DefaultRoute_DegreePlans_GetSamplePlanPreview5()
+        public void Route_DegreePlans_GetSamplePlanPreview5()
         {
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/degree-plans/degreePlanId/preview-sample?programCode=programCode&firstTermCode=firstTermCode", _mediaTypeHeaderVersion5);
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
@@ -11725,16 +12019,49 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
         }
 
         [TestMethod]
-        public void DefaultRoute_DegreePlans_GetSamplePlanPreview6()
+        public void Route_DegreePlans_GetSamplePlanPreview6()
         {
-            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/degree-plans/degreePlanId/preview-sample?programCode=programCode&firstTermCode=firstTermCode");
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/degree-plans/degreePlanId/preview-sample?programCode=programCode&firstTermCode=firstTermCode", _mediaTypeHeaderVersion6);
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("degree-plans/{degreePlanId}/preview-sample", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("DegreePlans", routeData.Values["Controller"]);
+            // WARNING: This is an obsolete route as of API 1.32. See the GetSamplePlanPreview7 route.
             Assert.AreEqual("GetSamplePlanPreview6Async", routeData.Values["Action"]);
         }
 
+        [TestMethod]
+        public void Route_DegreePlans_GetSamplePlanPreview7()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/degree-plans/degreePlanId/preview-sample?curriculumTrackCode=curriculumTrackCode&firstTermCode=firstTermCode", _mediaTypeHeaderVersion7);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("degree-plans/{degreePlanId}/preview-sample", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("DegreePlans", routeData.Values["Controller"]);
+            Assert.AreEqual("GetSamplePlanPreview7Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_DegreePlans_GetSamplePlanPreview8()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/degree-plans/degreePlanId/preview-sample?curriculumTrackCode=curriculumTrackCode&firstTermCode=firstTermCode&programCode=programCode", _mediaTypeHeaderVersion8);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("degree-plans/{degreePlanId}/preview-sample", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("DegreePlans", routeData.Values["Controller"]);
+            Assert.AreEqual("GetSamplePlanPreview8Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_DegreePlans_GetSamplePlanPreview8()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/degree-plans/degreePlanId/preview-sample?curriculumTrackCode=curriculumTrackCode&firstTermCode=firstTermCode&programCode=programCode");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("degree-plans/{degreePlanId}/preview-sample", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("DegreePlans", routeData.Values["Controller"]);
+            Assert.AreEqual("GetSamplePlanPreview8Async", routeData.Values["Action"]);
+        }
 
         [TestMethod]
         public void Route_DegreePlans_PutRegistration_1()
@@ -12130,6 +12457,17 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("DocumentApproval", routeData.Values["Controller"]);
             Assert.AreEqual("PostDocumentApprovalAsync", routeData.Values["Action"]);
         }
+        [TestMethod]
+        public void DefaultRoute_DocumentApproved_QueryApprovedDocuments()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/approved-documents");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("qapi/approved-documents", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("DocumentApproval", routeData.Values["Controller"]);
+            Assert.AreEqual("QueryApprovedDocumentsAsync", routeData.Values["Action"]);
+        }
+
         #endregion
 
         #region Draft budget adjustments
@@ -12252,8 +12590,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/educational-goals", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("EducationalGoals", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -12284,8 +12622,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/educational-goals/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("EducationalGoals", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -12353,8 +12691,19 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/educational-institutions", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("educational-institutions", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_EducationalInstitutions_GetEducationalInstitutions_6_1_0()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/educational-institutions", "application/vnd.hedtech.integration.v6.1.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("educational-institutions", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("EducationalInstitutions", routeData.Values["Controller"]);
+            Assert.AreEqual("GetEducationalInstitutionsAsync", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -12375,8 +12724,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/educational-institutions?type=type", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("educational-institutions", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -12396,8 +12745,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/educational-institutions/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("educational-institutions", routeData.Values["Controller"]);
-            Assert.AreEqual("id", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -12412,6 +12761,28 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
         }
 
         [TestMethod]
+        public void Route_EducationalInstitutions_GetEducationalInstitutionsByGuidAsync_6_1_0()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/educational-institutions/id", "application/vnd.hedtech.integration.v6.1.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("educational-institutions/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("EducationalInstitutions", routeData.Values["Controller"]);
+            Assert.AreEqual("GetEducationalInstitutionsByGuidAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_EducationalInstitutions_PutEducationalInstitutions_6_1_0()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Put, "~/educational-institutions/id", "application/vnd.hedtech.integration.v6.1.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("educational-institutions/{id}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("EducationalInstitutions", routeData.Values["Controller"]);
+            Assert.AreEqual("PutEducationalInstitutionsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
         public void Route_EducationalInstitutions_PutEducationalInstitutions_6()
         {
             var httpContextMock = CreateHttpContextMock(HttpMethod.Put, "~/educational-institutions/id", "application/vnd.hedtech.integration.v6+json");
@@ -12420,6 +12791,17 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("educational-institutions/{id}", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("EducationalInstitutions", routeData.Values["Controller"]);
             Assert.AreEqual("PutEducationalInstitutionsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_EducationalInstitutions_PostEducationalInstitutions_6_1_0()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/educational-institutions", "application/vnd.hedtech.integration.v6.1.0+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("educational-institutions", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("EducationalInstitutions", routeData.Values["Controller"]);
+            Assert.AreEqual("PostEducationalInstitutionsAsync", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -12836,8 +13218,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/emergency-contact-phone-availabilities", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("EmergencyContactPhoneAvailabilities", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -12868,8 +13250,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/emergency-contact-phone-availabilities/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("EmergencyContactPhoneAvailabilities", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -12937,8 +13319,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/emergency-contact-types", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("EmergencyContactTypes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -12969,8 +13351,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/emergency-contact-types/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("EmergencyContactTypes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -13353,8 +13735,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/employee-leave-plans", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("employee-leave-plans", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -13385,8 +13767,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/employee-leave-plans/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("employee-leave-plans", routeData.Values["Controller"]);
-            Assert.AreEqual("guid", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -13493,8 +13875,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/employee-leave-transactions", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("employee-leave-transactions", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -13525,8 +13907,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/employee-leave-transactions/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("employee-leave-transactions", routeData.Values["Controller"]);
-            Assert.AreEqual("guid", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -13695,7 +14077,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/employment-departments", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -13726,7 +14108,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/employment-departments/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -13974,8 +14356,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/employment-organizations", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("EmploymentOrganizations", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -14017,8 +14399,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/employment-organizations/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("EmploymentOrganizations", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -14118,8 +14500,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/employment-performance-reviews", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("employment-performance-reviews", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -14150,8 +14532,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/employment-performance-reviews/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("employment-performance-reviews", routeData.Values["Controller"]);
-            Assert.AreEqual("guid", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -14522,8 +14904,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/employment-proficiency-levels", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("EmploymentProficiencyLevels", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -14554,8 +14936,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/employment-proficiency-levels/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("EmploymentProficiencyLevels", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -15105,8 +15487,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/external-employments", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("external-employments", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -15137,8 +15519,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/external-employments/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("external-employments", routeData.Values["Controller"]);
-            Assert.AreEqual("guid", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -15366,14 +15748,36 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
 
 
         [TestMethod]
-        public void DefaultRoute_Faculty_GetFacultySections4()
+        public void Route_Faculty_GetFacultySections4()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/faculty/facultyId/sections?startDate=startDate&endDate=endDate&bestFit=bestFit", _mediaTypeHeaderVersion4);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("faculty/{facultyId}/sections", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Faculty", routeData.Values["Controller"]);
+            Assert.AreEqual("GetFacultySections4Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_Faculty_GetFacultySections5()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/faculty/facultyId/sections?startDate=startDate&endDate=endDate&bestFit=bestFit", _mediaTypeHeaderVersion5);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("faculty/{facultyId}/sections", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Faculty", routeData.Values["Controller"]);
+            Assert.AreEqual("GetFacultySections5Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_Faculty_GetFacultySections5()
         {
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/faculty/facultyId/sections?startDate=startDate&endDate=endDate&bestFit=bestFit");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("faculty/{facultyId}/sections", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("Faculty", routeData.Values["Controller"]);
-            Assert.AreEqual("GetFacultySections4Async", routeData.Values["Action"]);
+            Assert.AreEqual("GetFacultySections5Async", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -15765,8 +16169,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/financial-aid-application-outcomes", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("FinancialAidApplicationOutcomes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -15808,8 +16212,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/financial-aid-application-outcomes/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("FinancialAidApplicationOutcomes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -16282,8 +16686,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/financial-aid-funds", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("FinancialAidFunds", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -16314,8 +16718,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/financial-aid-funds/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("FinancialAidFunds", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -16533,8 +16937,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/financial-aid-years", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("FinancialAidYears", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -16565,8 +16969,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/financial-aid-years/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("FinancialAidYears", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -16774,8 +17178,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/fiscal-periods", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("fiscal-periods", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -16806,8 +17210,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/fiscal-periods/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("fiscal-periods", routeData.Values["Controller"]);
-            Assert.AreEqual("guid", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -16886,8 +17290,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/fiscal-years", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("fiscal-years", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -16914,13 +17318,13 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
 
         [TestMethod]
         public void Default_Route_FiscalYearsByGuid_UnsupportedVersion()
-        {
-            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/fiscal-years/guid", "application/vnd.hedtech.integration.v2+json");
-            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
-            Assert.IsNotNull(routeData);
-            Assert.AreEqual("fiscal-years", routeData.Values["Controller"]);
-            Assert.AreEqual("guid", routeData.Values["Action"]);
-        }
+            {
+                var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/fiscal-years/guid", "application/vnd.hedtech.integration.v2+json");
+                RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+                Assert.IsNotNull(routeData);
+                Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+                Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
+            }
 
         [TestMethod]
         public void Route_FiscalYearsByGuid_V11()
@@ -17089,8 +17493,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/fixed-asset-designations", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("FixedAssetDesignations", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -17121,8 +17525,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/fixed-asset-designations/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("FixedAssetDesignations", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -17521,8 +17925,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/gender-identities", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("GenderIdentityTypes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -17553,8 +17957,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/gender-identities/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("GenderIdentityTypes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -17663,8 +18067,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/general-ledger-transactions", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("GeneralLedgerTransactions", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -17717,8 +18121,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/general-ledger-transactions/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("GeneralLedgerTransactions", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -17846,6 +18250,20 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
         }
         #endregion
 
+        #region GlAccountBalances
+
+        [TestMethod]
+        public void DefaultRoute_GlAccountBalances_QueryGlAccountBalancesAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/general-ledger-account-balances", _mediaTypeHeaderVersion1);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("qapi/general-ledger-account-balances", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("GlAccountBalances", routeData.Values["Controller"]);
+            Assert.AreEqual("QueryGlAccountBalancesAsync", routeData.Values["Action"]);
+        }
+
+        #endregion
         #region GeographicAreas
 
         [TestMethod]
@@ -18151,6 +18569,27 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("DeleteGradeByIdAsync", routeData.Values["Action"]);
         }
 
+        [TestMethod]
+        public void Route_QueryAnonymousGradingIdsAsync_Post_V1()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/anonymous-grading-ids", _mediaTypeHeaderVersion1);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("qapi/anonymous-grading-ids", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Grades", routeData.Values["Controller"]);
+            Assert.AreEqual("QueryAnonymousGradingIdsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_QueryAnonymousGradingIdsAsync_Post()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/anonymous-grading-ids");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("qapi/anonymous-grading-ids", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Grades", routeData.Values["Controller"]);
+            Assert.AreEqual("QueryAnonymousGradingIdsAsync", routeData.Values["Action"]);
+        }
         #endregion Grades
 
         #region GradeChangeReasons
@@ -18344,8 +18783,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/grade-modes", "application/vnd.hedtech.integration.v4+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("GradeModes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -18378,8 +18817,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/grade-modes/id", "application/vnd.hedtech.integration.v4+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("GradeModes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
 
@@ -18895,7 +19334,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/housing-assignments", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         #endregion HousingAssignments
@@ -18949,11 +19388,11 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
         [TestMethod]
         public void Route_GetHousingRequests_UnsupportedVersion()
         {
-            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/housing-requests", "application/vnd.hedtech.integration.v1+json");
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/housing-requests", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("housing-requests", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -18962,9 +19401,10 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/housing-requests/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("housing-requests", routeData.Values["Controller"]);
-            Assert.AreEqual("guid", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
+
         #endregion
 
         #region HousingResidentTypes
@@ -19275,8 +19715,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/institution-jobs", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("institution-jobs", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -19329,8 +19769,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/institution-jobs/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("institution-jobs", routeData.Values["Controller"]);
-            Assert.AreEqual("id", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);           
         }
 
         /*
@@ -20143,8 +20583,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/instructional-delivery-methods", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("InstructionalDeliveryMethods", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -20175,8 +20615,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/instructional-delivery-methods/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("InstructionalDeliveryMethods", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -20333,8 +20773,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/instructional-events/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("instructional-events", routeData.Values["Controller"]);
-            Assert.AreEqual("id", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -20899,6 +21339,17 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
         }
 
         [TestMethod]
+        public void Route_Courses_PostInstantEnrollmentCourseSearch2Async()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/instant-enrollment/sections/search", "application/vnd.ellucian-instant-enrollment.v2+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("instant-enrollment/sections/search", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("InstantEnrollment", routeData.Values["Controller"]);
+            Assert.AreEqual("PostInstantEnrollmentCourseSearch2Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
         public void DefaultRoute_InstantEnrollment_PostZeroCostRegistrationForClassesAsync()
         {
             var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/instant-enrollment/zero-cost-registration");
@@ -21011,8 +21462,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/job-applications", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("job-applications", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -21043,8 +21494,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/job-applications/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("job-applications", routeData.Values["Controller"]);
-            Assert.AreEqual("guid", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -21112,8 +21563,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/job-application-sources", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("JobApplicationSources", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -21144,8 +21595,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/job-application-sources/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("JobApplicationSources", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -21213,8 +21664,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/job-application-statuses", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("JobApplicationStatuses", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -21245,8 +21696,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/job-application-statuses/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("JobApplicationStatuses", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -21533,8 +21984,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/language-iso-codes", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Languages", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -21565,8 +22016,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/language-iso-codes/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Languages", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -21634,8 +22085,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/leave-plans", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("leave-plans", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -21666,8 +22117,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/leave-plans/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("leave-plans", routeData.Values["Controller"]);
-            Assert.AreEqual("guid", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -21735,8 +22186,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/leave-categories", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("LeaveCategories", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -21767,8 +22218,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/leave-categories/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("LeaveCategories", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -22029,8 +22480,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/ledger-activities", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("LedgerActivities", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -22062,8 +22513,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/ledger-activities/guid", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("LedgerActivities", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -22225,8 +22676,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/mapping-settings", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("MappingSettings", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -22236,8 +22687,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("mapping-settings/{id}", GetRouteTemplate(routeData.Route));
-            Assert.AreEqual("MappingSettings", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -22279,8 +22730,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/mapping-settings/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("MappingSettings", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -22415,8 +22866,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/marital-statuses", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("MaritalStatuses", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -22458,8 +22909,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/marital-statuses/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("MaritalStatuses", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -22573,7 +23024,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/meal-plan-assignments", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -22615,7 +23066,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/meal-plan-assignments/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -22918,8 +23369,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/meal-plan-requests", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("meal-plan-requests", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -22950,8 +23401,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/meal-plan-requests/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("meal-plan-requests", routeData.Values["Controller"]);
-            Assert.AreEqual("guid", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -23496,8 +23947,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/organizations", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("organizations", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -23517,8 +23968,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/organizations?type=type", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("organizations", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -23527,8 +23978,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/organizations/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("organizations", routeData.Values["Controller"]);
-            Assert.AreEqual("id", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -23685,7 +24136,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/pay-classes", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -23727,7 +24178,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/pay-classes/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -24160,6 +24611,16 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
         }
 
         [TestMethod]
+        public void Route_PayrollDeductionArrangements_GetPayrollDeductionArrangements_UnsupportedVersion()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/payroll-deduction-arrangements", "application/vnd.hedtech.integration.v2+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
         public void Route_PayrollDeductionArrangements_GetPayrollDeductionArrangementsAsync()
         {
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/payroll-deduction-arrangements", "application/vnd.hedtech.integration.v7+json");
@@ -24180,6 +24641,16 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("PayrollDeductionArrangements", routeData.Values["Controller"]);
             // Assert.AreEqual("GetPayrollDeductionArrangements2ByIdAsync", routeData.Values["Action"]);
             Assert.AreEqual("GetPayrollDeductionArrangementByIdAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_PayrollDeductionArrangements_GetPayrollDeductionArrangementById_UnsupportedVersion()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/payroll-deduction-arrangements/id", "application/vnd.hedtech.integration.v2+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -24634,7 +25105,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/payment-transactions", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -24676,7 +25147,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/payment-transactions/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -24879,8 +25350,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-achievements", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonAchievements", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -24911,8 +25382,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-achievements/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonAchievements", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
         #endregion
 
@@ -25073,8 +25544,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/personal-pronouns", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonalPronounTypes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -25105,8 +25576,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/personal-pronouns/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonalPronounTypes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -25423,7 +25894,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/personal-relationships", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -25454,7 +25925,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/personal-relationships/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -25524,7 +25995,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/personal-relationship-initiation-process/id", "application/vnd.hedtech.integration.v7+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
 
@@ -25567,7 +26038,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Put, "~/personal-relationship-initiation-process/id", "application/vnd.hedtech.integration.v7+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         #endregion
@@ -25841,8 +26312,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-employment-references", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonEmploymentReferences", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -25873,8 +26344,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-employment-references/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonEmploymentReferences", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -25942,8 +26413,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-external-education", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonExternalEducation", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -25985,8 +26456,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-external-education/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonExternalEducation", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -26088,8 +26559,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("person-external-education-credentials/{id}", GetRouteTemplate(routeData.Route));
-            Assert.AreEqual("PersonExternalEducationCredentials", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -26132,8 +26603,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("person-external-education-credentials/{id}", GetRouteTemplate(routeData.Route));
-            Assert.AreEqual("PersonExternalEducationCredentials", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -26157,6 +26628,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("PersonExternalEducationCredentials", routeData.Values["Controller"]);
             Assert.AreEqual("GetPersonExternalEducationCredentialsByGuidAsync", routeData.Values["Action"]);
         }
+
 
 
         [TestMethod]
@@ -26257,8 +26729,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-filters", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonFilters", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -26300,8 +26772,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-filters/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonFilters", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -26583,8 +27055,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-matching-requests", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonMatchingRequests", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -26615,8 +27087,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-matching-requests/guid", "application/vnd.hedtech.integration.v*+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonMatchingRequests", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -26684,8 +27156,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-matching-requests/guid", "application/vnd.hedtech.integration.v1.0.0+json",
                 "application/vnd.hedtech.integration.person-matching-requests-initiations-prospects.v1.0.0+json"); RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonMatchingRequests", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
 
@@ -26720,8 +27192,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-sources", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonSources", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -26752,8 +27224,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-sources/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonSources", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -26821,8 +27293,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-publications", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonPublications", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -26853,8 +27325,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-publications/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonPublications", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -27001,7 +27473,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/persons", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
         [TestMethod]
         public void DefaultRoute_Persons_Get_All()
@@ -27068,7 +27540,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("persons/{id}", GetRouteTemplate(routeData.Route));
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -27279,7 +27751,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/qapi/persons", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -27504,8 +27976,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-emergency-contacts", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonEmergencyContacts", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -27536,8 +28008,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-emergency-contacts/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonEmergencyContacts", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -27654,7 +28126,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/persons-credentials", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -27720,7 +28192,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/persons-credentials/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -27887,8 +28359,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-holds", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("person-holds", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -27919,8 +28391,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-holds/id", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("person-holds", routeData.Values["Controller"]);
-            Assert.AreEqual("id", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -27951,8 +28423,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-holds?person=person", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("person-holds", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -28075,8 +28547,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-visas/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonVisas", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -28085,8 +28557,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/person-visas?person=person", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PersonVisas", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -28402,12 +28874,23 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
         [TestMethod]
         public void DefaultRoute_PlanningStudents_QueryEvaluations3()
         {
-            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/students/id/evaluation");
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/students/id/evaluation",  _mediaTypeHeaderVersion3);
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("qapi/students/{id}/evaluation", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("PlanningStudents", routeData.Values["Controller"]);
             Assert.AreEqual("QueryEvaluations3Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_PlanningStudents_QueryEvaluations4()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/students/id/evaluation");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("qapi/students/{id}/evaluation", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("PlanningStudents", routeData.Values["Controller"]);
+            Assert.AreEqual("QueryEvaluations4Async", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -28448,12 +28931,23 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
         [TestMethod]
         public void DefaultRoute_PlanningStudents_GetEvaluation4()
         {
-            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/students/id/evaluation?program=program");
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/students/id/evaluation?program=program", _mediaTypeHeaderVersion3);
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("students/{id}/evaluation", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("PlanningStudents", routeData.Values["Controller"]);
             Assert.AreEqual("GetEvaluation3Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_PlanningStudents_GetEvaluation5()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/students/id/evaluation?program=program");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("students/{id}/evaluation", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("PlanningStudents", routeData.Values["Controller"]);
+            Assert.AreEqual("GetEvaluation4Async", routeData.Values["Action"]);
         }
 
 
@@ -28793,8 +29287,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/procurement-receipts", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("ProcurementReceipts", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -28836,8 +29330,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/procurement-receipts/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("ProcurementReceipts", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -28950,8 +29444,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/proficiency-licensing-authorities", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("ProficiencyLicensingAuthorities", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -28982,8 +29476,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/proficiency-licensing-authorities/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("ProficiencyLicensingAuthorities", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -29195,8 +29689,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/prospect-opportunities", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("ProspectOpportunities", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -29227,8 +29721,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/prospect-opportunities/guid", "application/vnd.hedtech.integration.v*+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("ProspectOpportunities", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -29308,7 +29802,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
                 "application/vnd.hedtech.integration.prospect-opportunities-submissions.v1.0.0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
         #endregion
 
@@ -29331,8 +29825,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/prospect-opportunity-sources", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("ProspectOpportunitySources", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -29363,8 +29857,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/prospect-opportunity-sources/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("ProspectOpportunitySources", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -29447,8 +29941,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/publication-types", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PublicationTypes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -29479,8 +29973,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/publication-types/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PublicationTypes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -29548,8 +30042,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/purchasing-arrangements", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PurchasingArrangements", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -29580,8 +30074,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/purchasing-arrangements/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PurchasingArrangements", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -29649,8 +30143,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/purchase-classifications", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PurchaseClassifications", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -29681,8 +30175,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/purchase-classifications/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PurchaseClassifications", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -29762,8 +30256,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/purchase-orders", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PurchaseOrders", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -29816,8 +30310,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/purchase-orders/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("PurchaseOrders", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -29951,6 +30445,17 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("PurchaseOrders", routeData.Values["Controller"]);
             Assert.AreEqual("VoidPurchaseOrderAsync", routeData.Values["Action"]);
         }
+
+        [TestMethod]
+        public void DefaultRoute_PurchaseOrders_QueryPurchaseOrderSummariesAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/purchase-order-summaries", _mediaTypeHeaderVersion1);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("qapi/purchase-order-summaries", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("PurchaseOrders", routeData.Values["Controller"]);
+            Assert.AreEqual("QueryPurchaseOrderSummariesAsync", routeData.Values["Action"]);
+        }
         #endregion
 
         #region Quick Registration
@@ -30070,7 +30575,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.IsNotNull(routeData);
             Assert.AreEqual("receivables/account-holder/{personId}", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("Receivables", routeData.Values["Controller"]);
-            Assert.AreEqual("GetAccountHolder2", routeData.Values["Action"]);
+            Assert.AreEqual("GetAccountHolder2Async", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -30388,8 +30893,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/region-iso-codes", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("RegionIsoCodes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -30420,8 +30925,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/region-iso-codes/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("RegionIsoCodes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -30489,8 +30994,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/regions", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Regions", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -30521,8 +31026,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/regions/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Regions", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -30717,8 +31222,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/relationship-statuses", "application/vnd.hedtech.integration.vx+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("RelationshipStatuses", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -30749,8 +31254,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/relationship-statuses/guid", "application/vnd.hedtech.integration.vx+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("RelationshipStatuses", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -30829,8 +31334,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/relationship-types", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("RelationshipTypes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -30861,8 +31366,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/relationship-types/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("RelationshipTypes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -31051,8 +31556,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/requisitions", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Requisitions", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -31077,8 +31582,6 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("GetRequisitionsAsync", routeData.Values["Action"]);
         }
 
-
-
         [TestMethod]
         public void Default_Route_RequisitionsByGuid()
         {
@@ -31096,9 +31599,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/requisitions/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Requisitions", routeData.Values["Controller"]);
-            Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -31122,7 +31624,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("Requisitions", routeData.Values["Controller"]);
             Assert.AreEqual("GetRequisitionsByGuidAsync", routeData.Values["Action"]);
         }
-        
+
         [TestMethod]
         public void Route_Requisitions_Put_V11()
         {
@@ -31222,6 +31724,17 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("DeleteRequisitionAsync", routeData.Values["Action"]);
         }
 
+        [TestMethod]
+        public void DefaultRoute_Requisitions_QueryRequisitionSummariesAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/requisition-summaries", _mediaTypeHeaderVersion1);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("qapi/requisition-summaries", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Requisitions", routeData.Values["Controller"]);
+            Assert.AreEqual("QueryRequisitionSummariesAsync", routeData.Values["Action"]);
+        }
+
         #endregion Requisitions
 
         #region ResidenceLifeDeposits
@@ -31316,8 +31829,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/residency-types/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("ResidencyTypes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -31418,8 +31931,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/restricted-student-financial-aid-awards", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentFinancialAidAwards", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -31450,8 +31963,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/restricted-student-financial-aid-awards/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentFinancialAidAwards", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -32282,9 +32795,32 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
 
         #region SectionAttendances
 
+        [TestMethod]
         public void DefaultRoute_SectionAttendances_PutSectionAttendances()
         {
             var httpContextMock = CreateHttpContextMock(HttpMethod.Put, "~/section-attendances");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("section-attendances", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("SectionAttendances", routeData.Values["Controller"]);
+            Assert.AreEqual("PutSectionAttendances2Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_PutSectionAttendances2Async_V2()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Put, "~/section-attendances", _mediaTypeHeaderVersion2);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("section-attendances", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("SectionAttendances", routeData.Values["Controller"]);
+            Assert.AreEqual("PutSectionAttendances2Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_PutSectionAttendancesAsync_V1()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Put, "~/section-attendances", _mediaTypeHeaderVersion1);
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("section-attendances", GetRouteTemplate(routeData.Route));
@@ -32313,8 +32849,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/section-description-types", "application/vnd.hedtech.integration.v31+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("SectionDescriptionTypes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -32345,8 +32881,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/section-description-types/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("SectionDescriptionTypes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -32519,8 +33055,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/section-registrations/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("SectionRegistrations", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -32588,8 +33124,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/section-registrations", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("SectionRegistrations", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -32791,6 +33327,55 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
 
         #region Sections
 
+        #region Non-Ethos routes
+
+        [TestMethod]
+        public void Route_Sections_Get_4()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/sections/sectionId", _mediaTypeHeaderVersion4);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("sections/{sectionId}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Sections", routeData.Values["Controller"]);
+            Assert.AreEqual("GetSection4Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_Sections_Get_3()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/sections/sectionId", _mediaTypeHeaderVersion3);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("sections/{sectionId}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Sections", routeData.Values["Controller"]);
+            Assert.AreEqual("GetSection3Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_Sections_Get_2()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/sections/sectionId", _mediaTypeHeaderVersion2);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("sections/{sectionId}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Sections", routeData.Values["Controller"]);
+            Assert.AreEqual("GetSection2Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_Sections_Get_1()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/sections/sectionId", _mediaTypeHeaderVersion1);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("sections/{sectionId}", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Sections", routeData.Values["Controller"]);
+            Assert.AreEqual("GetSectionAsync", routeData.Values["Action"]);
+        }
+
+
+        #endregion
+
         #region Sections Default Routes
 
         [TestMethod]
@@ -32961,6 +33546,28 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
         }
 
         [TestMethod]
+        public void Route_Sections_QuerySectionsByPost4()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/sections", _mediaTypeHeaderVersion4);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("qapi/sections", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Sections", routeData.Values["Controller"]);
+            Assert.AreEqual("QuerySectionsByPost4Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_Sections_QueryByPost()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/sections");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("qapi/sections", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Sections", routeData.Values["Controller"]);
+            Assert.AreEqual("QuerySectionsByPost4Async", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
         public void Route_Sections_PostSection_V6()
         {
             var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/sections", "application/vnd.hedtech.integration.v6+json");
@@ -32977,8 +33584,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/sections", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Sections", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -32987,8 +33594,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/sections/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Sections", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -33019,8 +33626,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/sections", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Sections", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -33040,8 +33647,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Put, "~/sections/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Sections", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -33131,7 +33738,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.IsNotNull(routeData);
             Assert.AreEqual("sections/{sectionId}/grades", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("Sections", routeData.Values["Controller"]);
-            Assert.AreEqual("PutCollectionOfStudentGrades4Async", routeData.Values["Action"]);
+            Assert.AreEqual("PutCollectionOfStudentGrades5Async", routeData.Values["Action"]);
         }
 
 
@@ -33195,6 +33802,19 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
 
         #endregion Sections
 
+        #region SectionCensusCertification
+        [TestMethod]
+        public void DefaultRoute_Sections_PostSectionCensusCertification()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/sections/sectionId/certify-census");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("sections/{sectionId}/certify-census", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Sections", routeData.Values["Controller"]);
+            Assert.AreEqual("PostSectionCensusCertificationAsync", routeData.Values["Action"]);
+        }
+        #endregion
+
         #region sectionEventsICal
         [TestMethod]
         public void Route_Sections_QuerySectionEventsICal()
@@ -33216,8 +33836,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/sections", "application/vnd.hedtech.integration.maximum.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Sections", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -33270,8 +33890,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/sections/id", "application/vnd.hedtech.integration.maximum.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Sections", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -33780,8 +34400,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/section-title-types", "application/vnd.hedtech.integration.v31+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("SectionTitleTypes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -33812,8 +34432,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/section-title-types/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("SectionTitleTypes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -33931,7 +34551,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.IsNotNull(routeData);
             Assert.AreEqual("sections/search", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("Sections", routeData.Values["Controller"]);
-            Assert.AreEqual("PostSectionSearchAsync", routeData.Values["Action"]);
+            Assert.AreEqual("PostSectionSearch2Async", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -33945,6 +34565,30 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("PostSectionSearchAsync", routeData.Values["Action"]);
         }
 
+        #endregion
+
+        #region Section Seats
+        [TestMethod]
+        public void DefaultRoute_Sections_QuerySectionsSeatsAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/sections-seats");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("qapi/sections-seats", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Sections", routeData.Values["Controller"]);
+            Assert.AreEqual("QuerySectionsSeatsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void Route_Sections_QuerySectionsSeatsAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/sections-seats", _mediaTypeHeaderVersion1);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("qapi/sections-seats", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Sections", routeData.Values["Controller"]);
+            Assert.AreEqual("QuerySectionsSeatsAsync", routeData.Values["Action"]);
+        }
         #endregion
 
         #region Session
@@ -34036,6 +34680,17 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("session/proxy-subjects", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("Session", routeData.Values["Controller"]);
             Assert.AreEqual("PutSessionProxySubjectsAsync", routeData.Values["Action"]);
+        }
+
+        [TestMethod]
+        public void DefaultRoute_Session_PutSyncAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Put, "~/session/sync");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("session/sync", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Session", routeData.Values["Controller"]);
+            Assert.AreEqual("PutSyncAsync", routeData.Values["Action"]);
         }
 
         #endregion Session
@@ -34279,7 +34934,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.IsNotNull(routeData);
             Assert.AreEqual("students/{studentId}/shopping-sheets", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("ShoppingSheets", routeData.Values["Controller"]);
-            Assert.AreEqual("GetShoppingSheetsAsync", routeData.Values["Action"]);
+            Assert.AreEqual("GetShoppingSheets3Async", routeData.Values["Action"]);
         }
 
         #endregion ShoppingSheets
@@ -34494,8 +35149,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/source-contexts", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("source-contexts", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -34526,8 +35181,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/source-contexts/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("source-contexts", routeData.Values["Controller"]);
-            Assert.AreEqual("id", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -34595,8 +35250,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/sources", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("sources", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -34627,8 +35282,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/sources/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("sources", routeData.Values["Controller"]);
-            Assert.AreEqual("id", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -34767,8 +35422,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-academic-credentials", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentAcademicCredentials", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -34799,8 +35454,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-academic-credentials/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentAcademicCredentials", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -34992,8 +35647,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-academic-periods", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentAcademicPeriods", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -35024,8 +35679,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-academic-periods/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentAcademicPeriods", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -35093,8 +35748,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-academic-period-statuses", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentAcademicPeriodStatuses", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -35125,8 +35780,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-academic-period-statuses/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentAcademicPeriodStatuses", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -35205,8 +35860,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-academic-programs", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentAcademicPrograms", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -35259,8 +35914,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-academic-programs/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentAcademicPrograms", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -35441,7 +36096,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
                 "application/vnd.hedtech.integration.student-academic-programs-submissions.v1.0.0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         #endregion
@@ -35481,8 +36136,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-academic-standings", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("student-academic-standings", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -35513,8 +36168,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-academic-standings/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("student-academic-standings", routeData.Values["Controller"]);
-            Assert.AreEqual("guid", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -35582,8 +36237,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-advisor-relationships", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("student-advisor-relationships", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -35614,8 +36269,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-advisor-relationships/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("student-advisor-relationships", routeData.Values["Controller"]);
-            Assert.AreEqual("guid", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -35680,8 +36335,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-advisor-relationships", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("student-advisor-relationships", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -35712,8 +36367,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-advisor-relationships/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("student-advisor-relationships", routeData.Values["Controller"]);
-            Assert.AreEqual("guid", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -35837,7 +36492,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-aptitude-assessments", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -35890,7 +36545,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-aptitude-assessments/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -36232,8 +36887,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-charges", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentCharges", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -36264,8 +36919,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-charges/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentCharges", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -36617,8 +37272,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-cohort-assignments", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentCohortAssignments", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -36649,8 +37304,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-cohort-assignments/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentCohortAssignments", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -36710,6 +37365,15 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("student-course-transfers", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("StudentCourseTransfer", routeData.Values["Controller"]);
             Assert.AreEqual("GetStudentCourseTransfers2Async", routeData.Values["Action"]);
+        }
+
+        public void Route_StudentCourseTransfer_UnsupportedVersion()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-course-transfers", "application/vnd.hedtech.integration.v2+json");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -36920,8 +37584,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-financial-aid-awards", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentFinancialAidAwards", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -36952,8 +37616,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-financial-aid-awards/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentFinancialAidAwards", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -37125,8 +37789,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-financial-aid-need-summaries", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentFinancialAidNeedSummaries", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -37157,8 +37821,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-financial-aid-need-summaries/id", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentFinancialAidNeedSummaries", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -37335,8 +37999,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-payments", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentPayments", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -37389,8 +38053,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-payments/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentPayments", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -37556,8 +38220,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-registration-eligibilities", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("student-registration-eligibilities", routeData.Values["Controller"]);
-            Assert.AreEqual("Index", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]); ;
         }
 
         [TestMethod]
@@ -37588,8 +38252,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-registration-eligibilities/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("student-registration-eligibilities", routeData.Values["Controller"]);
-            Assert.AreEqual("guid", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]); ;
         }
 
         [TestMethod]
@@ -37842,14 +38506,24 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
         }
 
         [TestMethod]
-        public void DefaultRoute_Students_GetAcademicHistory4()
+        public void Route_Students_GetAcademicHistory4()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/students/studentId/academic-credits?bestFit=bestFit&filter=filter&term=term", _mediaTypeHeaderVersion4);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("students/{studentId}/academic-credits", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Students", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAcademicHistory4Async", routeData.Values["Action"]);
+        }
+        [TestMethod]
+        public void DefaultRoute_Students_GetAcademicHistory5()
         {
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/students/studentId/academic-credits?bestFit=bestFit&filter=filter&term=term");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
             Assert.AreEqual("students/{studentId}/academic-credits", GetRouteTemplate(routeData.Route));
             Assert.AreEqual("Students", routeData.Values["Controller"]);
-            Assert.AreEqual("GetAcademicHistory4Async", routeData.Values["Action"]);
+            Assert.AreEqual("GetAcademicHistory5Async", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -38070,6 +38744,16 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("QueryStudentsById4Async", routeData.Values["Action"]);
         }
 
+        [TestMethod]
+        public void DefaultRoute_Students_GetStudentAcademicLevels()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/students/studentId/academic-levels");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("students/{studentId}/academic-levels", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Students", routeData.Values["Controller"]);
+            Assert.AreEqual("GetStudentAcademicLevelsAsync", routeData.Values["Action"]);
+        }
         #endregion Students
 
         #region StudentStandings
@@ -38266,8 +38950,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-tags", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentTags", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -38298,8 +38982,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-tags/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentTags", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -38365,8 +39049,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-tag-assignments", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentTagAssignments", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
         [TestMethod]
         public void Route_GetStudentTagAssignments_V1_0_0()
@@ -38394,8 +39078,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-tag-assignments/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentTagAssignments", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
         [TestMethod]
         public void Route_StudentTagAssignmentsByGuid_V1_0_0()
@@ -38473,8 +39157,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-transcript-grades", "application/vnd.hedtech.integration.vX+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentTranscriptGrades", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -38505,8 +39189,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/student-transcript-grades/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("StudentTranscriptGrades", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -39048,8 +39732,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/subregions", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Subregions", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -39080,8 +39764,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/subregions/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Subregions", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -39149,8 +39833,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/subregion-iso-codes", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("SubregionIsoCodes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -39181,8 +39865,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/subregion-iso-codes/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("SubregionIsoCodes", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -39615,8 +40299,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/tax-forms", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("TaxFormsBase", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -39647,8 +40331,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/tax-forms/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("TaxFormsBase", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -39716,8 +40400,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/tax-form-components", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("TaxFormComponents", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -39748,8 +40432,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/tax-form-components/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("TaxFormComponents", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -40006,6 +40690,17 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("Timecards", routeData.Values["Controller"]);
             Assert.AreEqual("GetTimecardsAssociatedWithLeaveRequestsAsync", routeData.Values["Action"]);
 
+        }
+
+        [TestMethod]
+        public void Default_Route_GetTimecardsForLeaveAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/timecards-for-leave");
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("timecards-for-leave", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Timecards", routeData.Values["Controller"]);
+            Assert.AreEqual("GetTimecardsForLeaveAsync", routeData.Values["Action"]);
         }
 
         #endregion
@@ -40333,8 +41028,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/vendor-address-usages", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("VendorAddressUsages", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -40365,8 +41060,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/vendor-address-usages/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("VendorAddressUsages", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -40638,8 +41333,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/vendors", "application/vnd.hedtech.integration.v1+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("Vendors", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
 
@@ -40694,7 +41389,7 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/vendors/guid", "application/vnd.hedtech.integration.v2+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -40918,8 +41613,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/vendor-contacts", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("VendorContacts", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -40950,8 +41645,8 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             var httpContextMock = CreateHttpContextMock(HttpMethod.Get, "~/vendor-contacts/guid", "application/vnd.hedtech.integration.v0+json");
             RouteData routeData = routes.GetRouteData(httpContextMock.Object);
             Assert.IsNotNull(routeData);
-            Assert.AreEqual("VendorContacts", routeData.Values["Controller"]);
-            Assert.AreEqual("NotAcceptableStatusException", routeData.Values["Action"]);
+            Assert.AreEqual("EthosApiBuilder", routeData.Values["Controller"]);
+            Assert.AreEqual("GetAlternativeRouteOrNotAcceptable", routeData.Values["Action"]);
         }
 
         [TestMethod]
@@ -41312,6 +42007,16 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
             Assert.AreEqual("GetVouchersByVendorAndInvoiceNoAsync", routeData.Values["Action"]);
         }
 
+        [TestMethod]
+        public void DefaultRoute_Vouchers_QueryVoucherSummariesAsync()
+        {
+            var httpContextMock = CreateHttpContextMock(HttpMethod.Post, "~/qapi/voucher-summaries", _mediaTypeHeaderVersion1);
+            RouteData routeData = routes.GetRouteData(httpContextMock.Object);
+            Assert.IsNotNull(routeData);
+            Assert.AreEqual("qapi/voucher-summaries", GetRouteTemplate(routeData.Route));
+            Assert.AreEqual("Vouchers", routeData.Values["Controller"]);
+            Assert.AreEqual("QueryVoucherSummariesAsync", routeData.Values["Action"]);
+        }
         #endregion Vouchers
 
         #region WorkTasks
@@ -41426,6 +42131,9 @@ namespace Ellucian.Colleague.Api.Routing.Testsc
         private const string _mediaTypeHeaderVersion3 = "application/vnd.ellucian.v3+json";
         private const string _mediaTypeHeaderVersion4 = "application/vnd.ellucian.v4+json";
         private const string _mediaTypeHeaderVersion5 = "application/vnd.ellucian.v5+json";
+        private const string _mediaTypeHeaderVersion6 = "application/vnd.ellucian.v6+json";
+        private const string _mediaTypeHeaderVersion7 = "application/vnd.ellucian.v7+json";
+        private const string _mediaTypeHeaderVersion8 = "application/vnd.ellucian.v8+json";
 
         private const string _mediaTypeHeaderPdfVersion1 = "application/vnd.ellucian.v1+pdf";
         private const string _mediaTypeHeaderPdfVersion2 = "application/vnd.ellucian.v2+pdf";

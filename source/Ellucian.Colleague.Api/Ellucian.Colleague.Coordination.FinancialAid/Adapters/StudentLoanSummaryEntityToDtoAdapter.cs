@@ -18,6 +18,9 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Adapters
         {
             AddMappingDependency<Domain.FinancialAid.Entities.StudentLoanHistory, Dtos.FinancialAid.StudentLoanHistory>();
             AddMappingDependency<Domain.FinancialAid.Entities.InformedBorrowerItem, Dtos.FinancialAid.InformedBorrowerItem>();
+            AddMappingDependency<Domain.FinancialAid.Entities.PlusLoanItem, Dtos.FinancialAid.PlusLoanItem>();
+            AddMappingDependency<Domain.FinancialAid.Entities.PlusApplicationItem, Dtos.FinancialAid.PlusApplicationItem>();
+            AddMappingDependency<Domain.FinancialAid.Entities.PlusMpnItem, Dtos.FinancialAid.PlusMpnItem>();
         }
     }
 }

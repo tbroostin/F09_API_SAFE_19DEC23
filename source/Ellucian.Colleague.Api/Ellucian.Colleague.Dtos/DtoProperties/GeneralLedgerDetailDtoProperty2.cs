@@ -15,7 +15,7 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         /// <summary>
         /// An optional tracking number for the detailed accounting line.
         /// </summary>
-        [JsonProperty("sequenceNumber", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [JsonProperty("sequenceNumber", DefaultValueHandling = DefaultValueHandling.Ignore, NullValueHandling = NullValueHandling.Ignore)]
         public int? SequenceNumber { get; set; }
 
         /// <summary>
@@ -45,7 +45,7 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         /// <summary>
         /// The person submitting the general ledger transactions.
         /// </summary>
-        [JsonProperty("submittedBy", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [JsonProperty("submittedBy", DefaultValueHandling = DefaultValueHandling.Ignore, NullValueHandling = NullValueHandling.Ignore)]
         public GuidObject2 SubmittedBy { get; set; }
         
     }

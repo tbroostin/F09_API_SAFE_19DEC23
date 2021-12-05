@@ -53,5 +53,12 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         /// <returns></returns>
         Task<PurchaseOrderVoidResponse> VoidPurchaseOrderAsync(PurchaseOrderVoidRequest voidRequest);
 
+        /// <summary>
+        /// Get a list of purchase order summary domain entity objects
+        /// </summary>
+        /// <param name="criteria">procurement filter criteria</param>
+        /// <returns>list of purchase order summary domain entity objects</returns>
+        Task<IEnumerable<PurchaseOrderSummary>> QueryPurchaseOrderSummariesAsync(ProcurementDocumentFilterCriteria criteria);
+
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -58,18 +58,21 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
         private ParmT4 parmT4DataContract = new ParmT4()
         {
+            Pt4HideConsentFlag = "y",
             Pt4ConText = "I consent to receive my T4 online.",
             Pt4WhldText = "I withhold consent to receive my T4 online.",
         };
 
         private ParmT4a parmT4ADataContract = new ParmT4a()
         {
+            Pt4aHideConsentFlag = "Y",
             Pt4aConText = "I consent to receive my T4A online.",
             Pt4aWhldText = "I withhold consent to receive my T4A online."
         };
 
         private CnstRptParms cnstRptParmsContract = new CnstRptParms()
         {
+            CnstHideConsentFlag = "Y",
             CnstConsentText = "I consent to receive my T2202A online.",
             CnstWhldConsentText = "I withhold consent to receive my T2202A online.",
 
@@ -1106,11 +1109,47 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             #region T4
 
             [TestMethod]
-            public async Task GetTaxFormConfiguration2Async_Success_T4()
+            public async Task GetTaxFormConfiguration2Async_Success_T4_HideConsent()
             {
                 var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT4);
 
+                Assert.IsTrue(actualConfiguration.HideConsent);
                 // Check that the 1095-C consent paragraphs are the same
+                Assert.AreEqual(parmT4DataContract.Pt4ConText, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(parmT4DataContract.Pt4WhldText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_Success_T4_ShowConsentBlank()
+            {
+                parmT4DataContract.Pt4HideConsentFlag = "";
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT4);
+
+                Assert.IsFalse(actualConfiguration.HideConsent);
+                // Check that the 1095-C consent paragraphs are the same
+                Assert.AreEqual(parmT4DataContract.Pt4ConText, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(parmT4DataContract.Pt4WhldText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_Success_T4_ShowConsentNull()
+            {
+                parmT4DataContract.Pt4HideConsentFlag = null;
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT4);
+
+                Assert.IsFalse(actualConfiguration.HideConsent);
+                // Check that the 1095-C consent paragraphs are the same
+                Assert.AreEqual(parmT4DataContract.Pt4ConText, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(parmT4DataContract.Pt4WhldText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_Success_T4_ShowConsentN()
+            {
+                parmT4DataContract.Pt4HideConsentFlag = "N";
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT4);
+
+                Assert.IsFalse(actualConfiguration.HideConsent);
                 Assert.AreEqual(parmT4DataContract.Pt4ConText, actualConfiguration.ConsentParagraphs.ConsentText);
                 Assert.AreEqual(parmT4DataContract.Pt4WhldText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
             }
@@ -1152,11 +1191,48 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             #region T4A
 
             [TestMethod]
-            public async Task GetTaxFormConfiguration2Async_Success_T4A()
+            public async Task GetTaxFormConfiguration2Async_Success_T4A_HideConsent()
             {
                 var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT4A);
+                Assert.IsTrue(actualConfiguration.HideConsent);
 
-                // Check that the 1095-C consent paragraphs are the same
+                // Check that the T4A consent paragraphs are the same
+                Assert.AreEqual(parmT4ADataContract.Pt4aConText, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(parmT4ADataContract.Pt4aWhldText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_Success_T4A_ShowConsentBlank()
+            {
+                parmT4ADataContract.Pt4aHideConsentFlag = "";
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT4A);
+
+                Assert.IsFalse(actualConfiguration.HideConsent);
+                // Check that the T4A consent paragraphs are the same
+                Assert.AreEqual(parmT4ADataContract.Pt4aConText, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(parmT4ADataContract.Pt4aWhldText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_Success_T4A_ShowConsentNull()
+            {
+                parmT4ADataContract.Pt4aHideConsentFlag = null;
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT4A);
+
+                Assert.IsFalse(actualConfiguration.HideConsent);
+                // Check that the T4A consent paragraphs are the same
+                Assert.AreEqual(parmT4ADataContract.Pt4aConText, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(parmT4ADataContract.Pt4aWhldText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_Success_T4A_ShowConsentN()
+            {
+                parmT4ADataContract.Pt4aHideConsentFlag = "N";
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT4A);
+
+                Assert.IsFalse(actualConfiguration.HideConsent);
+                // Check that the T4A consent paragraphs are the same
                 Assert.AreEqual(parmT4ADataContract.Pt4aConText, actualConfiguration.ConsentParagraphs.ConsentText);
                 Assert.AreEqual(parmT4ADataContract.Pt4aWhldText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
             }
@@ -1198,11 +1274,48 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             #region T2202A
 
             [TestMethod]
-            public async Task GetTaxFormConfiguration2Async_Success_T2202A()
+            public async Task GetTaxFormConfiguration2Async_Success_T2202_HideConsent()
             {
                 var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT2202A);
+                Assert.IsTrue(actualConfiguration.HideConsent);
 
-                // Check that the 1095-C consent paragraphs are the same
+                // Check that the T2202 consent paragraphs are the same
+                Assert.AreEqual(cnstRptParmsContract.CnstConsentText, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(cnstRptParmsContract.CnstWhldConsentText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_Success_T2202_ShowConsentBlank()
+            {
+                cnstRptParmsContract.CnstHideConsentFlag = "";
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT2202A);
+
+                Assert.IsFalse(actualConfiguration.HideConsent);
+                // Check that the T2202 consent paragraphs are the same
+                Assert.AreEqual(cnstRptParmsContract.CnstConsentText, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(cnstRptParmsContract.CnstWhldConsentText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_Success_T2202_ShowConsentNull()
+            {
+                cnstRptParmsContract.CnstHideConsentFlag = null;
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT2202A);
+
+                Assert.IsFalse(actualConfiguration.HideConsent);
+                // Check that the T2202 consent paragraphs are the same
+                Assert.AreEqual(cnstRptParmsContract.CnstConsentText, actualConfiguration.ConsentParagraphs.ConsentText);
+                Assert.AreEqual(cnstRptParmsContract.CnstWhldConsentText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
+            }
+
+            [TestMethod]
+            public async Task GetTaxFormConfiguration2Async_Success_T2202_ShowConsentN()
+            {
+                cnstRptParmsContract.CnstHideConsentFlag = "N";
+                var actualConfiguration = await this.ConfigRepository.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT2202A);
+
+                Assert.IsFalse(actualConfiguration.HideConsent);
+                // Check that the T2202 consent paragraphs are the same
                 Assert.AreEqual(cnstRptParmsContract.CnstConsentText, actualConfiguration.ConsentParagraphs.ConsentText);
                 Assert.AreEqual(cnstRptParmsContract.CnstWhldConsentText, actualConfiguration.ConsentParagraphs.ConsentWithheldText);
             }
@@ -2555,7 +2668,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 dataReaderMock.Setup(r => r.ReadRecordAsync<CorewebDefaults>("CORE.PARMS", "COREWEB.DEFAULTS", true))
                        .ReturnsAsync(corewebDefaultsNull);
                 dataReaderMock.Setup(r => r.ReadRecordAsync<OfficeCollectionMap>("CORE.PARMS", "OFFICE.COLLECTION.MAP", true))
-                        .ReturnsAsync(null);
+                        .ReturnsAsync(() => null);
 
                 var configuration = await ConfigRepository.GetRequiredDocumentConfigurationAsync();
                 Assert.AreEqual(false, configuration.SuppressInstance);

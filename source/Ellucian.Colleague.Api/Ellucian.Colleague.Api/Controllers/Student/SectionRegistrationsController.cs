@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -25,6 +25,7 @@ using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
 using System.Net;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -66,7 +67,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">Id of the SectionRegistration</param>
         /// <returns>A SectionRegistration <see cref="Dtos.SectionRegistration2"/> object</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { SectionPermissionCodes.ViewRegistrations, SectionPermissionCodes.UpdateRegistrations })]
         public async Task<Dtos.SectionRegistration4> GetSectionRegistrationByGuid3Async([FromUri] string guid)
         {
             var bypassCache = false;
@@ -80,6 +81,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _sectionRegistrationService.ValidatePermissions(GetPermissionsMetaData());
                 var sectionRegistration = await _sectionRegistrationService.GetSectionRegistrationByGuid3Async(guid);
 
                 if (sectionRegistration != null)
@@ -144,14 +146,14 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="registrationStatusesByAcademicPeriod"></param>
         /// <returns></returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { SectionPermissionCodes.ViewRegistrations, SectionPermissionCodes.UpdateRegistrations })]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.SectionRegistration4))]
         [QueryStringFilterFilter("academicPeriod", typeof(Dtos.Filters.AcademicPeriodNamedQueryFilter))]
         [QueryStringFilterFilter("sectionInstructor", typeof(Dtos.Filters.SectionInstructorQueryFilter))]
         [QueryStringFilterFilter("registrationStatusesByAcademicPeriod", typeof(Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
-        public async Task<IHttpActionResult> GetSectionRegistrations3Async(Paging page, QueryStringFilter criteria, QueryStringFilter academicPeriod, 
+        public async Task<IHttpActionResult> GetSectionRegistrations3Async(Paging page, QueryStringFilter criteria, QueryStringFilter academicPeriod,
             QueryStringFilter sectionInstructor, QueryStringFilter registrationStatusesByAcademicPeriod)
         {
             var bypassCache = false;
@@ -165,6 +167,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _sectionRegistrationService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -194,7 +197,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 if (CheckForEmptyFilterParameters())
                     return new PagedHttpActionResult<IEnumerable<Dtos.SectionRegistration4>>(new List<Dtos.SectionRegistration4>(), page, 0, this.Request);
 
-                var pageOfItems = await _sectionRegistrationService.GetSectionRegistrations3Async(page.Offset, page.Limit, criteriaObj, academicPeriodFilterValue, 
+                var pageOfItems = await _sectionRegistrationService.GetSectionRegistrations3Async(page.Offset, page.Limit, criteriaObj, academicPeriodFilterValue,
                                         sectionInstructorFilterValue, registrationStatusesByAcademicPeriodObj, bypassCache);
 
                 AddEthosContextProperties(await _sectionRegistrationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -238,7 +241,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">Id of the SectionRegistration</param>
         /// <returns>A SectionRegistration <see cref="Dtos.SectionRegistration2"/> object</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { SectionPermissionCodes.ViewRegistrations, SectionPermissionCodes.UpdateRegistrations })]
         public async Task<Dtos.SectionRegistration2> GetSectionRegistrationAsync([FromUri] string guid)
         {
             var bypassCache = false;
@@ -252,6 +255,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _sectionRegistrationService.ValidatePermissions(GetPermissionsMetaData());
                 var sectionRegistration = await _sectionRegistrationService.GetSectionRegistrationAsync(guid);
 
                 if (sectionRegistration != null)
@@ -312,7 +316,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">Id of the SectionRegistration</param>
         /// <returns>A SectionRegistration <see cref="Dtos.SectionRegistration2"/> object</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { SectionPermissionCodes.ViewRegistrations, SectionPermissionCodes.UpdateRegistrations })]
         public async Task<Dtos.SectionRegistration3> GetSectionRegistration2Async([FromUri] string guid)
         {
             var bypassCache = false;
@@ -326,6 +330,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _sectionRegistrationService.ValidatePermissions(GetPermissionsMetaData());
                 var sectionRegistration = await _sectionRegistrationService.GetSectionRegistration2Async(guid);
 
                 if (sectionRegistration != null)
@@ -389,8 +394,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="section"></param>
         /// <param name="registrant"></param>
         /// <returns></returns>
-        [HttpGet, FilteringFilter(IgnoreFiltering = true)]
-        [ValidateQueryStringFilter(new string[] { "section", "registrant"}, false, true)]
+        [HttpGet, FilteringFilter(IgnoreFiltering = true), PermissionsFilter(new string[] { SectionPermissionCodes.ViewRegistrations, SectionPermissionCodes.UpdateRegistrations })]
+        [ValidateQueryStringFilter(new string[] { "section", "registrant" }, false, true)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         public async Task<IHttpActionResult> GetSectionRegistrationsAsync(Paging page, [FromUri] string section = "",
             [FromUri] string registrant = "")
@@ -406,6 +411,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _sectionRegistrationService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -417,7 +423,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                                   await _sectionRegistrationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                                   pageOfItems.Item1.Select(a => a.Id).ToList()));
 
-                return new PagedHttpActionResult<IEnumerable<Dtos.SectionRegistration2>>(pageOfItems.Item1, page,  pageOfItems.Item2, Request);
+                return new PagedHttpActionResult<IEnumerable<Dtos.SectionRegistration2>>(pageOfItems.Item1, page, pageOfItems.Item2, Request);
             }
             catch (PermissionsException e)
             {
@@ -454,7 +460,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="section"></param>
         /// <param name="registrant"></param>
         /// <returns></returns>
-        [HttpGet, FilteringFilter(IgnoreFiltering = true)]
+        [HttpGet, FilteringFilter(IgnoreFiltering = true), PermissionsFilter(new string[] { SectionPermissionCodes.ViewRegistrations, SectionPermissionCodes.UpdateRegistrations })]
         [ValidateQueryStringFilter(new string[] { "section", "registrant" }, false, true)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         public async Task<IHttpActionResult> GetSectionRegistrations2Async(Paging page, [FromUri] string section = "",
@@ -471,13 +477,14 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _sectionRegistrationService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
                 }
 
-               var pageOfItems = await _sectionRegistrationService.GetSectionRegistrations2Async(page.Offset, page.Limit,
-                    section, registrant);
+                var pageOfItems = await _sectionRegistrationService.GetSectionRegistrations2Async(page.Offset, page.Limit,
+                     section, registrant);
 
                 AddEthosContextProperties(await _sectionRegistrationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                                   await _sectionRegistrationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -523,11 +530,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">Id of the SectionRegistration</param>
         /// <param name="sectionRegistration">DTO of the SectionRegistration</param>
         /// <returns>A SectionRegistration <see cref="Dtos.SectionRegistration2"/> object</returns>
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(SectionPermissionCodes.UpdateRegistrations)]
         public async Task<Dtos.SectionRegistration2> PutSectionRegistrationAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.SectionRegistration2 sectionRegistration)
         {
             try
             {
+                _sectionRegistrationService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(guid))
                 {
                     throw new ArgumentNullException("Null sectionRegistration guid", "guid is a required property.");
@@ -561,7 +569,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 AddEthosContextProperties(dpList,
                     await _sectionRegistrationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { guid }));
 
-                return sectionRegistrationReturn;  
+                return sectionRegistrationReturn;
 
             }
             catch (PermissionsException e)
@@ -617,11 +625,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">Id of the SectionRegistration</param>
         /// <param name="sectionRegistration">DTO of the SectionRegistration</param>
         /// <returns>A SectionRegistration <see cref="Dtos.SectionRegistration3"/> object</returns>
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(SectionPermissionCodes.UpdateRegistrations)]
         public async Task<Dtos.SectionRegistration3> PutSectionRegistration2Async([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.SectionRegistration3 sectionRegistration)
         {
             try
             {
+                _sectionRegistrationService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(guid))
                 {
                     throw new ArgumentNullException("Null sectionRegistration guid", "guid is a required property.");
@@ -715,11 +724,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="sectionRegistration">DTO of the SectionRegistration</param>
         /// <returns>A SectionRegistration <see cref="Dtos.SectionRegistration4"/> object</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(SectionPermissionCodes.UpdateRegistrations)]
         public async Task<Dtos.SectionRegistration4> PutSectionRegistrations3Async([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.SectionRegistration4 sectionRegistration)
         {
             try
             {
+                _sectionRegistrationService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(guid))
                 {
                     throw new ArgumentNullException("Null sectionRegistration guid", "guid is a required property.");
@@ -815,11 +825,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="sectionRegistration">A SectionRegistration <see cref="Dtos.SectionRegistration2"/> object</param>
         /// <returns>A SectionRegistration <see cref="Dtos.SectionRegistration2"/> object</returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(SectionPermissionCodes.UpdateRegistrations)]
         public async Task<Dtos.SectionRegistration2> PostSectionRegistrationAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.SectionRegistration2 sectionRegistration)
         {
             try
             {
+                _sectionRegistrationService.ValidatePermissions(GetPermissionsMetaData());
                 if (sectionRegistration == null)
                 {
                     throw new ArgumentNullException("Null sectionRegistration argument", "The request body is required.");
@@ -904,11 +915,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="sectionRegistration">A SectionRegistration <see cref="Dtos.SectionRegistration3"/> object</param>
         /// <returns>A SectionRegistration <see cref="Dtos.SectionRegistration3"/> object</returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(SectionPermissionCodes.UpdateRegistrations)]
         public async Task<Dtos.SectionRegistration3> PostSectionRegistration2Async([ModelBinder(typeof(EedmModelBinder))] Dtos.SectionRegistration3 sectionRegistration)
         {
             try
             {
+                _sectionRegistrationService.ValidatePermissions(GetPermissionsMetaData());
                 if (sectionRegistration == null)
                 {
                     throw new ArgumentNullException("Null sectionRegistration argument", "The request body is required.");
@@ -992,11 +1004,12 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="sectionRegistration">A SectionRegistration <see cref="Dtos.SectionRegistration4"/> object</param>
         /// <returns>A SectionRegistration <see cref="Dtos.SectionRegistration4"/> object</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(SectionPermissionCodes.UpdateRegistrations)]
         public async Task<Dtos.SectionRegistration4> PostSectionRegistrations3Async([ModelBinder(typeof(EedmModelBinder))] Dtos.SectionRegistration4 sectionRegistration)
         {
             try
             {
+                _sectionRegistrationService.ValidatePermissions(GetPermissionsMetaData());
                 if (sectionRegistration == null)
                 {
                     throw new ArgumentNullException("Null sectionRegistration argument", "The request body is required.");

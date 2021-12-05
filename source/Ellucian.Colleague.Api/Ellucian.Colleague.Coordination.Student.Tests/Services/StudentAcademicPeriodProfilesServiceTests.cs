@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -774,7 +774,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 viewStudentAcadPeriodProfileRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentAcademicPeriodProfile));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentAcadPeriodProfileRole });
 
-                studentTermRepositoryMock.Setup(i => i.GetStudentTermByGuidAsync("1234")).ReturnsAsync(null);
+                studentTermRepositoryMock.Setup(i => i.GetStudentTermByGuidAsync("1234")).ReturnsAsync(() => null);
 
                 var actual = await studentAcademicPeriodProfilesService.GetStudentAcademicPeriodProfileByGuidAsync("1234");
             }

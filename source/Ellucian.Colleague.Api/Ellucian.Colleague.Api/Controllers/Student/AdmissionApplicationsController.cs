@@ -6,6 +6,7 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
@@ -53,7 +54,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="page"></param>
         /// <returns></returns>
-        [HttpGet]
+        [HttpGet,PermissionsFilter(new string[] {StudentPermissionCodes.ViewApplications, StudentPermissionCodes.UpdateApplications})]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetAdmissionApplicationsAsync(Paging page)
@@ -68,6 +69,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _admissionApplicationsService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(200, 0);
@@ -91,7 +93,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException e)
             {
@@ -115,7 +117,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="page"></param>
         /// <returns></returns>
-        [HttpGet]
+        [HttpGet,PermissionsFilter(new string[] { StudentPermissionCodes.ViewApplications, StudentPermissionCodes.UpdateApplications})]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetAdmissionApplications2Async(Paging page)
@@ -130,6 +132,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _admissionApplicationsService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(200, 0);
@@ -152,7 +155,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException e)
             {
@@ -179,7 +182,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="personFilter">PersonFilter Named Query</param>
         /// <returns></returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet]        
+        [HttpGet,PermissionsFilter(new string[] {StudentPermissionCodes.ViewApplications, StudentPermissionCodes.UpdateApplications})]        
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.AdmissionApplication3))]
@@ -205,6 +208,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _admissionApplicationsService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(200, 0);
@@ -256,7 +260,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired admissionApplications</param>
         /// <returns>A admissionApplications object <see cref="Dtos.AdmissionApplication"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] {StudentPermissionCodes.ViewApplications, StudentPermissionCodes.UpdateApplications })]
         public async Task<Dtos.AdmissionApplication> GetAdmissionApplicationsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -275,6 +279,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _admissionApplicationsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                     await _admissionApplicationsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache), 
                     await _admissionApplicationsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -289,7 +294,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException e)
             {
@@ -313,7 +318,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired admissionApplications</param>
         /// <returns>A admissionApplications object <see cref="Dtos.AdmissionApplication2"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] {StudentPermissionCodes.ViewApplications, StudentPermissionCodes.UpdateApplications})]
         public async Task<Dtos.AdmissionApplication2> GetAdmissionApplicationsByGuid2Async(string guid)
         {
             var bypassCache = false;
@@ -332,6 +337,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _admissionApplicationsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                      await _admissionApplicationsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                      await _admissionApplicationsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -346,7 +352,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException e)
             {
@@ -371,7 +377,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID to desired admissionApplications</param>
         /// <returns>A admissionApplications object <see cref="Dtos.AdmissionApplication3"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] {StudentPermissionCodes.ViewApplications , StudentPermissionCodes.UpdateApplications})]
         public async Task<Dtos.AdmissionApplication3> GetAdmissionApplicationsByGuid3Async(string guid)
         {
             var bypassCache = false;
@@ -390,6 +396,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _admissionApplicationsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                      await _admissionApplicationsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                      await _admissionApplicationsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -445,7 +452,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="admissionApplication">DTO of the new admissionApplications</param>
         /// <returns>A admissionApplications object <see cref="Dtos.AdmissionApplication2"/> in HeDM format</returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter,PermissionsFilter(StudentPermissionCodes.UpdateApplications)]
         public async Task<Dtos.AdmissionApplication2> PostAdmissionApplications2Async([ModelBinder(typeof(EedmModelBinder))] Dtos.AdmissionApplication2 admissionApplication)
         {
             var bypassCache = false;
@@ -472,7 +479,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
 
             try
-            {                             
+            {
+                _admissionApplicationsService.ValidatePermissions(GetPermissionsMetaData());
                 //call import extend method that needs the extracted extension data and the config
                 await _admissionApplicationsService.ImportExtendedEthosData(await ExtractExtendedData(await _admissionApplicationsService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
@@ -492,7 +500,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -541,7 +549,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID of the admissionApplications to update</param>
         /// <param name="admissionApplication">DTO of the updated admissionApplications</param>
         /// <returns>A AdmissionApplications object <see cref="Dtos.AdmissionApplication2"/> in EEDM format</returns>
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.UpdateApplications)]
         public async Task<Dtos.AdmissionApplication2> PutAdmissionApplications2Async([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.AdmissionApplication2 admissionApplication)
         {
             var bypassCache = false;
@@ -579,7 +587,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
-               
+                _admissionApplicationsService.ValidatePermissions(GetPermissionsMetaData());
                 //get Data Privacy List
                 var dpList = await _admissionApplicationsService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
@@ -599,7 +607,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {

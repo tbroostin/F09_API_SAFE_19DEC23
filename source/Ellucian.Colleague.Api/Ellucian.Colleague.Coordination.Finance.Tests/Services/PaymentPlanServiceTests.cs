@@ -2349,7 +2349,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
             arRepo = arRepoMock.Object;
             arRepoMock.Setup(repo => repo.GetDistribution(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Returns("BANK");
             arRepoMock.Setup(repo => repo.ReceivableTypes).Returns(allReceivableTypes);
-            arRepoMock.Setup(repo => repo.GetAccountHolder(It.IsAny<string>())).Returns(accountHolder);
+            arRepoMock.Setup(repo => repo.GetAccountHolderAsync(It.IsAny<string>(), false)).ReturnsAsync(accountHolder);
             arRepoMock.Setup(repo => repo.ChargeCodes).Returns(allChargeCodes);
 
             payRepoMock = new Mock<IPaymentRepository>();

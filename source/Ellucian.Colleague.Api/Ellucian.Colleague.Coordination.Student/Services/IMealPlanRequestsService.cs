@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -15,7 +15,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.MealPlanRequests>, int>> GetMealPlanRequestsAsync(int offset, int limit, bool bypassCache = false);
 
-        Task<Ellucian.Colleague.Dtos.MealPlanRequests> GetMealPlanRequestsByGuidAsync(string guid);
+        Task<Ellucian.Colleague.Dtos.MealPlanRequests> GetMealPlanRequestsByGuidAsync(string guid, bool bypassCache = false);
 
         Task<Dtos.MealPlanRequests> PutMealPlanRequestsAsync(string guid, Dtos.MealPlanRequests MealPlanRequestsDto);
 

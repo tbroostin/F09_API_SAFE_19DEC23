@@ -183,7 +183,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(Exception))]
             public async Task created_response_is_null()
             {
-                mockManager.Setup(mgr => mgr.ExecuteAsync<CreateStudentRequestRequest, CreateStudentRequestResponse>(It.Is<CreateStudentRequestRequest>(r => !string.IsNullOrEmpty(r.StudentId)))).ReturnsAsync(null);
+                mockManager.Setup(mgr => mgr.ExecuteAsync<CreateStudentRequestRequest, CreateStudentRequestResponse>(It.Is<CreateStudentRequestRequest>(r => !string.IsNullOrEmpty(r.StudentId)))).ReturnsAsync(() => null);
                 StudentTranscriptRequest newRequest = new StudentTranscriptRequest("11111", "my name","UG");
                 newRequest.HoldRequest = "OTHER";
                 newRequest.Id = "";
@@ -352,7 +352,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(Exception))]
             public async Task created_response_is_null()
             {
-                mockManager.Setup(mgr => mgr.ExecuteAsync<CreateStudentRequestRequest, CreateStudentRequestResponse>(It.Is<CreateStudentRequestRequest>(r => !string.IsNullOrEmpty(r.StudentId)))).ReturnsAsync(null);
+                mockManager.Setup(mgr => mgr.ExecuteAsync<CreateStudentRequestRequest, CreateStudentRequestResponse>(It.Is<CreateStudentRequestRequest>(r => !string.IsNullOrEmpty(r.StudentId)))).ReturnsAsync(() => null);
                 StudentEnrollmentRequest newRequest = new StudentEnrollmentRequest("11111", "my name");
                 newRequest.HoldRequest = "OTHER";
                 newRequest.Id = "";
@@ -472,7 +472,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task RequestLog_returned_is_null()
             {
-                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<StudentRequestLogs>(It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<StudentRequestLogs>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 var request = await requestRepository.GetAsync("12");
             }
             [TestMethod]
@@ -654,7 +654,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task RequestLog_returned_is_null()
             {
-                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<StudentRequestLogs>(It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<StudentRequestLogs>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 var request = await requestRepository.GetAsync("12");
             }
             [TestMethod]
@@ -783,7 +783,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task RequestLogs_ReturnsEmptyList_WhenDataReaderNull()
             {
-                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentRequestLogs>(It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentRequestLogs>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 var requests = await requestRepository.GetStudentRequestsAsync("11111");
                 Assert.AreEqual(0, requests.Count());
             }

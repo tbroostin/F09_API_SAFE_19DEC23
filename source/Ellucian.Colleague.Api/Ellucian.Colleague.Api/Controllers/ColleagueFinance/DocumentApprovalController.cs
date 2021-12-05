@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -112,6 +112,39 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(ex, ex.Message);
                 throw CreateHttpResponseException("Unable to update a document approval.", HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves documents approved by the user.
+        /// </summary>
+        /// <param name="filterCriteria">Approved documents filter criteria.</param>
+        /// <returns>List of document approved DTOs.</returns>
+        /// <accessComments>
+        /// Requires permission VIEW.DOCUMENT.APPROVAL.
+        /// </accessComments>
+        [HttpPost]
+        public async Task<IEnumerable<Dtos.ColleagueFinance.ApprovedDocument>> QueryApprovedDocumentsAsync([FromBody] Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria filterCriteria)
+        {
+            try
+            {
+                return await documentApprovalService.QueryApprovedDocumentsAsync(filterCriteria);
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex, "Insufficient permissions to get the approved documents.");
+                throw CreateHttpResponseException("Insufficient permissions to get the approved documents.", HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException argex)
+            {
+                logger.Error(argex, "Unable to get approved documents.");
+                throw CreateHttpResponseException("Unable to get approved documents.", HttpStatusCode.BadRequest);
+            }
+            // Application exceptions will be caught below.
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get approved documents.");
+                throw CreateHttpResponseException("Unable to get approved documents.", HttpStatusCode.BadRequest);
             }
         }
     }

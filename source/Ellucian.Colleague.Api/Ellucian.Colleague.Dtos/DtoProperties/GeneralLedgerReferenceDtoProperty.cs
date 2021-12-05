@@ -15,13 +15,13 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         /// <summary>
         /// A string that identifies a person associated with the transaction.
         /// </summary>
-        [JsonProperty("person", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [JsonProperty("person", DefaultValueHandling = DefaultValueHandling.Ignore, NullValueHandling = NullValueHandling.Ignore)]
         public GuidObject2 Person { get; set; }
 
         /// <summary>
         /// Reference Organization
         /// </summary>
-        [JsonProperty("organization", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [JsonProperty("organization", DefaultValueHandling = DefaultValueHandling.Ignore, NullValueHandling = NullValueHandling.Ignore)]
         public GuidObject2 Organization { get; set; }
     }
 }

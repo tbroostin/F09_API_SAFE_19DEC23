@@ -1,8 +1,6 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 
 namespace Ellucian.Colleague.Domain.HumanResources.Entities
 {
@@ -20,11 +18,6 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         public string Id { get { return id; } }
         private readonly string id;
 
-        /// <summary>
-        /// The arrangement database Guid
-        /// </summary>
-        public string ArrangementGuid { get; set; }
-        
         /// <summary>
         /// The arrangement database Id
         /// </summary>
@@ -55,11 +48,10 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// <param name="id">id of the record</param>
         /// <param name="guid">guid for the record</param>
         /// <param name="arrangementId">id for the arrangment</param>
-        /// <param name="arrangementGuid">guid for the arrangement</param>
         /// <param name="deductionDate">deduction date of the contribution</param>
         /// <param name="currencyCountry">currency country</param>
         /// <param name="amount">amount of the deduction</param>
-        public PayrollDeduction(string guid, string id, string arrangementId, string arrangementGuid, DateTime deductionDate, string currencyCountry, decimal amount)
+        public PayrollDeduction(string guid, string id, string arrangementId,  DateTime deductionDate, string currencyCountry, decimal amount)
         {
             if (string.IsNullOrEmpty(guid))
             {
@@ -76,11 +68,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
                 throw new ArgumentException("Arrangement Id is required to create a new PayrollDeduction");
             }
 
-            if (string.IsNullOrEmpty(arrangementGuid))
-            {
-                throw new ArgumentException("Arrangement Guid is required to create a new PayrollDeduction");
-            }
-
+          
             if (string.IsNullOrEmpty(currencyCountry))
             {
                 throw new ArgumentException("Country Currency is required to create a new PayrollDeduction");
@@ -93,8 +81,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
 
             Guid = guid;
             this.id = id;
-            this.arrangementId = arrangementId;
-            ArrangementGuid = arrangementGuid;
+            this.arrangementId = arrangementId;          
             this.deductionDate = deductionDate;
             this.amountCountry = currencyCountry;
             this.amount = amount;

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Base.Tests.UserFactories;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -122,7 +122,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 workflowGroupEntities.ElementAt(k).AddWorkflow(workflowEntities.ElementAt(k));
             }
-            proxyConfig = new Domain.Base.Entities.ProxyConfiguration(true, "", "", true, true);
+            proxyConfig = new Domain.Base.Entities.ProxyConfiguration(true, "", "", true, true, new List<Domain.Base.Entities.ProxyAndUserPermissionsMap>());
             //Add workflow groups to proxy config
             for (var j = 0; j < workflowGroupEntities.Count(); j++)
             {

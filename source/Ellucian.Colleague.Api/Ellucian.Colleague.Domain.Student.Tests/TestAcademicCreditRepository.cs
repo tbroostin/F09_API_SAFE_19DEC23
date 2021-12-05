@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using System;
@@ -140,7 +140,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         {"121","MATH-300BB","Calculus AP","D","3.00","I","2010/SP","B", "3", "10", "7435", "9001","0.00","3.00", "", "", "", "", "", "","G",   "001", "","3.00"}, //dropped with Grade 2010/SP
         {"122","MATH-300BB","Calculus AP","D","3.00","I","2018/SP","",  "4", "12", "7435", "9002","0.00","3.00", "", "", "", "", "", "","G",   "001", "","3.00"}, //dropped no grade 2017/SP
         {"123","MATH-300BB","Calculus AP","N","3.00","I","2018/FA","A", "4", "12", "7435", "9002","0.00","3.00", "", "", "", "", "", "","G",   "001", "","3.00"}, //COMPLETED course for 2018/FA
-        {"124","MATH-300BB","Calculus AP","N","3.00","I","2019/SP","",  "",  "0",  "7435", "9002","0.00","0.00", "", "", "", "", "", "","G",   "001", "","0.00"}, //INPROGRESS course for 2019/SP
+        {"124","MATH-300BB","Calculus AP","N","3.00","I","2019/SP","",  "",  "0",  "7435", "9002","0.00","0.00", "", "", "", "", "", "","G",   "001", "0.00","0.00"}, //INPROGRESS course for 2019/SP
 
         //credits for in.list.order tests
         {"130","FREN-100","fRENCH BASICS",             "N","3.00","I","2015/FA","",  "",  "0",  "7441", "9003","0.00","0.00", "", "", "", "", "", "","G",   "001", "","0.00"},
@@ -696,6 +696,12 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
 
         public Task<IEnumerable<AcademicCredit>> FilterAcademicCreditsAsync(IEnumerable<AcademicCredit> acadCredits, string criteria)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task<IEnumerable<StudentAnonymousGrading>> GetAnonymousGradingIdsAsync(AnonymousGradingType anonymousGradingType,
+            string studentId, List<string> termIds, List<string> sectionIds)
         {
             throw new NotImplementedException();
         }

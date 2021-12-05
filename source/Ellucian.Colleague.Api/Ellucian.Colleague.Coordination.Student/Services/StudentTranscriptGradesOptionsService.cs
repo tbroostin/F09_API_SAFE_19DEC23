@@ -1,4 +1,4 @@
-﻿//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -59,11 +59,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.StudentTranscriptGradesOptions>, int>> GetStudentTranscriptGradesOptionsAsync(int offset,
             int limit, Dtos.Filters.StudentFilter studentFilter, bool bypassCache = false)
         {
-            if (!await CheckViewStudentTranscriptGradesPermission())
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view student transcript grades.");
-            }
-
+         
             string studentGuid = string.Empty;
             if (studentFilter != null)
             {
@@ -126,12 +122,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new ArgumentNullException("guid", "A GUID is required to obtain a student transcript grade.");
             }
-
-            if (!await CheckViewStudentTranscriptGradesPermission())
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view student transcript grades.");
-            }
-
             try
             {
                 Ellucian.Colleague.Domain.Student.Entities.StudentTranscriptGradesOptions StudentTranscriptGradesOptionsEntity = null;
@@ -232,6 +222,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     gradeSchemeObject.Title = gradeSchemes.Description;
                 }
             }
+            
             return gradeSchemeObject;
         }
 
@@ -268,6 +259,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             gradesObject.Grade = new GuidObject2(grade.Guid);
                             gradesObject.Value = grade.LetterGrade;
                             gradesCollection.Add(gradesObject);
+                            if (!string.IsNullOrEmpty(grade.IncompleteGrade))
+                            {
+                                var incompleteGrade = entity.FirstOrDefault(i => i.Id.Equals(grade.IncompleteGrade));
+                                if (incompleteGrade != null && !string.IsNullOrEmpty(incompleteGrade.Guid))
+                                {
+                                    gradesObject.IncompleteGrade = new StudentTranscriptGradesIncompleteGrade()
+                                    {
+                                        FinalGrade = new GuidObject2(incompleteGrade.Guid)
+                                    };
+                                }
+                            }
                         }
                     }
                 }
@@ -300,23 +302,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         #endregion
 
-        #region Permission Check
-
-        /// <summary>
-        /// Permissions code that allows an external system to perform the READ operation.
-        /// </summary>
-        /// <returns></returns>
-        private async Task<bool> CheckViewStudentTranscriptGradesPermission()
-        {
-            IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
-            if (userPermissions.Contains(StudentPermissionCodes.ViewStudentTranscriptGrades) || userPermissions.Contains(StudentPermissionCodes.UpdateStudentTranscriptGradesAdjustments))
-            {
-                return true;
-            }
-            return false;
-        }
-
-        #endregion
-
+   
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -11,6 +11,7 @@ using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Planning.Services;
 using Ellucian.Colleague.Dtos.Planning;
+using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
 using Ellucian.Web.Security;
@@ -44,10 +45,10 @@ namespace Ellucian.Colleague.Api.Controllers.Planning
         }
 
         /// <summary>
-        /// Posts a <see cref="Dtos.Planning.CompletedAdvisement">completed advisement</see>
+        /// Posts a <see cref="Dtos.Student.CompletedAdvisement">completed advisement</see>
         /// </summary>
         /// <param name="studentId">ID of the student whose advisement is being marked complete</param>
-        /// <param name="completeAdvisement">A <see cref="Dtos.Planning.CompletedAdvisement">completed advisement</see></param>
+        /// <param name="completeAdvisement">A <see cref="Dtos.Student.CompletedAdvisement">completed advisement</see></param>
         /// <returns>An <see cref="Dtos.Planning.Advisee">advisee</see></returns>
         [HttpPost]
         public async Task<Advisee> PostCompletedAdvisementAsync(string studentId, [FromBody]CompletedAdvisement completeAdvisement)

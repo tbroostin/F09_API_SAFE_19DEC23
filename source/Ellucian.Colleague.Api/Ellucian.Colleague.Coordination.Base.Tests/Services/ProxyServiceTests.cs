@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Adapters;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Base.Tests.UserFactories;
@@ -54,7 +54,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             // Instantiate mock and fake objects used to construct the service
             proxyRepoMock = new Mock<IProxyRepository>();
             proxyRepo = proxyRepoMock.Object;
-            configEntity = new Domain.Base.Entities.ProxyConfiguration(true, "DISCLOSURE.ID", "EMAIL.ID", true, true) { DisclosureReleaseText = "Line 1" };
+            configEntity = new Domain.Base.Entities.ProxyConfiguration(true, "DISCLOSURE.ID", "EMAIL.ID", true, true, new List<Domain.Base.Entities.ProxyAndUserPermissionsMap>() {   new Domain.Base.Entities.ProxyAndUserPermissionsMap("10", "APPROVE.REJECT.LEAVE.REQUEST", "TMLA"),
+                  new Domain.Base.Entities.ProxyAndUserPermissionsMap("11", "APPROVE.REJECT.TIME.ENTRY", "TMTA")}) { DisclosureReleaseText = "Line 1" };
             var configEntityGroup = new Domain.Base.Entities.ProxyWorkflowGroup("SF", "Student Finance");
             configEntityGroup.AddWorkflow(new Domain.Base.Entities.ProxyWorkflow("SFAA", "Student Finance Account Activity", "SF", true));
             configEntityGroup.AddWorkflow(new Domain.Base.Entities.ProxyWorkflow("SFMAP", "Student Finance Make a Payment", "SF", true));
@@ -69,12 +70,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             permissionEntities = new List<Domain.Base.Entities.ProxyAccessPermission>()
             {
-                new Domain.Base.Entities.ProxyAccessPermission("32", "0001234", "0003316", "SFMAP", DateTime.Parse("08/21/2015")),
-                new Domain.Base.Entities.ProxyAccessPermission("33", "0001234", "0003316", "SFAA", DateTime.Parse("08/21/2015")),
-                new Domain.Base.Entities.ProxyAccessPermission("34", "0001234", "0004000", "SFMAP", DateTime.Parse("08/25/2015")),
-                new Domain.Base.Entities.ProxyAccessPermission("35", "0001234", "0004000", "SFAA", DateTime.Parse("08/25/2015")),
-                new Domain.Base.Entities.ProxyAccessPermission("35", "0003316", "0000001", "SFAA", DateTime.Parse("08/25/2015")),
-                new Domain.Base.Entities.ProxyAccessPermission("35", "0004000", "0000001", "SFAA", DateTime.Parse("08/25/2015"))
+                new Domain.Base.Entities.ProxyAccessPermission("32", "0001234", "0003316", "SFMAP", DateTime.Parse("08/21/2015"), DateTime.Parse("08/22/2015")),
+                new Domain.Base.Entities.ProxyAccessPermission("33", "0001234", "0003316", "SFAA", DateTime.Parse("08/21/2015"), DateTime.Parse("08/22/2015")),
+                new Domain.Base.Entities.ProxyAccessPermission("34", "0001234", "0004000", "SFMAP", DateTime.Parse("08/25/2015"), DateTime.Parse("08/26/2015")),
+                new Domain.Base.Entities.ProxyAccessPermission("35", "0001234", "0004000", "SFAA", DateTime.Parse("08/25/2015"), DateTime.Parse("08/26/2015")),
+                new Domain.Base.Entities.ProxyAccessPermission("35", "0003316", "0000001", "SFAA", DateTime.Parse("08/25/2015"), DateTime.Parse("08/26/2015")),
+                new Domain.Base.Entities.ProxyAccessPermission("35", "0004000", "0000001", "SFAA", DateTime.Parse("08/25/2015"), DateTime.Parse("08/26/2015"))
             };
 
             userEntities = new List<Domain.Base.Entities.ProxyUser>()
@@ -88,7 +89,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             userEntities[1].AddPermission(permissionEntities[3]);
 
             proxyRepoMock.Setup<Task<Domain.Base.Entities.ProxyConfiguration>>(repo => repo.GetProxyConfigurationAsync()).ReturnsAsync(configEntity);
-            proxyRepoMock.Setup<Task<IEnumerable<Domain.Base.Entities.ProxyUser>>>(repo => repo.GetUserProxyPermissionsAsync(It.IsAny<string>())).ReturnsAsync(userEntities);
+            proxyRepoMock.Setup<Task<IEnumerable<Domain.Base.Entities.ProxyUser>>>(repo => repo.GetUserProxyPermissionsAsync(It.IsAny<string>(), false)).ReturnsAsync(userEntities);
 
             adapterRegistryMock = new Mock<IAdapterRegistry>();
             adapterRegistry = adapterRegistryMock.Object;
@@ -238,6 +239,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Assert.AreEqual(configEntity.ProxyIsEnabled, config.ProxyIsEnabled);
                 Assert.AreEqual(configEntity.DisclosureReleaseDocumentId, config.DisclosureReleaseDocumentId);
                 CollectionAssert.AreEqual(configEntity.DisclosureReleaseText.ToList(), config.DisclosureReleaseText.ToList());
+                Assert.AreEqual(configEntity.ProxyAndUserPermissionsMap.Count(), config.ProxyAndUserPermissionsMap.Count());
                 Assert.AreEqual(configEntity.ProxyEmailDocumentId, config.ProxyEmailDocumentId);
                 Assert.AreEqual(configEntity.WorkflowGroups.Count(), config.WorkflowGroups.Count());
                 Assert.AreEqual(configEntity.RelationshipTypeCodes.Count(), config.RelationshipTypeCodes.Count());
@@ -440,7 +442,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
 
                 var mockProxyRepoWithNullConfiguration = new Mock<IProxyRepository>();
-                mockProxyRepoWithNullConfiguration.Setup(repo => repo.GetProxyConfigurationAsync()).ReturnsAsync(null);
+                mockProxyRepoWithNullConfiguration.Setup(repo => repo.GetProxyConfigurationAsync()).ReturnsAsync(() => null);
                 var proxyRepoWithNullConfiguration = mockProxyRepoWithNullConfiguration.Object;
                 var proxyServiceWithoutProxyConfiguration = new ProxyService(proxyRepoWithNullConfiguration, profileRepo, personProxyUserRepo, adapterRegistry, currentUserFactory, roleRepo, logger);
                 var user = new PersonProxyUser();
@@ -460,7 +462,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             public async Task ProxyService_PostPersonProxyUserAsync_AddUserConfigurationDisabled_ThrowsException()
             {
 
-                var disabledConfiguration = new Domain.Base.Entities.ProxyConfiguration(true, "DOCID", "EMAILID", false, false);
+                var disabledConfiguration = new Domain.Base.Entities.ProxyConfiguration(true, "DOCID", "EMAILID", false, false, new List<Domain.Base.Entities.ProxyAndUserPermissionsMap>());
                 var mockProxyRepoWithDisabledConfiguration = new Mock<IProxyRepository>();
                 mockProxyRepoWithDisabledConfiguration.Setup(repo => repo.GetProxyConfigurationAsync()).ReturnsAsync(disabledConfiguration);
                 var proxyRepoWithDisabledConfiguration = mockProxyRepoWithDisabledConfiguration.Object;

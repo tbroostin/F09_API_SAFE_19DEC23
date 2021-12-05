@@ -5,6 +5,7 @@ using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
@@ -56,7 +57,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="personFilter">Selection from SaveListParms definition or person-filters.</param>
         /// <returns>List of ProspectOpportunities <see cref="Dtos.ProspectOpportunities"/> objects representing matching prospectOpportunities</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewProspectOpportunity, StudentPermissionCodes.UpdateProspectOpportunity })]
         [QueryStringFilterFilter("criteria", typeof(Dtos.ProspectOpportunities))]
         [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter2))]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
@@ -73,6 +74,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _prospectOpportunitiesService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -141,7 +143,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID to desired prospectOpportunities</param>
         /// <returns>A prospectOpportunities object <see cref="Dtos.ProspectOpportunities"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewProspectOpportunity, StudentPermissionCodes.UpdateProspectOpportunity })]
         public async Task<Dtos.ProspectOpportunities> GetProspectOpportunitiesByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -159,6 +161,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _prospectOpportunitiesService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                    await _prospectOpportunitiesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                    await _prospectOpportunitiesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -350,6 +353,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             try
             {
                 var dpList = await _prospectOpportunitiesService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
+
+                await _prospectOpportunitiesService.ImportExtendedEthosData(await ExtractExtendedData(await _prospectOpportunitiesService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
                 var prospectOpportunitiesReturn = await _prospectOpportunitiesService.UpdateProspectOpportunitiesSubmissionsAsync(
                   await PerformPartialPayloadMerge(prospectOpportunities, async () => await _prospectOpportunitiesService.GetProspectOpportunitiesSubmissionsByGuidAsync(guid, true),

@@ -17,9 +17,39 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public string ResourceName { get; set; }
 
         /// <summary>
+        /// API type (Subroutine, API, Extension, Transaction)
+        /// </summary>
+        public string ApiType { get; set; }
+
+        /// <summary>
+        /// Process ID when type is Subroutine or Transaction
+        /// </summary>
+        public string ProcessId { get; set; }
+
+        /// <summary>
+        /// Name of the Parent Resource (making this an alternate representation)
+        /// </summary>
+        public string ParentResourceName { get; set; }
+
+        /// <summary>
         /// Primary Entity Name
         /// </summary>
         public string PrimaryEntity { get; set; }
+
+        /// <summary>
+        /// Primary Key Name
+        /// </summary>
+        public string PrimaryKeyName { get; set; }
+
+        /// <summary>
+        /// Secondary Key Name
+        /// </summary>
+        public string SecondaryKeyName { get; set; }
+
+        /// <summary>
+        /// Secondary Key Position
+        /// </summary>
+        public int? SecondaryKeyPosition { get; set; }
 
         /// <summary>
         /// Primary Validation Table Application

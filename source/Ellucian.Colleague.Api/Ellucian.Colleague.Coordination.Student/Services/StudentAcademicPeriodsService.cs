@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -6,7 +6,6 @@ using System.Linq;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using slf4net;
-using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
@@ -25,9 +24,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
     {
         private readonly IStudentAcademicPeriodRepository _studentAcademicPeriodRepository;
         private readonly IStudentRepository _studentRepository;
-        private readonly IStudentReferenceDataRepository _studentReferenceDataRepository;     
+        private readonly IStudentReferenceDataRepository _studentReferenceDataRepository;
         private readonly ITermRepository _termRepository;
-        private readonly IPersonRepository _personRepository;       
+        private readonly IPersonRepository _personRepository;
         private readonly IReferenceDataRepository _referenceDataRepository;
         private readonly IConfigurationRepository _configurationRepository;
         private ILogger _logger;
@@ -65,7 +64,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             return _studentLoad;
         }
-    
+
         private IEnumerable<Domain.Student.Entities.Term> _terms = null;
 
         private async Task<IEnumerable<Domain.Student.Entities.Term>> GetTermsAsync(bool bypassCache)
@@ -91,7 +90,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new ArgumentNullException("guid", "GUID is required to get a student-academic-periods.");
             }
-            CheckGetStudentAcademicPeriodsPermission();
+
             try
             {
                 StudentAcademicPeriod studentTermEntity = null;
@@ -134,14 +133,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="limit">Limit for paging results</param>
         /// <param name="bypassCache">Flag to bypass cache</param>
         /// <returns>List of StudentAcademicPeriods <see cref="Dtos.StudentAcademicPeriods"/> objects representing matching student-academic-periods</returns>
-        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.StudentAcademicPeriods>, int>> GetStudentAcademicPeriodsAsync(int offset, int limit, 
+        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.StudentAcademicPeriods>, int>> GetStudentAcademicPeriodsAsync(int offset, int limit,
             string personFilter = "", StudentAcademicPeriods filter = null, bool bypassCache = false)
         {
-            //check permissions
-            CheckGetStudentAcademicPeriodsPermission();
-
             try
-            {  
+            {
                 #region convert filters
                 // Convert and validate all input parameters
                 var newPerson = string.Empty;
@@ -180,7 +176,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         catch (Exception)
                         {
                             return new Tuple<IEnumerable<Dtos.StudentAcademicPeriods>, int>(new List<Dtos.StudentAcademicPeriods>(), 0);
-                        }                   
+                        }
                     }
 
                     if (filter.AcademicStatuses != null && filter.AcademicStatuses.Any())
@@ -254,7 +250,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         return new Tuple<IEnumerable<Dtos.StudentAcademicPeriods>, int>(await ConvertStudentTermEntityToStudentAcademicPeriodsDto(studentAcadProgEntities.ToList(), bypassCache), totalCount);
                     }
-                  
+
                     return new Tuple<IEnumerable<Dtos.StudentAcademicPeriods>, int>(new List<Dtos.StudentAcademicPeriods>(), totalCount);
                 }
 
@@ -286,7 +282,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var studentAcadPeriodProfileDtos = new List<Colleague.Dtos.StudentAcademicPeriods>();
 
             try
-            {               
+            {
                 var ids = new List<string>();
                 ids.AddRange(studentAcademicPeriods.Where(p => (!string.IsNullOrEmpty(p.StudentId)))
                     .Select(p => p.StudentId).Distinct().ToList());
@@ -294,13 +290,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 foreach (var studentAcademicPeriod in studentAcademicPeriods)
                 {
-                    
+
                     var studentAcadPeriodProfileDto = new Colleague.Dtos.StudentAcademicPeriods();
 
                     if (string.IsNullOrEmpty(studentAcademicPeriod.Guid))
-                         IntegrationApiExceptionAddError(string.Format("No student-academic-periods guid found for student id '{0}, term id '{1}'.", 
-                             studentAcademicPeriod.StudentId, studentAcademicPeriod.Term),
-                                 "Validation.Exception", studentAcademicPeriod.Guid);                       
+                        IntegrationApiExceptionAddError(string.Format("No student-academic-periods guid found for student id '{0}, term id '{1}'.",
+                            studentAcademicPeriod.StudentId, studentAcademicPeriod.Term),
+                                "Validation.Exception", studentAcademicPeriod.Guid);
                     else
                         studentAcadPeriodProfileDto.Id = studentAcademicPeriod.Guid;
 
@@ -319,7 +315,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         }
                     }
 
-                 
+
                     #region person
                     if (string.IsNullOrEmpty(studentAcademicPeriod.StudentId))
                     {
@@ -462,20 +458,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             return studentAcadPeriodProfileDtos;
 
-        }
-
-        /// <summary>
-        /// Helper method to determine if the user has permission to view Student Academic Periods.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckGetStudentAcademicPeriodsPermission()
-        {
-            var hasPermission = HasPermission(StudentPermissionCodes.ViewStudentAcademicPeriods);
-
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view student-academic-periods.");
-            }
         }
     }
 }

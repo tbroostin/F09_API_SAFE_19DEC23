@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -43,9 +43,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         public void Initialize()
         {
             eventRepositoryMock = new Mock<IEventRepository>();
-            
+
             adapterRegistryMock = new Mock<IAdapterRegistry>();
-            
+
             loggerMock = new Mock<ILogger>();
             roleRepositoryMock = new Mock<IRoleRepository>();
 
@@ -64,9 +64,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         [TestCleanup]
         public void Cleanup()
         {
-   
+
             allCals = null;
-            
+
             eventDtoAdapter = null;
             eventService = null;
         }
@@ -85,7 +85,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
 
             [TestMethod]
-            public void GetSectionEvents_ValidSingleSectionWithEvents() {
+            public void GetSectionEvents_ValidSingleSectionWithEvents()
+            {
                 string secId = "1111111";
                 List<string> secIds = new List<string>() { secId };
                 var csEvents = allCals.Where(c => c.Pointer == secId && c.Type == "CS");
@@ -132,7 +133,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            public void GetSectionEvents_ValidMultipleSectionsWithEvents() {
+            public void GetSectionEvents_ValidMultipleSectionsWithEvents()
+            {
                 string secId1 = "1111111";
                 string secId2 = "2222222";
                 List<string> secIds = new List<string>() { secId1, secId2 };
@@ -144,7 +146,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            public void GetSectionEvents_InvalidSection() {
+            public void GetSectionEvents_InvalidSection()
+            {
                 string secId = "9999999";
                 List<string> secIds = new List<string>() { secId };
                 eventRepositoryMock.Setup(repo => repo.Get("CS", secIds, null, null)).Returns(allCals.Where(c => c.Pointer == secId && c.Type == "CS"));
@@ -184,10 +187,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             //[TestCleanup]
             //public void Cleanup()
             //{
-        
+
             //    allCals = null;
             //    testUTCCals = null;
-          
+
             //    eventDtoAdapter = null;
             //    eventService = null;
             //}
@@ -366,7 +369,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             public async Task GetCalendarsTest()
             {
                 var calendarDtos = await eventService.GetCampusCalendarsAsync();
-                Assert.AreEqual(expectedCalendars.Count, calendarDtos.Count());                
+                Assert.AreEqual(expectedCalendars.Count, calendarDtos.Count());
             }
 
             [TestMethod]

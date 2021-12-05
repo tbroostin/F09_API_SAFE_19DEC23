@@ -1,6 +1,7 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Coordination.Student.Adapters;
 using Ellucian.Colleague.Data.Student.Repositories;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -202,6 +203,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="bestFit">Optional, true assigns a term to any non-term section based on the section start date. Defaults to false.</param>
         /// <param name="useCache">Flag indicating whether or not to use cached <see cref="Section3">course section</see> data. Defaults to true.</param>
         /// <returns>Collection of requested Section3 DTOs</returns>
+        [Obsolete("Obsolete as of API 1.31. Use latest version of this method.")]
         public async Task<PrivacyWrapper<IEnumerable<Ellucian.Colleague.Dtos.Student.Section3>>> GetFacultySections4Async(string facultyId, DateTime? startDate, DateTime? endDate, bool bestFit, bool useCache = true)
         {
             // Note - there is no permissions or current user check.  Anyone can see section information that is filtered by a faculty Id and either a date range or the default limiting parameters. 
@@ -300,6 +302,116 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             return BuildPrivacyWrappedSection3Dto(sectionEntities);
         }
+
+        /// <summary>
+        /// Get a list of sections taught by faculty ID based on a date range or system parameters. If a start date is not specified sections will be returned based on 
+        /// the allowed terms specified on Registration Web Parameters (RGWP), Class Schedule Web Parameters (CSWP) and Grading Web Parameters (GRWP).
+        /// </summary>
+        /// <param name="facultyId">A faculty ID - if not supplied an empty list of sections is returned.</param>
+        /// <param name="startDate">Optional, startDate, ISO-8601, yyyy-mm-dd</param>
+        /// <param name="endDate">Optional, endDate, ISO-8601, yyyy-mm-dd. If a start date is specified but end date is not, it will default to 90 days past start date. It must be greater than start date if specified, otherwise it will default to 90 days past start.</param>
+        /// <param name="bestFit">Optional, true assigns a term to any non-term section based on the section start date. Defaults to false.</param>
+        /// <param name="useCache">Flag indicating whether or not to use cached <see cref="Section3">course section</see> data. Defaults to true.</param>
+        /// <returns>Collection of requested Section3 DTOs</returns>
+        public async Task<PrivacyWrapper<IEnumerable<Ellucian.Colleague.Dtos.Student.Section4>>> GetFacultySections5Async(string facultyId, DateTime? startDate, DateTime? endDate, bool bestFit, bool useCache = true)
+        {
+            // Note - there is no permissions or current user check.  Anyone can see section information that is filtered by a faculty Id and either a date range or the default limiting parameters. 
+            // Which means it is really a query of sections...
+
+            if (string.IsNullOrEmpty(facultyId))
+            {
+                return new PrivacyWrapper<IEnumerable<Section4>>(new List<Section4>(), false);
+            }
+            if (startDate.HasValue && (!endDate.HasValue || endDate.Value < startDate))
+            {
+                endDate = startDate.Value.AddDays(90.0);
+            }
+            var registrationTerms = await _termRepository.GetRegistrationTermsAsync();
+            var allTerms = await _termRepository.GetAsync();
+
+            List<Domain.Student.Entities.Section> sectionEntities = new List<Domain.Student.Entities.Section>();
+            if (registrationTerms != null && registrationTerms.Any())
+            {
+                if (useCache)
+                {
+                    // Limit the registration sections to only those taught by this faculty Id.
+                    sectionEntities = (await _sectionRepository.GetRegistrationSectionsAsync(registrationTerms)).Where(cs => (cs.FacultyIds.Contains(facultyId))).ToList();
+                    var sectionIds = String.Join(",", sectionEntities.Select(s => s.Id));
+                }
+                else
+                {
+                    sectionEntities = (await _sectionRepository.GetNonCachedFacultySectionsAsync(registrationTerms, facultyId)).ToList();
+                    var sectionIds = String.Join(",", sectionEntities.Select(s => s.Id));
+                }
+            }
+
+            // Gather nonRegistrationTermsToCheck - these are any beyond the terms listed on RGWP.
+            var nonRegistrationTermsToCheck = new List<Domain.Student.Entities.Term>();
+            // If a date range was supplied determine which terms are in the date range but are not on RGWP. For example, this may return the current term, which could have been removed from RGWP if no futher reg actions are allowed (past Drop period)
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                // First reduce the list of registration sections to those within this date range.
+                sectionEntities = sectionEntities.Where(cs => cs.StartDate.CompareTo(endDate.Value) <= 0 && (!cs.EndDate.HasValue || (cs.EndDate.Value.CompareTo(startDate.Value) >= 0))).ToList();
+                // Next find the list of other terms that need to be considered in this date range.
+                foreach (var term in allTerms)
+                {
+                    if (!(term.EndDate.CompareTo(startDate) < 0 || term.StartDate.CompareTo(endDate) > 0))
+                    {
+                        if (!registrationTerms.Contains(term))
+                        {
+                            nonRegistrationTermsToCheck.Add(term);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // If a date range is not specified figure out which terms are on  
+                // Class Schedule Web Parameters (CSWP) and Grading Web Parameters (GRWP) but that are not on RGWP.
+                var gradingConfiguration = await _configurationRepository.GetFacultyGradingConfigurationAsync();
+                var gradingTerms = gradingConfiguration != null && gradingConfiguration.AllowedGradingTerms != null ? gradingConfiguration.AllowedGradingTerms.ToList() : new List<string>();
+                var scheduleTermsValcodes = await _studentReferenceDataRepository.GetAllScheduleTermsAsync(false);
+                var scheduleTerms = scheduleTermsValcodes != null ? scheduleTermsValcodes.Select(st => st.Code).ToList() : new List<string>();
+                var otherTerms = gradingTerms.Union(scheduleTerms).Except(registrationTerms.Select(r => r.Code)).ToList();
+                nonRegistrationTermsToCheck = (from termcode in otherTerms
+                                               join term in allTerms
+                                                   on termcode equals term.Code
+                                                   into joinNonRegTerms
+                                               from resultTerm in joinNonRegTerms
+                                               select resultTerm).ToList();
+
+
+            }
+            if (nonRegistrationTermsToCheck.Count() > 0)
+            {
+                List<Domain.Student.Entities.Section> nonRegTermSectionEntities = (await _sectionRepository.GetNonCachedFacultySectionsAsync(nonRegistrationTermsToCheck, facultyId, bestFit)).ToList();
+                var sectionIds = String.Join(",", nonRegTermSectionEntities.Select(s => s.Id));
+                sectionEntities.AddRange(nonRegTermSectionEntities);
+                sectionEntities = sectionEntities.Distinct().ToList();
+            }
+
+            List<Dtos.Student.Section3> sectionDtos = new List<Dtos.Student.Section3>();
+            var sectionDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Section, Ellucian.Colleague.Dtos.Student.Section3>();
+            var finalSectionIds = String.Join(",", sectionEntities.Select(s => s.Id));
+            foreach (var section in sectionEntities)
+            {
+                if (bestFit && string.IsNullOrEmpty(section.TermId))
+                {
+                    if (allTerms.Count() > 0)
+                    {
+                        var testTerms = allTerms.Where(t => ((t.StartDate.CompareTo(section.StartDate) <= 0 && t.EndDate.CompareTo(section.StartDate) >= 0) ||
+                                (t.StartDate.CompareTo(section.StartDate) >= 0 && (section.EndDate.HasValue && t.StartDate.CompareTo(section.EndDate) <= 0)) ||
+                                (t.StartDate.CompareTo(section.StartDate) >= 0 && !section.EndDate.HasValue)));
+                        if (testTerms.Count() > 0)
+                        {
+                            section.TermId = testTerms.First().Code;
+                        }
+                    }
+                }
+            }
+            return BuildPrivacyWrappedSection4Dto(sectionEntities);
+        }
+
 
         /// <summary>
         /// Get a single faculty by Id
@@ -482,10 +594,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             try
             {
+                var facultyDropRegistrationPermissions = await _facultyRepository.GetFacultyRegistrationEligibilityAsync(CurrentUser.PersonId);
+
                 IEnumerable<string> permissionCodes = await GetUserPermissionCodesAsync();
                 logger.Info("GetFacultyPermissions2: GetUserPermissionCodesAsync returned " + String.Join(", ", permissionCodes.ToArray()));
 
-                Domain.Student.Entities.FacultyPermissions permissionsEntity = new Domain.Student.Entities.FacultyPermissions(permissionCodes);
+                Domain.Student.Entities.FacultyPermissions permissionsEntity = new Domain.Student.Entities.FacultyPermissions(
+                    permissionCodes: permissionCodes, 
+                    isEligibleToDrop: facultyDropRegistrationPermissions.IsEligibleToDrop, 
+                    hasEligibilityOverrides: facultyDropRegistrationPermissions.HasEligibilityOverrides);
+
                 ITypeAdapter<Domain.Student.Entities.FacultyPermissions, Dtos.Student.FacultyPermissions> entityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.FacultyPermissions, Dtos.Student.FacultyPermissions>();
                 Dtos.Student.FacultyPermissions permissionsDto = entityToDtoAdapter.MapToType(permissionsEntity);
                 return permissionsDto;
@@ -618,5 +736,34 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             return new PrivacyWrapper<IEnumerable<Dtos.Student.Section3>>(sectionDtos, hasPrivacyRestriction);
         }
+
+        /// <summary>
+        /// A helper method to transform a set of section domain objects into a set of section DTOs.
+        /// </summary>
+        /// <param name="sections">A set of section domain objects</param>
+        /// <returns>A set of Section DTOs</returns>
+        private PrivacyWrapper<IEnumerable<Ellucian.Colleague.Dtos.Student.Section4>> BuildPrivacyWrappedSection4Dto(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sections)
+        {
+            var sectionDtoAdapter = new SectionEntityToStudentSection4DtoAdapter(_adapterRegistry, logger);
+            var hasPrivacyRestriction = false;
+            List<Dtos.Student.Section4> sectionDtos = new List<Dtos.Student.Section4>();
+
+            foreach (var section in sections)
+            {
+                if (section != null)
+                {
+                    Dtos.Student.Section4 sectionDto = sectionDtoAdapter.MapToType(section);
+                    if (section.FacultyIds == null || !section.FacultyIds.Contains(CurrentUser.PersonId))
+                    {
+                        hasPrivacyRestriction = true;
+                        sectionDto.ActiveStudentIds = new List<string>();
+                    }
+                    sectionDtos.Add(sectionDto);
+                }
+            }
+
+            return new PrivacyWrapper<IEnumerable<Dtos.Student.Section4>>(sectionDtos, hasPrivacyRestriction);
+        }
+
     }
 }

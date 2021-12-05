@@ -1,4 +1,8 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
+
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
@@ -16,6 +20,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class EmployeeLeaveTransactionsRepository : BaseColleagueRepository, IEmployeeLeaveTransactionsRepository
     {
+        RepositoryException exception = null;
+        const string AllEmployeeLeaveTransactionsCache = "AllEmployeeLeaveTransactions";
+        const int AllEmployeeLeaveTransactionsCacheTimeout = 20; // Clear from cache every 20 minutes
+
         public EmployeeLeaveTransactionsRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)
         {
@@ -23,62 +31,88 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         }
 
         /// <summary>
-        /// Get EmployeeLeaveTransactions objects for all EmployeeLeaveTransactions bypassing cache and reading directly from the database.
+        /// Get PerleaveDetails objects for all records.
         /// </summary>
         /// <param name="offset">Offset for record index on page reads.</param>
         /// <param name="limit">Take number of records on page reads.</param>
         /// <returns>Tuple of PerleaveDetails Entity objects <see cref="PerleaveDetails"/> and a count for paging.</returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.PerleaveDetails>, int>> GetEmployeeLeaveTransactionsAsync(int offset, int limit, bool bypassCache = false)
         {
-            try
+
+            //string criteria = string.Empty;
+            int totalCount = 0;
+
+            string[] subList = null;
+            string employeeLeaveTransactionsCacheKey = CacheSupport.BuildCacheKey(AllEmployeeLeaveTransactionsCache);
+
+            var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                employeeLeaveTransactionsCacheKey,
+                "PERLVDTL",
+                offset,
+                limit,
+                AllEmployeeLeaveTransactionsCacheTimeout,
+                async () => {
+                    return  new CacheSupport.KeyCacheRequirements() { };
+                });
+            if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
+
             {
-                string criteria = string.Empty;
-                var EmployeeLeaveTransactionsKeys = await DataReader.SelectAsync("PERLVDTL", criteria);
-                var EmployeeLeaveTransactionsRecords = new List<Domain.HumanResources.Entities.PerleaveDetails>();
-                var totalCount = 0;
-                if (EmployeeLeaveTransactionsKeys == null || !EmployeeLeaveTransactionsKeys.Any())
+                return new Tuple<IEnumerable<Domain.HumanResources.Entities.PerleaveDetails>, int>(null, 0);
+            }
+
+            subList = keyCache.Sublist.ToArray();
+            totalCount = keyCache.TotalCount.Value;
+
+            var employeeLeaveTransactionsRecords = new List<Domain.HumanResources.Entities.PerleaveDetails>();        
+            var empLeaveplanRecords = await DataReader.BulkReadRecordAsync<DataContracts.Perlvdtl>("PERLVDTL", subList);
+            foreach (var plan in empLeaveplanRecords)
+            {
+                try
                 {
-                    return new Tuple<IEnumerable<Domain.HumanResources.Entities.PerleaveDetails>, int>(null, 0);
+                    employeeLeaveTransactionsRecords.Add(BuildEmployeeLeaveTransactions(plan));
                 }
 
-                totalCount = EmployeeLeaveTransactionsKeys.Count();
-                Array.Sort(EmployeeLeaveTransactionsKeys);
-                var EmployeeLeaveTransactionsubList = EmployeeLeaveTransactionsKeys.Skip(offset).Take(limit);
-                if (EmployeeLeaveTransactionsubList != null && EmployeeLeaveTransactionsubList.Any())
+                catch (Exception ex)
                 {
-                    try
-                    {
-                        var empLeaveplanRecords = await DataReader.BulkReadRecordAsync<DataContracts.Perlvdtl>(EmployeeLeaveTransactionsubList.ToArray(), bypassCache);
-                        foreach (var plan in empLeaveplanRecords)
-                        {
+                    if (exception == null)
+                        exception = new RepositoryException();
 
-                            EmployeeLeaveTransactionsRecords.Add(await BuildEmployeeLeaveTransactions(plan));
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        throw ex;
-                    }
+                    exception.AddError(new RepositoryError("Bad.Data", "An unexpected error occurred extracting the Employee-leave-transaction data."));
                 }
-                return new Tuple<IEnumerable<Domain.HumanResources.Entities.PerleaveDetails>, int>(EmployeeLeaveTransactionsRecords, totalCount);
             }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
+
+            if (exception != null && exception.Errors.Any())
+                throw exception;
+
+            return new Tuple<IEnumerable<Domain.HumanResources.Entities.PerleaveDetails>, int>(employeeLeaveTransactionsRecords, totalCount);
+
         }
 
         /// <summary>
-        /// Get EmployeeLeaveTransactions entity for a specific id
+        /// Get PerleaveDetailsentity for a specific id
         /// </summary>   
-        /// <param name="id">id of the EmployeeLeaveTransactions record.</param>
-        /// <returns>EmployeeLeaveTransactions Entity <see cref="Domain.HumanResources.Entities.PerleaveDetails"./></returns>
+        /// <param name="id">id of the PerleaveDetails record.</param>
+        /// <returns>PerleaveDetails Entity <see cref="Domain.HumanResources.Entities.PerleaveDetails"./></returns>
         public async Task<Ellucian.Colleague.Domain.HumanResources.Entities.PerleaveDetails> GetEmployeeLeaveTransactionsByIdAsync(string id)
         {
             var entity = await this.GetRecordInfoFromGuidAsync(id);
-            if (entity == null || entity.Entity != "PERLVDTL")
+            if (entity == null)
             {
                 throw new KeyNotFoundException(string.Format("EmployeeLeaveTransactions not found for id {0}", id));
+            }
+            if (entity.Entity != "PERLVDTL")
+            {
+                if (exception == null)
+                    exception = new RepositoryException();
+
+                exception.AddError(new RepositoryError("GUID.Wrong.Type", "GUID '" + id + "' has different entity, '" + entity.Entity + "', than expected, 'PERLVDTL'"));
+                throw exception;
             }
             var empLeaveplanId = entity.PrimaryKey;
             if (string.IsNullOrWhiteSpace(empLeaveplanId))
@@ -90,20 +124,67 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 throw new KeyNotFoundException("EmployeeLeaveTransactions not found with id " + id);
             }
-            return await BuildEmployeeLeaveTransactions(empLeavePlanRecord);
+            var retval = BuildEmployeeLeaveTransactions(empLeavePlanRecord);
+
+            if (exception != null && exception.Errors.Any())
+                throw exception;
+            return retval;
+
         }
 
         /// <summary>
-        /// Helper to build employee Leave Transactions Entity
+        /// Helper to build PerleaveDetails domain entity
         /// </summary>
-        /// <param name="empLeavePlanTranRecord">the Perlvdtl db record</param>
-        /// <returns></returns>
-        private async Task<Ellucian.Colleague.Domain.HumanResources.Entities.PerleaveDetails> BuildEmployeeLeaveTransactions(DataContracts.Perlvdtl empLeavePlanTranRecord)
+        /// <param name="empLeavePlanTranRecord">the Perlvdtl data contract</param>
+        /// <returns>PerleaveDetails domain entity</returns>
+        private Domain.HumanResources.Entities.PerleaveDetails BuildEmployeeLeaveTransactions(DataContracts.Perlvdtl empLeavePlanTranRecord)
         {
-            Domain.HumanResources.Entities.PerleaveDetails empLeaveplanEntity = new Domain.HumanResources.Entities.PerleaveDetails(empLeavePlanTranRecord.RecordGuid, empLeavePlanTranRecord.Recordkey,empLeavePlanTranRecord.PldDate,empLeavePlanTranRecord.PldPerleaveId)
+
+            if (empLeavePlanTranRecord == null)
+            {
+                if (exception == null)
+                    exception = new RepositoryException();
+                exception.AddError(new RepositoryError("Bad.Data", "An unexpected error occurred attempting to build the PerleaveDetails domain entity."));
+                throw exception;
+            }
+
+            if (string.IsNullOrEmpty(empLeavePlanTranRecord.RecordGuid))
+            {
+                if (exception == null)
+                    exception = new RepositoryException();
+                exception.AddError(new RepositoryError("Bad.Data", "EmployeeLeaveTransactions guid can not be null or empty. Entity: 'PERLVDTL'")
+                {Id = empLeavePlanTranRecord.RecordGuid, SourceId = empLeavePlanTranRecord.Recordkey });
+            }
+            if (string.IsNullOrEmpty(empLeavePlanTranRecord.Recordkey))
+            {
+                if (exception == null)
+                    exception = new RepositoryException();
+                exception.AddError(new RepositoryError("Bad.Data", "EmployeeLeaveTransactions id can not be null or empty. Entity: 'PERLVDTL'")
+                { Id = empLeavePlanTranRecord.RecordGuid, SourceId = empLeavePlanTranRecord.Recordkey });
+            }
+            if (string.IsNullOrEmpty(empLeavePlanTranRecord.PldPerleaveId))
+            {
+                if (exception == null)
+                    exception = new RepositoryException();
+                exception.AddError(new RepositoryError("Bad.Data", "EmployeeLeaveTransactions Leave Id can not be null or empty. Entity: 'PERLVDTL'")
+                { Id = empLeavePlanTranRecord.RecordGuid, SourceId = empLeavePlanTranRecord.Recordkey });
+            }
+            if ((empLeavePlanTranRecord.PldDate == null) || (!empLeavePlanTranRecord.PldDate.HasValue))
+            {
+                if (exception == null)
+                    exception = new RepositoryException();
+                exception.AddError(new RepositoryError("Bad.Data", "EmployeeLeaveTransactions Transaction Date can not be null or empty. Entity: 'PERLVDTL'")
+                { Id = empLeavePlanTranRecord.RecordGuid, SourceId = empLeavePlanTranRecord.Recordkey });
+            }
+
+            if (exception != null && exception.Errors.Any())
+                throw exception;
+
+            var empLeaveplanEntity = new Domain.HumanResources.Entities.PerleaveDetails(empLeavePlanTranRecord.RecordGuid, 
+                empLeavePlanTranRecord.Recordkey,empLeavePlanTranRecord.PldDate,empLeavePlanTranRecord.PldPerleaveId)
             {
                 LeaveHours = empLeavePlanTranRecord.PldHours,
-                //AvailableHours = empLeavePlanTranRecord.PldCurrentBalance
+                
                 AvailableHours = empLeavePlanTranRecord.PldForwardingBalance
             };
             return empLeaveplanEntity;

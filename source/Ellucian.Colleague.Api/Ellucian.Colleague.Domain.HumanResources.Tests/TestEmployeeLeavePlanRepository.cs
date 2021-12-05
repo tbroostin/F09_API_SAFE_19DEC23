@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using System;
@@ -126,22 +126,26 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             new LeavePlan("guid1", "VACH", new DateTime(2000,1,1), "VacationHourly","VACA", "accrual", new List<string>() { "VAC" })
             {
                 AllowNegative = "Y",
-                YearlyStartDate = new DateTime(2000, 1,1)
+                YearlyStartDate = new DateTime(2000, 1,1),
+                IsLeaveReportingPlan = true
             },
             new LeavePlan("guid2", "SICH", new DateTime(2000,1,1), "SickHourly", "SICK", "accrual", new List<string>() {"SIC" })
             {
                 AllowNegative = "N",
-                YearlyStartDate = new DateTime(2000, 7, 1)
+                YearlyStartDate = new DateTime(2000, 7, 1),
+                IsLeaveReportingPlan = true
             },
             new LeavePlan("guid3", "INVALIDEARNTYPE", new DateTime(2000,1,1), "Error", "OTH", "accrual", new List<string>() { "FOOBAR" } )
             {
                 AllowNegative = "N",
-                YearlyStartDate = new DateTime(2005, 1,1)
+                YearlyStartDate = new DateTime(2005, 1,1),
+                IsLeaveReportingPlan = true
             },
             new LeavePlan("guid3", "NOYEARLYSTARTDATE", new DateTime(2000,1,1), "NoStartDate", "OTH", "accrual", new List<string>() { "PER" } )
             {
                 AllowNegative = "N",
-                YearlyStartDate = new DateTime(2005, 1,1)
+                YearlyStartDate = new DateTime(2005, 1,1),
+                IsLeaveReportingPlan = true
             },
 
         };
@@ -151,7 +155,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             new LeaveType("guid2", "VACA", "Vacation type") { TimeType = LeaveTypeCategory.Vacation },
             new LeaveType("guid3", "OTH", "Other type") { TimeType = LeaveTypeCategory.None },
             new LeaveType("guid4", "COMPA", "Comp time accrual") { TimeType = LeaveTypeCategory.Compensatory },
- 
+
 
         };
         public List<EarningType2> earnTypes = new List<EarningType2>()
@@ -173,7 +177,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
         /// <param name="leaveTypes"></param>
         /// <param name="earnTypes"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<EmployeeLeavePlan>> GetEmployeeLeavePlansByEmployeeIdsAsync(IEnumerable<string> employeeIds, IEnumerable<LeavePlan> leavePlans, IEnumerable<LeaveType> leaveTypes, IEnumerable<EarningType2> earnTypes)
+        public async Task<IEnumerable<EmployeeLeavePlan>> GetEmployeeLeavePlansByEmployeeIdsAsync(IEnumerable<string> employeeIds, IEnumerable<LeavePlan> leavePlans, IEnumerable<LeaveType> leaveTypes, IEnumerable<EarningType2> earnTypes, bool includeLeavePlansWithNoEarningsTypes = false)
         {
             var employeeLeavePlans = new List<EmployeeLeavePlan>();
             var leavePlanDictionary = leavePlans.ToDictionary(lp => lp.Id);
@@ -206,12 +210,15 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                                 employeeLeavePlanRecord.allowedDate ?? employeeLeavePlanRecord.startDate.Value,
                                 employeeLeavePlanRecord.balance.Value,
                                 leavePlan.YearlyStartDate.HasValue ? leavePlan.YearlyStartDate.Value.Month : 1,
-                                leavePlan.YearlyStartDate.HasValue ? leavePlan.YearlyStartDate.Value.Day : 1,                                
+                                leavePlan.YearlyStartDate.HasValue ? leavePlan.YearlyStartDate.Value.Day : 1,
+                                true,
                                 leavePlan.EarningsTypes,
                                 accrualRate,
                                 accrualLimit,
-                                accrualMaxCarryOver
-                                );
+                                accrualMaxCarryOver,
+                                leavePlan.AccrualMethod,
+                                false,
+                                true);
 
                             employeeLeavePlans.Add(employeeLeavePlan);
 
@@ -245,17 +252,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
 
             }
 
-
             return await Task.FromResult(employeeLeavePlans);
         }
-
 
         public Task<Tuple<IEnumerable<Perleave>, int>> GetEmployeeLeavePlansAsync(int offset, int limit, bool bypassCache = false)
         {
             throw new NotImplementedException();
         }
-
-
 
         public Task<Perleave> GetEmployeeLeavePlansByGuidAsync(string guid)
         {
@@ -266,8 +269,6 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
         {
             throw new NotImplementedException();
         }
-
-
 
         private LeaveTransactionType translateTransactionType(string action)
         {
@@ -287,6 +288,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 default:
                     throw new ArgumentException("leave transaction action does not match allowable values, A, U and J", "action");
             }
+        }
+
+        public Task<Dictionary<string, string>> GetPerleaveGuidsCollectionAsync(IEnumerable<string> perleaveIds)
+        {
+            throw new NotImplementedException();
         }
     }
 }

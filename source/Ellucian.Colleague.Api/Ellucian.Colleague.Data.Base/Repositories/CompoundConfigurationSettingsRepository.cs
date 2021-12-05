@@ -128,7 +128,12 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 throw new KeyNotFoundException(string.Format("No compound-configuration-settings was found for guid '{0}'", guid));
             }
             var foundEntry = idDict.FirstOrDefault();
-            if (foundEntry.Value == null || foundEntry.Value.Entity != "INTG.CMPD.CONFIG.SETTINGS" || !string.IsNullOrEmpty(foundEntry.Value.SecondaryKey))
+            if (foundEntry.Value == null)
+            {
+                throw new KeyNotFoundException(string.Format("No compound-configuration-settings was found for guid '{0}'", guid));
+            }
+
+            if (foundEntry.Value.Entity != "INTG.CMPD.CONFIG.SETTINGS" || !string.IsNullOrEmpty(foundEntry.Value.SecondaryKey))
             {
                 throw new KeyNotFoundException(string.Format("The GUID specified: '{0}' is used by a different entity/secondary key: {1}", guid, foundEntry.Value != null ? foundEntry.Value.Entity : string.Empty));
             }

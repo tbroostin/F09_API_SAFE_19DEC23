@@ -351,39 +351,38 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
-                var configSettings = await _configurationSettingsService.GetConfigurationSettingsByGuidAsync(guid, true);
-                if (configSettings != null && configurationSettings != null)
+                var origConfigurationSettings = await _configurationSettingsService.GetConfigurationSettingsByGuidAsync(guid, true);
+                var mergedSettings = await PerformPartialPayloadMerge(configurationSettings, origConfigurationSettings,
+                  await _configurationSettingsService.GetDataPrivacyListByApi(GetRouteResourceName(), true),
+                  _logger);
+
+                if (origConfigurationSettings != null && mergedSettings != null)
                 {
                     IntegrationApiException exception = null;
-
-                    if (configSettings.Source != null && configurationSettings.Source != null 
-                        && configSettings.Source.Value.Equals(configurationSettings.Source.Value, StringComparison.OrdinalIgnoreCase)
-                        && !configSettings.Source.Title.Equals(configurationSettings.Source.Title, StringComparison.OrdinalIgnoreCase))
+                    if (origConfigurationSettings.Source != null && mergedSettings.Source != null
+                        && origConfigurationSettings.Source.Value.Equals(mergedSettings.Source.Value, StringComparison.OrdinalIgnoreCase)
+                        && !origConfigurationSettings.Source.Title.Equals(mergedSettings.Source.Title, StringComparison.OrdinalIgnoreCase))
                     {
                         exception = new IntegrationApiException();
                         exception.AddError(new IntegrationApiError("Validation.Exception", "An error occurred attempting to validate data.", "The Source Title cannot be changed for a configuration setting."));
-                        
+
                     }
-                    if (!configSettings.Title.Equals(configurationSettings.Title, StringComparison.OrdinalIgnoreCase))
+                    if (!string.IsNullOrEmpty(origConfigurationSettings.Title) && !origConfigurationSettings.Title.Equals(mergedSettings.Title, StringComparison.OrdinalIgnoreCase))
                     {
                         if (exception == null) exception = new IntegrationApiException();
                         exception.AddError(new IntegrationApiError("Validation.Exception", "An error occurred attempting to validate data.", "The title cannot be changed for a configuration setting."));
                     }
-                    if (!configSettings.Description.Equals(configurationSettings.Description, StringComparison.OrdinalIgnoreCase))
+                    if (!string.IsNullOrEmpty(origConfigurationSettings.Description) && !origConfigurationSettings.Description.Equals(mergedSettings.Description, StringComparison.OrdinalIgnoreCase))
                     {
-                        if ( exception == null) exception = new IntegrationApiException();
-                        exception.AddError(new IntegrationApiError("Validation.Exception", "An error occurred attempting to validate data.", "The Description cannot be changed for a configuration setting."));         
+                        if (exception == null) exception = new IntegrationApiException();
+                        exception.AddError(new IntegrationApiError("Validation.Exception", "An error occurred attempting to validate data.", "The Description cannot be changed for a configuration setting."));
                     }
                     if (exception != null)
                     {
                         throw exception;
                     }
                 }
-
-                return await _configurationSettingsService.UpdateConfigurationSettingsAsync(
-                  await PerformPartialPayloadMerge(configurationSettings, configSettings,
-                  await _configurationSettingsService.GetDataPrivacyListByApi(GetRouteResourceName(), true),
-                  _logger));
+                return await _configurationSettingsService.UpdateConfigurationSettingsAsync(mergedSettings);
             }
             catch (PermissionsException e)
             {

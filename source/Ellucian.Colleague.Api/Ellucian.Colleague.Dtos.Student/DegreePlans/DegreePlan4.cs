@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 
@@ -76,5 +76,9 @@ namespace Ellucian.Colleague.Dtos.Student.DegreePlans
         /// The time when plan was requested
         /// </summary>
         public DateTime? ReviewRequestedTime { get; set; }
+        /// <summary>
+        /// The Datetime when notification is archived
+        /// </summary>
+        public DateTime? ArchiveNotificationDate { get; set; }
     }
 }

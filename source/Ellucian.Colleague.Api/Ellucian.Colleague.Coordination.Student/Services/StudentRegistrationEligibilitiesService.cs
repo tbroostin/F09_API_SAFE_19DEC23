@@ -1,10 +1,8 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Ellucian.Colleague.Coordination.Student.Adapters;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -17,7 +15,7 @@ using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Colleague.Domain.Student;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -61,42 +59,94 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             if (string.IsNullOrEmpty(studentId))
             {
-                throw new ArgumentNullException("student","Both student and academicPeriod filters are required on GET operation.");
+                IntegrationApiExceptionAddError("Both student and academicPeriod filters are required on GET operation.", "Validation.Exception");
+                throw IntegrationApiException;
             }
             if (string.IsNullOrEmpty(academicPeriodId))
             {
-                throw new ArgumentNullException("academicPeriod", "Both student and academicPeriod filters are required on GET operation.");
+                IntegrationApiExceptionAddError("Both student and academicPeriod filters are required on GET operation.", "Validation.Exception");
+                throw IntegrationApiException;
             }
+
+           
+            var personId = string.Empty;
+            try
+            {
+                personId = await _personRepository.GetPersonIdFromGuidAsync(studentId);
+                if (string.IsNullOrEmpty(personId))
+                {
+                    return null;
+                }
+            }
+            catch (Exception)
+            {            
+                return null;
+            }
+
             var studentRegistrationEligibilitiesCollection = new List<Ellucian.Colleague.Dtos.StudentRegistrationEligibilities>();
 
-            var personId = await _personRepository.GetPersonIdFromGuidAsync(studentId);
-            if (string.IsNullOrEmpty(personId))
-            {
-                throw new ArgumentException(string.Format("Student '{0}' is not valid.", studentId), "student");
-            }
-            // Make sure user has access to this student--If not, method throws exception
-            CheckViewStudentRegistrationEligibilityPermission(personId);
-
             // Retrieve the term for the priority checking (cannot just pull the registration ones due to the reporting term check).
-            var allTerms = await _termRepository.GetAsync();
-            var academicPeriod = allTerms.FirstOrDefault(rt => rt.RecordGuid == academicPeriodId);
-            if (academicPeriod == null || string.IsNullOrEmpty(academicPeriod.Code))
+            Term academicPeriod = null;
+            try
             {
-                throw new ArgumentException(string.Format("Academic Period '{0} is not valid.", academicPeriodId), "academicPeriod");
+                var allTerms = await _termRepository.GetAsync();
+                if (allTerms == null || allTerms.Count() == 0)
+                {           
+                    return null;
+                }
+                else
+                {
+                    academicPeriod = allTerms.FirstOrDefault(rt => rt.RecordGuid == academicPeriodId);
+                    if (academicPeriod == null || string.IsNullOrEmpty(academicPeriod.Code))
+                    {
+                        return null;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+               return null;
             }
 
-            var registrationEligibility = await _studentRepository.CheckRegistrationEligibilityEthosAsync(personId, new List<string>() { academicPeriod.Code });
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+          
+            IEnumerable<RegistrationPriority> studentRegistrationPriorities = null;
+            RegistrationEligibility registrationEligibility = null;
+            try
+            {
+                registrationEligibility = await _studentRepository.CheckRegistrationEligibilityEthosAsync(personId, new List<string>() { academicPeriod.Code });
 
-            // Next determine if the student has any registration priority (or is missing one where required).
-            // Registration priorities can affect the registration eligibility status for a term and the anticipated add date.
-            IEnumerable<RegistrationPriority> studentRegistrationPriorities = await _registrationPriorityRepository.GetAsync(personId);
+                // Next determine if the student has any registration priority (or is missing one where required).
+                // Registration priorities can affect the registration eligibility status for a term and the anticipated add date.
+                studentRegistrationPriorities = await _registrationPriorityRepository.GetAsync(personId);
 
-            // Next deal with any registration priorities - these may override the information above.
-            // Even if the student has no priorities you still need to do this update because if the term
-            // requires priorities and they don't have any then it changes their registration status.
-            registrationEligibility.UpdateRegistrationPriorities(studentRegistrationPriorities, new List<Term>() { academicPeriod });
+                // Next deal with any registration priorities - these may override the information above.
+                // Even if the student has no priorities you still need to do this update because if the term
+                // requires priorities and they don't have any then it changes their registration status.
+                registrationEligibility.UpdateRegistrationPriorities(studentRegistrationPriorities, new List<Term>() { academicPeriod });
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex, "Bad.Data");
+                throw IntegrationApiException;
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Bad.Data");
+                throw IntegrationApiException;
+            }
+            var retval = ConvertStudentRegistrationEligibilitiesEntityToDto(registrationEligibility, studentRegistrationPriorities, studentId, academicPeriod);
 
-            return ConvertStudentRegistrationEligibilitiesEntityToDto(registrationEligibility, studentRegistrationPriorities, studentId, academicPeriod);
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+
+            return retval;
+
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -192,20 +242,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             return studentRegistrationEligibilities;
-        }
-        
-        /// <summary>
-        /// Helper method to determine if the user has permission to view Students.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckViewStudentRegistrationEligibilityPermission(string personId)
-        {
-            var hasPermission = HasPermission(StudentPermissionCodes.ViewStuRegistrationEligibility);
-
-            if (!hasPermission && !CurrentUser.IsPerson(personId))
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view Student Registration Eligibilities.");
-            }
         }
     }
 }

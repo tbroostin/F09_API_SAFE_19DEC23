@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -89,7 +89,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
                         break;
                     }
             }
-
+            lineItemDto.OverBudget = Source.OverBudget;
             return lineItemDto;
         }
     }

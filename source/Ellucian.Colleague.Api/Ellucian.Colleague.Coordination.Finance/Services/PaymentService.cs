@@ -40,7 +40,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
             var proxySubject = CurrentUser.ProxySubjects.FirstOrDefault();
             if (!CurrentUser.IsPerson(personId) && !HasProxyAccessForPerson(personId))
             {
-                logger.Info(CurrentUser + " attempted to pay on account " + personId);
+                logger.Error(CurrentUser.PersonId + " attempted to pay on account " + personId);
                 throw new PermissionsException();
             }
         }
@@ -83,6 +83,11 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                 if (!string.IsNullOrEmpty(personId))
                 {
                     CheckAccountPermission(personId);
+                }
+                else if(paymentReceiptEntity.ErrorMessage == "Your payment has been canceled.")
+                {
+                    logger.Info("Your payment has been cancelled.");
+                    throw new InvalidOperationException("Your payment has been canceled.");
                 }
                 else
                 {

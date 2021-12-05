@@ -1,5 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
-using Ellucian.Colleague.Domain.Base;
+﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -53,10 +52,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="person"></param>
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<Dtos.PersonGuardianRelationship>, int>> GetPersonGuardianRelationshipsAllAndFilterAsync(int offset, int limit, string person = "")
-        {
-            CheckUserPersonGuardiansViewPermissions();
-
-            List<Dtos.PersonGuardianRelationship> personGuardianRelationships = new List<Dtos.PersonGuardianRelationship>();
+        {           
+            var personGuardianRelationships = new List<Dtos.PersonGuardianRelationship>();
 
             // Convert and validate all input parameters
             var personId = string.Empty;
@@ -101,8 +98,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns></returns>
         public async Task<Dtos.PersonGuardianRelationship> GetPersonGuardianRelationshipByIdAsync(string id)
         {
-            CheckUserPersonGuardiansViewPermissions();
-
+           
             if (string.IsNullOrEmpty(id))
             {
                 throw new ArgumentNullException("Guardian relationship id is required.");
@@ -264,18 +260,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             return defaultGuardianRelationships;
         }
 
-        /// <summary>
-        /// Verifies if the user has the correct permissions to view a person's guardian.
-        /// </summary>
-        private void CheckUserPersonGuardiansViewPermissions()
-        {
-            // access is ok if the current user has the view person guardians permission
-            if (!HasPermission(BasePermissionCodes.ViewAnyPersonGuardian))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view person-guardians.");
-                throw new PermissionsException("User is not authorized to view person-guardians.");
-            }
-        }
+      
         #endregion
     }
 }

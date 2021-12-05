@@ -1,10 +1,11 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
@@ -142,6 +143,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="pageIndex"></param>
         /// <returns></returns>
         /// <accessComments>Any authenticated user can perform search on sections and view Instant Enrollment catalog.</accessComments>
+        [Obsolete("Obsolete as of API version 1.32. Use the latest version of this method.")]
         public async Task<SectionPage> PostInstantEnrollmentCourseSearchAsync([FromBody]InstantEnrollmentCourseSearchCriteria criteria, int pageSize=10, int pageIndex=0)
         {
             try
@@ -161,6 +163,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
             }
         }
+
 
         /// <summary>
         /// For each course ID specified, this API will return the sections for this course that are offered in terms "open for registration". 
@@ -871,7 +874,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to create the course</exception>
         /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if the course is not provided.</exception>
         /// 
-        [HttpPost,EedmResponseFilter]
+        [HttpPost,EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateAndUpdateCourse)]
         public async Task<Ellucian.Colleague.Dtos.Course3> PostCourse3Async([ModelBinder(typeof(EedmModelBinder))] Ellucian.Colleague.Dtos.Course3 course)
         {
             if (course == null)
@@ -891,6 +894,7 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
+                _courseService.ValidatePermissions(GetPermissionsMetaData());
                 //call import extend method that needs the extracted extension data and the config
                 await _courseService.ImportExtendedEthosData(await ExtractExtendedData(await _courseService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
@@ -932,7 +936,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to create the course</exception>
         /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if the course is not provided.</exception>
         
-        [HttpPost,EedmResponseFilter]
+        [HttpPost,EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateAndUpdateCourse)]
         public async Task<Ellucian.Colleague.Dtos.Course4> PostCourse4Async([ModelBinder(typeof(EedmModelBinder))] Dtos.Course4 course)
         {
             var bypassCache = false;
@@ -962,6 +966,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                _courseService.ValidatePermissions(GetPermissionsMetaData());
                 //call import extend method that needs the extracted extension data and the config
                 await _courseService.ImportExtendedEthosData(await ExtractExtendedData(await _courseService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
@@ -1004,7 +1009,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to create the course</exception>
         /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if the course is not provided.</exception>
 
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateAndUpdateCourse)]
         public async Task<Ellucian.Colleague.Dtos.Course5> PostCourse5Async([ModelBinder(typeof(EedmModelBinder))] Dtos.Course5 course)
         {
             var bypassCache = false;
@@ -1034,6 +1039,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                _courseService.ValidatePermissions(GetPermissionsMetaData());
                 //call import extend method that needs the extracted extension data and the config
                 await _courseService.ImportExtendedEthosData(await ExtractExtendedData(await _courseService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
@@ -1086,7 +1092,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>The updated <see cref="Dtos.Course3">Course</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to update the course</exception>
         /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if the course is not provided.</exception>
-        [EedmResponseFilter,HttpPut]
+        [EedmResponseFilter,HttpPut, PermissionsFilter(StudentPermissionCodes.CreateAndUpdateCourse)]
         public async Task<Ellucian.Colleague.Dtos.Course3> PutCourse3Async([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.Course3 course)
         {
             if (string.IsNullOrEmpty(id))
@@ -1112,6 +1118,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                _courseService.ValidatePermissions(GetPermissionsMetaData());
                 //get Data Privacy List
                 var dpList = await _courseService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
@@ -1173,7 +1180,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>The updated <see cref="Dtos.Course4">Course</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to update the course</exception>
         /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if the course is not provided.</exception>
-        [EedmResponseFilter]
+        [EedmResponseFilter, HttpPut, PermissionsFilter(StudentPermissionCodes.CreateAndUpdateCourse)]
         public async Task<Ellucian.Colleague.Dtos.Course4> PutCourse4Async([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.Course4 course)
         {
             var bypassCache = false;
@@ -1207,7 +1214,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
-
+                _courseService.ValidatePermissions(GetPermissionsMetaData());
                 //get Data Privacy List
                 var dpList = await _courseService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
@@ -1268,7 +1275,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>The updated <see cref="Dtos.Course4">Course</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if user does not have the required role and permissions to update the course</exception>
         /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if the course is not provided.</exception>
-        [EedmResponseFilter]
+        [EedmResponseFilter, HttpPut, PermissionsFilter(StudentPermissionCodes.CreateAndUpdateCourse)]
         public async Task<Ellucian.Colleague.Dtos.Course5> PutCourse5Async([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.Course5 course)
         {
             var bypassCache = false;
@@ -1302,6 +1309,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                _courseService.ValidatePermissions(GetPermissionsMetaData());
                 //get Data Privacy List
                 var dpList = await _courseService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 

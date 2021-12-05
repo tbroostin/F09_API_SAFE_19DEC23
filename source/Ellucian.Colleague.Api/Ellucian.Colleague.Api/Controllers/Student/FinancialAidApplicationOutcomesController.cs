@@ -1,10 +1,11 @@
-﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
@@ -53,7 +54,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <returns>List of FinancialAidApplicationOutcomes</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet]
+        [HttpGet, PermissionsFilter(StudentPermissionCodes.ViewFinancialAidApplicationOutcomes)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         [ValidateQueryStringFilter()]
         [QueryStringFilterFilter("criteria", typeof(Dtos.FinancialAidApplicationOutcome)), FilteringFilter(IgnoreFiltering = true)]
@@ -73,6 +74,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                financialAidApplicationOutcomeService.ValidatePermissions(GetPermissionsMetaData());
                 var criteriaObject = GetFilterObject<Dtos.FinancialAidApplicationOutcome>(logger, "criteria");
                 if (CheckForEmptyFilterParameters())
                     return new PagedHttpActionResult<IEnumerable<Dtos.FinancialAidApplication>>(new List<Dtos.FinancialAidApplication>(), page, 0, this.Request);
@@ -124,7 +126,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="id">GUID to desired financialAidApplicationOutcomes</param>
         /// <returns>A single financialAidApplicationOutcomes object</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewFinancialAidApplicationOutcomes)]
         public async Task<Dtos.FinancialAidApplicationOutcome> GetFinancialAidApplicationOutcomesByGuidAsync(string id)
         {
             var bypassCache = false;
@@ -143,6 +145,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                financialAidApplicationOutcomeService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                      await financialAidApplicationOutcomeService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                      await financialAidApplicationOutcomeService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -158,7 +161,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {

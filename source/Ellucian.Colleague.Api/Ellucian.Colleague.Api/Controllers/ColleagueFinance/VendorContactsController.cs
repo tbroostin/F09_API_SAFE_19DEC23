@@ -1,9 +1,10 @@
-//Copyright 2020 Ellucian Company L.P. and its affiliates.
+//Copyright 2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Http;
@@ -56,7 +57,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="criteria"></param>
         /// <returns>List of VendorContacts <see cref="Dtos.VendorContacts"/> objects representing matching vendorContacts</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(ColleagueFinancePermissionCodes.ViewVendorContacts)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(VendorContacts))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
@@ -72,6 +73,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                _vendorContactsService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -129,7 +131,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="guid">GUID to desired vendorContacts</param>
         /// <returns>A vendorContacts object <see cref="Dtos.VendorContacts"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(ColleagueFinancePermissionCodes.ViewVendorContacts)]
         public async Task<Dtos.VendorContacts> GetVendorContactsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -147,6 +149,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                _vendorContactsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                    await _vendorContactsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                    await _vendorContactsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),

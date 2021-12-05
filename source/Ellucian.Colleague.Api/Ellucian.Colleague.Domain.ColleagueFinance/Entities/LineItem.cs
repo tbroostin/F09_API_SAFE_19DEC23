@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -119,11 +119,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// List of Line Item Tax codes
         /// </summary>
         public List<LineItemReqTax> LineItemReqTaxCodes = new List<LineItemReqTax>();
+
         /// <summary>
         /// Line Item Tax code
         /// </summary>
         public List<LineItemReqTax> ReqLineItemTaxCodes { get; set; }
-
 
         /// <summary>
         ///Line Item Trade Discount Amount
@@ -180,6 +180,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// This is the public getter for the private list of tax information.
         /// </summary>
         public ReadOnlyCollection<LineItemTax> LineItemTaxes { get; private set; }
+
+        /// <summary>
+        /// Indicates whether the line item has an overbudget general ledger number.
+        /// </summary>
+        public bool OverBudget { get; set; }
 
         /// <summary>
         /// This constructor initializes the line item object.

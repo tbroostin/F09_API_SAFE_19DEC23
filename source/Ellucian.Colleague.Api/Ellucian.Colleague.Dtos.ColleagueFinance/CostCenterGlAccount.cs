@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -43,6 +43,11 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// The total actuals amount for this GL account
         /// </summary>
         public decimal Actuals { get; set; }
+
+        /// <summary>
+        /// Justification Notes for this GL Account.
+        /// </summary>
+        public string JustificationNotes { get; set; }
 
         /// <summary>
         /// Is the GL account part of a GL Budget pool and in what capacity.

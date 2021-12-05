@@ -21,6 +21,11 @@ using Moq;
 using Newtonsoft.Json.Linq;
 using slf4net;
 using Ellucian.Colleague.Dtos.ColleagueFinance;
+using System.Web.Http.Routing;
+using Ellucian.Web.Http.Filters;
+using System.Web.Http.Controllers;
+using System.Collections;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 {
@@ -114,9 +119,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             page = new Paging(limit, offset);
         }
 
-        private void BuildPurchaseOrderPostRequest() { 
-}
-        private void BuildRequisitionSummaryData()
+        private void BuildPurchaseOrderPostRequest()
+        {
+        }
+        private void BuildPurchaseOrderSummaryData()
         {
             purchaseOrderSummaryCollection = new List<PurchaseOrderSummary>()
             {
@@ -293,19 +299,19 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task PurchaseOrdersControllerTests_GetPurchaseOrdersAsync_EmptyFilterParams()
         {
 
-            purchaseOrdersTuple = new Tuple<IEnumerable<PurchaseOrders2>, int>( _purchaseOrders, 3 );
+            purchaseOrdersTuple = new Tuple<IEnumerable<PurchaseOrders2>, int>(_purchaseOrders, 3);
 
-            _purchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri( "http://localhost" ) };
-            
-            _purchaseOrdersController.Request.Properties.Add( "EmptyFilterProperties", true );
+            _purchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            _purchaseOrdersController.Request.Properties.Add("EmptyFilterProperties", true);
             _purchaseOrdersController.Request.Headers.CacheControl =
              new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
-            _mockPurchaseOrdersService.Setup( x => x.GetPurchaseOrdersAsync( offset, limit, It.IsAny<PurchaseOrders2>(), It.IsAny<bool>() ) ).ReturnsAsync( purchaseOrdersTuple );
-            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync( page, criteriaFilter );
-            var cancelToken = new System.Threading.CancellationToken( false );
-            System.Net.Http.HttpResponseMessage httpResponseMessage = await actuals.ExecuteAsync( cancelToken );
-            List<PurchaseOrders2> ActualsAPI = ( (ObjectContent<IEnumerable<PurchaseOrders2>>) httpResponseMessage.Content ).Value as List<PurchaseOrders2>;
-            Assert.AreEqual( 0, ActualsAPI.Count() );
+            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync(offset, limit, It.IsAny<PurchaseOrders2>(), It.IsAny<bool>())).ReturnsAsync(purchaseOrdersTuple);
+            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync(page, criteriaFilter);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            System.Net.Http.HttpResponseMessage httpResponseMessage = await actuals.ExecuteAsync(cancelToken);
+            List<PurchaseOrders2> ActualsAPI = ((ObjectContent<IEnumerable<PurchaseOrders2>>)httpResponseMessage.Content).Value as List<PurchaseOrders2>;
+            Assert.AreEqual(0, ActualsAPI.Count());
         }
 
         [TestMethod]
@@ -493,6 +499,177 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             _mockPurchaseOrdersService.Setup(r => r.GetPurchaseOrderSummaryByPersonIdAsync(It.IsAny<string>())).ThrowsAsync(new ApplicationException());
             await _purchaseOrdersController.GetPurchaseOrderSummaryByPersonIdAsync(personId);
         }
+
+        //GET by id v11.2.0 v11.1.0 v11
+        //Successful
+        //GetPurchaseOrdersByGuidAsync
+        [TestMethod]
+        public async Task PurchaseOrdersController_GetPurchaseOrdersByGuidAsync_Permissions()
+        {
+            var expected = _purchaseOrders.FirstOrDefault(po => po.Id == Guid);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PurchaseOrders" },
+                    { "action", "GetPurchaseOrdersByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("purchase-orders", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _purchaseOrdersController.Request.SetRouteData(data);
+            _purchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewPurchaseOrders, ColleagueFinancePermissionCodes.UpdatePurchaseOrders });
+
+            var controllerContext = _purchaseOrdersController.ControllerContext;
+            var actionDescriptor = _purchaseOrdersController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _mockPurchaseOrdersService.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersByGuidAsync(It.IsAny<string>())).ReturnsAsync(expected);
+            var actual = await _purchaseOrdersController.GetPurchaseOrdersByGuidAsync(Guid);
+
+            Object filterObject;
+            _purchaseOrdersController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewPurchaseOrders));
+
+
+        }
+
+        //GET by id v11.2.0 v11.1.0 v11
+        //Exception
+        //GetPurchaseOrdersByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PurchaseOrdersController_GetPurchaseOrdersByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PurchaseOrders" },
+                    { "action", "GetPurchaseOrdersByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("purchase-orders", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _purchaseOrdersController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _purchaseOrdersController.ControllerContext;
+            var actionDescriptor = _purchaseOrdersController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersByGuidAsync(It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+                _mockPurchaseOrdersService.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view purchase-orders."));
+                var actual = await _purchaseOrdersController.GetPurchaseOrdersByGuidAsync(Guid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET v11.2.0 v11.1.0 v11
+        //Successful
+        //GetPurchaseOrdersAsync
+        [TestMethod]
+        public async Task PurchaseOrdersController_GetPurchaseOrdersAsync_Permissions()
+        {
+            purchaseOrdersTuple = new Tuple<IEnumerable<PurchaseOrders2>, int>(_purchaseOrders, 3);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PurchaseOrders" },
+                    { "action", "GetPurchaseOrdersAsync" }
+                };
+            HttpRoute route = new HttpRoute("purchase-orders", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _purchaseOrdersController.Request.SetRouteData(data);
+            _purchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewPurchaseOrders, ColleagueFinancePermissionCodes.UpdatePurchaseOrders });
+
+            var controllerContext = _purchaseOrdersController.ControllerContext;
+            var actionDescriptor = _purchaseOrdersController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _mockPurchaseOrdersService.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync(offset, limit, It.IsAny<PurchaseOrders2>(), It.IsAny<bool>())).ReturnsAsync(purchaseOrdersTuple);
+            var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync(page, criteriaFilter);
+
+            Object filterObject;
+            _purchaseOrdersController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewPurchaseOrders));
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
+
+        }
+
+        //GET v11.2.0 v11.1.0 v11
+        //Exception
+        //GetPurchaseOrdersAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PurchaseOrdersController_GetPurchaseOrdersAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PurchaseOrders" },
+                    { "action", "GetPurchaseOrdersAsync" }
+                };
+            HttpRoute route = new HttpRoute("purchase-orders", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _purchaseOrdersController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _purchaseOrdersController.ControllerContext;
+            var actionDescriptor = _purchaseOrdersController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _mockPurchaseOrdersService.Setup(x => x.GetPurchaseOrdersAsync(offset, limit, new PurchaseOrders2(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                _mockPurchaseOrdersService.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view purchase-orders."));
+                var actuals = await _purchaseOrdersController.GetPurchaseOrdersAsync(page, criteriaFilter);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #region "Post"
 
         [TestMethod]
@@ -500,8 +677,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task PoController_PostPurchaseOrderAsync_ArgumentNullException()
         {
             _mockPurchaseOrdersService.Setup(r => r.CreateUpdatePurchaseOrderAsync(It.IsAny<PurchaseOrderCreateUpdateRequest>())).ThrowsAsync(new ArgumentNullException());
-           
-           await _purchaseOrdersController.PostPurchaseOrderAsync(null);
+
+            await _purchaseOrdersController.PostPurchaseOrderAsync(null);
         }
 
         [TestMethod]
@@ -542,7 +719,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             po.PurchaseOrderDate = new DateTime(2020, 01, 01);
             po.ErrorOccured = false;
             po.ErrorMessages = null;
-           
+
 
             _mockPurchaseOrdersService.Setup(r => r.CreateUpdatePurchaseOrderAsync(It.IsAny<PurchaseOrderCreateUpdateRequest>())).ReturnsAsync(po);
             var result = await _purchaseOrdersController.PostPurchaseOrderAsync(purchaseOrderRequestCollection);
@@ -597,7 +774,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 WarningOccured = false,
                 WarningMessages = null
             };
-            
+
             _mockPurchaseOrdersService.Setup(r => r.VoidPurchaseOrderAsync(It.IsAny<PurchaseOrderVoidRequest>())).ReturnsAsync(response);
             var result = await _purchaseOrdersController.VoidPurchaseOrderAsync(request);
 
@@ -744,7 +921,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
             #endregion
 
-            
+
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task PoController_PostPurchaseOrdersAsync_KeyNotFoundException()
@@ -810,6 +987,91 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 Assert.AreEqual(purchaseOrders.Id, result.Id);
             }
 
+            //POST v11.2.0 v11.1.0 v11
+            //Successful
+            //PostPurchaseOrdersAsync
+            [TestMethod]
+            public async Task PurchaseOrdersController_PostPurchaseOrdersAsync_Permissions()
+            {
+                purchaseOrders.Id = "00000000-0000-0000-0000-000000000000";
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PurchaseOrders" },
+                    { "action", "PostPurchaseOrdersAsync" }
+                };
+                HttpRoute route = new HttpRoute("purchase-orders", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                purchaseOrdersController.Request.SetRouteData(data);
+                purchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.UpdatePurchaseOrders);
+
+                var controllerContext = purchaseOrdersController.ControllerContext;
+                var actionDescriptor = purchaseOrdersController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                purchaseOrderServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                purchaseOrderServiceMock.Setup(s => s.PostPurchaseOrdersAsync(It.IsAny<PurchaseOrders2>())).ReturnsAsync(purchaseOrders);
+                var result = await purchaseOrdersController.PostPurchaseOrdersAsync(purchaseOrders);
+
+                Object filterObject;
+                purchaseOrdersController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
+
+
+            }
+
+            //POST v11.2.0 v11.1.0 v11
+            //Exception
+            //PostPurchaseOrdersAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PurchaseOrdersController_PostPurchaseOrdersAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PurchaseOrders" },
+                    { "action", "PostPurchaseOrdersAsync" }
+                };
+                HttpRoute route = new HttpRoute("purchase-orders", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                purchaseOrdersController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = purchaseOrdersController.ControllerContext;
+                var actionDescriptor = purchaseOrdersController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    purchaseOrderServiceMock.Setup(s => s.PostPurchaseOrdersAsync(It.IsAny<PurchaseOrders2>())).ThrowsAsync(new PermissionsException());
+                    purchaseOrderServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to create purchase-orders."));
+                    await purchaseOrdersController.PostPurchaseOrdersAsync(purchaseOrders);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
         }
 
         [TestClass]
@@ -832,7 +1094,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             private Dtos.DtoProperties.Amount2DtoProperty amount;
             private List<Dtos.DtoProperties.PurchaseOrdersAccountDetailDtoProperty> accountDetails;
 
-            private string guid = "1adc2629-e8a7-410e-b4df-572d02822f8b";         
+            private string guid = "1adc2629-e8a7-410e-b4df-572d02822f8b";
 
             #endregion
 
@@ -918,7 +1180,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 // and we are now issueing an error if it exist in the payload.
                 vendor = new PurchaseOrdersVendorDtoProperty2()
                 {
-                    ExistingVendor = new Dtos.DtoProperties.PurchaseOrdersExistingVendorDtoProperty() {
+                    ExistingVendor = new Dtos.DtoProperties.PurchaseOrdersExistingVendorDtoProperty()
+                    {
                         Vendor = new GuidObject2("1adc2629-e8a7-410e-b4df-572d02822f8b")
                     },
                     ManualVendorDetails = new ManualVendorDetailsDtoProperty()
@@ -1045,7 +1308,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
             //    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
             //}
-            
+
             //[TestMethod]
             //[ExpectedException(typeof(HttpResponseException))]
             //public async Task PoController_PutPurchaseOrdersAsync_ArgumentNullException_When_PO_ManualVendor_Country_Not_CAN_AND_USA()
@@ -1428,8 +1691,252 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
                 Assert.IsNotNull(result);
             }
+
+            //PUT v11.2.0 v11.1.0 v11
+            //Successful
+            //PutPurchaseOrdersAsync
+            [TestMethod]
+            public async Task PurchaseOrdersController_PutPurchaseOrdersAsync_Permissions()
+            {
+                purchaseOrders.Id = null;
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PurchaseOrders" },
+                    { "action", "PutPurchaseOrdersAsync" }
+                };
+                HttpRoute route = new HttpRoute("purchase-orders", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                purchaseOrdersController.Request.SetRouteData(data);
+                purchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.UpdatePurchaseOrders);
+
+                var controllerContext = purchaseOrdersController.ControllerContext;
+                var actionDescriptor = purchaseOrdersController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                purchaseOrderServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                purchaseOrderServiceMock.Setup(s => s.PutPurchaseOrdersAsync(It.IsAny<string>(), It.IsAny<PurchaseOrders2>())).ReturnsAsync(purchaseOrders);
+                var result = await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+
+                Object filterObject;
+                purchaseOrdersController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.UpdatePurchaseOrders));
+
+
+            }
+
+            //PUT v11.2.0 v11.1.0 v11
+            //Exception
+            //PutPurchaseOrdersAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PurchaseOrdersController_PutPurchaseOrdersAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PurchaseOrders" },
+                    { "action", "PutPurchaseOrdersAsync" }
+                };
+                HttpRoute route = new HttpRoute("purchase-orders", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                purchaseOrdersController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = purchaseOrdersController.ControllerContext;
+                var actionDescriptor = purchaseOrdersController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    purchaseOrderServiceMock.Setup(s => s.PutPurchaseOrdersAsync(It.IsAny<string>(), It.IsAny<PurchaseOrders2>())).ThrowsAsync(new PermissionsException());
+                    purchaseOrderServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to update purchase-orders."));
+                    await purchaseOrdersController.PutPurchaseOrdersAsync(guid, purchaseOrders);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
         }
     }
 
+    #region QueryPurchaseOrderSummariesAsync Tests
+
+    [TestClass]
+    public class QueryPurchaseOrderSummariesAsyncTests
+    {
+        /// <summary>
+        ///Gets or sets the test context which provides
+        ///information about and functionality for the current test run.
+        ///</summary>
+        public TestContext TestContext { get; set; }
+
+        private Mock<IPurchaseOrderService> purchaseOrderServiceMock;
+        private Mock<ILogger> loggerMock;
+        private PurchaseOrdersController purchaseOrdersController;
+        private List<PurchaseOrderSummary> purchaseOrderSummaryCollection;
+
+        private Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria filterCriteria;
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.DeploymentDirectory, "App_Data"));
+
+            purchaseOrderServiceMock = new Mock<IPurchaseOrderService>();
+            loggerMock = new Mock<ILogger>();
+
+            filterCriteria = new ProcurementDocumentFilterCriteria();
+            filterCriteria.PersonId = "0000100";
+            filterCriteria.VendorIds = new List<string>() { "0000190" };
+
+            purchaseOrderSummaryCollection = new List<PurchaseOrderSummary>();
+
+            BuildPurchaseOrderSummaryData();
+
+            purchaseOrdersController = new PurchaseOrdersController(purchaseOrderServiceMock.Object, loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+        }
+
+
+
+        private void BuildPurchaseOrderSummaryData()
+        {
+            purchaseOrderSummaryCollection = new List<PurchaseOrderSummary>()
+            {
+                new PurchaseOrderSummary()
+                {
+                   Id = "1",
+                   Date = DateTime.Today.AddDays(2),
+                   InitiatorName = "Test User",
+                   RequestorName = "Test User",
+                   Status = PurchaseOrderStatus.InProgress,
+                   StatusDate = DateTime.Today.AddDays(2),
+                   VendorId = "0000190",
+                   VendorName = "Basic Office Supply",
+                   Amount = 10.00m,
+                   Number = "0000001",
+                   Requisitions = new List<RequisitionLinkSummary>()
+                   {
+                       new RequisitionLinkSummary()
+                       {
+                           Id = "1",
+                           Number = "0000001"
+                       }
+                   }
+
+                },
+                new PurchaseOrderSummary()
+                {
+                     Id = "2",
+                   Date = DateTime.Today.AddDays(2),
+                   InitiatorName = "Test User",
+                   RequestorName = "Test User",
+                   Status = PurchaseOrderStatus.InProgress,
+                   StatusDate = DateTime.Today.AddDays(2),
+                   VendorId = "0000190",
+                   VendorName = "Basic Office Supply",
+                   Amount = 10.00m,
+                   Number = "0000002",
+                   Requisitions = new List<RequisitionLinkSummary>()
+                   {
+                       new RequisitionLinkSummary()
+                       {
+                           Id = "2",
+                           Number = "0000002"
+                       }
+                   }
+                }
+
+            };
+            purchaseOrderServiceMock.Setup(r => r.QueryPurchaseOrderSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ReturnsAsync(purchaseOrderSummaryCollection);
+
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            purchaseOrdersController = null;
+            loggerMock = null;
+            purchaseOrderServiceMock = null;
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_QueryPurchaseOrderSummariesAsync_Dto_Null()
+        {
+            await purchaseOrdersController.QueryPurchaseOrderSummariesAsync(null);
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_QueryRequisitionSummariessAsync_PermissionsException()
+        {
+            purchaseOrderServiceMock.Setup(r => r.QueryPurchaseOrderSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ThrowsAsync(new PermissionsException());
+            await purchaseOrdersController.QueryPurchaseOrderSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_QueryPurchaseOrderSummariesAsync_Exception()
+        {
+            purchaseOrderServiceMock.Setup(r => r.QueryPurchaseOrderSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ThrowsAsync(new Exception());
+            await purchaseOrdersController.QueryPurchaseOrderSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_QueryPurchaseOrderSummariesAsync_ArgumentNullException()
+        {
+            purchaseOrderServiceMock.Setup(r => r.QueryPurchaseOrderSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ThrowsAsync(new ArgumentNullException());
+            await purchaseOrdersController.QueryPurchaseOrderSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_QueryPurchaseOrderSummariesAsync_KeyNotFoundException()
+        {
+            purchaseOrderServiceMock.Setup(r => r.QueryPurchaseOrderSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ThrowsAsync(new KeyNotFoundException());
+            await purchaseOrdersController.QueryPurchaseOrderSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        public async Task RequisitionsController_QueryPurchaseOrderSummariesAsync()
+        {
+            purchaseOrderServiceMock.Setup(r => r.QueryPurchaseOrderSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ReturnsAsync(purchaseOrderSummaryCollection);
+            var result = await purchaseOrdersController.QueryPurchaseOrderSummariesAsync(filterCriteria);
+
+            Assert.IsNotNull(result);
+            Assert.IsTrue(result.Count() > 0);
+        }
+
+    }
+
+    #endregion
     #endregion
 }

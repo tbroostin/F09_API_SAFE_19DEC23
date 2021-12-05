@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Planning.Services;
@@ -217,7 +217,7 @@ namespace Ellucian.Colleague.Api.Controllers.Planning
         /// REVIEW.ASSIGNED.ADVISEES
         /// UPDATE.ASSIGNED.ADVISEES
         /// ALL.ACCESS.ASSIGNED.ADVISEES
-        /// 3. A user with permission of VIEW.STUDENT.INFORMATION is accessing the student's data.
+        /// 3. A user with permission of VIEW.PERSON.INFORMATION is accessing the student's data.
         /// 
         /// Student privacy is enforced by this response. If any student has an assigned privacy code that the requestor is not authorized to access, 
         /// the response object is returned with an X-Content-Restricted header with a value of "partial" to indicate only partial information is returned for some subset of students. 
@@ -380,6 +380,7 @@ namespace Ellucian.Colleague.Api.Controllers.Planning
         /// UPDATE.ANY.ADVISEE
         /// ALL.ACCESS.ANY.ADVISEE
         /// </accessComments>
+        [Obsolete("Obsolete as of Colleague API 1.33, use QueryEvaluations4Async instead.")]
         [ParameterSubstitutionFilter(ParameterNames = new string[] { "program" })]
         public async Task<Dtos.Planning.ProgramEvaluation3> GetEvaluation3Async(string id, string program, string catalogYear = null)
         {
@@ -411,6 +412,60 @@ namespace Ellucian.Colleague.Api.Controllers.Planning
         }
 
         /// <summary>
+        /// Retrieves the program evaluation results for the student's specified program.
+        /// </summary>
+        /// <remarks>
+        /// Routing is used to expose this action under the /Students path.
+        /// </remarks>
+        /// <param name="id">The student's ID</param>
+        /// <param name="program">The student's program code</param>
+        /// <param name="catalogYear">The catalogYear code for the program</param>
+        /// <returns>The <see cref="ProgramEvaluation3">Program Evaluation</see> result</returns>
+        /// <accessComments>
+        /// Program Evaluation can be retrieved only if:
+        /// 1. A student is accessing their own data
+        /// 2. An authenticated user (advisor) may retrieve a Program Evaluation from their own list of assigned advisees if they have one of the following 4 permissions:
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// An authenticated user (advisor) may retrieve any Program Evaluation if they have one of the following 4 permissions:
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// </accessComments>
+        [ParameterSubstitutionFilter(ParameterNames = new string[] { "program" })]
+        public async Task<Dtos.Planning.ProgramEvaluation4> GetEvaluation4Async(string id, string program, string catalogYear = null)
+        {
+            try
+            {
+                Domain.Student.Entities.ProgramEvaluation programEvaluationEntity;
+                // Call the coordination-layer evaluation service
+                if (string.IsNullOrEmpty(catalogYear)) { catalogYear = null; }
+
+                programEvaluationEntity = (await _programEvaluationService.EvaluateAsync(id, new List<string>() { program }, catalogYear)).First();
+
+                // Get the adapter
+                var programEvaluation4DtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.ProgramEvaluation, Dtos.Planning.ProgramEvaluation4>();
+
+                // use adapter to map data to DTO
+                var evaluation = programEvaluation4DtoAdapter.MapToType(programEvaluationEntity);
+                return evaluation;
+            }
+            catch (PermissionsException pex)
+            {
+                _logger.Error(pex.Message);
+                throw CreateHttpResponseException("User does not have permissions to access this student.", HttpStatusCode.Forbidden);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex,ex.Message);
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
         /// Retrieves the program evaluation results of the given student against a list of programs.
         /// </summary>
         /// <remarks>
@@ -433,6 +488,7 @@ namespace Ellucian.Colleague.Api.Controllers.Planning
         /// UPDATE.ANY.ADVISEE
         /// ALL.ACCESS.ANY.ADVISEE
         /// </accessComments>
+        [Obsolete("Obsolete as of Colleague API 1.33, use QueryEvaluations4Async instead.")]
         public async Task<IEnumerable<Dtos.Planning.ProgramEvaluation3>> QueryEvaluations3Async(string id, [FromBody] List<string> programCodes)
         {
             try
@@ -459,6 +515,59 @@ namespace Ellucian.Colleague.Api.Controllers.Planning
             catch (Exception ex)
             {
                 _logger.Error(ex.Message);
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the program evaluation results of the given student against a list of programs.
+        /// </summary>
+        /// <remarks>
+        /// Routing is used to expose this action under the /Students path.
+        /// </remarks>
+        /// <param name="id">The student's ID</param>
+        /// <param name="programCodes">The list of programs to evaluate</param>
+        /// <returns>The <see cref="ProgramEvaluation4">Program Evaluation</see> result</returns>
+        /// <accessComments>
+        /// Program Evaluation can be retrieved only if:
+        /// 1. A student is accessing their own data
+        /// 2. An authenticated user (advisor) may retrieve a Program Evaluation from their own list of assigned advisees if they have one of the following 4 permissions:
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// An authenticated user (advisor) may retrieve any Program Evaluation if they have one of the following 4 permissions:
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// </accessComments>
+        public async Task<IEnumerable<Dtos.Planning.ProgramEvaluation4>> QueryEvaluations4Async(string id, [FromBody] List<string> programCodes)
+        {
+            try
+            {
+                // Call the coordination-layer evaluation service
+                var programEvaluationEntities = await _programEvaluationService.EvaluateAsync(id, programCodes, null);
+
+                // Get the adapter
+                var programEvaluation4DtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.ProgramEvaluation, Dtos.Planning.ProgramEvaluation4>();
+
+                // use adapter to map data to DTO
+                var evaluations = new List<ProgramEvaluation4>();
+                foreach (var evaluation in programEvaluationEntities)
+                {
+                    evaluations.Add(programEvaluation4DtoAdapter.MapToType(evaluation));
+                }
+                return evaluations;
+            }
+            catch (PermissionsException pex)
+            {
+                _logger.Error(pex.Message);
+                throw CreateHttpResponseException("User does not have permissions to access this student.", HttpStatusCode.Forbidden);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex,ex.Message);
                 throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
             }
         }

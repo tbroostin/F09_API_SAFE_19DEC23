@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -16,6 +16,7 @@ using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.HumanResources;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 {
@@ -102,6 +103,13 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 empLeaveTransRepositoryMock.Setup(l => l.GetEmployeeLeaveTransactionsAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ReturnsAsync(tupleEmployeeLeaveTransactions);
                 empLeaveTransRepositoryMock.Setup(l => l.GetEmployeeLeaveTransactionsByIdAsync(It.IsAny<string>())).ReturnsAsync(domainEmployeeLeaveTransactions);
                 empLeavePlansRepositoryMock.Setup(r => r.GetEmployeeLeavePlansByIdAsync(It.IsAny<string>())).ReturnsAsync(empleave);
+
+                var personGuidCollection = new Dictionary<string, string>();
+                personGuidCollection.Add(domainEmployeeLeaveTransactions.EmployeeLeaveId, domainEmployeeLeaveTransactions.Guid);
+               
+                empLeavePlansRepositoryMock.Setup(r => r.GetPerleaveGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
+
+
             }
 
             #endregion
@@ -109,7 +117,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             [TestMethod]
             public async Task EmployeeLeaveTransactionsService_GetEmployeeLeaveTransactionsAsync_Repository_Returns_Null()
             {
-                empLeaveTransRepositoryMock.Setup(l => l.GetEmployeeLeaveTransactionsAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ReturnsAsync(null);
+                empLeaveTransRepositoryMock.Setup(l => l.GetEmployeeLeaveTransactionsAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ReturnsAsync(() => null);
                 var result = await empLeaveTransService.GetEmployeeLeaveTransactionsAsync(0, 100);
 
                 Assert.IsNotNull(result);
@@ -137,7 +145,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
             
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(InvalidOperationException))]
             public async Task EmployeeLeaveTransactionsService_GetEmployeeLeaveTransactionsByGuidAsync_InvalidOperation()
             {
                 empLeaveTransRepositoryMock.Setup(l => l.GetEmployeeLeaveTransactionsByIdAsync(It.IsAny<string>())).ThrowsAsync(new InvalidOperationException());
@@ -153,7 +161,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task EmployeeLeaveTransactionsService_GetEmployeeLeaveTransactionsAsync_Exception_From_Repository()
             {
                 empLeaveTransRepositoryMock.Setup(l => l.GetEmployeeLeaveTransactionsAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ThrowsAsync(new Exception());
@@ -161,19 +169,21 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task EmployeeLeaveTransactionsService_GetEmployeeLeaveTransactionsAsync_EmpLeave_Null_From_Repos()
             {
-                empLeavePlansRepositoryMock.Setup(r => r.GetEmployeeLeavePlansByIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+                // empLeavePlansRepositoryMock.Setup(r => r.GetEmployeeLeavePlansByIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
+                empLeavePlansRepositoryMock.Setup(r => r.GetPerleaveGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(new Dictionary<string, string>());
+
                 await empLeaveTransService.GetEmployeeLeaveTransactionsAsync(0, 100);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task EmployeeLeaveTransactionsService_GetEmployeeLeaveTransactionsAsync_Invalid_EmpLeave()
             {
                 tupleEmployeeLeaveTransactions = new Tuple<IEnumerable<PerleaveDetails>, int>(new List<PerleaveDetails>() { new PerleaveDetails(guid, "1", DateTime.Today, "empleave2") { } }, 1);
-                empLeavePlansRepositoryMock.Setup(r => r.GetEmployeeLeavePlansByIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+                empLeavePlansRepositoryMock.Setup(r => r.GetEmployeeLeavePlansByIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 empLeaveTransRepositoryMock.Setup(l => l.GetEmployeeLeaveTransactionsAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ReturnsAsync(tupleEmployeeLeaveTransactions);
                 await empLeaveTransService.GetEmployeeLeaveTransactionsAsync(0, 100);
             }
@@ -191,19 +201,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 Assert.AreEqual(result.Item1.FirstOrDefault().Id, guid);
             }
 
-
-
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task EmployeeLeaveTransactionsService_GetEmployeeLeaveTransactionsByGuidAsync_PermissionsException()
-            {
-                getEmpLeaveTransRole= new Ellucian.Colleague.Domain.Entities.Role(1, "Role");
-                getEmpLeaveTransRole.AddPermission(new Domain.Entities.Permission(HumanResourcesPermissionCodes.ViewEmployeeData));
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { getEmpLeaveTransRole });
-                await empLeaveTransService.GetEmployeeLeaveTransactionsByGuidAsync(guid);
-            }
-
-           
+                       
         }
 
     }

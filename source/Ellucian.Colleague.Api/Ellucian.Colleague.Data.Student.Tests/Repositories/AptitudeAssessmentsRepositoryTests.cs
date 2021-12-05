@@ -107,7 +107,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         public async Task AptitudeAssessmentsRepository_GetAptitudeAssessmentByIdAsync_DataContract_NotFound_KeyNotFoundException()
         {
             var id = "3d390690-7b66-4b66-820e-7610c96c5973";
-            dataAccessorMock.Setup(acc => acc.ReadRecordAsync<NonCourses>("NON.COURSES", "DC", true)).ReturnsAsync(null);
+            dataAccessorMock.Setup(acc => acc.ReadRecordAsync<NonCourses>("NON.COURSES", "DC", true)).ReturnsAsync(() => null);
             var result = await _aptitudeAssessmentsRepository.GetAptitudeAssessmentByIdAsync(id);
         }
 

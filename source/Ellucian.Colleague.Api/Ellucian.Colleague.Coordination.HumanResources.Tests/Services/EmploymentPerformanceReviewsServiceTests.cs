@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -17,6 +17,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Data.Colleague;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 {
@@ -26,6 +27,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         [TestClass]
         public class EmploymentPerformanceReviewsServiceTests_GET : CurrentUserSetup
         {
+            private const string personGuid = "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d";
+            private const string perposGuid = "d2253ac7-9931-4560-b42f-1fccd43c952e";
             //Mock<IPositionRepository> positionRepositoryMock;
             Mock<IEmploymentPerformanceReviewsRepository> employmentPerformanceReviewsRepositoryMock;
             Mock<IHumanResourcesReferenceDataRepository> hrReferenceDataRepositoryMock;
@@ -145,7 +148,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 Assert.IsNotNull(actual);
 
                 Assert.AreEqual(expected.Guid, actual.Id);
-            }       
+            }
 
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
@@ -166,7 +169,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task EmploymentPerformanceReviews_GET_ById_ReturnsNullEntity_RepositoryException()
             {
                 var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
@@ -247,26 +250,23 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
                 employmentPerformanceReviewsEntities = new List<Domain.HumanResources.Entities.EmploymentPerformanceReview>() 
                 {
-                    new Domain.HumanResources.Entities.EmploymentPerformanceReview("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "d2253ac7-9931-4560-b42f-1fccd43c952e", new DateTime(18080), "CODE1", "CODE1"),
-                    new Domain.HumanResources.Entities.EmploymentPerformanceReview("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "d2253ac7-9931-4560-b42f-1fccd43c952e", "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", new DateTime(18080), "CODE2", "CODE2"),
-                    new Domain.HumanResources.Entities.EmploymentPerformanceReview("d2253ac7-9931-4560-b42f-1fccd43c952e", "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", new DateTime(18080), "CODE3", "CODE3")
-                    //new Domain.HumanResources.Entities.EmploymentPerformanceReview("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "d2253ac7-9931-4560-b42f-1fccd43c952e", new DateTime(18080), "d2253ac7-9931-4560-b42f-1fccd43c952e", "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc"),
-                    //new Domain.HumanResources.Entities.EmploymentPerformanceReview("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "d2253ac7-9931-4560-b42f-1fccd43c952e", "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", new DateTime(18080), "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "d2253ac7-9931-4560-b42f-1fccd43c952e"),
-                    //new Domain.HumanResources.Entities.EmploymentPerformanceReview("d2253ac7-9931-4560-b42f-1fccd43c952e", "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", new DateTime(18080), "d2253ac7-9931-4560-b42f-1fccd43c952e", "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d")
+                    new Domain.HumanResources.Entities.EmploymentPerformanceReview("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "PID1", "PERPOS1", new DateTime(18080), "CODE1", "CODE1"),
+                    new Domain.HumanResources.Entities.EmploymentPerformanceReview("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "PID2", "PERPOS2", new DateTime(18080), "CODE2", "CODE2"),
+                    new Domain.HumanResources.Entities.EmploymentPerformanceReview("d2253ac7-9931-4560-b42f-1fccd43c952e", "PID3", "PERPOS3", new DateTime(18080), "CODE3", "CODE3")                    
                 };
 
                 employmentPerformanceReviewRatingEntities = new List<Domain.HumanResources.Entities.EmploymentPerformanceReviewRating>() 
                 {
                     new Domain.HumanResources.Entities.EmploymentPerformanceReviewRating("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "CODE1", "DESC1"),
-                    new Domain.HumanResources.Entities.EmploymentPerformanceReviewRating("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "CODE1", "DESC1"),
-                    new Domain.HumanResources.Entities.EmploymentPerformanceReviewRating("d2253ac7-9931-4560-b42f-1fccd43c952e", "CODE1", "DESC1"),
+                    new Domain.HumanResources.Entities.EmploymentPerformanceReviewRating("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "CODE2", "DESC2"),
+                    new Domain.HumanResources.Entities.EmploymentPerformanceReviewRating("d2253ac7-9931-4560-b42f-1fccd43c952e", "CODE3", "DESC3"),
                 };
 
                 employmentPerformanceReviewTypeEntities = new List<Domain.HumanResources.Entities.EmploymentPerformanceReviewType>() 
                 {
                     new Domain.HumanResources.Entities.EmploymentPerformanceReviewType("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc", "CODE1", "DESC1"),
-                    new Domain.HumanResources.Entities.EmploymentPerformanceReviewType("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "CODE1", "DESC1"),
-                    new Domain.HumanResources.Entities.EmploymentPerformanceReviewType("d2253ac7-9931-4560-b42f-1fccd43c952e", "CODE1", "DESC1"),
+                    new Domain.HumanResources.Entities.EmploymentPerformanceReviewType("849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", "CODE2", "DESC2"),
+                    new Domain.HumanResources.Entities.EmploymentPerformanceReviewType("d2253ac7-9931-4560-b42f-1fccd43c952e", "CODE3", "DESC3"),
                 };
 
                 employmentPerformanceReviewsEntityTuple = new Tuple<IEnumerable<Domain.HumanResources.Entities.EmploymentPerformanceReview>, int>(employmentPerformanceReviewsEntities, employmentPerformanceReviewsEntities.Count());
@@ -277,15 +277,28 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 hrReferenceDataRepositoryMock.Setup(i => i.GetEmploymentPerformanceReviewTypesAsync(It.IsAny<bool>())).ReturnsAsync(employmentPerformanceReviewTypeEntities);
                 hrReferenceDataRepositoryMock.Setup(i => i.GetEmploymentPerformanceReviewRatingsAsync(It.IsAny<bool>())).ReturnsAsync(employmentPerformanceReviewRatingEntities);
 
-                employmentPerformanceReviewsRepositoryMock.Setup(i => i.GetIdFromGuidAsync(employmentPerformanceReviewsEntities.FirstOrDefault().Guid)).ReturnsAsync("NOTNULL");
-                personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(employmentPerformanceReviewsEntities.FirstOrDefault().PersonId)).ReturnsAsync(employmentPerformanceReviewsEntities.ToList()[0].PersonId);
-                employmentPerformanceReviewsRepositoryMock.Setup(i => i.GetIdFromGuidAsync(employmentPerformanceReviewsEntities.FirstOrDefault().PerposId)).ReturnsAsync(employmentPerformanceReviewsEntities.ToList()[0].PerposId);
+                employmentPerformanceReviewsRepositoryMock.Setup(i => i.GetIdFromGuidAsync(employmentPerformanceReviewsEntities.FirstOrDefault().Guid, It.IsAny<string>())).ReturnsAsync("NOTNULL");
+                personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(personGuid)).ReturnsAsync(employmentPerformanceReviewsEntities.ToList()[0].PersonId);
+                employmentPerformanceReviewsRepositoryMock.Setup(i => i.GetIdFromGuidAsync(perposGuid, It.IsAny<string>())).ReturnsAsync(employmentPerformanceReviewsEntities.ToList()[0].PerposId);
                 employmentPerformanceReviewsRepositoryMock.Setup(i => i.GetInfoFromGuidAsync(It.IsAny<string>())).ReturnsAsync(guidLookUpResult);
-                employmentPerformanceReviewsRepositoryMock.Setup(i => i.GetIdFromGuidAsync(employmentPerformanceReviewsEntities.FirstOrDefault().ReviewedById)).ReturnsAsync(employmentPerformanceReviewsEntities.ToList()[0].ReviewedById);
+                employmentPerformanceReviewsRepositoryMock.Setup(i => i.GetIdFromGuidAsync(employmentPerformanceReviewsEntities.FirstOrDefault().ReviewedById, It.IsAny<string>())).ReturnsAsync(employmentPerformanceReviewsEntities.ToList()[0].ReviewedById);
 
                 employmentPerformanceReviewsRepositoryMock.Setup(i => i.UpdateEmploymentPerformanceReviewsAsync(It.IsAny<EmploymentPerformanceReview>())).ReturnsAsync(employmentPerformanceReviewsEntities.ToList()[0]);
                 employmentPerformanceReviewsRepositoryMock.Setup(i => i.CreateEmploymentPerformanceReviewsAsync(It.IsAny<EmploymentPerformanceReview>())).ReturnsAsync(employmentPerformanceReviewsEntities.ToList()[0]);
 
+                var personGuidDictionary = new Dictionary<string, string>() { };
+                personGuidDictionary.Add("PID1", "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d");
+                personGuidDictionary.Add("PID2", "a7cbdbbe-131e-4b91-9c99-d9b65c41f1c8");
+                personGuidDictionary.Add("PID3", "ae91ddf9-0b25-4008-97c5-76ac5fe570a3");
+                personRepositoryMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>()))
+                    .ReturnsAsync(personGuidDictionary);
+                
+                var perposGuidDictionary = new Dictionary<string, string>() { };
+                perposGuidDictionary.Add("PERPOS1", "d2253ac7-9931-4560-b42f-1fccd43c952e");
+                perposGuidDictionary.Add("PERPOS2", "a7cbdbbe-131e-4b91-9c99-d9b65c41f1c8");
+                perposGuidDictionary.Add("PERPOS3", "ae91ddf9-0b25-4008-97c5-76ac5fe570a3");
+                employmentPerformanceReviewsRepositoryMock.Setup(repo => repo.GetGuidsCollectionAsync(It.IsAny<IEnumerable<string>>(), "PERPOS"))
+                    .ReturnsAsync(perposGuidDictionary);
             }
         }
     }

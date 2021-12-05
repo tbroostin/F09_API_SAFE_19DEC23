@@ -103,7 +103,14 @@ namespace Ellucian.Colleague.Api.Controllers.Finance
             catch(Exception ex)
             {
                 _logger.Error(ex, ex.Message);
-                throw CreateHttpResponseException("Could not retrieve payment receipt with the specified information. See log for details.");
+                if (ex.Message == "Your payment has been canceled.")
+                {
+                    throw CreateHttpResponseException("Your payment has been canceled. Contact the system administrator if you are receiving this message in error.");
+                }
+                else
+                {
+                    throw CreateHttpResponseException("Could not retrieve payment receipt with the specified information. See log for details.");
+                }
             }
         }
 

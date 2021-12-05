@@ -1,7 +1,6 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Student.Entities;
-using Ellucian.Colleague.Domain.Student.Entities.DegreePlans;
 using Ellucian.Colleague.Domain.Student.Entities.Requirements;
 using Ellucian.Colleague.Domain.Student.Entities.Requirements.Modifications;
 using slf4net;
@@ -32,7 +31,8 @@ namespace Ellucian.Colleague.Domain.Student.Services
         public List<string> constructorDebug;
         private ILogger logger;
         private IEnumerable<Course> Courses;
-       private bool ShowRelatedCourses { get; set; }
+        public Dictionary<string, RequirementExclusionTable> RequirementExclusionTable;
+        private bool ShowRelatedCourses { get; set; }
         private List<AcademicCredit> CreditsExcludedFromTranscriptGrouping { get;  set; }
 
         // Not sure this belongs here, but it has to get set in the constructor
@@ -68,6 +68,7 @@ namespace Ellucian.Colleague.Domain.Student.Services
             Credits = credits.ToList();
             PlannedCourses = plannedCourses;
             Courses = courses;
+            RequirementExclusionTable = new Dictionary<string, RequirementExclusionTable>();
             AdditionalRequirements = CopyRequirements(additionalrequirements);
 
             ProgramRequirements = CopyProgramRequirements(programrequirements);
@@ -139,9 +140,11 @@ namespace Ellucian.Colleague.Domain.Student.Services
             }
 
             StoreRuleResultsInCopiedTree(ruleResults);
+            //This will build exclusion table to identify which requirment is excludes or excluded by other requirements
+            BuildRequirementExclusionTable();
         }
 
-
+           
         public ProgramEvaluator(StudentProgram studentprogram, ProgramRequirements programrequirements, List<Requirement> additionalrequirements,
                                IEnumerable<AcademicCredit> credits, IEnumerable<PlannedCredit> plannedCourses, IEnumerable<RuleResult> ruleResults, List<Override> overrides, List<AcademicCredit> creditsExcludedFromTranscriptGrouping, IEnumerable<Course> courses, DegreeAuditParameters degreeAuditParameters, ILogger logger):
             this( studentprogram,  programrequirements,  additionalrequirements,credits, plannedCourses,  ruleResults,  overrides,courses, logger)
@@ -165,9 +168,9 @@ namespace Ellucian.Colleague.Domain.Student.Services
             if (credits == null) { throw new ArgumentNullException("credits"); }
             if (plannedCourses == null) { throw new ArgumentNullException("plannedCourses"); }
             if (courses == null) { throw new ArgumentNullException("courses"); }
+            RequirementExclusionTable = new Dictionary<string, RequirementExclusionTable>();
 
             Requirements = CopyRequirements(requirements, null);
-
 
             // The following items are not used but are required by Evaluate
             StudentProgram = null;
@@ -186,6 +189,9 @@ namespace Ellucian.Colleague.Domain.Student.Services
             GroupsToSkip = new List<string>();
 
             StoreRuleResultsInCopiedTree(ruleResults);
+            //This will build exclusion table to identify which requirment is excludes or excluded by other requirements
+            BuildRequirementExclusionTable();
+
         }
 
         private void StoreRuleResultsInCopiedTree(IEnumerable<RuleResult> results)
@@ -671,8 +677,8 @@ namespace Ellucian.Colleague.Domain.Student.Services
             ProgramResult.Credits = ProgramResult.GetCredits();
 
             ProgramResult.InProgressCredits = ProgramResult.GetInProgressCredits();
-
-            ProgramResult.PlannedCredits = PlannedCourses.Select(pc => pc.Credits ?? pc.Course.MinimumCredits ?? 0m).Sum();
+            //Planned credits count should not include planned courses  that were replaced in progress
+            ProgramResult.PlannedCredits = PlannedCourses.Where(p => p.ReplacedStatus != ReplacedStatus.ReplaceInProgress).Select(pc => pc.Credits ?? pc.Course.MinimumCredits ?? 0m).Sum();
 
 
             // Evaluate program-level requrements
@@ -741,13 +747,12 @@ namespace Ellucian.Colleague.Domain.Student.Services
                 foreach (var line in constructorDebug)
                 {
                     logger.Debug(line);
-                    logger.Info(line);
                 }
 
                 foreach (var line in debuglist)
                 {
                     //logger.Debug(line);
-                    logger.Info(line);
+                    logger.Debug(line);
                 }
             }
 
@@ -794,9 +799,7 @@ namespace Ellucian.Colleague.Domain.Student.Services
             // FIRST EXCLUDE: Build list of results to use for this group using the master list of academic credits.
             //    The master list is reduced based on requirement type reuse specifications at program level.
 
-            // Ids of Requirements that exclude this group's requirement type (unless it's the requirement over this group, can exclude from itself)
-            var requirementsThatExcludeThisGroupsRequirementType = Requirements.Where(r => r.Exclusions.Contains(group.SubRequirement.Requirement.RequirementType.Code) && r.Id != group.SubRequirement.Requirement.Id).Select(r => r.Id).ToList();
-              
+
             foreach (var acr in masterlist)
             {
                 List<string> appliedToReqs = new List<string>();
@@ -821,37 +824,42 @@ namespace Ellucian.Colleague.Domain.Student.Services
                         }
 
                     }
+                    //get the current group's requirement Id
+                    var currentGroupRequirementId = group.SubRequirement.Requirement.Id;
 
-                    // Exclude this academic credit if it has already been applied to a group whose requirement excludes this group's requirement type
-                    //NOTE: This is being done so that the reverse of the exclude is also done(because that is what EVAL does).In other words, if
-
-                    //  a requirement of type MAJ excludes requirements of type GEN, then the reverse will happen even if the GEN requirement does not have an
-                    //    exclusion for MAJ.At the requirement level it is reciprocal.
-                    if (appliedToReqs.Intersect(requirementsThatExcludeThisGroupsRequirementType).Count() > 0)
+                    //Check if requirement exclusion table contains requirement id as a key. Usually Exclusion table can never be null because it is created as empty dictionary in constructor.
+                    //but it can be empty if none of the requirements have exclusion types defined. 
+                    //If any of the requirement have exclusion type defined then there should always be an entry for each requirement id even if that Id does not have exclusion type defined.
+                    if (RequirementExclusionTable.ContainsKey(currentGroupRequirementId))
                     {
-                        // do not include; go to the next academic credit
-                        continue;
-                    }
-
-                    // Exclude this academic credit if it has already been applied to a group whose requirement is excluded by this group's requirement type
-                    // or to a requirement excluded in the group's excludes.
-                    if (group.SubRequirement.Requirement.Exclusions.Any() || group.Exclusions.Any())
-                    {
-                        if (appliedToReqs.Count() > 0)
+                        //check if current academic credit is applied to the requirement which this group's requirement excludes. if so don't take it for current group evaluation
+                        // In other words, Exclude this academic credit if it has already been applied to a group whose requirement is excluded by this group's requirement type
+                        if (appliedToReqs.Intersect(RequirementExclusionTable[currentGroupRequirementId].ExcludesRequirementIds).Count() > 0)
                         {
-                            // Find each requirement to which this academic credit has been applied (excluding this group's requirement)
-                            // and return the requirement types for all requirements to which it has been applied. 
-                            // If any requirement type in that list is an excluded type, skip this academic credit.
-                            var appliedToReqTypes = Requirements.Where(r => appliedToReqs.Contains(r.Id) && r.Id != group.SubRequirement.Requirement.Id).Select(r => r.RequirementType.Code);
-                            if (appliedToReqTypes.Intersect(group.SubRequirement.Requirement.Exclusions).Count() > 0 || appliedToReqTypes.Intersect(group.Exclusions).Count() > 0)
-                            {
-                                // do not include; go to the next academic credit
-                                continue;
-                            }
+                            continue;
+                        }
+                        //check if current academic credit is already applied to the requirment that this particular group's requirment is excluded by.  
+                        //Or in other words check if current academic credit is already applied to the requirement that excludes this particular group's requirement.
+                        // Exclude this academic credit if it has already been applied to a group whose requirement excludes this group's requirement type
+                        //NOTE: This is being done so that the reverse of the exclude is also done(because that is what EVAL does).In other words, if
+                        //  a requirement of type MAJ excludes requirements of type GEN, then the reverse will happen even if the GEN requirement does not have an
+                        //    exclusion for MAJ.At the requirement level it is reciprocal.
+                        if (appliedToReqs.Intersect(RequirementExclusionTable[currentGroupRequirementId].ExcludedByRequirementIds).Count() > 0)
+                        {
+                            continue;
+                        }
+                    }
+                    //we should also validate for group's exclusions- do not take the acad cred if the requirements it is applied to is excluded in the group's excludes.
+                    if (group.Exclusions.Any())
+                    {
+                        var appliedToReqTypes = Requirements.Where(r => appliedToReqs.Contains(r.Id) && r.Id != group.SubRequirement.Requirement.Id).Select(r => r.RequirementType.Code);
+                        if (appliedToReqTypes.Intersect(group.Exclusions).Count() > 0)
+                        {
+                            continue;
                         }
                     }
                 }
-
+            
                 // Add any academic credit that remains at this point (and has a valid status) to the result set, excluding withdrawn credits
                 if (acr.GetType() == typeof(CreditResult))
                 {
@@ -865,6 +873,8 @@ namespace Ellucian.Colleague.Domain.Student.Services
                 else
                 {
                     var pcc = new PlannedCredit(acr.GetCourse(), acr.GetTermCode(), acr.GetSectionId());
+                    pcc.ReplacedStatus = (acr as CourseResult).PlannedCourse.ReplacedStatus;
+                    pcc.ReplacementStatus = (acr as CourseResult).PlannedCourse.ReplacementStatus;
                     pcc.Credits = (acr as CourseResult).PlannedCourse.Credits;
                     resultSet.Add((AcadResult)new CourseResult(pcc));
                 }
@@ -1067,13 +1077,12 @@ namespace Ellucian.Colleague.Domain.Student.Services
                 r2.AllowsCourseReuse = r1.AllowsCourseReuse;
                 r2.CustomUse = r1.CustomUse;
                 r2.SortSpecificationId = r1.SortSpecificationId;
-
-                if (r1.Exclusions != null)
+                if (r1.RequirementExclusions != null)
                 {
-                    r2.Exclusions = new List<string>();
-                    foreach (var excl in r1.Exclusions)
+                    r2.RequirementExclusions = new List<RequirementBlockExclusion>();
+                    foreach (var excl in r1.RequirementExclusions)
                     {
-                        r2.Exclusions.Add(excl);
+                        r2.RequirementExclusions.Add(new RequirementBlockExclusion(excl.ExclusionType, excl.FirstOnlyFlag));
                     }
                 }
 
@@ -1320,7 +1329,9 @@ namespace Ellucian.Colleague.Domain.Student.Services
                 foreach (var plannedCredit in plannedCredits)
                 {
                     const int sortvalue = 6;
-                    var courseresult = new CourseResult(new PlannedCredit(plannedCredit.Course, plannedCredit.TermCode, plannedCredit.SectionId));
+                    var courseresult  = new CourseResult(new PlannedCredit(plannedCredit.Course, plannedCredit.TermCode, plannedCredit.SectionId));
+                    courseresult.PlannedCourse.ReplacedStatus = plannedCredit.ReplacedStatus;
+                    courseresult.PlannedCourse.ReplacementStatus = plannedCredit.ReplacementStatus;
                     if (plannedCredit.Credits.HasValue) { courseresult.PlannedCourse.Credits = plannedCredit.Credits; }
                     sortorder.Add(courseresult, sortvalue);
                     resultlist.Add(courseresult);
@@ -1354,6 +1365,8 @@ namespace Ellucian.Colleague.Domain.Student.Services
                 foreach (var plannedCredit in plannedCredits)
                 {
                     var courseresult = new CourseResult(new PlannedCredit(plannedCredit.Course, plannedCredit.TermCode, plannedCredit.SectionId));
+                    courseresult.PlannedCourse.ReplacedStatus = plannedCredit.ReplacedStatus;
+                    courseresult.PlannedCourse.ReplacementStatus = plannedCredit.ReplacementStatus;
                     if (plannedCredit.Credits.HasValue) { courseresult.PlannedCourse.Credits = plannedCredit.Credits; }
                     sortorder.Add(courseresult, plannedCreditSortvalue);
                     resultlist.Add(courseresult);
@@ -1499,6 +1512,87 @@ namespace Ellucian.Colleague.Domain.Student.Services
             }
         }
 
+        /// <summary>
+        /// This will build Requirement exclusion table that identifies which requirement excludes or is excluded by other requirements
+        /// Having this table build in the beginning helps to not check everytime for each acad cred for each group evaluation.
+        /// </summary>
+        private void BuildRequirementExclusionTable()
+        {
+            try
+            {
+                if (RequirementExclusionTable == null)
+                {
+                    logger.Info("Requirement exclusion table is null, it should not be that case. An empty exclusion table should always be existing.");
+                    return;
+                }
+                //build only when any of the requirement have exclusions defined
+                if (!this.Requirements.Select(r => r.RequirementExclusions).Any())
+                {
+                    logger.Info("Requirement Exclusion table is empty because there are no exclusions defined.");
+                    return;
+                }
+
+                //build empty exclusion table with all the requirement ids first. It means we have to have one to one corresponding enty with each requirement.
+                foreach (Requirement req in Requirements)
+                {
+                    if (!RequirementExclusionTable.ContainsKey(req.Id))
+                    {
+                        RequirementExclusionTable.Add(req.Id, new RequirementExclusionTable(req.Id, req.Code, req.RequirementType));
+                    }
+                }
+
+                //now fill the exclusion properties
+                //In this loop taking each requirement id one by one  
+                foreach (Requirement req in Requirements)
+                {
+                    if (req.RequirementExclusions != null)
+                    {
+                        //this loop will build excludes and excluded by properties for each requirement
+                        //For example - MIN is declared such as Exclusion type is MAJ then the table is set in both the directions such as MIN excludes MAJ and MAJ is excluded by MIN.
+                        //In this case all the requirements of type MIN will have all the requirement Ids of MAJ type in its Excludes collection 
+                        //whereas all the requirements of MAJ type will have this particular requirment id of MIN type in its Excluded By collection. 
+
+                        //Now for the requirment Id, loop for all the exclusions defined one by one
+                        foreach (RequirementBlockExclusion requirmentExclusion in req.RequirementExclusions)
+                        {
+                            List<string> requirementIds = new List<string>();
+                            //if the requirement excluion of first only flag then grab the requirement id of only first requirement of that type
+                            //For example MIN has MAJ exclusion type with flag=Y and there are suppose 2 major requirements then it will take only the first one from the list
+                            //otherwsie will take all the requirements of MAJ type.
+                            if (requirmentExclusion.FirstOnlyFlag == true)
+                            {
+                                //take only the firt requirment id of that exclusion type
+                                Requirement firstRequirment = Requirements.Where(r => r.Id != req.Id && r.RequirementType.Code == requirmentExclusion.ExclusionType).FirstOrDefault();
+                                if (firstRequirment != null)
+                                {
+                                    requirementIds.Add(firstRequirment.Id);
+                                }
+                            }
+                            else
+                            {
+                                List<string> alltheRequirmentIds = Requirements.Where(r => r.Id != req.Id && r.RequirementType.Code == requirmentExclusion.ExclusionType).Select(r => r.Id).ToList();
+                                requirementIds.AddRange(alltheRequirmentIds);
+                            }
+
+                            //populate excludes- Above requirment Ids will go as Excludes for the requirment being processed.
+                            RequirementExclusionTable[req.Id].ExcludesRequirementIds.AddRange(requirementIds);
+                            //populate excluded by. Since it is 2 way table, for all recquirements that current requirement was excluding, we need to update for those requirments "Excluded By" collection
+                            foreach (string reqId in requirementIds)
+                            {
+                                RequirementExclusionTable[reqId].ExcludedByRequirementIds.Add(req.Id);
+
+                            }
+                        }
+
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                logger.Error(ex, "Exception occured while building Requirment Exclusion Table.");
+                throw;
+            }
+        }
     }
 
 }

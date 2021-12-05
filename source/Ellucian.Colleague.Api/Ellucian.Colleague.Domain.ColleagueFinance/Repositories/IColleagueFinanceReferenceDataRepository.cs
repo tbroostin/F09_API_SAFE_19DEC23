@@ -47,11 +47,26 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         Task<string> GetAccountingStringComponentValuesGuidFromIdAsync(string id);
 
         /// <summary>
+        /// Get guid for AssetCategories code
+        /// </summary>
+        /// <param name="code">AssetCategories code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetAssetCategoriesGuidAsync(string code);
+
+
+        /// <summary>
         /// Gets all asset ctegories.
         /// </summary>
         /// <param name="bypassCache"></param>
         /// <returns></returns>
         Task<IEnumerable<AssetCategories>> GetAssetCategoriesAsync(bool bypassCache);
+
+        /// <summary>
+        /// Get guid for AssetTypes code
+        /// </summary>
+        /// <param name="code">AssetTypes code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetAssetTypesGuidAsync(string code);
 
         /// <summary>
         /// Gets all asset types.

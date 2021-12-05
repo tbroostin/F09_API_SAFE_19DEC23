@@ -148,7 +148,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [TestMethod]
         public async Task GetVendorCommodityAsync_Repository_ReturnsNull()
         {
-            vendorCommodityRepositoryMock.Setup(i => i.GetVendorCommodityAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
+            vendorCommodityRepositoryMock.Setup(i => i.GetVendorCommodityAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(() => null);
             var resultDto = await vendorCommodityService.GetVendorCommodityAsync(vendorId, commodityCode);
             Assert.IsNotNull(resultDto);
             Assert.IsNull(resultDto.Id);

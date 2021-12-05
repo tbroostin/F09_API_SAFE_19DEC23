@@ -1,7 +1,8 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
@@ -113,6 +114,125 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return facultyEntities;
         }
 
+        public async Task<FacultyDropRegistrationPermissions> GetFacultyRegistrationEligibilityAsync(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "Must provide the ID of the faculty to retrieve eligibility.");
+            }
+
+            bool isEligibleToDrop = false;
+            bool hasEligibilityOverrides = false;
+
+            string regUserGroupId = await GetStaffRegistrationUserGroupIdAsync(personId);
+            if (string.IsNullOrEmpty(regUserGroupId))
+            {
+                //when nothing is assigned for the user then read the default reg user groupgs
+                regUserGroupId = await GetRegistrationUserGroupIdAsync();
+            }
+
+            // we should now have a reg group id to retrieve corresponding RGU.REG.CONTROLS from REG.USERS
+            string criteria = string.Format("WITH REG.USERS.ID EQ '{0}'", regUserGroupId);
+            var regUsers = await DataReader.BulkReadRecordAsync<RegUsers>("REG.USERS", criteria, true);
+            if (regUsers != null && !regUsers.Any())
+            {
+                //If there are no reg controls defined for reg users. This should only happen if data is corrupted. 
+                logger.Debug(string.Format("No RGU.REG.CONTROLS for REG.USER {0}", regUserGroupId));
+                return new FacultyDropRegistrationPermissions(isEligibleToDrop, hasEligibilityOverrides);
+            }
+
+            var regUser = regUsers[0];
+            if (regUser.RguRegControls == null || regUser.RguRegControls.Count == 0)
+            {
+                //If there are no reg controls defined for reg users. This should only happen if data is corrupted. 
+                logger.Debug(string.Format("No RGU.REG.CONTROLS for REG.USER {0}", regUser));
+                return new FacultyDropRegistrationPermissions(isEligibleToDrop, hasEligibilityOverrides);
+            }
+
+            //check if drop processing action is permitted for the reg user group
+            bool dropActionPermitted = regUser.RguAllowedRegPeriods == null ? false : regUser.RguAllowedRegPeriods.Where(a => a != null && a.ToUpper() == "D").Any();
+            if (dropActionPermitted)
+            {
+                isEligibleToDrop = true;
+            }
+
+            //check if the student override flags are all set to Yes
+            if ((!string.IsNullOrWhiteSpace(regUser.RguPreregStudentRuleFlag) && string.Equals(regUser.RguPreregStudentRuleFlag, "Y", StringComparison.OrdinalIgnoreCase)) &&
+                (!string.IsNullOrWhiteSpace(regUser.RguRegStudentRuleFlag) && string.Equals(regUser.RguRegStudentRuleFlag, "Y", StringComparison.OrdinalIgnoreCase)) &&
+                (!string.IsNullOrWhiteSpace(regUser.RguAddStudentRuleFlag) && string.Equals(regUser.RguAddStudentRuleFlag, "Y", StringComparison.OrdinalIgnoreCase)) &&
+                (!string.IsNullOrWhiteSpace(regUser.RguOtherStudentRuleFlag) && string.Equals(regUser.RguOtherStudentRuleFlag, "Y", StringComparison.OrdinalIgnoreCase)))
+            {
+                hasEligibilityOverrides = true;
+            }
+
+            return new FacultyDropRegistrationPermissions(isEligibleToDrop, hasEligibilityOverrides);
+        }
+
+        private async Task<string> GetStaffRegistrationUserGroupIdAsync(string personId)
+        {
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "Must provide the ID of the faculty to retrieve staff registration user group.");
+            }
+
+            //check to see if the faculty user has a reg user group for their staff record
+            string criteria = string.Format("WITH RGU.STAFF.IDS EQ '{0}'", personId);
+            string[] ids = await DataReader.SelectAsync("REG.USERS", criteria);
+
+            // user has no reg user group for their staff record
+            if (ids != null && ids.Length == 0)
+            {
+                return string.Empty;
+            }
+
+            string regUserGroupId = ids[0];
+
+            // use reg group id to retrieve corresponding RGU.REG.CONTROLS from REG.USERS to check if active
+            criteria = string.Format("WITH REG.USERS.ID EQ '{0}'", regUserGroupId);
+            var regUsers = await DataReader.BulkReadRecordAsync<RegUsers>("REG.USERS", criteria, true);
+
+            if (regUsers != null && !regUsers.Any())
+            {
+                //If there are no reg controls defined for reg users. This should only happen if data is corrupted. 
+                logger.Debug(string.Format("No RGU.REG.CONTROLS for REG.USER {0}", regUserGroupId));
+                return string.Empty;
+            }
+
+            var regUser = regUsers[0];
+            if (regUser.RguRegControls == null || regUser.RguRegControls.Count == 0)
+            {
+                //If there are no reg controls defined for reg users. This should only happen if data is corrupted. 
+                logger.Debug(string.Format("No RGU.REG.CONTROLS for REG.USER {0}", regUser));
+                return string.Empty;
+            }
+
+            //check to see if reg user control is active for staff member
+            var RguRegStaffEntity = regUser.RguRegStaffEntityAssociation.Where(s => s != null && s.RguStaffIdsAssocMember == personId).FirstOrDefault();
+            if (RguRegStaffEntity != null &&
+                ((!RguRegStaffEntity.RguStaffRegStartDatesAssocMember.HasValue || RguRegStaffEntity.RguStaffRegStartDatesAssocMember.Value <= DateTime.Today) &&
+                 (!RguRegStaffEntity.RguStaffRegEndDatesAssocMember.HasValue || RguRegStaffEntity.RguStaffRegEndDatesAssocMember.Value >= DateTime.Today)))
+            {
+                return regUserGroupId;
+            }
+
+            return string.Empty;
+        }
+
+        private async Task<string> GetRegistrationUserGroupIdAsync()
+        {
+            string regUserId = string.Empty;
+            Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS", true);
+            if (stwebDefaults != null && !string.IsNullOrWhiteSpace(stwebDefaults.StwebRegUsersId))
+            {
+                regUserId = stwebDefaults.StwebRegUsersId;
+            }
+            else
+            {
+                regUserId = "NAMELESS";
+            }
+            return regUserId;
+        }
+
         /// <summary>
         /// Gets faculty office hours for the given list of faculty Ids
         /// </summary>
@@ -123,20 +243,20 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var facultyofficeHoursList = new List<Ellucian.Colleague.Domain.Student.Entities.FacultyOfficeHours>();
             string idsNotFound = "";
             if ((facultyIds != null) && (facultyIds.Any()))
-            {                                
+            {
                 foreach (var id in facultyIds)
                 {
                     try
                     {
-                        var officeHours = await GetFacultyOfficeHoursAsync(id);
+                        var officeHours = await GetOrAddToCacheAsync("FacultyOfficeHours" + id,
+                        async () => { return await GetFacultyOfficeHoursAsync(id); });
 
                         //Remove any faculty office hour if it's in past or in future
                         if (officeHours.Any())
                         {
                             foreach (var officeHour in officeHours.ToList())
                             {
-                                if (officeHour.OfficeEndDate.HasValue && officeHour.OfficeStartDate.HasValue &&
-                                (officeHour.OfficeEndDate.Value.Date < DateTimeOffset.UtcNow.Date || officeHour.OfficeStartDate.Value.Date > DateTimeOffset.UtcNow.Date))
+                                if (officeHour.OfficeEndDate.HasValue && officeHour.OfficeEndDate.Value.Date < DateTimeOffset.UtcNow.Date)
                                 {
                                     officeHours.Remove(officeHour);
                                 }
@@ -176,7 +296,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             string idsNotFound = "";
             if ((ids != null) && (ids.Count() != 0))
             {
-                var allFaculty = await GetAllFacultyAsync();               
+                var allFaculty = await GetAllFacultyAsync();
                 foreach (var id in ids)
                 {
                     try
@@ -198,137 +318,137 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         }
 
         private async Task<List<OfficeHours>> GetFacultyOfficeHoursAsync(string facultyId)
-        {           
-               List<OfficeHours> officeHoursdata = new List<OfficeHours>();
-               var query = "FACULTY.ID EQ " + facultyId;
-               Collection<DataContracts.Faculty> facultyBulkData = await DataReader.BulkReadRecordAsync<DataContracts.Faculty>("FACULTY", query);
-               if (facultyBulkData != null && facultyBulkData.FirstOrDefault() != null)
-               {
-                   var facultyData = facultyBulkData.First();
-                   List<string> officeBuildings = new List<string>();
-                   List<string> officeRooms = new List<string>();
-                   List<DateTime?> officeStartDates = new List<DateTime?>();
-                   List<DateTime?> officeEndDates = new List<DateTime?>();
-                   List<DateTime?> officeStartTimes = new List<DateTime?>();
-                   List<DateTime?> officeEndTimes = new List<DateTime?>();
-                   List<string> officeFrequency = new List<string>();
-                   List<string> officeMonday = new List<string>();
-                   List<string> officeTuesday = new List<string>();
-                   List<string> officeWednesday = new List<string>();
-                   List<string> officeThursday = new List<string>();
-                   List<string> officeFriday = new List<string>();
-                   List<string> officeSaturday = new List<string>();
-                   List<string> officeSunday = new List<string>();
+        {
+            List<OfficeHours> officeHoursdata = new List<OfficeHours>();
+            var query = "FACULTY.ID EQ " + facultyId;
+            Collection<DataContracts.Faculty> facultyBulkData = await DataReader.BulkReadRecordAsync<DataContracts.Faculty>("FACULTY", query);
+            if (facultyBulkData != null && facultyBulkData.FirstOrDefault() != null)
+            {
+                var facultyData = facultyBulkData.First();
+                List<string> officeBuildings = new List<string>();
+                List<string> officeRooms = new List<string>();
+                List<DateTime?> officeStartDates = new List<DateTime?>();
+                List<DateTime?> officeEndDates = new List<DateTime?>();
+                List<DateTime?> officeStartTimes = new List<DateTime?>();
+                List<DateTime?> officeEndTimes = new List<DateTime?>();
+                List<string> officeFrequency = new List<string>();
+                List<string> officeMonday = new List<string>();
+                List<string> officeTuesday = new List<string>();
+                List<string> officeWednesday = new List<string>();
+                List<string> officeThursday = new List<string>();
+                List<string> officeFriday = new List<string>();
+                List<string> officeSaturday = new List<string>();
+                List<string> officeSunday = new List<string>();
 
-                   int rowCount = 0;
-                   if (facultyData.FacOfficeStartDate != null && facultyData.FacOfficeStartDate.Any())
-                   {
-                       rowCount = facultyData.FacOfficeStartDate.Count();
-                       officeStartDates = facultyData.FacOfficeStartDate;
-                   }
-                   if (facultyData.FacOfficeEndDate != null && facultyData.FacOfficeEndDate.Any())
-                   {
-                       officeEndDates = facultyData.FacOfficeEndDate;
-                   }
-                   if (facultyData.FacOfficeBldg != null && facultyData.FacOfficeBldg.Any())
-                   {
-                       officeBuildings = facultyData.FacOfficeBldg;
-                   }
-                   if (facultyData.FacOfficeRoom != null && facultyData.FacOfficeRoom.Any())
-                   {
-                       officeRooms = facultyData.FacOfficeRoom;
-                   }
-                   if (facultyData.FacOfficeStartTime != null && facultyData.FacOfficeStartTime.Any())
-                   {
-                       officeStartTimes = facultyData.FacOfficeStartTime;
-                   }
-                   if (facultyData.FacOfficeEndTime != null && facultyData.FacOfficeEndTime.Any())
-                   {
-                       officeEndTimes = facultyData.FacOfficeEndTime;
-                   }
-                   if (facultyData.FacOfficeRepeat != null && facultyData.FacOfficeRepeat.Any())
-                   {
-                       officeFrequency = facultyData.FacOfficeRepeat;
-                   }
-                   if (facultyData.FacOfficeMonday != null && facultyData.FacOfficeMonday.Any())
-                   {
-                       officeMonday = facultyData.FacOfficeMonday;
-                   }
-                   if (facultyData.FacOfficeTuesday != null && facultyData.FacOfficeTuesday.Any())
-                   {
-                       officeTuesday = facultyData.FacOfficeTuesday;
-                   }
-                   if (facultyData.FacOfficeWednesday != null && facultyData.FacOfficeWednesday.Any())
-                   {
-                       officeWednesday = facultyData.FacOfficeWednesday;
-                   }
-                   if (facultyData.FacOfficeThursday != null && facultyData.FacOfficeThursday.Any())
-                   {
-                       officeThursday = facultyData.FacOfficeThursday;
-                   }
-                   if (facultyData.FacOfficeFriday != null && facultyData.FacOfficeFriday.Any())
-                   {
-                       officeFriday = facultyData.FacOfficeFriday;
-                   }
-                   if (facultyData.FacOfficeSaturday != null && facultyData.FacOfficeSaturday.Any())
-                   {
-                       officeSaturday = facultyData.FacOfficeSaturday;
-                   }
-                   if (facultyData.FacOfficeSunday != null && facultyData.FacOfficeSunday.Any())
-                   {
-                       officeSunday = facultyData.FacOfficeSunday;
-                   }
-                   for (int i = 0; i < rowCount; i++)
-                   {
-                       OfficeHours officeHours = new OfficeHours();
-                       if (officeBuildings.Count() > i)
-                       {
-                           officeHours.OfficeBuilding = officeBuildings[i];
-                       }
-                       if (officeRooms.Count() > i)
-                       {
-                           officeHours.OfficeRoom = officeRooms[i];
-                       }
-                       if (officeStartDates.Count() > i)
-                       {
-                           officeHours.OfficeStartDate = officeStartDates[i];
-                       }
-                       if (officeEndDates.Count() > i)
-                       {
-                           officeHours.OfficeEndDate = officeEndDates[i];
-                       }
-                       if (officeStartTimes.Count() > i)
-                       {
-                           officeHours.OfficeStartTime = officeStartTimes[i];
-                       }
-                       if (officeEndTimes.Count() > i)
-                       {
-                           officeHours.OfficeEndTime = officeEndTimes[i];
-                       }
-                       if (officeFrequency.Count() > i)
-                       {
-                           officeHours.OfficeFrequency = officeFrequency[i];
-                       }
-                        officeHours.DaysOfWeek = new List<DayOfWeek>();
-                        if (officeSunday.Count() > i && officeSunday[i].ToUpperInvariant() == "Y")
-                            officeHours.DaysOfWeek.Add(DayOfWeek.Sunday);
-                        if (officeMonday.Count() > i && officeMonday[i].ToUpperInvariant() == "Y")
-                            officeHours.DaysOfWeek.Add(DayOfWeek.Monday);
-                        if (officeTuesday.Count() > i && officeTuesday[i].ToUpperInvariant() == "Y")
-                            officeHours.DaysOfWeek.Add(DayOfWeek.Tuesday);
-                        if (officeWednesday.Count() > i && officeWednesday[i].ToUpperInvariant() == "Y")
-                            officeHours.DaysOfWeek.Add(DayOfWeek.Wednesday);
-                        if (officeThursday.Count() > i && officeThursday[i].ToUpperInvariant() == "Y")
-                            officeHours.DaysOfWeek.Add(DayOfWeek.Thursday);
-                        if (officeFriday.Count() > i && officeFriday[i].ToUpperInvariant() == "Y")
-                            officeHours.DaysOfWeek.Add(DayOfWeek.Friday);
-                        if (officeSaturday.Count() > i && officeSaturday[i].ToUpperInvariant() == "Y")
-                            officeHours.DaysOfWeek.Add(DayOfWeek.Saturday);                    
+                int rowCount = 0;
+                if (facultyData.FacOfficeStartDate != null && facultyData.FacOfficeStartDate.Any())
+                {
+                    rowCount = facultyData.FacOfficeStartDate.Count();
+                    officeStartDates = facultyData.FacOfficeStartDate;
+                }
+                if (facultyData.FacOfficeEndDate != null && facultyData.FacOfficeEndDate.Any())
+                {
+                    officeEndDates = facultyData.FacOfficeEndDate;
+                }
+                if (facultyData.FacOfficeBldg != null && facultyData.FacOfficeBldg.Any())
+                {
+                    officeBuildings = facultyData.FacOfficeBldg;
+                }
+                if (facultyData.FacOfficeRoom != null && facultyData.FacOfficeRoom.Any())
+                {
+                    officeRooms = facultyData.FacOfficeRoom;
+                }
+                if (facultyData.FacOfficeStartTime != null && facultyData.FacOfficeStartTime.Any())
+                {
+                    officeStartTimes = facultyData.FacOfficeStartTime;
+                }
+                if (facultyData.FacOfficeEndTime != null && facultyData.FacOfficeEndTime.Any())
+                {
+                    officeEndTimes = facultyData.FacOfficeEndTime;
+                }
+                if (facultyData.FacOfficeRepeat != null && facultyData.FacOfficeRepeat.Any())
+                {
+                    officeFrequency = facultyData.FacOfficeRepeat;
+                }
+                if (facultyData.FacOfficeMonday != null && facultyData.FacOfficeMonday.Any())
+                {
+                    officeMonday = facultyData.FacOfficeMonday;
+                }
+                if (facultyData.FacOfficeTuesday != null && facultyData.FacOfficeTuesday.Any())
+                {
+                    officeTuesday = facultyData.FacOfficeTuesday;
+                }
+                if (facultyData.FacOfficeWednesday != null && facultyData.FacOfficeWednesday.Any())
+                {
+                    officeWednesday = facultyData.FacOfficeWednesday;
+                }
+                if (facultyData.FacOfficeThursday != null && facultyData.FacOfficeThursday.Any())
+                {
+                    officeThursday = facultyData.FacOfficeThursday;
+                }
+                if (facultyData.FacOfficeFriday != null && facultyData.FacOfficeFriday.Any())
+                {
+                    officeFriday = facultyData.FacOfficeFriday;
+                }
+                if (facultyData.FacOfficeSaturday != null && facultyData.FacOfficeSaturday.Any())
+                {
+                    officeSaturday = facultyData.FacOfficeSaturday;
+                }
+                if (facultyData.FacOfficeSunday != null && facultyData.FacOfficeSunday.Any())
+                {
+                    officeSunday = facultyData.FacOfficeSunday;
+                }
+                for (int i = 0; i < rowCount; i++)
+                {
+                    OfficeHours officeHours = new OfficeHours();
+                    if (officeBuildings.Count() > i)
+                    {
+                        officeHours.OfficeBuilding = officeBuildings[i];
+                    }
+                    if (officeRooms.Count() > i)
+                    {
+                        officeHours.OfficeRoom = officeRooms[i];
+                    }
+                    if (officeStartDates.Count() > i)
+                    {
+                        officeHours.OfficeStartDate = officeStartDates[i];
+                    }
+                    if (officeEndDates.Count() > i)
+                    {
+                        officeHours.OfficeEndDate = officeEndDates[i];
+                    }
+                    if (officeStartTimes.Count() > i)
+                    {
+                        officeHours.OfficeStartTime = officeStartTimes[i];
+                    }
+                    if (officeEndTimes.Count() > i)
+                    {
+                        officeHours.OfficeEndTime = officeEndTimes[i];
+                    }
+                    if (officeFrequency.Count() > i)
+                    {
+                        officeHours.OfficeFrequency = officeFrequency[i];
+                    }
+                    officeHours.DaysOfWeek = new List<DayOfWeek>();
+                    if (officeSunday.Count() > i && officeSunday[i].ToUpperInvariant() == "Y")
+                        officeHours.DaysOfWeek.Add(DayOfWeek.Sunday);
+                    if (officeMonday.Count() > i && officeMonday[i].ToUpperInvariant() == "Y")
+                        officeHours.DaysOfWeek.Add(DayOfWeek.Monday);
+                    if (officeTuesday.Count() > i && officeTuesday[i].ToUpperInvariant() == "Y")
+                        officeHours.DaysOfWeek.Add(DayOfWeek.Tuesday);
+                    if (officeWednesday.Count() > i && officeWednesday[i].ToUpperInvariant() == "Y")
+                        officeHours.DaysOfWeek.Add(DayOfWeek.Wednesday);
+                    if (officeThursday.Count() > i && officeThursday[i].ToUpperInvariant() == "Y")
+                        officeHours.DaysOfWeek.Add(DayOfWeek.Thursday);
+                    if (officeFriday.Count() > i && officeFriday[i].ToUpperInvariant() == "Y")
+                        officeHours.DaysOfWeek.Add(DayOfWeek.Friday);
+                    if (officeSaturday.Count() > i && officeSaturday[i].ToUpperInvariant() == "Y")
+                        officeHours.DaysOfWeek.Add(DayOfWeek.Saturday);
                     officeHoursdata.Add(officeHours);
-                   }
-               }
-               return officeHoursdata;                 
-        }        
+                }
+            }
+            return officeHoursdata;
+        }
 
         /// <summary>
         /// Used to retrieve all faculty records and put them into cache. Following the philosophy that we pull faculty into cache 
@@ -491,6 +611,31 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 }
                             }
                         }
+
+                        string facultyNameHierarchy = await GetFacultyNameHierarchy();
+                        if (!string.IsNullOrEmpty(facultyNameHierarchy))
+                        {
+                            // Calculate the person display name
+                            NameAddressHierarchy hierarchy = null;
+                            try
+                            {
+                                hierarchy = await GetCachedNameAddressHierarchyAsync(facultyNameHierarchy);
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.Error(ex, "Unable to find name address hierarchy with ID " + facultyNameHierarchy + ". Not calculating hierarchy name.");
+
+                            }
+                            if (hierarchy != null)
+                            {
+                                var personBaseEntity = await GetPersonBaseAsync(person.Recordkey, true);
+                                if (personBaseEntity != null)
+                                {
+                                    fac.PersonDisplayName = PersonNameService.GetHierarchyName(personBaseEntity, hierarchy);
+                                }
+                            }
+                        }
+
                         // Next get the local address phone information from the PSEASON association in person
                         if (person.PseasonEntityAssociation != null && person.PseasonEntityAssociation.Count() > 0)
                         {
@@ -689,6 +834,33 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             // If the name type was found, return the corresponding name.
             // Otherwise, return null
             return (pos >= 0) ? formattedNames[pos] : null;
+        }
+
+        /// <summary>
+        /// Get the Faculty Name Hierarchy
+        /// </summary>
+        /// <returns>The Name hierarchy value</returns>
+        private async Task<string> GetFacultyNameHierarchy()
+        {
+            string result = string.Empty;
+            string configuration = await GetOrAddToCacheAsync<string>("FacultyNameHierarchy",
+           async () =>
+           {
+               StwebDefaults stwebDefaults = await DataReader.ReadRecordAsync<StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS");
+
+               if (stwebDefaults == null)
+               {
+                   var errorMessage = "Unable to access faculty web defaults from ST.PARMS. STWEB.DEFAULTS.";
+                   logger.Info(errorMessage);
+                   stwebDefaults = new StwebDefaults();
+               }
+               else
+               {
+                   result = !string.IsNullOrEmpty(stwebDefaults.StwebFacAdvDispNameHier) ? stwebDefaults.StwebFacAdvDispNameHier : string.Empty;
+               }
+               return result;
+           });
+            return configuration;
         }
     }
 }

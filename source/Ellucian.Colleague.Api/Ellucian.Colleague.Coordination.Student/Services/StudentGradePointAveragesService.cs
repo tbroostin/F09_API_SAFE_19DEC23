@@ -1,10 +1,9 @@
-//Copyright 2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos;
@@ -29,7 +28,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private readonly IStudentReferenceDataRepository _referenceDataRepository;
         private readonly ITermRepository _termRepository;
         private readonly IConfigurationRepository _configurationRepository;
-        private readonly IAcademicCredentialsRepository _academicCredentialsRepository;
+        //private readonly IAcademicCredentialsRepository _academicCredentialsRepository;
 
 
         public StudentGradePointAveragesService(
@@ -37,7 +36,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             IPersonRepository personRepository,
             IStudentRepository studentRepository,
             ITermRepository termRepository,
-            IAcademicCredentialsRepository academicCredentialsRepository,
             IStudentReferenceDataRepository referenceDataRepository,
             IAdapterRegistry adapterRegistry,
             ICurrentUserFactory currentUserFactory,
@@ -50,24 +48,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             _personRepository = personRepository;
             _studentRepository = studentRepository;
             _termRepository = termRepository;
-            _academicCredentialsRepository = academicCredentialsRepository;
             _referenceDataRepository = referenceDataRepository;
             _configurationRepository = configurationRepository;
         }
 
         public async Task<Tuple<IEnumerable<StudentGradePointAverages>, int>> GetStudentGradePointAveragesAsync(int offset, int limit, StudentGradePointAverages criteriaObj,
             string gradeDateFilterValue, bool bypassCache)
-        {
-            //Check if user has view permissions.
-            if (!await HasStudentGradePointAveragesPermissionsAsync())
-            {
-                IntegrationApiExceptionAddError(string.Format("User '{0}' is not authorized to view grade point averages.", CurrentUser.UserId), "Authentication.Required", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
-                throw IntegrationApiException;
-            }
-
-            /*
-                Handle all the filters 
-            */
+        {           
             StudentAcademicCredit sGpa = null;
             if (criteriaObj != null && criteriaObj.Student != null && !string.IsNullOrEmpty(criteriaObj.Student.Id))
             {
@@ -181,13 +168,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new ArgumentNullException("guid", "GUID is required to get a student grade point average.");
             }
 
-            //Check if user has view permissions.
-            if (!await HasStudentGradePointAveragesPermissionsAsync())
-            {
-                // throw new PermissionsException(string.Format("User {0} does not have permission to view grade point averages.", CurrentUser.UserId));
-                IntegrationApiExceptionAddError(string.Format("User '{0}' is not authorized to view grade point averages.", CurrentUser.UserId), "Authentication.Required", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
-                throw IntegrationApiException;
-            }
             string stGpaRecordKey = string.Empty;
             try
             {
@@ -728,22 +708,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
         #endregion
 
-        #region Permission Check
-        /// <summary>
-        /// Checks to see if the user has permissions
-        /// </summary>
-        /// <returns></returns>
-        private async Task<bool> HasStudentGradePointAveragesPermissionsAsync()
-        {
-            //VIEW.STUDENT.GRADE.POINT.AVERAGES
-            IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
-            if (userPermissions.Contains(StudentPermissionCodes.ViewStudentGradePointAverages))
-            {
-                return true;
-            }
-            return false;
-        }
-
-        #endregion
+      
     }
 }

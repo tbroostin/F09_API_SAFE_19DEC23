@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -63,7 +63,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
             ICollection<Event> events = new List<Event>();
 
             string secId1 = "100";
-            string title1 = "Testing DDay Calendar";
+            string title1 = "Testing ICal.Net calendar";
             DateTime theDate = new DateTime(2017, 7, 18, 0, 0, 0);
 
             //Set the time as midnight UTC, comes up as START;VALUE=DATE:20170720 in dday string without adding HasTime
@@ -153,7 +153,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
             DateTime theEnd3 = new DateTime(1968, 1, 1, 14, 50, 0);
             events.Add(new Event("9", title3, "CS", "MC", secId3, BuildDateTimeOffset(theDate, theStart3), BuildDateTimeOffset(theDate, theEnd3)));
             events.Add(new Event("10", title3, "CS", "MC", secId3, BuildDateTimeOffset(theDate.AddDays(1.0), theStart3), BuildDateTimeOffset(theDate.AddDays(1.0), theEnd3)));
-            events.Add(new Event("11", title3, "CS", "MC", secId3,  BuildDateTimeOffset(theDate.AddDays(2.0), theStart3), BuildDateTimeOffset(theDate.AddDays(2.0), theEnd3)));
+            events.Add(new Event("11", title3, "CS", "MC", secId3, BuildDateTimeOffset(theDate.AddDays(2.0), theStart3), BuildDateTimeOffset(theDate.AddDays(2.0), theEnd3)));
 
             // simple testing data for specific FI (Faculty Information) cases
             string facId1 = "1111111";
@@ -193,7 +193,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
             return events;
         }
 
-        private DateTimeOffset BuildDateTimeOffset (DateTime date, DateTimeOffset time)
+        private DateTimeOffset BuildDateTimeOffset(DateTime date, DateTimeOffset time)
         {
             return new DateTimeOffset(new DateTime(date.Year, date.Month, date.Day, time.Hour, time.Minute, time.Second), time.Offset);
         }

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -62,6 +62,9 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
             }
         }
 
+        //user id of the person doing the operation
+        public string CurrentUserId { get; set; }
+
         /// <summary>
         /// The version number of the plan that represents the updates to the database. 
         /// </summary>
@@ -78,6 +81,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
         public DateTime? ReviewRequestedDate { get; set; }
         public DateTime? ReviewRequestedTime { get; set; }
 
+        public DateTime? ArchiveNotificationDate { get; set; }
         /// <summary>
         /// Term Courses contains a dictionary that has its keys as term ids, and its values a list of PlannedCourses,
         /// each of which contains a course id and an optional section id.
@@ -215,7 +219,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
         }
 
         /// <summary>
-        /// Returns the course Ids that are planned for the specified term.
+        /// Returns the all planned courses (including course placeholders) that are planned for the specified term.
         /// </summary>
         /// <param name="term">the termId, must not be null</param>
         /// <returns></returns>
@@ -264,8 +268,16 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
                     {
                         this.AddTerm(termId);
                     }
-                    // Allow the add if the sectionId is empty OR the section is not already on the plan
-                    if (string.IsNullOrEmpty(plannedCourse.SectionId) || (TermCourses[termId].Where(c => c.SectionId == plannedCourse.SectionId).Count() == 0))
+
+                    // add the course placeholder to the term if it doesn't alreay exists in the term
+                    if (!string.IsNullOrWhiteSpace(plannedCourse.CoursePlaceholderId) &&
+                       (TermCourses[termId].Where(t => t.CoursePlaceholderId == plannedCourse.CoursePlaceholderId).Count() == 0))
+                    {
+                        TermCourses[termId].Add(plannedCourse);
+                    }
+                    // Allow the add if there is a course and the sectionId is empty OR the section is not already on the plan
+                    else if (!string.IsNullOrWhiteSpace(plannedCourse.CourseId) &&
+                        (string.IsNullOrEmpty(plannedCourse.SectionId) || (TermCourses[termId].Where(c => c.SectionId == plannedCourse.SectionId).Count() == 0)))
                     {
                         TermCourses[termId].Add(plannedCourse);
                     }
@@ -376,7 +388,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
         }
 
         /// <summary>
-        /// Converts the list of terms/planned courses returned by GetPlannedCoursesForValidation to a flat list of course objects.
+        /// Converts the list of terms/planned courses returned by GetPlannedCoursesForValidation to a flat list of course objects excluding course placeholders.
         /// Since this is used for program evaluation, CompletedByDate is not specified and sections are not needed.
         /// </summary>
         /// <param name="allTerms">A list of all terms, for reference</param>
@@ -394,13 +406,13 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
             var evaluationPlannedCourses = ConvertPlannedTermToEvalPlannedCourses(plannedTerms, courses);
 
             return evaluationPlannedCourses;
-
         }
 
         public IEnumerable<PlannedCredit> ConvertPlannedTermToEvalPlannedCourses(Dictionary<string, IEnumerable<PlannedCourse>> plannedTerms, IEnumerable<Course> courses)
         {
             // Return the list of planned courses in a flat list of objects. Similar to PlannedCourse, but with a subset of
             // properties and including the course object, needed by the evaluator.
+            // Course Placeholders are not included result.
             var evaluationPlannedCourses = new List<PlannedCredit>();
 
             foreach (var plannedTerm in plannedTerms)
@@ -409,10 +421,13 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
                 {
                     try
                     {
-                        var course = courses.Where(c => c.Id == plannedCourse.CourseId).FirstOrDefault();
-                        var evalPlannedCourse = new PlannedCredit(course, plannedTerm.Key, plannedCourse.SectionId);
-                        if (plannedCourse.Credits.HasValue) { evalPlannedCourse.Credits = plannedCourse.Credits; }
-                        evaluationPlannedCourses.Add(evalPlannedCourse);
+                        if (!string.IsNullOrEmpty(plannedCourse.CourseId))
+                        {
+                            var course = courses.Where(c => c.Id == plannedCourse.CourseId).FirstOrDefault();
+                            var evalPlannedCourse = new PlannedCredit(course, plannedTerm.Key, plannedCourse.SectionId);
+                            if (plannedCourse.Credits.HasValue) { evalPlannedCourse.Credits = plannedCourse.Credits; }
+                            evaluationPlannedCourses.Add(evalPlannedCourse);
+                        }
                     }
                     catch
                     {
@@ -430,6 +445,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
         /// completion date and the credits for a student to-date. The degree plan planned courses 
         /// must be filtered by the credits (registered/taken courses that match up) and the given
         /// date, that causes planned courses to be excluded that have not been completed by that date.
+        /// Course Placeholders are not included in result.
         /// </summary>
         /// <param name="completedByDate"></param>
         /// <param name="startByDate"></param>
@@ -506,7 +522,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
                 // Get all but alternate courses for each term on the degree plan. 
                 // Sequence items so that those with section Id are examined first.
                 //IEnumerable<PlannedCourse> plannedTermCourses = this.GetPlannedCourses(termCode).Where(p => p.IsAlternate == false).OrderByDescending(p => p.SectionId);
-                IEnumerable<PlannedCourse> plannedTermCourses = this.GetPlannedCourses(termCode).OrderByDescending(p => p.SectionId);
+                IEnumerable<PlannedCourse> plannedTermCourses = this.GetPlannedCourses(termCode).Where(c => !string.IsNullOrEmpty(c.CourseId)).OrderByDescending(p => p.SectionId);
                 if (plannedTermCourses.Count() > 0)
                 {
                     // Get the term and continue if the term dates conform to the set minimum and completion date
@@ -698,7 +714,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
                     var plannedCourses = plannedTerm.Value;
                     foreach (var plannedCourse in plannedCourses)
                     {
-                        var course = courses.Where(c => c.Id == plannedCourse.CourseId).FirstOrDefault();
+                        var course = courses.Where(c => !string.IsNullOrEmpty(plannedCourse.CourseId) && c.Id == plannedCourse.CourseId).FirstOrDefault();
                         if (course != null)
                         {
                             // If a section has been planned, check the section corequisites
@@ -786,7 +802,6 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
                         {
                             plannedCourse.AddWarning(new PlannedCourseWarning(PlannedCourseWarningType.CourseOfferingConflict));
                         }
-
                     }
                 }
                 else
@@ -799,15 +814,12 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
                         plannedCourse.AddWarning(new PlannedCourseWarning(PlannedCourseWarningType.CourseOfferingConflict));
                     }
                 }
-
-
-
             }
         }
 
         private void CheckSectionRequisites(PlannedCourse plannedCourse, string plannedTerm, IEnumerable<Term> terms, IEnumerable<Term> registrationTerms, IEnumerable<Course> courses, IEnumerable<Section> sections, IEnumerable<AcademicCredit> credits, IEnumerable<Requirement> requirements, IEnumerable<RuleResult> ruleResults)
         {
-            var course = courses.Where(c => c.Id == plannedCourse.CourseId).FirstOrDefault();
+            var course = courses.Where(c => !string.IsNullOrEmpty(plannedCourse.CourseId) && c.Id == plannedCourse.CourseId).FirstOrDefault();
             var section = sections.Where(s => s.Id == plannedCourse.SectionId).FirstOrDefault();
             if (section != null && course != null)
             {
@@ -1133,6 +1145,25 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
         }
 
         /// <summary>
+        /// Returns the list of term codes in which the given course placeholder is found in the plan
+        /// </summary>
+        /// <param name="coursePlaceholderId"></param>
+        /// <returns></returns>
+        public IEnumerable<string> TermsCoursePlaceholderPlanned(string coursePlaceholderId)
+        {
+            var plannedTerms = new List<String>();
+            foreach (var planTerm in this.TermCourses)
+            {
+                var coursePlaceholder = planTerm.Value.Where(pc => pc.CoursePlaceholderId == coursePlaceholderId).FirstOrDefault();
+                if (coursePlaceholder != null)
+                {
+                    plannedTerms.Add(planTerm.Key);
+                }
+            }
+            return plannedTerms;
+        }
+
+        /// <summary>
         /// Checks time conflicts between all scheduled sections on the degree plan. Since terms may overlap
         /// and non-term sections can have any date range, compare all sections on the registration
         /// terms and in the non-term planned courses.
@@ -1285,7 +1316,6 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
                     }
                 }
             }
-
         }
 
         private void ValidateCredits(IEnumerable<Term> registrationTerms, IEnumerable<Section> sections)
@@ -1323,8 +1353,6 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
                         var section = sections.Where(s => s.Id == plannedCourse.SectionId).FirstOrDefault();
                         if (section != null)
                         {
-
-
                             if (section.MaximumCredits == null)
                             {
                                 if (section.MinimumCredits != null && plannedCourse.Credits != section.MinimumCredits)
@@ -1736,8 +1764,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
             {
                 var plannedCourses = new List<PlannedCourse>();
 
-                // Sequence items so that those with section Id are examined first.
-                IEnumerable<PlannedCourse> plannedTermCourses = this.GetPlannedCourses(termCode).OrderByDescending(p => p.SectionId).ToList();
+                // Sequence items so that those with section Id are examined first. and exclude course placeholders
+                IEnumerable<PlannedCourse> plannedTermCourses = this.GetPlannedCourses(termCode).Where(c => c.CourseId != null).OrderByDescending(p => p.SectionId).ToList();
                 if (plannedTermCourses.Count() > 0)
                 {
                     // Get the term and continue if the term dates conform to the set earliest start date and the planned course start and end dates.
@@ -1837,9 +1865,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
             {
                 if (cachedPlannedCourse != null && cachedPlannedCourse.IsProtected == true)
                 {
-                    var currentPlannedCourse = this.NonTermPlannedCourses.Where(c => c.CourseId == cachedPlannedCourse.CourseId &&
-                                                                                     c.IsProtected == cachedPlannedCourse.IsProtected)
-                                                                         .FirstOrDefault();
+                    var currentPlannedCourse = this.NonTermPlannedCourses
+                        .Where(c => c.CourseId == cachedPlannedCourse.CourseId && c.IsProtected == cachedPlannedCourse.IsProtected)
+                        .FirstOrDefault();
+
                     if (currentPlannedCourse == null)
                     {
                         return true;
@@ -1989,8 +2018,9 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
             {
                 if (!string.IsNullOrEmpty(plannedTerm))
                 {
-                    var storedPlannedCourses = storedDegreePlan.GetPlannedCourses(plannedTerm);
-                    var plannedCourses = this.GetPlannedCourses(plannedTerm);
+                    var storedPlannedCourses = storedDegreePlan.GetPlannedCourses(plannedTerm).Where(c => c.CourseId != null);
+                    var plannedCourses = this.GetPlannedCourses(plannedTerm).Where(c => c.CourseId != null);
+
                     foreach (var storedPlannedCourse in storedPlannedCourses)
                     {
                         // Reset any protected flags on "this" using the protected planned courses in the stored plan.
@@ -2002,8 +2032,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
                             // If it has a section see if you can find that one.
                             if (!string.IsNullOrEmpty(storedPlannedCourse.SectionId))
                             {
-                                var plannedCourse = plannedCourses.Where(c => c.CourseId == storedPlannedCourse.CourseId && c.SectionId == storedPlannedCourse.SectionId && c.IsProtected != true)
-                                                                                 .FirstOrDefault();
+                                var plannedCourse = plannedCourses
+                                    .Where(c => c.CourseId == storedPlannedCourse.CourseId && c.SectionId == storedPlannedCourse.SectionId && c.IsProtected != true)
+                                    .FirstOrDefault();
+
                                 if (plannedCourse != null)
                                 {
                                     // Found a match - update it
@@ -2015,8 +2047,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
                             {
                                 // If it doesn't have a section - or if the course with that exact section was not already found, see
                                 // if there is an unprotected planned course without any section on the plan that can be used.  (i.e. take that over another one with a different section)
-                                var plannedCourse = plannedCourses.Where(c => c.CourseId == storedPlannedCourse.CourseId && string.IsNullOrEmpty(c.SectionId) && c.IsProtected != true)
-                                                                                 .FirstOrDefault();
+                                var plannedCourse = plannedCourses
+                                    .Where(c => c.CourseId == storedPlannedCourse.CourseId && string.IsNullOrEmpty(c.SectionId) && c.IsProtected != true)
+                                    .FirstOrDefault();
+
                                 if (plannedCourse != null)
                                 {
                                     // Found a match - update it
@@ -2029,8 +2063,9 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
                                 // If we still haven't found a match, take any unprotected planned course regardless what section and protect it.  This is no guarentee
                                 // that we will match up perfectly with the sections we really don't protect the sections just the course so getting the same number
                                 // of protection flags back on the plan is more important.
-                                var plannedCourse = plannedCourses.Where(c => c.CourseId == storedPlannedCourse.CourseId && c.IsProtected != true)
-                                                                                 .FirstOrDefault();
+                                var plannedCourse = plannedCourses
+                                    .Where(c => c.CourseId == storedPlannedCourse.CourseId && c.IsProtected != true)
+                                    .FirstOrDefault();
                                 if (plannedCourse != null)
                                 {
                                     // Found a match - update it

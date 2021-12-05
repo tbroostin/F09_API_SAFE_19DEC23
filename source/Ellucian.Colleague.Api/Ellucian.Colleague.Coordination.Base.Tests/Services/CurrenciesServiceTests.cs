@@ -1,4 +1,4 @@
-﻿//Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -409,7 +409,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             public async Task CurrenciesService_PutCurrenciesAsync_IntegrationApiException_GuidNotFound()
             {
                 _currencyRepositoryMock.Setup(repo => repo.GetCurrencyConversionByGuidAsync(currenciesGuid))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 var currencyDto = _currenciesDtoCollection.FirstOrDefault(x => x.Id == currenciesGuid);
 
@@ -517,7 +517,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var currencyDto = _currenciesDtoCollection.FirstOrDefault(x => x.Id == currenciesGuid);
 
                 var currencyEntity = _currenciesEntityCollection.FirstOrDefault(x => x.Guid == currenciesGuid);
-                _currencyRepositoryMock.Setup(repo => repo.UpdateCurrencyConversionAsync(It.IsAny<Domain.Base.Entities.CurrencyConv>())).ReturnsAsync(null);
+                _currencyRepositoryMock.Setup(repo => repo.UpdateCurrencyConversionAsync(It.IsAny<Domain.Base.Entities.CurrencyConv>())).ReturnsAsync(() => null);
 
                 await _currenciesService.PutCurrenciesAsync(currenciesGuid, currencyDto);
             }

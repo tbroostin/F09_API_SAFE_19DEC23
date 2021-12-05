@@ -1,5 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Net;
 using System.Linq;
@@ -18,6 +17,7 @@ using Ellucian.Colleague.Dtos.Student.Requirements;
 using Ellucian.Colleague.Dtos.Student.QuickRegistration;
 using Ellucian.Colleague.Dtos.Student.InstantEnrollment;
 using Ellucian.Colleague.Dtos.Student.TransferWork;
+using Ellucian.Colleague.Dtos.Student.AnonymousGrading;
 
 namespace Ellucian.Colleague.Api.Client
 {
@@ -39,6 +39,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_facultyPath, id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<Faculty>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -66,6 +67,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_facultyPath, id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<Faculty>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -96,6 +98,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecutePostRequestWithResponse(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<Faculty>>(response.Content.ReadAsStringAsync().Result);
             }
@@ -124,6 +127,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<Faculty>>(await response.Content.ReadAsStringAsync());
             }
@@ -671,6 +675,42 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+
+        /// <summary>
+        /// Get the academic history for the provided student async
+        /// </summary>
+        /// <returns>Returns the academic history Version 3</returns>
+        /// <param name="id">The student's ID for whom academic history is being requested</param>
+        /// <param name="bestFit">(Optional) If true, non-term credit is fitted into terms based on dates</param>
+        /// <param name="filter">(Optional) used to filter to active credit only.</param>
+        /// <param name="term">(Optional) used to return only a specific term of data.</param>
+        /// <param name="includeDrops">(Optional) used to include dropped academic credits</param>
+        /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<AcademicHistory4> GetAcademicHistory5Async(string id, bool bestFit = false, bool filter = true, string term = null, bool includeDrops = false)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "ID cannot be empty/null for Academic History retrieval.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_studentsPath, id, "academic-credits");
+                var queryString = UrlUtility.BuildEncodedQueryString("bestFit", bestFit.ToString(), "filter", filter.ToString(), "term", term, "includeDrops", includeDrops.ToString());
+                urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion5);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<AcademicHistory4>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get Academic History");
+                throw;
+            }
+        }
 
         /// <summary>
         /// Get the academic history for the provided student
@@ -1899,10 +1939,12 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="startsAtTime">Start at time (section)</param>
         /// <param name="endsByTime">End by time (section)</param>
         /// <param name="openAndWaitlistedSections">Flag to retrieve sections that are open and Waitlisted</param>
+        /// <param name="searchSubjects">List of subjects for catalog search</param>
         /// <returns><see cref="CoursePage2">CoursePage2</see> containing the list of course Ids, section Ids and filters</returns>
-        public async Task<CoursePage2> SearchCoursesAsync(IEnumerable<string> courseIds, IEnumerable<string> subjects, IEnumerable<string> academicLevels, IEnumerable<string> courseLevels, IEnumerable<string> courseTypes, IEnumerable<string> topicCodes, IEnumerable<string> terms, IEnumerable<string> days, IEnumerable<string> locations, IEnumerable<string> faculty, int? startTime, int? endTime, string keyword, RequirementGroup requirementGroup, string requirementCode, IEnumerable<string> sectionIds, IEnumerable<string> onlineCategories, bool? openSections, DateTime? sectionStartDate, DateTime? sectionEndDate, int pageSize, int pageIndex, string startsAtTime, string endsByTime, bool? openAndWaitlistedSections = false)
+        public async Task<CoursePage2> SearchCoursesAsync(IEnumerable<string> courseIds, IEnumerable<string> subjects, IEnumerable<string> academicLevels, IEnumerable<string> courseLevels, IEnumerable<string> courseTypes, IEnumerable<string> topicCodes, IEnumerable<string> terms, IEnumerable<string> days, IEnumerable<string> locations, IEnumerable<string> faculty, int? startTime, int? endTime, string keyword, RequirementGroup requirementGroup, string requirementCode, IEnumerable<string> sectionIds, IEnumerable<string> onlineCategories, bool? openSections, DateTime? sectionStartDate, DateTime? sectionEndDate, int pageSize, int pageIndex, string startsAtTime, string endsByTime, bool? openAndWaitlistedSections = false, IEnumerable<string> searchSubjects = null)
         {
             if (keyword == null) keyword = string.Empty;
+            if (searchSubjects == null) searchSubjects = new List<string>();
 
             try
             {
@@ -1953,6 +1995,7 @@ namespace Ellucian.Colleague.Api.Client
                 criteria.SectionStartDate = sectionStartDate;
                 criteria.SectionEndDate = sectionEndDate;
                 criteria.OpenAndWaitlistSections = openAndWaitlistedSections.HasValue ? openAndWaitlistedSections.Value : false;
+                criteria.SearchSubjects = searchSubjects;
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
 
@@ -1991,8 +2034,9 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="pageIndex">Page number</param>
         /// <param name="openAndWaitlistedSections">Flag to retrieve sections that are open and Waitlisted</param>
         /// <returns><see cref="CoursePage2">CoursePage2</see> containing the list of course Ids, section Ids and filters</returns>
+        [Obsolete("Obsolete as of API version 1.32. Use the latest version of this method.")]
         public async Task<SectionPage> InstantEnrollmentCourseSearchAsync(IEnumerable<string> topicCodes, IEnumerable<string> terms, IEnumerable<string> days, IEnumerable<string> locations, IEnumerable<string> faculty,
-            IEnumerable<string> courseIds, IEnumerable<string> sectionIds, int? startTime, int? endTime, string keyword, IEnumerable<string> onlineCategories, bool? openSections, DateTime? sectionStartDate, DateTime? sectionEndDate, int pageSize, int pageIndex, bool? openAndWaitlistedSections = false)
+            IEnumerable<string> courseIds, IEnumerable<string> sectionIds, int? startTime, int? endTime, string keyword, IEnumerable<string> onlineCategories, bool? openSections, DateTime? sectionStartDate, DateTime? sectionEndDate, int pageSize, int pageIndex, bool? openAndWaitlistedSections = false, IEnumerable<string> subjects = null, IEnumerable<string> synonyms = null)
         {
             if (keyword == null) keyword = string.Empty;
 
@@ -2009,6 +2053,8 @@ namespace Ellucian.Colleague.Api.Client
                     criteria.Keyword = keyword.Replace("/", "_~");
                 }
 
+                criteria.Subjects = subjects;
+                criteria.Synonyms = synonyms;
                 criteria.TopicCodes = topicCodes;
                 criteria.Terms = terms;
                 criteria.DaysOfWeek = days;
@@ -2041,6 +2087,77 @@ namespace Ellucian.Colleague.Api.Client
         }
 
 
+        /// <summary>
+        /// Search for course, brings back a page containing courses that met criteria and associated filters async.
+        /// </summary>
+        /// <param name="topicCodes">List of topic codes</param>
+        /// <param name="terms">List of terms (section)</param>
+        /// <param name="days">List of meeting days (section)</param>
+        /// <param name="locations">List of locations (course and section)</param>
+        /// <param name="faculty">List of faculty (section)</param>
+        /// <param name="courseIds">List of course Ids</param>
+        /// <param name="sectionIds">List of section Ids</param>
+        /// <param name="startTime">Start time (section)</param>
+        /// <param name="endTime">End time (section)</param>
+        /// <param name="keyword">Search string (course and section)</param>
+        /// <param name="onlineCategories">Online Category</param>
+        /// <param name="openSections">Flag to retrieve only sections that are open </param>
+        /// <param name="sectionStartDate">Earliest first meeting time of the section.</param>
+        /// <param name="sectionEndDate">Lastest last meeting time for the section</param>
+        /// <param name="pageSize">Number of items to return per page</param>
+        /// <param name="pageIndex">Page number</param>
+        /// <param name="openAndWaitlistedSections">Flag to retrieve sections that are open and Waitlisted</param>
+        /// <returns><see cref="SectionPage2">SectionPage2</see> containing the list of sections and filters</returns>
+        public async Task<SectionPage2> InstantEnrollmentCourseSearch2Async(IEnumerable<string> topicCodes, IEnumerable<string> terms, IEnumerable<string> days, IEnumerable<string> locations, IEnumerable<string> faculty,
+            IEnumerable<string> courseIds, IEnumerable<string> sectionIds, int? startTime, int? endTime, string keyword, IEnumerable<string> onlineCategories, bool? openSections, DateTime? sectionStartDate, DateTime? sectionEndDate, int pageSize, int pageIndex, bool? openAndWaitlistedSections = false, IEnumerable<string> subjects = null, IEnumerable<string> synonyms = null)
+        {
+            if (keyword == null) keyword = string.Empty;
+
+            try
+            {
+                // Build url path + subject
+                var queryString = UrlUtility.BuildEncodedQueryString("pageSize", pageSize.ToString(), "pageIndex", pageIndex.ToString());
+                var urlPath = UrlUtility.CombineUrlPathAndArguments(_instantEnrollmentSectionsSearchPath, queryString);
+
+                var criteria = new InstantEnrollmentCourseSearchCriteria();
+
+                if (!string.IsNullOrEmpty(keyword))
+                {
+                    criteria.Keyword = keyword.Replace("/", "_~");
+                }
+
+                criteria.Subjects = subjects;
+                criteria.Synonyms = synonyms;
+                criteria.TopicCodes = topicCodes;
+                criteria.Terms = terms;
+                criteria.DaysOfWeek = days;
+                criteria.Locations = locations;
+                criteria.Faculty = faculty;
+                criteria.EarliestTime = startTime == null ? 0 : (int)startTime;
+                criteria.LatestTime = endTime == null ? 0 : (int)endTime;
+                criteria.OnlineCategories = onlineCategories;
+                criteria.OpenSections = openSections.HasValue ? openSections.Value : false;
+                criteria.SectionStartDate = sectionStartDate;
+                criteria.SectionEndDate = sectionEndDate;
+                criteria.OpenAndWaitlistSections = openAndWaitlistedSections.HasValue ? openAndWaitlistedSections.Value : false;
+                criteria.CourseIds = courseIds;
+                criteria.SectionIds = sectionIds;
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeEllucianInstantEnrollmentFormatVersion2);
+
+                // Use URL path to call web api method (including query string)
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+
+                var sections = JsonConvert.DeserializeObject<SectionPage2>(await response.Content.ReadAsStringAsync());
+
+                return sections;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
 
 
         /// <summary>
@@ -2253,6 +2370,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <returns><see cref="Section3">Section3</see> object</returns>
         /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
         /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        [Obsolete("Obsolete as of API 1.31. Use GetSection4Async.")]
         public Section3 GetSection3(string id, bool useCache = true)
         {
             if (string.IsNullOrEmpty(id))
@@ -2275,12 +2393,14 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Get a section  async.
         /// </summary>
         /// <returns><see cref="Section3">Section3</see> object</returns>
         /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
         /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        [Obsolete("Obsolete as of API 1.31. Use GetSection4Async.")]
         public async Task<Section3> GetSection3Async(string id, bool useCache = true)
         {
             if (string.IsNullOrEmpty(id))
@@ -2303,6 +2423,36 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
+        /// <summary>
+        /// Get a section asynchrnously.
+        /// </summary>
+        /// <returns><see cref="Section4">Section</see> object</returns>
+        /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<Section4> GetSection4Async(string id, bool useCache = true)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "ID cannot be empty/null for Section retrieval.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_sectionsPath, UrlParameterUtility.EncodeWithSubstitution(id));
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion4);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers, useCache: useCache);
+                var resource = JsonConvert.DeserializeObject<Section4>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get course section");
+                throw;
+            }
+        }
+
         /// <summary>
         /// Get a set of sections
         /// </summary>
@@ -2432,6 +2582,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <returns>Returns a set of <see cref="Section3">Section3</see> items</returns>
         /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
         /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        [Obsolete("Obsolete as of Api version 1.31, use version 4 of this API")]
         public IEnumerable<Section3> GetSections4(IEnumerable<string> sectionIds, bool useCache = true, bool bestFit = false)
         {
 
@@ -2468,6 +2619,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <returns>Returns a set of <see cref="Section3">Section3</see> items</returns>
         /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
         /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        [Obsolete("Obsolete as of Api version 1.31, use version 4 of this API")]
         public async Task<IEnumerable<Section3>> GetSections4Async(IEnumerable<string> sectionIds, bool useCache = true, bool bestFit = false)
         {
 
@@ -2495,6 +2647,45 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
+        /// <summary>
+        /// Retrieve Section Objects based on a Post transaction with multiple keys async.
+        /// </summary>
+        /// <param name="ids">List of section Ids</param>
+        /// <param name="useCache">Boolean indicates whether to get cached sections or sections from database (for seat counts)</param>
+        /// <param name="bestFit">Boolean indicates whether to assign a term to sections that do not have one</param>
+        /// <returns>Returns a set of <see cref="Section3">Section3</see> items</returns>
+        /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<Section4>> GetSections5Async(IEnumerable<string> sectionIds, bool useCache = true, bool bestFit = false)
+        {
+
+            if (sectionIds == null)
+            {
+                throw new ArgumentNullException("sectionIds", "IDs cannot be empty/null for Section retrieval.");
+            }
+            SectionsQueryCriteria criteria = new SectionsQueryCriteria();
+            criteria.SectionIds = sectionIds;
+            criteria.BestFit = bestFit;
+            try
+            {
+                // Build url path from qapi path and sections path
+                string[] pathStrings = new string[] { _qapiPath, _sectionsPath };
+                var urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion4);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers, useCache: useCache);
+                return JsonConvert.DeserializeObject<IEnumerable<Section4>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve sections.");
+                throw;
+            }
+        }
+
+
         /// <summary>
         /// Given a set of section IDs, return an iCal representation of those sections' meetings
         /// </summary>
@@ -2609,8 +2800,9 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="sectionId">section Id (required)</param>
         /// <param name="includeCrossListedSections">If yes, attendances for sections crosslisted to the sectionId will also be included</param>
         /// <param name="attendanceDate">Attendance date if only one date is requested. If omitted, all student attendances will be returned.</param>
+        /// <param name="useCache">If true, returned data will be pulled fresh from the database; otherwise, cached data is returned.</param>
         /// <returns>At list of student attendance Dtos</returns>
-        public async Task<IEnumerable<StudentAttendance>> QueryStudentAttendancesAsync(string sectionId, bool includeCrossListedSections, DateTime? attendanceDate)
+        public async Task<IEnumerable<StudentAttendance>> QueryStudentAttendancesAsync(string sectionId, bool includeCrossListedSections, DateTime? attendanceDate, bool useCache = true)
         {
             if (string.IsNullOrEmpty(sectionId))
             {
@@ -2629,7 +2821,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers, useCache: useCache);
                 return JsonConvert.DeserializeObject<IEnumerable<StudentAttendance>>(await response.Content.ReadAsStringAsync());
             }
             catch (Exception ex)
@@ -2710,6 +2902,35 @@ namespace Ellucian.Colleague.Api.Client
         /// </summary>
         /// <param name="studentAttendance">A SectionAttendance object.</param>
         /// <returns>An SectionAttendanceResponse DTO that itemizes the items that were successful and the failures.</returns>
+        public async Task<SectionAttendanceResponse> UpdateSectionAttendances2Async(SectionAttendance sectionAttendance)
+        {
+            if (sectionAttendance == null)
+            {
+                throw new ArgumentNullException("sectionAttendance", "sectionAttendance cannot be null.");
+            }
+            try
+            {
+                // Build url path
+                var urlPath = _sectionAttendancesPath;
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                var response = await ExecutePutRequestWithResponseAsync<SectionAttendance>(sectionAttendance, urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<SectionAttendanceResponse>(await response.Content.ReadAsStringAsync());
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to update Section Attendance information.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Update a section attendance information async.
+        /// </summary>
+        /// <param name="studentAttendance">A SectionAttendance object.</param>
+        /// <returns>An SectionAttendanceResponse DTO that itemizes the items that were successful and the failures.</returns>
+        [Obsolete("Obsolete as of API 1.31. Use UpdateSectionAttendances2Async.")]
         public async Task<SectionAttendanceResponse> UpdateSectionAttendancesAsync(SectionAttendance sectionAttendance)
         {
             if (sectionAttendance == null)
@@ -2786,6 +3007,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="sectionId">section id</param>
         /// <param name="sectionGrades">student grades</param>
         /// <returns></returns>
+        [Obsolete("Obsolete as of API 1.33. Use PutCollectionOfStudentGrades5Async")]
         public async Task<IEnumerable<SectionGradeResponse>> PutCollectionOfStudentGrades4Async(string sectionId, SectionGrades3 sectionGrades)
         {
             if (sectionId == null)
@@ -2808,6 +3030,52 @@ namespace Ellucian.Colleague.Api.Client
             {
                 var response = await ExecutePutRequestWithResponseAsync<SectionGrades3>(sectionGrades, urlPath, headers: headers);
                 updatedResponse = JsonConvert.DeserializeObject<IEnumerable<SectionGradeResponse>>(await response.Content.ReadAsStringAsync());
+            }
+
+            // If the HTTP request fails, the grades weren't updated successfull
+            catch (HttpRequestFailedException hre)
+            {
+                logger.Error(hre.ToString());
+                throw new InvalidOperationException(string.Format("Grades for section {0} failed.", sectionId), hre);
+            }
+            // HTTP request successful, but some other problem encountered...
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+
+            return updatedResponse;
+        }
+
+        /// <summary>
+        /// Update student grades from non-ILP caller.
+        /// </summary>
+        /// <param name="sectionId">section id</param>
+        /// <param name="sectionGrades">student grades</param>
+        /// <returns></returns>
+        public async Task<SectionGradeSectionResponse> PutCollectionOfStudentGrade5Async(string sectionId, SectionGrades4 sectionGrades)
+        {
+            if (sectionId == null)
+            {
+                throw new ArgumentNullException("sectionId", "Section ID cannot be null");
+            }
+
+            if (sectionGrades == null)
+            {
+                throw new ArgumentNullException("sectionGrades", "Section Grades object cannot be null");
+            }
+
+            var urlPath = UrlUtility.CombineUrlPath(new[] { _sectionsPath, sectionId, "grades" });
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion5);
+
+            SectionGradeSectionResponse updatedResponse = null;
+
+            try
+            {
+                var response = await ExecutePutRequestWithResponseAsync<SectionGrades4>(sectionGrades, urlPath, headers: headers);
+                updatedResponse = JsonConvert.DeserializeObject<SectionGradeSectionResponse>(await response.Content.ReadAsStringAsync());
             }
 
             // If the HTTP request fails, the grades weren't updated successfull
@@ -3543,6 +3811,11 @@ namespace Ellucian.Colleague.Api.Client
                 var registrationEligibility = JsonConvert.DeserializeObject<RegistrationEligibility>(await response.Content.ReadAsStringAsync());
                 return registrationEligibility;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "timeout exception have occurred while checking registration eligibility");
+                throw;
+            }
             catch (Exception exception)
             {
                 logger.Error(exception.ToString());
@@ -3935,6 +4208,7 @@ namespace Ellucian.Colleague.Api.Client
 
             try
             {
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent);
                 var response = ExecutePostRequestWithResponse<Application>(updatedApplication, urlPath, headers: headers);
             }
             catch (Exception ex)
@@ -3961,6 +4235,7 @@ namespace Ellucian.Colleague.Api.Client
 
             try
             {
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent);
                 var response = await ExecutePostRequestWithResponseAsync<Application>(updatedApplication, urlPath, headers: headers);
             }
             catch (Exception ex)
@@ -3987,6 +4262,7 @@ namespace Ellucian.Colleague.Api.Client
 
             try
             {
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent);
                 var response = ExecutePostRequestWithResponse<Application>(importedApplication, urlPath, headers: headers);
             }
             catch (Exception ex)
@@ -4013,6 +4289,7 @@ namespace Ellucian.Colleague.Api.Client
 
             try
             {
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent);
                 var response = await ExecutePostRequestWithResponseAsync<Application>(importedApplication, urlPath, headers: headers);
             }
             catch (Exception ex)
@@ -4824,6 +5101,38 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
+        /// <summary>
+        /// Get Student Standings (Academic Standings) for a student
+        /// </summary>
+        /// <param name="studentId">Student Id</param>
+        /// <returns>StudentStanding DTO objects</returns>
+        /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<StudentStanding>> GetStudentAcademicStandingsAsync(string studentId)
+        {
+            if (studentId == null)
+            {
+                throw new ArgumentNullException("studentIds", "ID cannot be empty/null for IEnumerable<StudentStanding> retrieval.");
+            }
+            try
+            {
+                // Build url path 
+                string[] pathStrings = new string[] { _studentStandingsPath, studentId };
+                var urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<IEnumerable<StudentStanding>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve student academic standings.");
+                throw;
+            }
+        }
+
         /// <summary>
         /// Get Student Terms (Student Load, etc.) for a list of students
         /// </summary>
@@ -5149,6 +5458,9 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, "application/vnd.ellucian-batch.v4+json");
+                // Do not log the response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
+
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<StudentBatch3>>(await response.Content.ReadAsStringAsync());
             }
@@ -5184,6 +5496,9 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, "application/vnd.ellucian-batch.v4+json");
+                // Do not log the response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
+
                 var response = ExecutePostRequestWithResponse(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<StudentBatch3>>(response.Content.ReadAsStringAsync().Result);
             }
@@ -5348,6 +5663,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecutePostRequestWithResponse(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<Faculty>>(response.Content.ReadAsStringAsync().Result);
             }
@@ -5379,6 +5695,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<Faculty>>(await response.Content.ReadAsStringAsync());
             }
@@ -5417,6 +5734,109 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
+        /// <summary>
+        /// Add new office hours for faculty.
+        /// </summary>
+        /// <param name="addOfficeHours">new office hours</param>
+        /// <returns>Newly Added office hours</returns>
+        public async Task<AddOfficeHours> AddOfficeHoursAsync(AddOfficeHours addOfficeHours)
+        {
+            if (addOfficeHours == null)
+            {
+                throw new ArgumentNullException("addOfficeHours", "addOfficeHours cannot be null ");
+            }
+
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync<AddOfficeHours>(addOfficeHours, _officeHoursPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<AddOfficeHours>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (HttpRequestFailedException hre)
+            {
+                if (hre.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    logger.Error(hre.ToString() + " office hours " + addOfficeHours.Id + " already exists for faculty");
+                    throw new ExistingResourceException();
+                }
+                logger.Error(hre.ToString());
+                throw new InvalidOperationException(string.Format("Add office hours failed."), hre);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Update an existing office hours for faculty.
+        /// </summary>
+        /// <param name="updateOfficeHours">update office hours</param>
+        /// <returns>Updated office hours</returns>
+        public async Task<UpdateOfficeHours> UpdateOfficeHoursAsync(UpdateOfficeHours updateOfficeHours)
+        {
+            if (updateOfficeHours == null)
+            {
+                throw new ArgumentNullException("updateOfficeHours", "updateOfficeHours cannot be null ");
+            }
+
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePutRequestWithResponseAsync<UpdateOfficeHours>(updateOfficeHours, _officeHoursPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<UpdateOfficeHours>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (HttpRequestFailedException hre)
+            {
+                logger.Error(hre.ToString());
+                throw new InvalidOperationException(string.Format("Update office hours failed."), hre);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+
+        }
+
+        /// <summary>
+        /// Delete office hours for faculty.
+        /// </summary>
+        /// <param name="deleteOfficeHours">Office hours information to delete</param>
+        /// <returns>Deleted office hours</returns>
+        public async Task<DeleteOfficeHours> DeleteOfficeHoursAsync(DeleteOfficeHours deleteOfficeHours)
+        {
+            if (deleteOfficeHours == null)
+            {
+                throw new ArgumentNullException("deleteOfficeHours", "deleteOfficeHours cannot be null ");
+            }
+
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync<DeleteOfficeHours>(deleteOfficeHours, _officeHoursDeletePath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<DeleteOfficeHours>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (HttpRequestFailedException hre)
+            {
+                logger.Error(hre.ToString());
+                throw new InvalidOperationException(string.Format("Delete office hours failed."), hre);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+
         /// <summary>
         /// Get all Academic Programs
         /// </summary>
@@ -6176,6 +6596,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_applicantPath, applicantId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                // Do not log the response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<Applicant>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -6206,6 +6628,7 @@ namespace Ellucian.Colleague.Api.Client
                 var urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId + "/emergency-information");
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<EmergencyInformation>(response.Content.ReadAsStringAsync().Result);
             }
@@ -6235,6 +6658,7 @@ namespace Ellucian.Colleague.Api.Client
                 var urlPath = UrlUtility.CombineUrlPath(_studentsPath, emergencyInformation.PersonId + "/emergency-information");
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecutePutRequestWithResponse<EmergencyInformation>(emergencyInformation, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<EmergencyInformation>(response.Content.ReadAsStringAsync().Result);
             }
@@ -6257,6 +6681,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_applicantPath, applicantId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                // Do not log the response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<Applicant>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -6297,6 +6723,11 @@ namespace Ellucian.Colleague.Api.Client
                 var messages = JsonConvert.DeserializeObject<RegistrationResponse>(response.Content.ReadAsStringAsync().Result);
                 return messages;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Registration timeout have occurred");
+                throw;
+            }
             catch (Exception exception)
             {
                 logger.Error(exception.ToString());
@@ -6331,12 +6762,58 @@ namespace Ellucian.Colleague.Api.Client
                 var messages = JsonConvert.DeserializeObject<RegistrationResponse>(await response.Content.ReadAsStringAsync());
                 return messages;
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Registration timeout have occurred" );
+                throw;
+            }
             catch (Exception exception)
             {
                 logger.Error(exception.ToString());
                 throw new InvalidOperationException("Unable to register.", exception);
             }
         }
+
+        /// <summary>
+        /// Process facutly drop registration requests for student async.
+        /// </summary>
+        /// <param name="studentId">Id of the student being registered</param>
+        /// <param name="sectionDropRegistration">Drop Section registration item being submitted to drop registration</param>
+        /// <returns>A registration Response containing any registration messages</returns>
+        public async Task<RegistrationResponse> DropRegistrationAsync(string studentId, SectionDropRegistration sectionDropRegistration)
+        {
+            if (string.IsNullOrWhiteSpace(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Must provide a student Id.");
+            }
+            if (sectionDropRegistration == null)
+            {
+                throw new ArgumentNullException("sectionDropRegistration", "sectionDropRegistrations must contain at least 1 value.");
+            }
+
+            if (string.IsNullOrWhiteSpace(sectionDropRegistration.SectionId))
+            {
+                throw new ArgumentNullException("sectionId", "Must provide a section Id.");
+            }
+
+            var urlPath = UrlUtility.CombineUrlPath(new[] { _studentsPath, studentId, "drop-registration" });
+
+            var headers = new NameValueCollection();
+            headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+            try
+            {
+                var response = await ExecutePutRequestWithResponseAsync<SectionDropRegistration>(sectionDropRegistration, urlPath, headers: headers);
+                var messages = JsonConvert.DeserializeObject<RegistrationResponse>(await response.Content.ReadAsStringAsync());
+                return messages;
+            }
+            catch (Exception exception)
+            {
+                logger.Error(exception.ToString());
+                throw new InvalidOperationException("Unable to drop registration.", exception);
+            }
+        }
+
         public IEnumerable<TranscriptGrouping> GetSelectableTranscriptGroupings()
         {
             var urlPath = UrlUtility.CombineUrlPath(new[] { _transcriptGroupingsPath + "/selectable" });
@@ -6636,6 +7113,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="bestFit">Optional, true assigns a term to any non-term section based on the section start date. Defaults to false.</param>
         /// <param name="useCache">Flag indicating whether or not to use cached <see cref="Section3">course section</see> data. Defaults to true.</param>
         /// <returns>List of <see cref="Section3">Section3 Dtos</see></returns>
+        [Obsolete("Obsolete as of API 1.31. Use latest version of this method.")]
         public async Task<IEnumerable<Section3>> GetFacultySections4Async(string facultyId, DateTime? startDate = null, DateTime? endDate = null, bool bestFit = false, bool useCache = true)
         {
             if (string.IsNullOrEmpty(facultyId))
@@ -6671,6 +7149,54 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
+        /// <summary>
+        /// Gets a faculty member's sections either by date range or system parameters.  If a start date is not supplied it will retrieve sections based on the allowed
+        /// terms defined on the RGWP, CSWP and GRWP parameter forms.
+        /// </summary>
+        /// <param name="facultyId">Id of the faculty for whom sections are desired. Required.</param>
+        /// <param name="startDate">Optional, ISO-8601 short date format, yyyy-mm-dd</param>
+        /// <param name="endDate">Optional, ISO-8601 short date format, yyyy-mm-dd, if start date is supplied this defaults to current date+90 days. Must be greater than start date if specified.</param>
+        /// <param name="bestFit">Optional, true assigns a term to any non-term section based on the section start date. Defaults to false.</param>
+        /// <param name="useCache">Flag indicating whether or not to use cached <see cref="Section4">course section</see> data. Defaults to true.</param>
+        /// <returns>List of <see cref="Section4">Section3 Dtos</see></returns>
+        public async Task<IEnumerable<Section4>> GetFacultySections5Async(string facultyId, DateTime? startDate = null, DateTime? endDate = null, bool bestFit = false, bool useCache = true)
+        {
+            if (string.IsNullOrEmpty(facultyId))
+            {
+                throw new ArgumentNullException("facultyId", "Faculty ID cannot be empty/null to retrieve faculty sections.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_facultyPath, facultyId, "sections");
+                List<string> parameters = new List<string>() { "bestFit", bestFit.ToString() };
+                if (startDate.HasValue)
+                {
+                    parameters.Add("startDate");
+                    parameters.Add(startDate.Value.ToString("s"));
+                }
+                if (endDate.HasValue)
+                {
+                    parameters.Add("endDate");
+                    parameters.Add(endDate.Value.ToString("s"));
+                }
+                var queryString = UrlUtility.BuildEncodedQueryString(parameters.ToArray());
+                var combinedUrl = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion5);
+                var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers, useCache: useCache);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<Section4>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get Faculty Sections");
+                throw;
+            }
+        }
+
+
         /// <summary>
         /// Returns a list of waiver objects for the given section.
         /// </summary>
@@ -7287,6 +7813,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                // Do not log the response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<Student>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -7315,6 +7843,8 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                // Do not log the response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<Student>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -7344,6 +7874,7 @@ namespace Ellucian.Colleague.Api.Client
                 var urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId + "/emergency-information");
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<EmergencyInformation>(await response.Content.ReadAsStringAsync());
             }
@@ -7372,6 +7903,7 @@ namespace Ellucian.Colleague.Api.Client
                 var urlPath = UrlUtility.CombineUrlPath(_studentsPath, emergencyInformation.PersonId + "/emergency-information");
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePutRequestWithResponseAsync<EmergencyInformation>(emergencyInformation, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<EmergencyInformation>(await response.Content.ReadAsStringAsync());
             }
@@ -7518,6 +8050,50 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
+        /// <summary>
+        /// Client method to Put (Update) a student petition async.
+        /// </summary>
+        /// <param name="studentPetitionToUpdate">StudentPetition object</param>
+        /// <returns>The StudentPetition object updated</returns>
+        public async Task<StudentPetition> UpdateStudentPetitionAsync(StudentPetition studentPetitionToUpdate)
+        {
+            try
+            {
+                if (studentPetitionToUpdate == null)
+                {
+                    throw new ArgumentNullException("studentPetitionToUpdate", "studentPetitionToUpdate cannot be null");
+                }
+
+                try
+                {
+                    string urlPath = UrlUtility.CombineUrlPath(_studentPetitionsPath);
+                    var headers = new NameValueCollection();
+                    headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                    var response = await ExecutePutRequestWithResponseAsync<StudentPetition>(objectToSend: studentPetitionToUpdate, urlPath: urlPath, headers: headers);
+                    var resource = JsonConvert.DeserializeObject<StudentPetition>(await response.Content.ReadAsStringAsync());
+                    return resource;
+                }
+                // If the HTTP request fails, the student petition probably wasn't updated successfully...
+                catch (HttpRequestFailedException hre)
+                {
+                    logger.Error(hre, hre.ToString());
+                    throw new InvalidOperationException(string.Format("Student Petition update failed."), hre);
+                }
+                // HTTP request successful, but some other problem encountered...
+                catch (Exception ex)
+                {
+                    logger.Error(ex, ex.ToString());
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to update Student Petition");
+                throw;
+            }
+        }
+
         /// <summary>
         /// Returns a StudentPetition as requested by type and Id
         /// </summary>
@@ -7629,6 +8205,49 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
+        /// Asynchronously returns a graduation configuration with all needed information to render a new graduation application
+        /// </summary>
+        /// <returns>The requested <see cref="GraduationConfiguration2">GraduationConfiguration2</see> object</returns>
+        public async Task<GraduationConfiguration2> GetGraduationConfiguration2Async()
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                var responseString = await ExecuteGetRequestWithResponseAsync(_graduationConfigurationPath, headers: headers);
+                var configuration = JsonConvert.DeserializeObject<GraduationConfiguration2>(await responseString.Content.ReadAsStringAsync());
+
+                return configuration;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the graduation configuration information.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously returns a My Progress configuration with all needed information to control information displayed on My Progress.
+        /// </summary>
+        /// <returns>The requested <see cref="MyProgressConfiguration">MyProgressConfiguration</see> object</returns>
+        public async Task<MyProgressConfiguration> GetMyProgressConfigurationAsync()
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var responseString = await ExecuteGetRequestWithResponseAsync(_myprogressConfigurationPath, headers: headers);
+                var configuration = JsonConvert.DeserializeObject<MyProgressConfiguration>(await responseString.Content.ReadAsStringAsync());
+                return configuration;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the my progress configuration information.");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Returns a graduation application for a student for a particular program Code asynchronously.
         /// </summary>
         /// <param name="studentId">Id of student</param>
@@ -7641,6 +8260,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _programsPath, UrlParameterUtility.EncodeWithSubstitution(programCode), _graduationApplicationPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogResponseContent);
                 var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var graduationApplication = JsonConvert.DeserializeObject<GraduationApplication>(await responseString.Content.ReadAsStringAsync());
                 return graduationApplication;
@@ -7665,6 +8285,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _programsPath, UrlParameterUtility.EncodeWithSubstitution(programCode), _graduationApplicationPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogResponseContent);
                 var responseString = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var graduationApplication = JsonConvert.DeserializeObject<GraduationApplication>(responseString.Content.ReadAsStringAsync().Result);
 
@@ -7690,6 +8311,7 @@ namespace Ellucian.Colleague.Api.Client
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
                 var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogResponseContent);
                 var graduationApplications = JsonConvert.DeserializeObject<List<GraduationApplication>>(await responseString.Content.ReadAsStringAsync());
                 return graduationApplications;
             }
@@ -7712,6 +8334,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _graduationApplicationsPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogResponseContent);
                 var responseString = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var graduationApplications = JsonConvert.DeserializeObject<List<GraduationApplication>>(responseString.Content.ReadAsStringAsync().Result);
                 return graduationApplications;
@@ -7746,6 +8369,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, graduationApplication.StudentId, _programsPath, UrlParameterUtility.EncodeWithSubstitution(graduationApplication.ProgramCode), _graduationApplicationPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync<GraduationApplication>(graduationApplication, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<GraduationApplication>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -7785,6 +8409,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, graduationApplication.StudentId, _programsPath, UrlParameterUtility.EncodeWithSubstitution(graduationApplication.ProgramCode), _graduationApplicationPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecutePostRequestWithResponse<GraduationApplication>(graduationApplication, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<GraduationApplication>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -7863,6 +8488,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(pathStrings);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<RosterStudent>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -7975,6 +8601,33 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to retrieve section waitlist.");
+                throw;
+            }
+        }
+
+
+        /// <summary>
+        /// Get a list of<see cref="SectionWaitlistStudent"/> for a given list of course section IDs
+        /// </summary>
+        /// <param name="criteria">Section Waitlist Query Criteria</param>
+        /// <returns>A list of<see cref="SectionWaitlistStudent"/></returns>
+        public async Task<IEnumerable<SectionWaitlistStudent>> QuerySectionWaitlistAsync(SectionWaitlistQueryCriteria criteria)
+        {
+            try
+            {
+                if (criteria == null || criteria.SectionIds == null || !criteria.SectionIds.Any())
+                {
+                    throw new ArgumentNullException("criteria.SectionId", "Cannot build a section waitlist without a course section ID.");
+                }
+                string urlPath = UrlUtility.CombineUrlPath(_qapiPath, _sectionWaitlistPath);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath);
+                string responseString = await response.Content.ReadAsStringAsync();
+                var resource = JsonConvert.DeserializeObject<IEnumerable<SectionWaitlistStudent>>(responseString);
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.GetBaseException(), "Unable to retrieve section waitlist.");
                 throw;
             }
         }
@@ -8144,6 +8797,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, graduationApplication.StudentId, _programsPath, UrlParameterUtility.EncodeWithSubstitution(graduationApplication.ProgramCode), _graduationApplicationPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePutRequestWithResponseAsync<GraduationApplication>(graduationApplication, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<GraduationApplication>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -8211,6 +8865,7 @@ namespace Ellucian.Colleague.Api.Client
                     string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentRequest.StudentId, "student-transcript-request");
                     var headers = new NameValueCollection();
                     headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                    AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                     var response = await ExecutePostRequestWithResponseAsync<StudentTranscriptRequest>(studentRequest, urlPath, headers: headers);
                     var resource = JsonConvert.DeserializeObject<StudentTranscriptRequest>(await response.Content.ReadAsStringAsync());
                     return resource;
@@ -8254,6 +8909,7 @@ namespace Ellucian.Colleague.Api.Client
                     string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentRequest.StudentId, "student-enrollment-request");
                     var headers = new NameValueCollection();
                     headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                    AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
                     var response = await ExecutePostRequestWithResponseAsync<StudentEnrollmentRequest>(studentRequest, urlPath, headers: headers);
                     var resource = JsonConvert.DeserializeObject<StudentEnrollmentRequest>(await response.Content.ReadAsStringAsync());
                     return resource;
@@ -8297,6 +8953,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, "student-transcript-request", requestId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<StudentTranscriptRequest>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -8327,6 +8984,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, "student-enrollment-request", requestId);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<StudentEnrollmentRequest>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -8403,6 +9061,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _studentEnrollmentRequests);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<List<StudentEnrollmentRequest>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -8433,6 +9092,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId, _studentTranscriptRequests);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<List<StudentTranscriptRequest>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -8547,8 +9207,9 @@ namespace Ellucian.Colleague.Api.Client
         /// Also returns List of invalid academic credit Ids.
         /// </summary>
         /// <param name="criteria">Criteria that identifies which credits are desired. At least one section is required.</param>
+        /// <param name="useCache">If true, returned data will be pulled fresh from the database; otherwise, cached data is returned.</param>
         /// <returns><see cref="AcademicCreditsWithInvalidKeys">Academic Credit with Invalid Academic credit Ids</see></returns>
-        public async Task<AcademicCreditsWithInvalidKeys> QueryAcademicCreditsWithInvalidKeysAsync(AcademicCreditQueryCriteria criteria, int? offset = null, int? limit = null)
+        public async Task<AcademicCreditsWithInvalidKeys> QueryAcademicCreditsWithInvalidKeysAsync(AcademicCreditQueryCriteria criteria, int? offset = null, int? limit = null, bool useCache = true)
         {
             // Throw exception if section Id is not supplied
             if (criteria == null || criteria.SectionIds == null || !criteria.SectionIds.Any())
@@ -8565,7 +9226,7 @@ namespace Ellucian.Colleague.Api.Client
                 var combinedUrl = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeEllucianInvalidKeysFormatVersion1);
-                var response = await ExecutePostRequestWithResponseAsync(criteria, combinedUrl, headers: headers);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, combinedUrl, headers: headers, useCache: useCache);
                 string responseString = await response.Content.ReadAsStringAsync();
                 var academicCreditsWithInvalidKeys = JsonConvert.DeserializeObject<AcademicCreditsWithInvalidKeys>(responseString);
                 return academicCreditsWithInvalidKeys;
@@ -8653,6 +9314,8 @@ namespace Ellucian.Colleague.Api.Client
         /// Asynchronously returns the course catalog configuration with all needed information for catalog searches
         /// </summary>
         /// <returns>The requested <see cref="CourseCatalogConfiguration3">CourseCatalogConfiguration3</see> object</returns>
+        [Obsolete("Obsolete as of API version 1.32. Use GetCourseCatalogConfiguration4Async.")]
+
         public async Task<CourseCatalogConfiguration3> GetCourseCatalogConfiguration3Async()
         {
             try
@@ -8662,6 +9325,30 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_configurationPath, _courseCatalogPath);
                 var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var configuration = JsonConvert.DeserializeObject<CourseCatalogConfiguration3>(await responseString.Content.ReadAsStringAsync());
+
+                return configuration;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the course catalog configuration information.");
+                throw;
+            }
+        }
+
+
+        /// <summary>
+        /// Asynchronously returns the course catalog configuration with all needed information for catalog searches
+        /// </summary>
+        /// <returns>The requested <see cref="CourseCatalogConfiguration4">CourseCatalogConfiguration4</see> object</returns>
+        public async Task<CourseCatalogConfiguration4> GetCourseCatalogConfiguration4Async()
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion4);
+                string urlPath = UrlUtility.CombineUrlPath(_configurationPath, _courseCatalogPath);
+                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var configuration = JsonConvert.DeserializeObject<CourseCatalogConfiguration4>(await responseString.Content.ReadAsStringAsync());
 
                 return configuration;
             }
@@ -8899,6 +9586,33 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
+        /// Retrieve all Awards from Colleague
+        /// </summary>
+        /// <returns>A list of Award3 data objects</returns>
+        public IEnumerable<Award3> GetAwards3()
+        {
+            try
+            {
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
+                var response = ExecuteGetRequestWithResponse(_awardsPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<Award3>>(response.Content.ReadAsStringAsync().Result);
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to find awards resource");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get awards");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// This method gets the specified FA award year on student's file
         /// </summary>
         /// <param name="studentId">Student Id for whom to retrieve award years</param>
@@ -8957,6 +9671,9 @@ namespace Ellucian.Colleague.Api.Client
 
             var headers = new NameValueCollection();
             headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+
+            // Do not log the response body
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
 
             IEnumerable<Student> students = null;
             var criteria = new StudentSearchCriteria();
@@ -9469,6 +10186,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<DegreePlanAcademicHistory3>(await response.Content.ReadAsStringAsync());
                 return resource;
+            }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "DegreePlan retrieval timeout exception have occurred");
+                throw;
             }
             catch (Exception ex)
             {
@@ -10153,6 +10875,11 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePutRequestWithResponseAsync<DegreePlan4>(updatedPlan, urlPath, headers: headers);
                 updatedResponse = JsonConvert.DeserializeObject<DegreePlanAcademicHistory3>(await response.Content.ReadAsStringAsync());
             }
+            catch (LoginException lex)
+            {
+                logger.Error(lex, "Timeout expired while updating degree plan");
+                throw;
+            }
             catch (HttpRequestFailedException hrfe)
             {
                 if (hrfe.StatusCode == System.Net.HttpStatusCode.Conflict)
@@ -10333,6 +11060,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(pathStrings);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderPlanningVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<PlanningStudent>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -10748,6 +11476,8 @@ namespace Ellucian.Colleague.Api.Client
         /// </summary>
         /// <param name="sectionSearchCriteria">A <see cref="SectionSearchCriteria">Section Search Criteria</see> containing keywords, course Ids or Section Ids, along with filter settings</param>
         /// <returns><see cref="SectionPage">SectionPage</see> containing the page information for total number of sections, sections on the current page, and filters</returns>
+        [Obsolete("Obsolete as of API version 1.32. Use the latest version of this method.")]
+
         public async Task<SectionPage> SearchSectionsAsync(SectionSearchCriteria sectionSearchCriteria, int pageSize, int pageIndex)
         {
             if (sectionSearchCriteria.Keyword == null) sectionSearchCriteria.Keyword = string.Empty;
@@ -10769,6 +11499,42 @@ namespace Ellucian.Colleague.Api.Client
                 var response = await ExecutePostRequestWithResponseAsync(sectionSearchCriteria, urlPath, headers: headers);
 
                 var sectionPage = JsonConvert.DeserializeObject<SectionPage>(await response.Content.ReadAsStringAsync());
+
+                return sectionPage;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Search for sections brings back a page containing a page worth of sections that meet the criteria and associated filters asynchronously.
+        /// </summary>
+        /// <param name="sectionSearchCriteria">A <see cref="SectionSearchCriteria">Section Search Criteria</see> containing keywords, course Ids or Section Ids, along with filter settings</param>
+        /// <returns><see cref="SectionPage2">SectionPage</see> containing the page information for total number of sections, sections on the current page, and filters</returns>
+        public async Task<SectionPage2> SearchSections2Async(SectionSearchCriteria2 sectionSearchCriteria, int pageSize, int pageIndex)
+        {
+            if (sectionSearchCriteria.Keyword == null) sectionSearchCriteria.Keyword = string.Empty;
+            if (!string.IsNullOrEmpty(sectionSearchCriteria.Keyword))
+            {
+                sectionSearchCriteria.Keyword = sectionSearchCriteria.Keyword.Replace("/", "_~");
+            }
+
+            try
+            {
+                // Build url path + subject
+                var queryString = UrlUtility.BuildEncodedQueryString("pageSize", pageSize.ToString(), "pageIndex", pageIndex.ToString());
+                var urlPath = UrlUtility.CombineUrlPathAndArguments(_sectionsSearchPath, queryString);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+
+                // Use URL path to call web api method (including query string)
+                var response = await ExecutePostRequestWithResponseAsync(sectionSearchCriteria, urlPath, headers: headers);
+
+                var sectionPage = JsonConvert.DeserializeObject<SectionPage2>(await response.Content.ReadAsStringAsync());
 
                 return sectionPage;
             }
@@ -10913,6 +11679,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasePath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(retentionAlertCase, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<RetentionAlertCaseCreateResponse>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -10942,6 +11709,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasePath, id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePutRequestWithResponseAsync(retentionAlertCase, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<RetentionAlertCaseCreateResponse>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -10978,6 +11746,35 @@ namespace Ellucian.Colleague.Api.Client
             catch (Exception ex)
             {
                 logger.Error(ex, "Unable to get Retention Alert work Cases");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieve Retention Alert Cases information
+        /// </summary>
+        /// <param name="criteria"></param>
+        /// <returns>Retention Alert Work Case list</returns>
+        public async Task<IEnumerable<RetentionAlertWorkCase2>> QueryRetentionAlertWorkCases2Async(RetentionAlertQueryCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria", "Criteria cannot be empty/null for Retention alert cases.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _retentionAlertCasesPath };
+                var urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<RetentionAlertWorkCase2>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get Retention Alert work cases 2 async");
                 throw;
             }
         }
@@ -11034,6 +11831,7 @@ namespace Ellucian.Colleague.Api.Client
             {
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogResponseContent);
                 string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCaseDetailPath, caseId);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<RetentionAlertCaseDetail>(await response.Content.ReadAsStringAsync());
@@ -11073,6 +11871,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseNoteVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(retentionAlertCaseNote, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -11112,6 +11911,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseFollowUpVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(retentionAlertCaseNote, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -11151,6 +11951,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseCommCodeVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(retentionAlertCaseCommCode, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -11190,6 +11991,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseTypeVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(retentionAlertCaseType, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -11229,6 +12031,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCasePriorityVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(retentionAlertCasePriority, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -11268,6 +12071,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseCloseVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(retentionAlertCaseClose, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -11307,6 +12111,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseSetReminderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(reminder, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -11339,6 +12144,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-history");
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseManageRemindersVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(reminders, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -11405,6 +12211,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, "case-send-mail");
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseSendMailVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(retentionAlertWorkCaseSendMail, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -11505,6 +12312,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_retentionAlertCasesPath, caseId, _caseHistoryPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeEllucianRetentionAlertCaseReassignVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(retentionAlertWorkCaseReassign, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<RetentionAlertWorkCaseActionResponse>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -11752,6 +12560,7 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, "application/pdf");
                 headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
                 headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = response.Content.ReadAsByteArrayAsync().Result;
@@ -11789,6 +12598,7 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, "application/pdf");
                 headers.Add(AcceptHeaderKey, "application/vnd.ellucian.v1+pdf");
                 headers.Add("X-Ellucian-Media-Type", "application/vnd.ellucian.v1+pdf");
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = response.Content.ReadAsByteArrayAsync().Result;
@@ -11802,6 +12612,352 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         #endregion
+
+        /// <summary>
+        /// Get a person's emergency information async.
+        /// </summary>
+        /// <param name="studentId">ID of the student whose emergency information is requested.</param>
+        /// <returns>An EmergencyInformation object</returns>
+        public async Task<IEnumerable<StudentAcademicLevel>> GetStudentAcademicLevelsAsync(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "You must provide the student ID to return academci levels.");
+            }
+            try
+            {
+                // Build url path
+                var urlPath = UrlUtility.CombineUrlPath(_studentsPath, studentId + "/academic-levels");
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<IEnumerable<StudentAcademicLevel>>(await response.Content.ReadAsStringAsync());
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex, string.Format("Unable to get academic levels for the given student {0}", studentId));
+                throw;
+            }
+        }
+        /// <summary>
+        /// Asynchronously certifies the section's census.
+        /// </summary>
+        /// <param name="sectionId">section Id</param>
+        /// <param name="sectionCensusToCertify">Census to certify</param>
+        /// <returns><see cref="SectionCensusCertification"/>Certified Census</see></returns>
+        public async Task<SectionCensusCertification> PostSectionCensusCertificationAsync(string sectionId, SectionCensusToCertify sectionCensusToCertify)
+        {
+            if (sectionId == null)
+            {
+                throw new ArgumentNullException("sectionId", "Section Id must be provided to update its census certs");
+            }
+            if (sectionCensusToCertify == null)
+            {
+                throw new ArgumentNullException("sectionCensusToCertify", "Section Cert details for the census must be provided");
+            }
+            if (sectionCensusToCertify.CensusCertificationDate == null)
+            {
+                throw new ArgumentNullException("sectionCensusToCertify.CensusCertificationDate", "Section Census date must be provided");
+            }
+            if (sectionCensusToCertify.CensusCertificationRecordedDate == null)
+            {
+                throw new ArgumentNullException("sectionCensusToCertify.CensusCertificationRecordedDate", "Section Census certification recorded date must be provided");
+            }
+            if (sectionCensusToCertify.CensusCertificationRecordedTime == null)
+            {
+                throw new ArgumentNullException("sectionCensusToCertify.CensusCertificationRecordedTime", "Section Census certification recorded time must be provided");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _sectionsPath, UrlParameterUtility.EncodeWithSubstitution(sectionId), _certifyCensusPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(sectionCensusToCertify, urlPath, headers: headers);
+                var certifiedCensus = JsonConvert.DeserializeObject<SectionCensusCertification>(await response.Content.ReadAsStringAsync());
+                return certifiedCensus;
+            }
+            // If the HTTP request fails because of a conflict indicate that with a specific type of exception.
+            catch (HttpRequestFailedException hre)
+            {
+                logger.Error(hre.ToString());
+                throw new InvalidOperationException(string.Format("Census could not be certified for the section {0}", sectionId));
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously returns section census configuration with information
+        /// </summary>
+        /// <returns>The requested <see cref="SectionCensusConfiguration">SectionCensusConfiguration</see> object</returns>
+        public async Task<SectionCensusConfiguration> GetSectionCensusConfigurationAsync()
+        {
+            try
+            {
+                string[] pathStrings = new string[] { _configurationPath, _sectionCensusPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var configuration = JsonConvert.DeserializeObject<SectionCensusConfiguration>(await responseString.Content.ReadAsStringAsync());
+
+                return configuration;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get section census configuration information.");
+                throw;
+            }
+        }
+
+        public async Task<String> GetCourseDelimiterConfigurationAsync()
+        {
+            string defaultCourseDelimiter = "-";
+            try
+            {
+                string[] pathStrings = new string[] { _configurationPath, _courseDelimiterPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var courseDelimiter = JsonConvert.DeserializeObject<string>(await responseString.Content.ReadAsStringAsync());
+                return courseDelimiter;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get course delimiter configuration, returning default hyphen.");
+                return defaultCourseDelimiter;
+            }
+        }
+
+        /// <summary>
+        /// Retrieve a collection of course placeholders by ID
+        /// </summary>
+        /// <param name="coursePlaceholderIds">Unique identifiers for course placeholders to retrieve</param>
+        /// <param name="useCache">Flag indicating whether or not to use the API's cached course placeholder data; defaults to true. If set to false, course placeholder data is retrieved directly from Colleague.</param>
+        /// <returns>Collection of <see cref="CoursePlaceholder"/></returns>
+        public async Task<IEnumerable<CoursePlaceholder>> QueryCoursePlaceholdersByIdsAsync(IEnumerable<string> coursePlaceholderIds, bool useCache = true)
+        {
+            if (coursePlaceholderIds == null || !coursePlaceholderIds.Any())
+            {
+                throw new ArgumentNullException("At least one course placeholder ID is required when retrieving course placeholders by ID.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _coursePlaceholdersPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(coursePlaceholderIds, urlPath, headers: headers, useCache: useCache);
+                var coursePlaceholders = JsonConvert.DeserializeObject<IEnumerable<CoursePlaceholder>>(await response.Content.ReadAsStringAsync());
+                return coursePlaceholders;
+            }
+            catch (Exception ex)
+            {
+                var message = string.Format("An error occurred while trying to retrieve course placeholder data for IDs {0}.", string.Join(",", coursePlaceholderIds));
+                logger.Error(ex, message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Returns SectionSeats Objects containing seat counts for the section ids given and their cross-listed sections.
+        /// </summary>
+        /// <param name="sectionIds">List of section Ids for which to get seat counts</param>
+        /// <returns>Returns a set of <see cref="SectionSeats">SectionSeats</see> items for the section ids and any cross-listed sections</returns>
+        public async Task<IEnumerable<SectionSeats>> QuerySectionsSeatsAsync(IEnumerable<string> sectionIds)
+        {
+            if (sectionIds == null || !sectionIds.Any())
+            {
+                throw new ArgumentNullException("At least one course section ID is required when retrieving section seat counts.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _sectionsSeats };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(sectionIds, urlPath, headers: headers);
+                var sectionsSeats = JsonConvert.DeserializeObject<IEnumerable<SectionSeats>>(await response.Content.ReadAsStringAsync());
+                return sectionsSeats;
+            }
+            catch (Exception ex)
+            {
+                var message = string.Format("An error occurred while trying to retrieve section seat count data for section ids {0}.", string.Join(",", sectionIds));
+                logger.Error(ex, message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Returns Overload Petitions asynchronously
+        /// </summary>
+        /// <param name="studentId">Student Id</param>
+        /// <returns>A collection of <see cref="StudentOverloadPetition">StudentOverloadPetition</see> object.</returns>
+        public async Task<IEnumerable<StudentOverloadPetition>> GetStudentOverloadPetitionsAsync(string studentId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(studentId))
+                {
+                    throw new ArgumentNullException("studentId", "student Id must be specified.");
+                }
+
+                string urlPath = UrlUtility.CombineUrlPath(_studentOverloadPetitionsPath, studentId);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<List<StudentOverloadPetition>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get the requested Student Overload Petitions");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously returns section academic record configuration information
+        /// </summary>
+        /// <returns>The requested <see cref="AcademicRecordConfiguration">AcademicRecordConfiguration</see> object</returns>
+        public async Task<AcademicRecordConfiguration> GetAcademicRecordConfigurationAsync()
+        {
+            try
+            {
+                string[] pathStrings = new string[] { _configurationPath, _academicRecordPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var responseString = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var configuration = JsonConvert.DeserializeObject<AcademicRecordConfiguration>(await responseString.Content.ReadAsStringAsync());
+                return configuration;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get academic record configuration information.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously returns student anonymous grading ids information
+        /// </summary>
+        /// <param name="criteria">Post in Body a student id and optionally a list of term ids or a list of section ids</param>
+        /// <returns>The requested <see cref="StudentAnonymousGrading">StudentAnonymousGrading</see> object</returns>
+        public async Task<IEnumerable<StudentAnonymousGrading>> QueryAnonymousGradingIdsAsync(AnonymousGradingQueryCriteria criteria)
+        {
+            if (criteria == null || string.IsNullOrWhiteSpace(criteria.StudentId))
+            {
+                throw new ArgumentNullException("criteria", "Criteria cannot be empty/null a student id must me provided.");
+            }
+            if ((criteria.TermIds != null && criteria.TermIds.Any()) && (criteria.SectionIds != null && criteria.SectionIds.Any()))
+            {
+                throw new ArgumentException("Either term ids or course section ids may be provided but not both.");
+            }
+
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_qapiPath, _anonymousGradingIdsPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath: urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<StudentAnonymousGrading>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to retrieve grading IDs for the student.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get preliminary anonymous grade information for the specified course section
+        /// </summary>
+        /// <param name="sectionId">ID of the course section for which to retrieve preliminary anonymous grade information</param>
+        /// <returns>Preliminary anonymous grade information for the specified course section</returns>
+        /// <exception cref="ArgumentNullException">A course section ID is required when retrieving preliminary anonymous grade information.</exception>
+        public async Task<SectionPreliminaryAnonymousGrading> GetPreliminaryAnonymousGradesBySectionIdAsync(string sectionId)
+        {
+            if (string.IsNullOrEmpty(sectionId))
+            {
+                throw new ArgumentNullException("sectionId", "A course section ID is required when retrieving preliminary anonymous grade information.");
+            }
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_sectionsPath, sectionId, _preliminaryAnonymousGradesPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath: urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<SectionPreliminaryAnonymousGrading>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, string.Format("Could not retrieve preliminary anonymous grade information for course section {0}.", sectionId));
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Update preliminary anonymous grade information for the specified course section
+        /// </summary>
+        /// <param name="sectionId">ID of the course section for which to process preliminary anonymous grade updates</param>
+        /// <param name="preliminaryAnonymousGrades">Preliminary anonymous grade updates to process</param>
+        /// <returns>Preliminary anonymous grade update results</returns>
+        /// <exception cref="ArgumentNullException">A course section ID and at least one grade are required when updating preliminary anonymous grade information.</exception>
+        public async Task<IEnumerable<PreliminaryAnonymousGradeUpdateResult>> UpdatePreliminaryAnonymousGradesBySectionIdAsync(string sectionId,
+            IEnumerable<PreliminaryAnonymousGrade> preliminaryAnonymousGrades)
+        {
+            if (string.IsNullOrEmpty(sectionId))
+            {
+                throw new ArgumentNullException("sectionId", "A course section ID is required when updating preliminary anonymous grade information.");
+            }
+            if (preliminaryAnonymousGrades == null || !preliminaryAnonymousGrades.Any())
+            {
+                throw new ArgumentNullException("preliminaryAnonymousGrades", "At least one grade is required when updating preliminary anonymous grade information.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_sectionsPath, sectionId, _preliminaryAnonymousGradesPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePutRequestWithResponseAsync(preliminaryAnonymousGrades, urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<IEnumerable<PreliminaryAnonymousGradeUpdateResult>>(await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, string.Format("Could not update preliminary anonymous grade information for course section {0}.", sectionId));
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the grading status for a course section
+        /// </summary>
+        /// <param name="sectionId">Unique identifier for the course section</param>
+        /// <returns>Grading status for the specified course section</returns>
+        /// <exception cref="ArgumentNullException">A course section ID is required when retrieving course section grading status.</exception>
+        public async Task<SectionGradingStatus> GetSectionGradingStatusAsync(string sectionId)
+        {
+            if (string.IsNullOrEmpty(sectionId))
+            {
+                throw new ArgumentNullException("sectionId", "A course section ID is required when retrieving course section grading status information.");
+            }
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_sectionsPath, sectionId, _gradingStatusPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath: urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<SectionGradingStatus>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, string.Format("Could not retrieve course section grading status information for course section {0}.", sectionId));
+                throw;
+            }
+        }
     }
 }
-

@@ -271,7 +271,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
 
             try
-            {
+            {             
                 //call import extend method that needs the extracted extension dataa and the config
                 await _sectionCrosslistService.ImportExtendedEthosData(await ExtractExtendedData(await _sectionCrosslistService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
                 

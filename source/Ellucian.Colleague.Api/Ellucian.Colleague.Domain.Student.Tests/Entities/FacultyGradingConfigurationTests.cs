@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Student.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -37,7 +37,30 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 var config = new FacultyGradingConfiguration();
                 config.NumberOfMidtermGrades = 7;
             }
+
+            [TestMethod]
+            public void FacultyGradingConfiguration_FinalGradesLastDateAttendedNeverAttendedDisplayBehavior_Get_Set()
+            {
+                var config = new FacultyGradingConfiguration();
+                Assert.AreEqual(LastDateAttendedNeverAttendedFieldDisplayType.Editable, config.FinalGradesLastDateAttendedNeverAttendedDisplayBehavior);
+                config.FinalGradesLastDateAttendedNeverAttendedDisplayBehavior = LastDateAttendedNeverAttendedFieldDisplayType.Hidden;
+                Assert.AreEqual(LastDateAttendedNeverAttendedFieldDisplayType.Hidden, config.FinalGradesLastDateAttendedNeverAttendedDisplayBehavior);
+                config.FinalGradesLastDateAttendedNeverAttendedDisplayBehavior = LastDateAttendedNeverAttendedFieldDisplayType.ReadOnly;
+                Assert.AreEqual(LastDateAttendedNeverAttendedFieldDisplayType.ReadOnly, config.FinalGradesLastDateAttendedNeverAttendedDisplayBehavior);
+            }
+
+            [TestMethod]
+            public void FacultyGradingConfiguration_MidtermGradesLastDateAttendedNeverAttendedDisplayBehavior_Get_Set()
+            {
+                var config = new FacultyGradingConfiguration();
+                Assert.AreEqual(LastDateAttendedNeverAttendedFieldDisplayType.Editable, config.MidtermGradesLastDateAttendedNeverAttendedDisplayBehavior);
+                config.MidtermGradesLastDateAttendedNeverAttendedDisplayBehavior = LastDateAttendedNeverAttendedFieldDisplayType.Hidden;
+                Assert.AreEqual(LastDateAttendedNeverAttendedFieldDisplayType.Hidden, config.MidtermGradesLastDateAttendedNeverAttendedDisplayBehavior);
+                config.MidtermGradesLastDateAttendedNeverAttendedDisplayBehavior = LastDateAttendedNeverAttendedFieldDisplayType.ReadOnly;
+                Assert.AreEqual(LastDateAttendedNeverAttendedFieldDisplayType.ReadOnly, config.MidtermGradesLastDateAttendedNeverAttendedDisplayBehavior);
+            }
         }
+
         [TestClass]
         public class FacultyGradingConfiguration_AddGradingTerms
         {
@@ -63,8 +86,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities
                 Assert.AreEqual(1, configuration.AllowedGradingTerms.Count());
                 Assert.IsTrue(configuration.AllowedGradingTerms.Contains("2015/FA"));
             }
-
         }
-
     }
 }

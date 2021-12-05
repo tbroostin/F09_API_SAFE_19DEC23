@@ -3301,7 +3301,7 @@
           <Paragraph>
             <TextRuns>
               <TextRun>
-                <Value>=IIf(User!Language = "en-US", "SSN:", "SIN:")</Value>
+                <Value>=IIf(Parameters!HostCountry.Value = "USA", "SSN:", "SIN:")</Value>
                 <Style>
                   <FontSize>8pt</FontSize>
                   <FontWeight>Bold</FontWeight>
@@ -5278,6 +5278,12 @@
       <Prompt>ReportParameter1</Prompt>
     </ReportParameter>
     <ReportParameter Name="LogoPath">
+      <DataType>String</DataType>
+      <Nullable>true</Nullable>
+      <AllowBlank>true</AllowBlank>
+      <Prompt>ReportParameter1</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="HostCountry">
       <DataType>String</DataType>
       <Nullable>true</Nullable>
       <AllowBlank>true</AllowBlank>

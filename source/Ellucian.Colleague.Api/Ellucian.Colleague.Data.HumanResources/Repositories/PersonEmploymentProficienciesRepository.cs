@@ -48,20 +48,24 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         {
             try
             {
-                var hrIndSkillIds = await DataReader.SelectAsync("HR.IND.SKILL", "");
-                int totalCount = hrIndSkillIds.Count();
-                Array.Sort(hrIndSkillIds);
-                var subList = hrIndSkillIds.Skip(offset).Take(limit).ToArray();
-
-                var hrIndSkillData = await DataReader.BulkReadRecordAsync<DataContracts.HrIndSkill>("HR.IND.SKILL", subList);
-
-                if (hrIndSkillData == null)
-                    throw new KeyNotFoundException("No records selected from HR.IND.SKILL entity in colleague");
-
+                int totalCount = 0;
                 List<PersonEmploymentProficiency> allPep = new List<PersonEmploymentProficiency>();
-                foreach (var hrIndSkill in hrIndSkillData)
+                var hrIndSkillIds = await DataReader.SelectAsync("HR.IND.SKILL", "");
+                if (hrIndSkillIds != null && hrIndSkillIds.Any())
                 {
-                    allPep.Add(BuildPEP(hrIndSkill));
+                    totalCount = hrIndSkillIds.Count();
+                    Array.Sort(hrIndSkillIds);
+                    var subList = hrIndSkillIds.Skip(offset).Take(limit).ToArray();
+
+                    var hrIndSkillData = await DataReader.BulkReadRecordAsync<DataContracts.HrIndSkill>("HR.IND.SKILL", subList);
+
+                    if (hrIndSkillData != null)
+                    {
+                        foreach (var hrIndSkill in hrIndSkillData)
+                        {
+                            allPep.Add(BuildPEP(hrIndSkill));
+                        }
+                    }
                 }
 
                 return new Tuple<IEnumerable<PersonEmploymentProficiency>, int>(allPep, totalCount);
@@ -72,7 +76,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             } catch (Exception EX)
             {
                 RepositoryException REX = new RepositoryException();
-                REX.AddError(new RepositoryError("PersonEmploymentProficiencies.Repository", EX.Message));
+                REX.AddError(new RepositoryError("Bad.Data", EX.Message));
                 throw REX;
             }
             
@@ -88,21 +92,38 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             if (string.IsNullOrWhiteSpace(guid))
                 throw new ArgumentNullException("guid");
 
-            var id = await GetRecordKeyFromGuidAsync(guid);
-
-            if (string.IsNullOrEmpty(id))
+            var guidEntity = await GetInfoFromGuidAsync(guid);
+            if (guidEntity == null || guidEntity.Entity != "HR.IND.SKILL" || !string.IsNullOrWhiteSpace(guidEntity.SecondaryKey))
             {
-                throw new KeyNotFoundException("Could not find id with GUID " + guid);
+                if (guidEntity != null && !string.IsNullOrEmpty(guidEntity.Entity))
+                {
+                    var exception = new RepositoryException();
+                    var errorMessage = string.Format("GUID '{0}' has different entity, '{1}', than expected, HR.IND.SKILL.", guid, guidEntity.Entity);
+                    exception.AddError(new RepositoryError("GUID.Wrong.Type", errorMessage) { Id = guid });
+                    throw exception;
+                }
+                else
+                {
+                    throw new KeyNotFoundException("Could not find id with GUID " + guid);
+                }
             }
-
-            var hrIndSkill = await DataReader.ReadRecordAsync<HrIndSkill>(id);
-
-            if (hrIndSkill == null)
+            else
             {
-                throw new KeyNotFoundException("Could not find record for guid " + guid);
+                var id = guidEntity.PrimaryKey;
+                if (string.IsNullOrEmpty(id))
+                {
+                    throw new KeyNotFoundException("Could not find id with GUID " + guid);
+                }
+
+                var hrIndSkill = await DataReader.ReadRecordAsync<HrIndSkill>(id);
+
+                if (hrIndSkill == null)
+                {
+                    throw new KeyNotFoundException("Could not find record for guid " + guid);
+                }
+
+                return BuildPEP(hrIndSkill);
             }
-            
-            return BuildPEP(hrIndSkill);
         }
 
         /// <summary>
@@ -117,13 +138,31 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 return await GetGuidFromRecordInfoAsync(entity, key);
             }
-            catch (RepositoryException REX)
+            catch (RepositoryException)
             {
-                REX.AddError(new RepositoryError(entity + ".guid.NotFound", "GUID not found for " + entity + "id " + key));
-                throw REX;
+                var exception = new RepositoryException();
+                exception.AddError(new RepositoryError("GUID.Not.Found", "GUID not found for " + entity + " id " + key) { SourceId = key });
+                throw exception;
             }
-            
         }
+
+        /// <summary>
+        /// Gets id from guid input
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public async Task<GuidLookupResult> GetInfoFromGuidAsync(string id)
+        {
+            try
+            {
+                return await GetRecordInfoFromGuidAsync(id);
+            }
+            catch (Exception)
+            {
+                throw new KeyNotFoundException("Could not find id with GUID " + id);
+            }
+        }
+
 
         /// <summary>
         /// Build the proficiency Entity with source coming from HR.IND.SKILL dataContract

@@ -1,4 +1,4 @@
-//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+//Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -22,6 +22,9 @@ using Ellucian.Web.Http.Models;
 using System.Configuration;
 using Ellucian.Web.Http.Filters;
 using System.Web.Http.Controllers;
+using System.Web.Http.Routing;
+using System.Collections;
+using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 {
@@ -492,6 +495,179 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             await personExternalEducationCredentialsController.DeletePersonExternalEducationCredentialsAsync(personExternalEducationCredentialsCollection.FirstOrDefault().Id);
         }
 
+        //GET by id v1.1.0 / v1.0.0
+        //Successful
+        //GetPersonExternalEducationCredentialsByGuidAsync
+        [TestMethod]
+        public async Task PersonExternalEducationCredentialsController_GetPersonExternalEducationCredentialsByGuidAsync_Permissions()
+        {
+            var expected = personExternalEducationCredentialsCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonExternalEducationCredentials" },
+                    { "action", "GetPersonExternalEducationCredentialsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-external-education-credentials", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personExternalEducationCredentialsController.Request.SetRouteData(data);
+            personExternalEducationCredentialsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BasePermissionCodes.ViewPersonExternalEducationCredentials, BasePermissionCodes.UpdatePersonExternalEducationCredentials });
+
+            var controllerContext = personExternalEducationCredentialsController.ControllerContext;
+            var actionDescriptor = personExternalEducationCredentialsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            personExternalEducationCredentialsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsByGuidAsync(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
+            var actual = await personExternalEducationCredentialsController.PutPersonExternalEducationCredentialsAsync(expected.Id, expected);
+
+            Object filterObject;
+            personExternalEducationCredentialsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewPersonExternalEducationCredentials));
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdatePersonExternalEducationCredentials));
+
+
+        }
+
+        //GET by id v1.1.0 / v1.0.0
+        //Exception
+        //GetPersonExternalEducationCredentialsByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonExternalEducationCredentialsController_GetPersonExternalEducationCredentialsByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonExternalEducationCredentials" },
+                    { "action", "GetPersonExternalEducationCredentialsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-external-education-credentials", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personExternalEducationCredentialsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personExternalEducationCredentialsController.ControllerContext;
+            var actionDescriptor = personExternalEducationCredentialsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                personExternalEducationCredentialsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view person-external-education-credentials."));
+                await personExternalEducationCredentialsController.GetPersonExternalEducationCredentialsByGuidAsync(expectedGuid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET v1.1.0 / v1.0.0
+        //Successful
+        //GetPersonExternalEducationCredentialsAsync
+        [TestMethod]
+        public async Task PersonExternalEducationCredentialsController_GetPersonExternalEducationCredentialsAsync_Permissions()
+        {
+            var gradeOptionsTuple = new Tuple<IEnumerable<Dtos.PersonExternalEducationCredentials>, int>(personExternalEducationCredentialsCollection, 3);
+            studentFilter = string.Empty;
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonExternalEducationCredentials" },
+                    { "action", "GetPersonExternalEducationCredentialsAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-external-education-credentials", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personExternalEducationCredentialsController.Request.SetRouteData(data);
+            personExternalEducationCredentialsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BasePermissionCodes.ViewPersonExternalEducationCredentials, BasePermissionCodes.UpdatePersonExternalEducationCredentials });
+
+            var controllerContext = personExternalEducationCredentialsController.ControllerContext;
+            var actionDescriptor = personExternalEducationCredentialsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            personExternalEducationCredentialsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<PersonExternalEducationCredentials>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(gradeOptionsTuple);
+            var sourceContexts = await personExternalEducationCredentialsController.GetPersonExternalEducationCredentialsAsync(new Paging(1, 0), studentCriteriaFilter, null, null);
+
+            Object filterObject;
+            personExternalEducationCredentialsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewPersonExternalEducationCredentials));
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdatePersonExternalEducationCredentials));
+
+
+        }
+
+        //GET v1.1.0 / v1.0.0
+        //Exception
+        //GetPersonExternalEducationCredentialsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonExternalEducationCredentialsController_GetPersonExternalEducationCredentialsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonExternalEducationCredentials" },
+                    { "action", "GetPersonExternalEducationCredentialsAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-external-education-credentials", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personExternalEducationCredentialsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personExternalEducationCredentialsController.ControllerContext;
+            var actionDescriptor = personExternalEducationCredentialsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(),It.IsAny<PersonExternalEducationCredentials>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                personExternalEducationCredentialsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view person-external-education-credentials."));
+                await personExternalEducationCredentialsController.GetPersonExternalEducationCredentialsAsync(new Paging(1, 0), studentCriteriaFilter, null, null);
+          
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion
 
         #region PUT
@@ -636,6 +812,94 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             await personExternalEducationCredentialsController.PutPersonExternalEducationCredentialsAsync(expected.Id, expected);
         }
 
+        //PUT v1.1.0 / v1.0.0
+        //Successful
+        //PutPersonExternalEducationCredentialsAsync
+        [TestMethod]
+        public async Task PersonExternalEducationCredentialsController_PutPersonExternalEducationCredentialsAsync_Permissions()
+        {
+            var expected = personExternalEducationCredentialsCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonExternalEducationCredentials" },
+                    { "action", "PutPersonExternalEducationCredentialsAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-external-education-credentials", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personExternalEducationCredentialsController.Request.SetRouteData(data);
+            personExternalEducationCredentialsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(BasePermissionCodes.UpdatePersonExternalEducationCredentials);
+
+            var controllerContext = personExternalEducationCredentialsController.ControllerContext;
+            var actionDescriptor = personExternalEducationCredentialsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            personExternalEducationCredentialsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personExternalEducationCredentialsServiceMock.Setup(x => x.UpdatePersonExternalEducationCredentialsAsync(It.IsAny<PersonExternalEducationCredentials>())).ReturnsAsync(expected);
+            var actual = await personExternalEducationCredentialsController.PutPersonExternalEducationCredentialsAsync(expected.Id, expected);
+
+            Object filterObject;
+            personExternalEducationCredentialsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdatePersonExternalEducationCredentials));
+
+
+        }
+
+        //PUT v1.1.0 / v1.0.0
+        //Exception
+        //PutPersonExternalEducationCredentialsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonExternalEducationCredentialsController_PutPersonExternalEducationCredentialsAsync_Invalid_Permissions()
+        {
+            var expected = personExternalEducationCredentialsCollection.FirstOrDefault();
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonExternalEducationCredentials" },
+                    { "action", "PutPersonExternalEducationCredentialsAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-external-education-credentials", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personExternalEducationCredentialsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personExternalEducationCredentialsController.ControllerContext;
+            var actionDescriptor = personExternalEducationCredentialsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                personExternalEducationCredentialsServiceMock.Setup(x => x.GetPersonExternalEducationCredentialsByGuidAsync(expected.Id, It.IsAny<bool>())).Throws<PermissionsException>();
+                personExternalEducationCredentialsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to update person-external-education-credentials."));
+                await personExternalEducationCredentialsController.PutPersonExternalEducationCredentialsAsync(expected.Id, expected);
+
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
+
         #endregion
 
         #region POST
@@ -754,6 +1018,96 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 
             await personExternalEducationCredentialsController.PostPersonExternalEducationCredentialsAsync(expected);
         }
+
+        //POST v1.1.0 / v1.0.0
+        //Successful
+        //PostPersonExternalEducationCredentialsAsync
+        [TestMethod]
+        public async Task PersonExternalEducationCredentialsController_PostPersonExternalEducationCredentialsAsync_Permissions()
+        {
+            var expected = personExternalEducationCredentialsCollection.FirstOrDefault();
+            expected.Id = Guid.Empty.ToString();
+            var record = personExternalEducationCredentialsCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonExternalEducationCredentials" },
+                    { "action", "PostPersonExternalEducationCredentialsAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-external-education-credentials", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personExternalEducationCredentialsController.Request.SetRouteData(data);
+            personExternalEducationCredentialsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(BasePermissionCodes.UpdatePersonExternalEducationCredentials);
+
+            var controllerContext = personExternalEducationCredentialsController.ControllerContext;
+            var actionDescriptor = personExternalEducationCredentialsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            personExternalEducationCredentialsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personExternalEducationCredentialsServiceMock.Setup(x => x.CreatePersonExternalEducationCredentialsAsync(It.IsAny<PersonExternalEducationCredentials>())).ReturnsAsync(record);
+            var actual = await personExternalEducationCredentialsController.PostPersonExternalEducationCredentialsAsync(expected);
+
+            Object filterObject;
+            personExternalEducationCredentialsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdatePersonExternalEducationCredentials));
+
+
+        }
+
+        //POST v1.1.0 / v1.0.0
+        //Exception
+        //PostPersonExternalEducationCredentialsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonExternalEducationCredentialsController_PostPersonExternalEducationCredentialsAsync_Invalid_Permissions()
+        {
+            var expected = personExternalEducationCredentialsCollection.FirstOrDefault();
+            expected.Id = Guid.Empty.ToString();
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonExternalEducationCredentials" },
+                    { "action", "PostPersonExternalEducationCredentialsAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-external-education-credentials", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personExternalEducationCredentialsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personExternalEducationCredentialsController.ControllerContext;
+            var actionDescriptor = personExternalEducationCredentialsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                
+                personExternalEducationCredentialsServiceMock.Setup(x => x.CreatePersonExternalEducationCredentialsAsync(It.IsAny<PersonExternalEducationCredentials>())).Throws<PermissionsException>();
+                personExternalEducationCredentialsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to create person-external-education-credentials."));
+                await personExternalEducationCredentialsController.PostPersonExternalEducationCredentialsAsync(expected);
+
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
 
         #endregion
 

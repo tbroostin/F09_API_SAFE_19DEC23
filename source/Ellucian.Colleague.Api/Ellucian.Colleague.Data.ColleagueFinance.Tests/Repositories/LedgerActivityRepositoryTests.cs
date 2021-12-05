@@ -229,7 +229,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [ExpectedException(typeof(RepositoryException))]
             public async Task LedgerActivityRepository_GetGlSourceCodesAsync_GlSourceCodes_Null_From_Repository()
             {
-                dataReaderMock.Setup(d => d.ReadRecordAsync<ApplValcodes>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.ReadRecordAsync<ApplValcodes>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 await ledgerActivityRepository.GetGlaFyrAsync(0, 2, "2017", "", "", "Name", "");
             }
 
@@ -304,7 +304,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task LedgerActivityRepository_GetGlaFyrByIdAsync_ReadRecordAsync_Returns_Null()
             {
-                dataReaderMock.Setup(d => d.ReadRecordAsync<GlaFyr>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.ReadRecordAsync<GlaFyr>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 await ledgerActivityRepository.GetGlaFyrByIdAsync(guid);
             }
 

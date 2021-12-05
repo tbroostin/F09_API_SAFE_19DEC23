@@ -1,4 +1,4 @@
-﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 
 using System;
@@ -16,7 +16,6 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Colleague.Coordination.Student.Tests.UserFactories;
 using Ellucian.Colleague.Dtos.DtoProperties;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
@@ -87,10 +86,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private Mock<IStudentRepository> _studentRepositoryMock;
             private Mock<ITermRepository> _termRepositoryMock;
             private Mock<IAdapterRegistry> _adapterRegistryMock;
-            //private Mock<IAdvisorTypesService> _advisorTypesServiceMock;
             private Mock<ICurrentUserFactory> _currentUserFactoryMock;
             private Mock<IRoleRepository> _roleRepositoryMock;
-            private Mock<IAcademicCredentialsRepository> _academicCredentialsRepoMock;
             private IConfigurationRepository baseConfigurationRepository;
             private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
 
@@ -116,10 +113,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _termRepositoryMock = new Mock<ITermRepository>();
                 _personRepositoryMock = new Mock<IPersonRepository>();
                 _adapterRegistryMock = new Mock<IAdapterRegistry>();
-                //_advisorTypesServiceMock = new Mock<IAdvisorTypesService>();
                 _currentUserFactoryMock = new Mock<ICurrentUserFactory>();
                 _roleRepositoryMock = new Mock<IRoleRepository>();
-                _academicCredentialsRepoMock = new Mock<IAcademicCredentialsRepository>();
                 baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
                 baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
 
@@ -298,7 +293,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentAcadCredDictionary.Add( "secGuid3", "secGuid3" );
 
                 _studentGradePointAveragesService = new StudentGradePointAveragesService( _studentGradePointAveragesRepositoryMock.Object, _personRepositoryMock.Object,
-                   _studentRepositoryMock.Object, _termRepositoryMock.Object, _academicCredentialsRepoMock.Object, _referenceRepositoryMock.Object,
+                   _studentRepositoryMock.Object, _termRepositoryMock.Object,  _referenceRepositoryMock.Object,
                    _adapterRegistryMock.Object, curntUserFactory, _roleRepositoryMock.Object, baseConfigurationRepository, _loggerMock.Object );
             }
 

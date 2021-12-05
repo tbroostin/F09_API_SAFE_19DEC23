@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -30,10 +30,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         public string earningsTypeDescription;
         public int planYearStartMonth;
         public int planYearStartDay;
+        public bool isLeaveReportingPlan;
         public IEnumerable<string> earningTypeIDList;
         public Decimal? accrualRate;
         public Decimal? accrualLimit;
         public Decimal? accrualMaxCarryOver;
+        public string accrualMethod;
+        public bool isPlanYearStartDateDefined;
 
         public List<EmployeeLeaveTransaction> employeeLeaveTransactions;
 
@@ -56,13 +59,14 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                     priorPayPeriodBalance,
                     planYearStartMonth,
                     planYearStartDay,
+                    isLeaveReportingPlan,
                     earningTypeIDList,
                     accrualRate,
                     accrualLimit,
                     accrualMaxCarryOver,
+                    accrualMethod,
+                    isPlanYearStartDateDefined,
                     allowNegativeBalance);
-
-
             }
         }
 
@@ -85,12 +89,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             earningsTypeDescription = "Vacation Leave EarningsType";
             planYearStartMonth = 1;
             planYearStartDay = 1;
-
+            isLeaveReportingPlan = true;
+            isPlanYearStartDateDefined = false;
             earningTypeIDList = new List<string> { "VAC", "CMTH" };
             accrualRate = 50;
             accrualLimit = 50;
             accrualMaxCarryOver = 80;
-       
+            accrualMethod = "P";
             var lastYear = DateTime.Today.AddYears(-1).Year;
             employeeLeaveTransactions = new List<EmployeeLeaveTransaction>()
             {
@@ -314,7 +319,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 Assert.IsFalse(employeeLeavePlan.SortedLeaveTransactions.Any());
             }
 
-           
+
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public void EarningTypeIDList_IsNullTest()
@@ -369,6 +374,12 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             public void AccrualMaxCarryOverTest()
             {
                 Assert.AreEqual(accrualMaxCarryOver, employeeLeavePlan.AccrualMaxCarryOver);
+            }
+
+            [TestMethod]
+            public void IsPlanYearStartDateDefinedTest()
+            {
+                Assert.AreEqual(isPlanYearStartDateDefined, employeeLeavePlan.IsPlanYearStartDateDefined);
             }
 
         }
@@ -780,7 +791,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 decimal expectedAmount = plan.CurrentPlanYearStartingBalance;
                 for (int i = plan.PriorPlanYearEndTransactionIndex + 1; i < plan.SortedLeaveTransactions.Count; i++)
                 {
-                    expectedAmount += plan.SortedLeaveTransactions[i].TransactionHours;     
+                    expectedAmount += plan.SortedLeaveTransactions[i].TransactionHours;
                 }
 
                 Assert.AreEqual(expectedAmount, plan.CurrentPlanYearBalance);

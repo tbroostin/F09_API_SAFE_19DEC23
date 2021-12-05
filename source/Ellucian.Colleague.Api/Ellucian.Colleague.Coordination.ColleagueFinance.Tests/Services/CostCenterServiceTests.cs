@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -32,6 +32,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private TestCostCenterRepository testCostCenterRepository;
         private GeneralLedgerUser generalLedgerUser;
         private TestGeneralLedgerConfigurationRepository testGlConfigurationRepository;
+        private TestColleagueFinanceWebConfigurationsRepository testColleagueFinanceWebConfigurationsRepository;
         private GeneralLedgerAccountStructure testGlAccountStructure;
         private CostCenterStructure testGlCostCenterStructure;
         private GeneralLedgerClassConfiguration testGlClassConfiguration;
@@ -67,6 +68,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             testGlCostCenterStructure = null;
             testGlClassConfiguration = null;
             testGlComponentDescriptions = null;
+            testColleagueFinanceWebConfigurationsRepository = null;
         }
         #endregion
 
@@ -959,10 +961,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             //   1. a cost center repository object.
             //   2. a general ledger user repository object.
             //   3. a GL configuration repository object.
-            //   4. an adapterRegistry object.
-            //   5. a GL user factory object.
-            //   6. a role repository object.
-            //   7. a logger object.
+            //   4. a Colleague Finance Web Configurations repository object.
+            //   5. an adapterRegistry object.
+            //   6. a GL user factory object.
+            //   7. a role repository object.
+            //   8. a logger object.
             // We need the unit tests to be independent of "real" implementations of these classes,
             // so we use Moq to create mock implementations that are based on the same interfaces
             var roleRepository = new Mock<IRoleRepository>().Object;
@@ -971,6 +974,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             testCostCenterRepository = new TestCostCenterRepository();
             testGeneralLedgerUserRepository = new TestGeneralLedgerUserRepository();
             testGlConfigurationRepository = new TestGeneralLedgerConfigurationRepository();
+            testColleagueFinanceWebConfigurationsRepository = new TestColleagueFinanceWebConfigurationsRepository();
 
             // Get the account structure configuration so we know how to format the GL numbers and how to calculate the cost center.
             //var costCenterStructure = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
@@ -985,13 +989,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             #region Set up the services
 
             // Set up the current user with all cost centers and set up the service.
-            serviceAll = new CostCenterService(testCostCenterRepository, testGeneralLedgerUserRepository, testGlConfigurationRepository, adapterRegistry.Object, glUserFactoryAll, roleRepository, loggerObject);
+            serviceAll = new CostCenterService(testCostCenterRepository, testGeneralLedgerUserRepository, testGlConfigurationRepository, testColleagueFinanceWebConfigurationsRepository, adapterRegistry.Object, glUserFactoryAll, roleRepository, loggerObject);
             // Set up the current user with a subset of cost centers and set up the service.
-            serviceSubset = new CostCenterService(testCostCenterRepository, testGeneralLedgerUserRepository, testGlConfigurationRepository, adapterRegistry.Object, glUserFactorySubset, roleRepository, loggerObject);
+            serviceSubset = new CostCenterService(testCostCenterRepository, testGeneralLedgerUserRepository, testGlConfigurationRepository, testColleagueFinanceWebConfigurationsRepository, adapterRegistry.Object, glUserFactorySubset, roleRepository, loggerObject);
             // Set up the current user with no cost centers and set up the service.
-            serviceNone = new CostCenterService(testCostCenterRepository, testGeneralLedgerUserRepository, testGlConfigurationRepository, adapterRegistry.Object, glUserFactoryNone, roleRepository, loggerObject);
+            serviceNone = new CostCenterService(testCostCenterRepository, testGeneralLedgerUserRepository, testGlConfigurationRepository, testColleagueFinanceWebConfigurationsRepository, adapterRegistry.Object, glUserFactoryNone, roleRepository, loggerObject);
             // Set up the current user with access to cost centers that do not exist and set up the service.
-            serviceNonExistant = new CostCenterService(testCostCenterRepository, testGeneralLedgerUserRepository, testGlConfigurationRepository, adapterRegistry.Object, glUserFactoryNonExistant, roleRepository, loggerObject);
+            serviceNonExistant = new CostCenterService(testCostCenterRepository, testGeneralLedgerUserRepository, testGlConfigurationRepository, testColleagueFinanceWebConfigurationsRepository, adapterRegistry.Object, glUserFactoryNonExistant, roleRepository, loggerObject);
 
             #endregion
         }

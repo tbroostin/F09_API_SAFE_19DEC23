@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Exceptions;
@@ -1007,7 +1007,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                   //mock student repo to have planning student returned with same  studentid as provided in graduation dto
                   var student = new Domain.Student.Entities.Student("0000011", "bhaumik", null, new List<string>() { "MATH.BA" }, null, null);
                   studentRepositoryMock.Setup(x => x.GetAsync(It.IsAny<string>())).ReturnsAsync(student);
-                  var graduationEntity = graduationApplicationRepositoryMock.Setup(x => x.GetGraduationApplicationAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
+                  var graduationEntity = graduationApplicationRepositoryMock.Setup(x => x.GetGraduationApplicationAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(() => null);
                   var graduationApplicationDto = await graduationApplicationService.UpdateGraduationApplicationAsync(new Dtos.Student.GraduationApplication("0000011", "MATH.BA"));
 
               }

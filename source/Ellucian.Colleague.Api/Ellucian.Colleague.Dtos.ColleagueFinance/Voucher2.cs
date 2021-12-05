@@ -151,5 +151,14 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// </summary>
         public List<string> ConfirmationEmailAddresses { get; set; }
 
+        /// <summary>
+        /// Address type code
+        /// </summary>
+        public string VendorAddressTypeCode { get; set; }
+
+        /// <summary>
+        /// Address type description
+        /// </summary>
+        public string VendorAddressTypeDesc { get; set; }
     }
 }

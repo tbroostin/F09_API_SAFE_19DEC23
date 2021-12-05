@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -190,6 +190,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <returns>List of StudentAptitudeAssessments <see cref="Dtos.StudentAptitudeAssessments"/> objects representing matching studentAptitudeAssessments</returns>
         [HttpGet]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter2))]
         [QueryStringFilterFilter("criteria", typeof(Dtos.StudentAptitudeAssessments2)), FilteringFilter(IgnoreFiltering = true)]
@@ -400,6 +401,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID to desired studentAptitudeAssessments</param>
         /// <returns>A studentAptitudeAssessments object <see cref="Dtos.StudentAptitudeAssessments"/> in EEDM format</returns>
         [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.StudentAptitudeAssessments2> GetStudentAptitudeAssessmentsByGuid3Async(string guid)
         {
             var bypassCache = false;
@@ -480,29 +482,29 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         [HttpPut, EedmResponseFilter]
         public async Task<Dtos.StudentAptitudeAssessments> PutStudentAptitudeAssessments2Async([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.StudentAptitudeAssessments studentAptitudeAssessments)
         {
-            if (string.IsNullOrEmpty(guid))
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("Null guid argument",
-                    IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
-            }
-            if (studentAptitudeAssessments == null)
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("Null studentAptitudeAssessments argument",
-                    IntegrationApiUtility.GetDefaultApiError("The request body is required.")));
-            }
-            if (guid.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                throw CreateHttpResponseException("Nil GUID cannot be used in PUT operation.", HttpStatusCode.BadRequest);
-            }
-            if (string.IsNullOrEmpty(studentAptitudeAssessments.Id))
-            {
-                studentAptitudeAssessments.Id = guid.ToLowerInvariant();
-            }
-            else if (!string.Equals(guid, studentAptitudeAssessments.Id, StringComparison.InvariantCultureIgnoreCase))
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("GUID mismatch",
-                    IntegrationApiUtility.GetDefaultApiError("GUID not the same as in request body.")));
-            }
+            //if (string.IsNullOrEmpty(guid))
+            //{
+            //    throw CreateHttpResponseException(new IntegrationApiException("Null guid argument",
+            //        IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
+            //}
+            //if (studentAptitudeAssessments == null)
+            //{
+            //    throw CreateHttpResponseException(new IntegrationApiException("Null studentAptitudeAssessments argument",
+            //        IntegrationApiUtility.GetDefaultApiError("The request body is required.")));
+            //}
+            //if (guid.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
+            //{
+            //    throw CreateHttpResponseException("Nil GUID cannot be used in PUT operation.", HttpStatusCode.BadRequest);
+            //}
+            //if (string.IsNullOrEmpty(studentAptitudeAssessments.Id))
+            //{
+            //    studentAptitudeAssessments.Id = guid.ToLowerInvariant();
+            //}
+            //else if (!string.Equals(guid, studentAptitudeAssessments.Id, StringComparison.InvariantCultureIgnoreCase))
+            //{
+            //    throw CreateHttpResponseException(new IntegrationApiException("GUID mismatch",
+            //        IntegrationApiUtility.GetDefaultApiError("GUID not the same as in request body.")));
+            //}
             if (studentAptitudeAssessments.Source != null && (studentAptitudeAssessments.Source.Id == string.Empty || studentAptitudeAssessments.Source.Id == Guid.Empty.ToString()))
                 throw CreateHttpResponseException(new IntegrationApiException("Null source id",
                     IntegrationApiUtility.GetDefaultApiError("Source id cannot be empty.")));
@@ -579,41 +581,44 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="studentAptitudeAssessments">DTO of the updated studentAptitudeAssessments</param>
         /// <returns>A StudentAptitudeAssessments object <see cref="Dtos.StudentAptitudeAssessments"/> in EEDM format</returns>
         [HttpPut, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.StudentAptitudeAssessments2> PutStudentAptitudeAssessments3Async([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.StudentAptitudeAssessments2 studentAptitudeAssessments)
         {
             if (string.IsNullOrEmpty(guid))
             {
                 throw CreateHttpResponseException(new IntegrationApiException("Null guid argument",
-                    IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
+                  IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
             }
             if (studentAptitudeAssessments == null)
             {
                 throw CreateHttpResponseException(new IntegrationApiException("Null studentAptitudeAssessments argument",
                     IntegrationApiUtility.GetDefaultApiError("The request body is required.")));
             }
-            if (guid.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                throw CreateHttpResponseException("Nil GUID cannot be used in PUT operation.", HttpStatusCode.BadRequest);
-            }
-            if (string.IsNullOrEmpty(studentAptitudeAssessments.Id))
-            {
-                studentAptitudeAssessments.Id = guid.ToLowerInvariant();
-            }
-            else if (!string.Equals(guid, studentAptitudeAssessments.Id, StringComparison.InvariantCultureIgnoreCase))
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("GUID mismatch",
-                    IntegrationApiUtility.GetDefaultApiError("GUID not the same as in request body.")));
-            }
+            //if (guid.Equals(Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
+            //{
+            //    throw CreateHttpResponseException("Nil GUID cannot be used in PUT operation.", HttpStatusCode.BadRequest);
+            //}
+            //if (string.IsNullOrEmpty(studentAptitudeAssessments.Id))
+            //{
+            //    studentAptitudeAssessments.Id = guid.ToLowerInvariant();
+            //}
+            //else if (!string.Equals(guid, studentAptitudeAssessments.Id, StringComparison.InvariantCultureIgnoreCase))
+            //{
+            //    throw CreateHttpResponseException(new IntegrationApiException("GUID mismatch",
+            //        IntegrationApiUtility.GetDefaultApiError("GUID not the same as in request body.")));
+            //}
+
+            //validations to occur before partial put
             if (studentAptitudeAssessments.Source != null && (studentAptitudeAssessments.Source.Id == string.Empty || studentAptitudeAssessments.Source.Id == Guid.Empty.ToString()))
                 throw CreateHttpResponseException(new IntegrationApiException("Null source id",
                     IntegrationApiUtility.GetDefaultApiError("Source id cannot be empty.")));
             if (studentAptitudeAssessments.SpecialCircumstances != null)
             {
-                foreach(var circ in studentAptitudeAssessments.SpecialCircumstances)
+                foreach (var circ in studentAptitudeAssessments.SpecialCircumstances)
                 {
                     if ((string.IsNullOrEmpty(circ.Id)) || (circ.Id == Guid.Empty.ToString()))
                     {
-                        throw CreateHttpResponseException(new IntegrationApiException("Null special circumstances id", 
+                        throw CreateHttpResponseException(new IntegrationApiException("Null special circumstances id",
                             IntegrationApiUtility.GetDefaultApiError("Special circumstances id cannot be empty.")));
                     }
                 }
@@ -698,11 +703,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 throw CreateHttpResponseException("Request body must contain a valid studentAptitudeAssessments.", HttpStatusCode.BadRequest);
             }
-            if (studentAptitudeAssessments.Id != Guid.Empty.ToString())
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("Null guid must be supplied to create operation",
-                    IntegrationApiUtility.GetDefaultApiError("Null guid must be supplied to create operation")));
-            }
+           
             if (studentAptitudeAssessments.Source != null && (studentAptitudeAssessments.Source.Id == string.Empty || studentAptitudeAssessments.Source.Id == Guid.Empty.ToString()))
                 throw CreateHttpResponseException(new IntegrationApiException("Null source id",
                     IntegrationApiUtility.GetDefaultApiError("Source id cannot be empty.")));
@@ -775,31 +776,32 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="studentAptitudeAssessments">DTO of the new studentAptitudeAssessments</param>
         /// <returns>A studentAptitudeAssessments object <see cref="Dtos.StudentAptitudeAssessments"/> in HeDM format</returns>
         [HttpPost, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.StudentAptitudeAssessments2> PostStudentAptitudeAssessments3Async([ModelBinder(typeof(EedmModelBinder))] Dtos.StudentAptitudeAssessments2 studentAptitudeAssessments)
         {
             if (studentAptitudeAssessments == null)
             {
                 throw CreateHttpResponseException("Request body must contain a valid studentAptitudeAssessments.", HttpStatusCode.BadRequest);
             }
-            if (studentAptitudeAssessments.Id != Guid.Empty.ToString())
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("Null guid must be supplied to create operation",
-                    IntegrationApiUtility.GetDefaultApiError("Null guid must be supplied to create operation")));
-            }
-            if (studentAptitudeAssessments.Source != null && (studentAptitudeAssessments.Source.Id == string.Empty || studentAptitudeAssessments.Source.Id == Guid.Empty.ToString()))
-                throw CreateHttpResponseException(new IntegrationApiException("Null source id",
-                    IntegrationApiUtility.GetDefaultApiError("Source id cannot be empty.")));
-            if (studentAptitudeAssessments.SpecialCircumstances != null)
-            {
-                foreach (var circ in studentAptitudeAssessments.SpecialCircumstances)
-                {
-                    if ((string.IsNullOrEmpty(circ.Id)) || (circ.Id == Guid.Empty.ToString()))
-                    {
-                        throw CreateHttpResponseException(new IntegrationApiException("Null special circumstances id",
-                            IntegrationApiUtility.GetDefaultApiError("Special circumstances id cannot be empty.")));
-                    }
-                }
-            }
+            //if (studentAptitudeAssessments.Id != Guid.Empty.ToString())
+            //{
+            //    throw CreateHttpResponseException(new IntegrationApiException("Null guid must be supplied to create operation",
+            //        IntegrationApiUtility.GetDefaultApiError("Null guid must be supplied to create operation")));
+            //}
+            //if (studentAptitudeAssessments.Source != null && (studentAptitudeAssessments.Source.Id == string.Empty || studentAptitudeAssessments.Source.Id == Guid.Empty.ToString()))
+            //    throw CreateHttpResponseException(new IntegrationApiException("Null source id",
+            //        IntegrationApiUtility.GetDefaultApiError("Source id cannot be empty.")));
+            //if (studentAptitudeAssessments.SpecialCircumstances != null)
+            //{
+            //    foreach (var circ in studentAptitudeAssessments.SpecialCircumstances)
+            //    {
+            //        if ((string.IsNullOrEmpty(circ.Id)) || (circ.Id == Guid.Empty.ToString()))
+            //        {
+            //            throw CreateHttpResponseException(new IntegrationApiException("Null special circumstances id",
+            //                IntegrationApiUtility.GetDefaultApiError("Special circumstances id cannot be empty.")));
+            //        }
+            //    }
+            //}
             try
             {
                 //call import extend method that needs the extracted extension data and the config

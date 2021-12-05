@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Domain.Entities;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -171,7 +172,18 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             foreach (var financialAidFundsEntity in FinancialAidFunds)
             {
-                FinancialAidFundsEntities.Add(BuildFinancialAidFund(financialAidFundsEntity));
+                if (financialAidFundsEntity != null && !string.IsNullOrEmpty(financialAidFundsEntity.Recordkey))
+                {
+                    var financialAidFund = BuildFinancialAidFund(financialAidFundsEntity);
+                    if (financialAidFund != null)
+                    {
+                        FinancialAidFundsEntities.Add(BuildFinancialAidFund(financialAidFundsEntity));
+                    }
+                }
+            }
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
             }
             return new Tuple<IEnumerable<FinancialAidFund>, int>(FinancialAidFundsEntities, totalCount);
         }
@@ -183,13 +195,20 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>FinancialAidFund domain entitiy</returns>
         private FinancialAidFund BuildFinancialAidFund(Awards source)
         {
-            var financialAidFund = new FinancialAidFund(source.RecordGuid, source.Recordkey, !string.IsNullOrEmpty(source.AwDescription) ? source.AwDescription : source.Recordkey);
-            financialAidFund.Description2 = source.AwExplanationText;
-            financialAidFund.Source = source.AwType;
-            financialAidFund.CategoryCode = source.AwCategory;
-            financialAidFund.FundingType = source.AwReportingFundingType;
-
-            return financialAidFund;
+            if (source != null && !string.IsNullOrEmpty(source.RecordGuid))
+            {
+                var financialAidFund = new FinancialAidFund(source.RecordGuid, source.Recordkey, !string.IsNullOrEmpty(source.AwDescription) ? source.AwDescription : source.Recordkey);
+                financialAidFund.Description2 = source.AwExplanationText;
+                financialAidFund.Source = source.AwType;
+                financialAidFund.CategoryCode = source.AwCategory;
+                financialAidFund.FundingType = source.AwReportingFundingType;
+                return financialAidFund;
+            }
+            else
+            {
+                exception.AddError(new RepositoryError("Bad.Data", string.Concat("No Guid found, Entity:'AWARDS', Record ID:'", source.Recordkey, "'")));
+                return null;
+            }
         }
 
         /// <summary>

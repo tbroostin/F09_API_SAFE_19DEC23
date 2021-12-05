@@ -1,13 +1,13 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Student.DataContracts;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
-using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
@@ -23,8 +23,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     [RegisterType]
     public class StudentAcademicCredentialsRepository : BaseColleagueRepository, IStudentAcademicCredentialsRepository
     {
-        RepositoryException exception = new RepositoryException();        
+        RepositoryException exception = new RepositoryException();
+        const string AllStudentAcademicCredentialsCache = "AllStudentAcademicCredentials:";
 
+        const int AllStudentAcademicCredentialsCacheTimeout = 20; // Clear from cache every 20 minutes
         public StudentAcademicCredentialsRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)
         {
@@ -61,15 +63,27 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             //common criteria with default host corp id.
             string commonCriteria = string.Format("WITH ACAD.INSTITUTIONS.ID EQ '{0}'", defaultHostCorpId);
 
-            string allStudentAcademicCredentialsKey = GetCacheKey(criteriaEntity, filterPersonIds, acadProgramFilter);
-            if (offset == 0 && ContainsKey(BuildFullCacheKey(allStudentAcademicCredentialsKey)))
-            {
-                ClearCache(new List<string> { allStudentAcademicCredentialsKey });
-            }
-            acadCredIds = await GetOrAddToCacheAsync<List<string>>(allStudentAcademicCredentialsKey,
-                async () =>
-                {
-                    var acadCredentialsIds = new List<string> { };
+            string allStudentAcademicCredentialsKey = CacheSupport.BuildCacheKey(AllStudentAcademicCredentialsCache, criteriaEntity.StudentId, criteriaEntity.Degrees, criteriaEntity.Ccds,
+                criteriaEntity.GraduatedOn, criteriaEntity.AcademicLevel, criteriaEntity.AcadAcadProgramId, criteriaEntity.AcademicPeriod, acadProgramFilter, filterPersonIds, filterQualifiers
+                );
+
+            string[] subList = null;
+
+            var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+
+                        this,
+                        ContainsKey,
+                        GetOrAddToCacheAsync,
+                        AddOrUpdateCacheAsync,
+                        transactionInvoker,
+                        allStudentAcademicCredentialsKey,
+                        "ACAD.CREDENTIALS",
+                        offset,
+                        limit,
+                        AllStudentAcademicCredentialsCacheTimeout,
+
+                async () => {
+                    //var acadCredentialsIds = new List<string> { };
                     //Student filter, ACAD.PERSON.ID indexed on UTBI for ACAD.CREDENTIALS
                     if (criteriaEntity != null && !string.IsNullOrEmpty(criteriaEntity.StudentId))
                     {
@@ -148,48 +162,51 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         var credIds = await DataReader.SelectAsync("INSTITUTIONS.ATTEND", keys, criteria);
                         if (credIds == null || !credIds.Any())
                         {
-                            return credIds.ToList();
+                            return new CacheSupport.KeyCacheRequirements()
+                            {
+                                NoQualifyingRecords = true
+                            };
                         }
                         limitingKeys.AddRange(credIds);
                         criteria = string.Empty;
                     }
 
                     criteria = string.IsNullOrEmpty(criteria) ? commonCriteria : string.Format("{0} AND {1}", commonCriteria, criteria);
-                    var tempIds = await DataReader.SelectAsync("ACAD.CREDENTIALS", limitingKeys.Distinct().ToArray() ?? null, criteria);
+                    
+                    CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
+                    {
+                        limitingKeys = limitingKeys.Distinct().ToList(),
+                        criteria = criteria.ToString(),
+                    };
 
-                    if (tempIds != null && tempIds.Any())
-                    {
-                        acadCredentialsIds = tempIds.ToList();
-                        Array.Sort(acadCredentialsIds.ToArray());
-                    }
-                    else
-                    {
-                        acadCredentialsIds = new List<string>() { };
-                    }
-                    return acadCredentialsIds.ToList();
+                    return requirements;
                 });
 
-            if (acadCredIds == null || !acadCredIds.Any())
+            if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
             {
                 return new Tuple<IEnumerable<StudentAcademicCredential>, int>(new List<StudentAcademicCredential>(), 0);
             }
 
-            totalCount = acadCredIds.Count();
-            var subList = acadCredIds.Skip(offset).Take(limit).Distinct().ToArray();
-
-            if(subList == null || !subList.Any())
-            {
-                return new Tuple<IEnumerable<StudentAcademicCredential>, int>(new List<StudentAcademicCredential>(), 0);
-            }
+            subList = keyCache.Sublist.ToArray();
+            totalCount = keyCache.TotalCount.Value;
 
             //Get guids dictionary with secondarykey & index
             var acadCredDC = await DataReader.BulkReadRecordAsync<AcadCredentials>(subList);
-            var stAcadCredIds = acadCredDC.Select(ac => ac.Recordkey);
-            Dictionary<string, string> dict = null;
+            //var stAcadCredIds = acadCredDC.Select(ac => ac.Recordkey);
 
+            var dictAcadCreds = new Dictionary<string, string>();
+            foreach (var source in acadCredDC)
+            {
+                if (!dictAcadCreds.ContainsKey(source.Recordkey))
+                {
+                    dictAcadCreds.Add(source.Recordkey, source.AcadPersonId);
+                }
+            }
+
+            Dictionary<string, string> dict = null;
             try
             {
-                dict = await GetStAcadCredDictionaryAsync(stAcadCredIds);
+                dict = await GetStAcadCredDictionaryAsync(dictAcadCreds);
             }
             catch (Exception ex)
             {
@@ -272,7 +289,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             Dictionary<string, string> dict = null;
             try
             {
-                dict = await GetStAcadCredDictionaryAsync(new List<string>() { dc.Recordkey });
+                var acadCredDict = new Dictionary<string, string>();
+                acadCredDict.Add(dc.Recordkey, dc.AcadPersonId);
+                dict = await GetStAcadCredDictionaryAsync(acadCredDict);
             }
             catch (Exception ex)
             {
@@ -381,16 +400,19 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if(source.AcadMajors != null && source.AcadMajors.Any())
             {
                 disciplines.AddRange(source.AcadMajors);
+                entity.AcadMajors = source.AcadMajors;
             }
 
             if (source.AcadMinors != null && source.AcadMinors.Any())
             {
                 disciplines.AddRange(source.AcadMinors);
+                entity.AcadMinors = source.AcadMinors;
             }
 
             if (source.AcadSpecialization != null && source.AcadSpecialization.Any())
             {
                 disciplines.AddRange(source.AcadSpecialization);
+                entity.AcadSpecializations = source.AcadSpecialization;
             }
 
             if(disciplines.Any())
@@ -434,28 +456,36 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// </summary>
         /// <param name="ids"></param>
         /// <returns></returns>
-        private async Task<Dictionary<string, string>> GetStAcadCredDictionaryAsync(IEnumerable<string> ids)
+        private async Task<Dictionary<string, string>> GetStAcadCredDictionaryAsync(Dictionary<string, string> ids)
         {
             if ((ids == null) || (ids != null && !ids.Any()))
             {
                 return new Dictionary<string, string>();
             }
+            
             var guidCollection = new Dictionary<string, string>();
             try
-            {                
-                string criteria = string.Join("", "WITH LDM.GUID.PRIMARY.KEY EQ '?' AND LDM.GUID.SECONDARY.KEY NE '' AND LDM.GUID.SECONDARY.FLD EQ 'ACAD.PERSON.ID' AND LDM.GUID.ENTITY EQ ",
-                                  "'ACAD.CREDENTIALS' AND LDM.GUID.REPLACED.BY EQ ''");
-                var acadCredIds = ids.Where(i => !string.IsNullOrEmpty(i)).Select(id => id);
-                var guidList = await DataReader.SelectAsync("LDM.GUID", criteria, acadCredIds.ToArray());
-                var ldmGuidRecords = await DataReader.BulkReadRecordAsync<LdmGuid>(guidList);
+            {
+                var guidLookup = ids
+                    .Where(s => !string.IsNullOrWhiteSpace(s.Key) && !string.IsNullOrWhiteSpace(s.Value))
+                    .Distinct().ToList()
+                    .ConvertAll(key => new RecordKeyLookup("ACAD.CREDENTIALS", key.Key,
+                    "ACAD.PERSON.ID", key.Value, false))
+                    .ToArray();
 
-                if ((ldmGuidRecords != null) && (ldmGuidRecords.Any()))
+                var recordKeyLookupResults = await DataReader.SelectAsync(guidLookup);
+
+                if ((recordKeyLookupResults != null) && (recordKeyLookupResults.Any()))
                 {
-                    foreach (var ldmGuidRecord in ldmGuidRecords)
+                    foreach (var recordKeyLookupResult in recordKeyLookupResults)
                     {
-                        if (ldmGuidRecord != null && !guidCollection.Keys.Contains(ldmGuidRecord.LdmGuidPrimaryKey))
+                        if (recordKeyLookupResult.Value != null)
                         {
-                            guidCollection.Add(ldmGuidRecord.LdmGuidPrimaryKey, ldmGuidRecord.Recordkey);                            
+                            var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                            if (!guidCollection.ContainsKey(splitKeys[1]))
+                            {
+                                guidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
+                            }
                         }
                     }
                 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Threading;
@@ -28,20 +28,18 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             [TestInitialize]
             public void Initialize()
             {
+                // Asserts are based off this constructor statement, unless another constructor is used in the test method
                 personId = "0000693";
                 degreePlanId = 1;
                 degreePlan = new DegreePlan(degreePlanId, personId, 1);
                 degreePlan.AddTerm("2012/FA");
                 degreePlan.AddTerm("2013/SP");
-                degreePlan.AddCourse(new PlannedCourse("111"), "2012/FA");
-
-                // Asserts are based off this constructor statement, unless another constructor is used in the test method
+                degreePlan.AddCourse(new PlannedCourse(course: "111", coursePlaceholder: null), "2012/FA");
             }
 
             [TestCleanup]
             public void CleanUp()
             {
-
             }
             [TestMethod]
             public void DegreeId()
@@ -65,6 +63,12 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             {
                 Assert.IsNull(degreePlan.LastReviewedAdvisorId);
                 Assert.IsNull(degreePlan.LastReviewedDate);
+            }
+
+            [TestMethod]
+            public void Degree_ArchiveNotificationDate()
+            {
+                Assert.IsNull(degreePlan.ArchiveNotificationDate);
             }
 
             [TestMethod]
@@ -108,11 +112,14 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 DegreePlan degreePlan2 = new DegreePlan(degreePlanId, personId, 12, true);
                 degreePlan2.LastReviewedAdvisorId = "1111111";
                 degreePlan2.LastReviewedDate = new DateTime(2012, 9, 1);
+                degreePlan2.ArchiveNotificationDate = new DateTime(2021, 8, 27);
                 Assert.IsTrue(degreePlan2.ReviewRequested);
                 Assert.AreEqual(new DateTime(2012, 9, 1), degreePlan2.LastReviewedDate);
                 Assert.AreEqual("1111111", degreePlan2.LastReviewedAdvisorId);
+                Assert.AreEqual(new DateTime(2021, 8, 27), degreePlan2.ArchiveNotificationDate);
             }
         }
+
         [TestClass]
         public class DegreePlanConstructorWithNoId
         {
@@ -122,17 +129,16 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             [TestInitialize]
             public void Initialize()
             {
+                // Asserts in this class are based off this constructor statement, unless another constructor is used in the test method
                 personId = "0000693";
                 degreePlan = new DegreePlan(personId);
                 degreePlan.AddTerm("2012/FA");
                 degreePlan.AddTerm("2013/SP");
-                // Asserts in this class are based off this constructor statement, unless another constructor is used in the test method
             }
 
             [TestCleanup]
             public void CleanUp()
             {
-
             }
 
             [TestMethod]
@@ -280,7 +286,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                         {
                             planEndDate = studentCompletionDate;
                         }
-
                     }
                 }
                 return planEndDate;
@@ -327,21 +332,20 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             [TestInitialize]
             public void Initialize()
             {
+                // Asserts in this class are based off this constructor statement, unless another constructor is used in the test method
                 personId = "0000693";
                 degreePlan = new DegreePlan(personId);
                 degreePlan.AddTerm("2012/FA");
                 degreePlan.AddTerm("2013/SP");
                 degreePlan.AddTerm("2013/FA");
-                degreePlan.AddCourse(new PlannedCourse("111"), "2012/FA");
-                degreePlan.AddCourse(new PlannedCourse("222"), "2012/FA");
-                degreePlan.AddCourse(new PlannedCourse("333", "444", GradingType.Audit), "2013/SP");
-                // Asserts in this class are based off this constructor statement, unless another constructor is used in the test method
+                degreePlan.AddCourse(new PlannedCourse(course: "111", coursePlaceholder: null), "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: "222", coursePlaceholder: null), "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: "333", section: "444", gradingType: GradingType.Audit, coursePlaceholder: null), "2013/SP");
             }
 
             [TestCleanup]
             public void CleanUp()
             {
-
             }
 
             [TestMethod]
@@ -361,7 +365,20 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             {
                 var courses = degreePlan.GetPlannedCourses("2012/FA");
                 Assert.AreEqual(2, courses.Count());
-                Assert.AreEqual(new PlannedCourse("111"), courses.ElementAt(0));
+                Assert.AreEqual(new PlannedCourse(course: "111", coursePlaceholder: null), courses.ElementAt(0));
+            }
+
+            [TestMethod]
+            public void ReturnsCoursesIncludingCoursePlaceholdersForTerm()
+            {
+                //add course placeholder that should be included
+                var plannedCourse = new PlannedCourse(course: null, section: null, coursePlaceholder: "abc");
+                degreePlan.AddCourse(plannedCourse, "2012/FA");
+
+                var courses = degreePlan.GetPlannedCourses("2012/FA");
+                Assert.AreEqual(3, courses.Count());
+                Assert.AreEqual(new PlannedCourse(course: "111", coursePlaceholder: null), courses.ElementAt(0));
+                Assert.AreEqual(plannedCourse, courses.ElementAt(2));
             }
 
             [TestMethod]
@@ -381,15 +398,14 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             [TestInitialize]
             public void Initialize()
             {
+                // Asserts in this class are based off this constructor statement, unless another constructor is used in the test method
                 personId = "0000693";
                 degreePlan = new DegreePlan(personId);
-                // Asserts in this class are based off this constructor statement, unless another constructor is used in the test method
             }
 
             [TestCleanup]
             public void CleanUp()
             {
-
             }
 
             [TestMethod]
@@ -432,28 +448,25 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             [TestInitialize]
             public void Initialize()
             {
+                // Asserts in this class are based off this constructor statement, unless another constructor is used in the test method
                 personId = "0000693";
                 degreePlan = new DegreePlan(personId);
                 degreePlan.AddTerm("2012/FA");
                 degreePlan.AddTerm("2013/SP");
                 degreePlan.AddTerm("2013/FA");
-                degreePlan.AddCourse(new PlannedCourse("333"), "2013/SP");
-
-
-                // Asserts in this class are based off this constructor statement, unless another constructor is used in the test method
+                degreePlan.AddCourse(new PlannedCourse(course: "333", coursePlaceholder: null), "2013/SP");
             }
 
             [TestCleanup]
             public void CleanUp()
             {
-
             }
 
             [TestMethod]
             public void AddsTermAndCourseIfTermNotOnPlan()
             {
-                degreePlan.AddCourse(new PlannedCourse("111"), "2014/SP");
-                Assert.AreEqual(new PlannedCourse("111"), degreePlan.GetPlannedCourses("2014/SP").ElementAt(0));
+                degreePlan.AddCourse(new PlannedCourse(course: "111", coursePlaceholder: null), "2014/SP");
+                Assert.AreEqual(new PlannedCourse(course: "111", coursePlaceholder: null), degreePlan.GetPlannedCourses("2014/SP").ElementAt(0));
             }
 
             [TestMethod]
@@ -473,14 +486,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 Assert.AreEqual(2, coursesInTerm.Count());
             }
 
-
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
-            public void ThrowsExceptionIfCourseEmptyString()
-            {
-                degreePlan.AddCourse(new PlannedCourse(""), "2012/FA");
-            }
-
             [TestMethod]
             public void NonTermCourseNotAddedWithoutSection()
             {
@@ -496,6 +501,59 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 PlannedCourse plannedCourse = null;
                 degreePlan.AddCourse(plannedCourse, null);
                 Assert.AreEqual(count, degreePlan.NonTermPlannedCourses.Count());
+            }
+
+            [TestMethod]
+            public void DoesNotThrowsExceptionIfCourseEmptyStringAndCoursePlaceholderHasValue()
+            {
+                degreePlan.AddCourse(new PlannedCourse(course: "", coursePlaceholder: "abc"), "2012/FA");
+            }
+
+            [TestMethod]
+            public void DoesNotThrowsExceptionIfCourseHasValueAndCoursePlaceholderEmptyString()
+            {
+                degreePlan.AddCourse(new PlannedCourse(course: "abc", coursePlaceholder: ""), "2012/FA");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public void ThrowsExceptionIfCourseEmptyStringAndCoursePlaceholderEmptyString()
+            {
+                degreePlan.AddCourse(new PlannedCourse(course: "", coursePlaceholder: ""), "2012/FA");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public void ThrowsExceptionIfCourseEmptyStringAndCoursePlaceholderNull()
+            {
+                degreePlan.AddCourse(new PlannedCourse(course: "", coursePlaceholder: null), "2012/FA"); ; ;
+            }
+
+            //Course Placeholders
+            [TestMethod]
+            public void AddsTermAndCoursePlaceholderIfTermNotOnPlan()
+            {
+                degreePlan.AddCourse(new PlannedCourse(course: "", coursePlaceholder: "abc"), "2014/SP");
+                Assert.AreEqual(new PlannedCourse(course: "", coursePlaceholder: "abc"), degreePlan.GetPlannedCourses("2014/SP").ElementAt(0));
+            }
+
+            [TestMethod]
+            public void AddsCoursePlaceholderIfNotInTerm()
+            {
+                degreePlan.AddCourse(new PlannedCourse(course: "", coursePlaceholder: "abc"), "2012/FA");
+                var coursesInTerm = degreePlan.GetPlannedCourses("2012/FA");
+                Assert.AreEqual(1, coursesInTerm.Count());
+                Assert.AreEqual(new PlannedCourse(course: "", coursePlaceholder: "abc"), coursesInTerm.ElementAt(0));
+            }
+
+            [TestMethod]
+            public void DoesNotThrowExceptionOrAddDuplicateWhenCoursePlaceholderAlreadyInTerm()
+            {
+                // try to add the courseplaceholder to the same term twice
+                degreePlan.AddCourse(new PlannedCourse(course: "", coursePlaceholder: "xyz"), "2013/SP");
+                degreePlan.AddCourse(new PlannedCourse(course: "", coursePlaceholder: "xyz"), "2013/SP");
+                var coursesInTerm = degreePlan.GetPlannedCourses("2013/SP");
+                Assert.AreEqual(2, coursesInTerm.Count());
             }
         }
 
@@ -548,6 +606,39 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 var termIds = degreePlan.TermsCoursePlanned("2223");
                 Assert.AreEqual(0, termIds.Count());
             }
+
+            [TestMethod]
+            public void ReturnsTermIfCoursePlaceholderFound()
+            {
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse("222", "2223"), "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse("333", "3334"), "2013/SP");
+                degreePlan.AddCourse(new PlannedCourse("333", "3335"), "2013/FA");
+
+                var termIds = degreePlan.TermsCoursePlaceholderPlanned(coursePlaceholderId: "abc");
+                Assert.AreEqual(1, termIds.Count());
+                Assert.AreEqual("2012/FA", termIds.ElementAt(0));
+            }
+
+            [TestMethod]
+            public void ReturnsMultipleTermsIfCoursePlaceholderFound()
+            {
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse("222", "2223"), "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2013/SP");
+                degreePlan.AddCourse(new PlannedCourse("333", "3335"), "2013/FA");
+                var termIds = degreePlan.TermsCoursePlaceholderPlanned(coursePlaceholderId: "abc");
+                Assert.AreEqual(2, termIds.Count());
+                Assert.AreEqual("2012/FA", termIds.ElementAt(0));
+                Assert.AreEqual("2013/SP", termIds.ElementAt(1));
+            }
+
+            [TestMethod]
+            public void ReturnsFalseIfCoursePlaceholderNotFound()
+            {
+                var termIds = degreePlan.TermsCoursePlaceholderPlanned(coursePlaceholderId: "abc");
+                Assert.AreEqual(0, termIds.Count());
+            }
         }
 
         [TestClass]
@@ -564,10 +655,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 degreePlan.AddTerm("2012/FA");
                 degreePlan.AddTerm("2013/SP");
                 degreePlan.AddTerm("2013/FA");
-                degreePlan.AddCourse(new PlannedCourse("111", "1112"), "2012/FA");
-                degreePlan.AddCourse(new PlannedCourse("222", "2223"), "2012/FA");
-                degreePlan.AddCourse(new PlannedCourse("333", "3334"), "2013/SP");
-                degreePlan.AddCourse(new PlannedCourse("444", "4445"), "");
+                degreePlan.AddCourse(new PlannedCourse(course: "111", section: "1112", coursePlaceholder: null), "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: "222", section: "2223", coursePlaceholder: null), "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: "333", section: "3334", coursePlaceholder: null), "2013/SP");
+                degreePlan.AddCourse(new PlannedCourse(course: "444", section: "4445", coursePlaceholder: null), "");
             }
 
             [TestCleanup]
@@ -583,8 +674,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 Assert.IsTrue(degreePlan.SectionsInPlan.Contains("3334"));
                 Assert.IsTrue(degreePlan.SectionsInPlan.Contains("4445"));
             }
-
-
         }
 
         [TestClass]
@@ -629,6 +718,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 // Arrange--Set up degree plan with no coreqs planned
                 plannedCourse1 = new PlannedCourse("9999999999", "");
                 degreePlan.AddCourse(plannedCourse1, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
@@ -640,6 +730,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 // Arrange--Set up degree plan with course that has required coreqs
                 plannedCourse1 = new PlannedCourse("7702", "");
                 degreePlan.AddCourse(plannedCourse1, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 // Act--Check for conflicts. Course List contains only planned course
                 var courses = allCourses.Where(c => c.Id == "7702");
@@ -659,6 +750,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 // Arrange--Set up degree plan, add a course with no coreqs
                 plannedCourse1 = new PlannedCourse("7705", "");
                 degreePlan.AddCourse(plannedCourse1, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
@@ -681,6 +773,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 // Arrange--Set up degree plan with no coreqs planned
                 plannedCourse1 = new PlannedCourse("7702", "");
                 degreePlan.AddCourse(plannedCourse1, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
@@ -710,6 +803,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 degreePlan.AddCourse(plannedCourse2, "2013/SP");
                 plannedCourse3 = new PlannedCourse("143", "");
                 degreePlan.AddCourse(plannedCourse3, "2013/SP");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
@@ -724,7 +818,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 Assert.AreEqual("143", pc1.Warnings.ElementAt(1).Requisite.CorequisiteCourseId);
                 Assert.AreEqual(PlannedCourseWarningType.UnmetRequisite, pc1.Warnings.ElementAt(1).Type);
                 Assert.IsFalse(pc1.Warnings.ElementAt(1).Requisite.IsRequired);
-
             }
 
             [TestMethod]
@@ -741,6 +834,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 degreePlan.AddCourse(plannedCourse2, "2012/FA");
                 plannedCourse3 = new PlannedCourse("143", "");
                 degreePlan.AddCourse(plannedCourse3, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
@@ -765,6 +859,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 degreePlan.AddCourse(plannedCourse2, "2011/FA");
                 plannedCourse3 = new PlannedCourse("143", "");
                 degreePlan.AddCourse(plannedCourse3, "2012/SP");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 // Act--check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
@@ -789,6 +884,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 degreePlan.AddCourse(plannedCourse2, "2012/FA");
                 plannedCourse3 = new PlannedCourse("143", "");
                 degreePlan.AddCourse(plannedCourse3, "2011/SP");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
@@ -798,7 +894,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 var pc1 = plannedCourses.Where(pc => pc.CourseId == "7702").First();
                 Assert.AreEqual(0, pc1.Warnings.Count());
             }
-
 
             [TestMethod]
             public void MessageForSectionCourseCoreqNotPlanned()
@@ -811,6 +906,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 var sec1 = allSections.Where(s => s.CourseId == "7702" && s.TermId == "2012/FA").First();
                 plannedCourse1 = new PlannedCourse("7702", sec1.Id);
                 degreePlan.AddCourse(plannedCourse1, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
@@ -842,6 +938,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 degreePlan.AddCourse(plannedCourse2, "2014/FA");
                 plannedCourse3 = new PlannedCourse("21", "");
                 degreePlan.AddCourse(plannedCourse3, "2014/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
@@ -856,7 +953,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 Assert.AreEqual("21", pc1.Warnings.ElementAt(1).Requisite.CorequisiteCourseId);
                 Assert.AreEqual(PlannedCourseWarningType.UnmetRequisite, pc1.Warnings.ElementAt(1).Type);
                 Assert.IsFalse(pc1.Warnings.ElementAt(1).Requisite.IsRequired);
-
             }
 
             [TestMethod]
@@ -874,6 +970,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 degreePlan.AddCourse(plannedCourse2, "2012/FA");
                 plannedCourse3 = new PlannedCourse("21", "");
                 degreePlan.AddCourse(plannedCourse3, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
@@ -900,6 +997,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 degreePlan.AddCourse(plannedCourse2, "2011/FA");
                 plannedCourse3 = new PlannedCourse("21", "");
                 degreePlan.AddCourse(plannedCourse3, "2011/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 //Act--check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
@@ -932,6 +1030,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 acadCredit1.TermCode = "2011/FA";
                 var acadCredits = credits.Union(new List<AcademicCredit>() { acadCredit1 });
 
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 //Act--check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, acadCredits, requirements, RuleResults);
 
@@ -963,6 +1063,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 acadCredit1.TermCode = "2013/FA";
                 var acadCredits = credits.Union(new List<AcademicCredit>() { acadCredit1 });
 
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 //Act--check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, acadCredits, requirements, RuleResults);
 
@@ -989,6 +1091,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 var sec1 = allSections.Where(s => s.CourseId == "7703" && s.TermId == "2012/FA").First();
                 plannedCourse1 = new PlannedCourse("7703", sec1.Id);
                 degreePlan.AddCourse(plannedCourse1, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
@@ -1022,7 +1125,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                     }
                 }
 
-                //
                 foreach (var req in sec1.SectionRequisites)
                 {
                     if (req.CorequisiteSectionIds != null)
@@ -1066,6 +1168,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 var sec1 = allSections.Where(s => s.CourseId == "7703" && s.TermId == "2012/FA").First();
                 var plannedCourse1 = new PlannedCourse("7703", sec1.Id);
                 degreePlan.AddCourse(plannedCourse1, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 // Add a planned section for the sections cited in the section requisites--first the multi- requisite sections
                 var coreqSectionRequisite = sec1.SectionRequisites.Where(r => r.CorequisiteSectionIds.Count() > 1).FirstOrDefault();
@@ -1135,6 +1238,9 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 coreqSecCourse = allCourses.Where(c => c.Id == coreqSec.CourseId).FirstOrDefault();
                 var credit4 = new AcademicCredit("04", coreqSecCourse, coreqSec.Id);
                 credits = new List<AcademicCredit>() { credit1, credit2, credit3, credit4 };
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
+
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
 
@@ -1153,7 +1259,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 Assert.AreEqual(RequisiteCompletionOrder.PreviousOrConcurrent, pc1.Warnings.ElementAt(0).Requisite.CompletionOrder);
             }
 
-
             [TestMethod]
             public void NoMessageWhenAllSectionCoreqsPlanned()
             {
@@ -1169,6 +1274,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 var sec1 = allSections.Where(s => s.CourseId == "7703" && s.TermId == "2012/FA").First();
                 plannedCourse1 = new PlannedCourse("7703", sec1.Id);
                 degreePlan.AddCourse(plannedCourse1, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 // Add a planned section for the sections cited in the section requisites--first the multi-section requisite
                 var coreqSectionRequisite = sec1.SectionRequisites.Where(r => r.CorequisiteSectionIds.Count() > 1 && r.IsRequired).First();
@@ -1238,6 +1344,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 var plannedCourse7 = new PlannedCourse("42", "");
                 degreePlan.AddCourse(plannedCourse7, "2011/FA");
 
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 // Act--Check plan for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
 
@@ -1271,6 +1379,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 plannedCourse1 = new PlannedCourse("7704", sec1.Id);
                 degreePlan.AddCourse(plannedCourse1, "2012/FA");
 
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
 
@@ -1287,6 +1397,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 var sec1 = allSections.Where(s => s.CourseId == "7704" && s.Number == "04").First();
                 plannedCourse1 = new PlannedCourse("7704", sec1.Id);
                 degreePlan.AddCourse(plannedCourse1, "");   // Since this section has no term, added to non-term planned courses
+
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
@@ -1348,6 +1460,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 var plannedCourse5 = new PlannedCourse("21", "");
                 degreePlan.AddCourse(plannedCourse5, "2011/FA");
 
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
 
@@ -1380,6 +1494,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 var plannedCourse5 = new PlannedCourse("21", "");
                 degreePlan.AddCourse(plannedCourse5, "2011/FA");
 
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
 
@@ -1396,6 +1512,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 var sec1 = allSections.Where(s => s.CourseId == "7706" && s.Number == "04").First();
                 plannedCourse1 = new PlannedCourse("7706", sec1.Id);
                 degreePlan.AddCourse(plannedCourse1, "");   // Since this section has no term, added to non-term planned courses
+
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
@@ -1420,6 +1538,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 plannedCourse2 = new PlannedCourse("7701", sec2.Id);
                 degreePlan.AddCourse(plannedCourse2, "");   // No term == added as nonterm courseSection
 
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
 
@@ -1441,6 +1561,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 var acadCredit1 = new AcademicCredit("01", crs2, sec2.Id);
                 var acadCredits = new List<AcademicCredit>() { acadCredit1 };
                 degreePlan.AddCourse(plannedCourse2, "");   // No term == added as nonterm courseSection
+
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, acadCredits, requirements, RuleResults);
@@ -1464,6 +1586,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 plannedCourse2 = new PlannedCourse("7701", sec2.Id);
                 degreePlan.AddCourse(plannedCourse2, "");   // No term == added as nonterm courseSection
 
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
 
@@ -1480,6 +1604,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 var sec1 = allSections.Where(s => s.CourseId == "7705" && s.TermId == "2013/SP").First();
                 plannedCourse1 = new PlannedCourse("7705", sec1.Id);
                 degreePlan.AddCourse(plannedCourse1, "2013/SP"); // This is a term-based section
+
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
@@ -1510,6 +1636,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 var sec3 = allSections.Where(s => s.CourseId == "7701" && s.Number == "04").First();
                 degreePlan.AddCourse(new PlannedCourse("7701", sec3.Id), "");
 
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
 
@@ -1536,6 +1664,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 var sec3 = allSections.Where(s => s.CourseId == "7701" && s.Number == "04").First();
                 degreePlan.AddCourse(new PlannedCourse("7701", sec3.Id), ""); // Nonterm, but start date will compare favorably with 2012/fa
 
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
 
@@ -1559,6 +1689,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 // Add equate course POLI 100 (id 155) to plan
                 plannedCourse2 = new PlannedCourse("155");
                 degreePlan.AddCourse(plannedCourse2, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
@@ -1590,6 +1721,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 var acadCredits = credits.ToList();
                 acadCredits.Add(academicCredit);
 
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, acadCredits, requirements, RuleResults);
 
@@ -1614,6 +1747,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 var sec3 = allSections.Where(s => s.CourseId == "7703" && s.TermId == "2013/SP").First();
                 plannedCourse2 = new PlannedCourse("7703", sec3.Id);
                 degreePlan.AddCourse(plannedCourse2, "");
+
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
 
                 // Act--Check for conflicts
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, allSections, credits, requirements, RuleResults);
@@ -1649,6 +1784,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 degreePlan = new DegreePlan(degreePlanId, personId, 1);
                 degreePlan.AddTerm("2012/FA");
                 degreePlan.AddTerm("2013/SP");
+
                 regTerms = new TestTermRepository().Get().Where(t => t.Code == "2012/FA");
                 var student = new TestStudentRepository().Get(personId);
                 credits = await new TestAcademicCreditRepository().GetAsync(student.AcademicCreditIds);
@@ -1689,6 +1825,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             {
                 PlannedCourse pc = new PlannedCourse("130", "11111");
                 degreePlan.AddCourse(pc, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, sections, credits, requirements, RuleResults);
                 PlannedCourse updatedpc = degreePlan.GetPlannedCourses("2012/FA").ElementAt(0);
                 Assert.AreEqual(0, updatedpc.Warnings.Count());
@@ -1700,6 +1838,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 PlannedCourse pc = new PlannedCourse("93", "11111");
                 pc.Credits = -1.0m;
                 degreePlan.AddCourse(pc, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 //IEnumerable<PlannedCourseWarning> warnings = degreePlan.Validate(sections);
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, sections, credits, requirements, RuleResults);
                 PlannedCourse updatedpc = degreePlan.GetPlannedCourses("2012/FA").ElementAt(0);
@@ -1713,6 +1853,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 PlannedCourse pc = new PlannedCourse("130", null);
                 pc.Credits = 44.0m;
                 degreePlan.AddCourse(pc, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 //IEnumerable<PlannedCourseWarning> warnings = degreePlan.Validate(sections);
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, sections, credits, requirements, RuleResults);
                 PlannedCourse updatedpc = degreePlan.GetPlannedCourses("2012/FA").ElementAt(0);
@@ -1725,6 +1867,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 PlannedCourse pc = new PlannedCourse("78", "33333");
                 pc.Credits = 44.0m;
                 degreePlan.AddCourse(pc, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 //IEnumerable<PlannedCourseWarning> warnings = degreePlan.Validate(sections);
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, sections, credits, requirements, RuleResults);
                 PlannedCourse updatedpc = degreePlan.GetPlannedCourses("2012/FA").ElementAt(0);
@@ -1737,6 +1881,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 PlannedCourse pc = new PlannedCourse("130", "11111");
                 pc.Credits = 3.0m;
                 degreePlan.AddCourse(pc, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 //IEnumerable<PlannedCourseWarning> warningss = degreePlan.Validate(sections);
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, sections, credits, requirements, RuleResults);
                 PlannedCourse updatedpc = degreePlan.GetPlannedCourses("2012/FA").ElementAt(0);
@@ -1749,6 +1895,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 PlannedCourse pc = new PlannedCourse("130", "11111");
                 pc.Credits = 4.0m;
                 degreePlan.AddCourse(pc, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 //IEnumerable<PlannedCourseWarning> warnings = degreePlan.Validate(sections);
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, sections, credits, requirements, RuleResults);
                 PlannedCourse updatedpc = degreePlan.GetPlannedCourses("2012/FA").ElementAt(0);
@@ -1762,6 +1910,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 PlannedCourse pc = new PlannedCourse("20", "55555");
                 pc.Credits = 4.0m;
                 degreePlan.AddCourse(pc, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 //IEnumerable<PlannedCourseWarning> warnings = degreePlan.Validate(sections);
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, sections, credits, requirements, RuleResults);
                 PlannedCourse updatedpc = degreePlan.GetPlannedCourses("2012/FA").ElementAt(0);
@@ -1774,6 +1924,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 PlannedCourse pc = new PlannedCourse("20", "55555");
                 pc.Credits = 7.0m;
                 degreePlan.AddCourse(pc, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 //IEnumerable<PlannedCourseWarning> warnings = degreePlan.Validate(sections);
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, sections, credits, requirements, RuleResults);
                 PlannedCourse updatedpc = degreePlan.GetPlannedCourses("2012/FA").ElementAt(0);
@@ -1787,6 +1939,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 PlannedCourse pc = new PlannedCourse("93", "22222");
                 pc.Credits = 5.0m;
                 degreePlan.AddCourse(pc, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 //IEnumerable<PlannedCourseWarning> warnings = degreePlan.Validate(sections);
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, sections, credits, requirements, RuleResults);
                 PlannedCourse updatedpc = degreePlan.GetPlannedCourses("2012/FA").ElementAt(0);
@@ -1799,6 +1953,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 PlannedCourse pc = new PlannedCourse("93", "22222");
                 pc.Credits = 7.0m;
                 degreePlan.AddCourse(pc, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 //IEnumerable<PlannedCourseWarning> warnings = degreePlan.Validate(sections);
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, sections, credits, requirements, RuleResults);
                 PlannedCourse updatedpc = degreePlan.GetPlannedCourses("2012/FA").ElementAt(0);
@@ -1811,6 +1967,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 PlannedCourse pc = new PlannedCourse("93", "22222");
                 pc.Credits = 2.0m;
                 degreePlan.AddCourse(pc, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 //IEnumerable<DegreePlanMessage> messages = degreePlan.Validate(sections);
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, sections, credits, requirements, RuleResults);
                 PlannedCourse updatedpc = degreePlan.GetPlannedCourses("2012/FA").ElementAt(0);
@@ -1824,6 +1982,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 PlannedCourse pc = new PlannedCourse("46", "44444");
                 pc.Credits = 4.0m;
                 degreePlan.AddCourse(pc, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 //IEnumerable<PlannedCourseWarning> warnings = degreePlan.Validate(sections);
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, sections, credits, requirements, RuleResults);
                 PlannedCourse updatedpc = degreePlan.GetPlannedCourses("2012/FA").ElementAt(0);
@@ -1836,6 +1996,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 PlannedCourse pc = new PlannedCourse("46", "44444");
                 pc.Credits = 4.5m;
                 degreePlan.AddCourse(pc, "2012/FA");
+                degreePlan.AddCourse(new PlannedCourse(course: null, coursePlaceholder: "abc"), "2012/FA");
+
                 //IEnumerable<PlannedCourseWarning> warnings = degreePlan.Validate(sections);
                 degreePlan.CheckForConflicts(allTerms, regTerms, allCourses, sections, credits, requirements, RuleResults);
                 PlannedCourse updatedpc = degreePlan.GetPlannedCourses("2012/FA").ElementAt(0);
@@ -1843,7 +2005,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 Assert.AreEqual(PlannedCourseWarningType.InvalidPlannedCredits, updatedpc.Warnings.ElementAt(0).Type);
             }
         }
-
 
         [TestClass]
         public class DegreePlanCheckTimeConflicts
@@ -1909,13 +2070,13 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 var section1 = allSections.Where(s => s.CourseId == courseId1 && s.TermId == termId && s.Number == "01").First();
                 // Make sure this section has no meetings
                 Assert.IsTrue(section1.Meetings.Count() == 0);
-                plannedCourse1 = new PlannedCourse(courseId1, section1.Id);
+                plannedCourse1 = new PlannedCourse(course: courseId1, section: section1.Id, coursePlaceholder: null);
                 degreePlan.AddCourse(plannedCourse1, termId);
                 var courseId2 = "7704";
                 var section2 = allSections.Where(s => s.CourseId == courseId2 && s.Number == "04").First();
                 // Make sure this section has no meetings
                 Assert.IsTrue(section2.Meetings.Count() == 0);
-                plannedCourse2 = new PlannedCourse(courseId2, section2.Id);
+                plannedCourse2 = new PlannedCourse(course: courseId2, section: section2.Id, coursePlaceholder: null);
                 degreePlan.AddCourse(plannedCourse2, ""); // add as non-term to test that sections are retrieved from both term and nonterm
 
                 // Act -- Check conflicts
@@ -3621,7 +3782,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
         }
     }
 
-
     [TestClass]
     public class DegreePlanCheckTimeConflicts_WithPrimarySectionMeetings
     {
@@ -3680,13 +3840,13 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             var section1 = allSections.Where(s => s.CourseId == courseId1 && s.TermId == termId && s.Number == "01").First();
             // Make sure this section has no meetings
             Assert.IsTrue(section1.PrimarySectionMeetings.Count() == 0);
-            plannedCourse1 = new PlannedCourse(courseId1, section1.Id);
+            plannedCourse1 = new PlannedCourse(course: courseId1, section: section1.Id, coursePlaceholder: null);
             degreePlan.AddCourse(plannedCourse1, termId);
             var courseId2 = "7704";
             var section2 = allSections.Where(s => s.CourseId == courseId2 && s.Number == "04").First();
             // Make sure this section has no meetings
             Assert.IsTrue(section2.PrimarySectionMeetings.Count() == 0);
-            plannedCourse2 = new PlannedCourse(courseId2, section2.Id);
+            plannedCourse2 = new PlannedCourse(course: courseId2, section: section2.Id, coursePlaceholder: null);
             degreePlan.AddCourse(plannedCourse2, ""); // add as non-term to test that sections are retrieved from both term and nonterm
 
             // Act -- Check conflicts
@@ -3709,7 +3869,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             var courseId1 = "7701";
             var section1 = allSections.Where(s => s.CourseId == courseId1 && s.TermId == termId && s.Number == "01").First();
             Assert.IsTrue(section1.PrimarySectionMeetings.Count() == 0);
-            plannedCourse1 = new PlannedCourse(courseId1, section1.Id);
+            plannedCourse1 = new PlannedCourse(course: courseId1, section: section1.Id, coursePlaceholder: null);
             degreePlan.AddCourse(plannedCourse1, termId);
             var courseId2 = "7704";
             var section2 = allSections.Where(s => s.CourseId == courseId2 && s.Number == "01").First();
@@ -3723,7 +3883,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             Assert.IsTrue(section2.Meetings.Count() == 0);
             Assert.IsTrue(section2.PrimarySectionMeetings.Count() > 0);
             Assert.IsTrue(section2.PrimarySectionMeetings.ElementAt(0).StartDate != null);
-            plannedCourse2 = new PlannedCourse(courseId2, section2.Id);
+            plannedCourse2 = new PlannedCourse(course: courseId2, section: section2.Id, coursePlaceholder: null);
             degreePlan.AddCourse(plannedCourse2, ""); // add as non-term to test that sections are retrieved from both term and nonterm
 
             // Act -- Check conflicts
@@ -3748,7 +3908,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             var section1 = allSections.Where(s => s.CourseId == courseId1 && s.TermId == termId && s.Number == "01").First();
             Assert.IsTrue(section1.Meetings.Count() > 0);
             Assert.IsTrue(section1.Meetings.ElementAt(0).StartDate != null);
-            plannedCourse1 = new PlannedCourse(courseId1, section1.Id);
+            plannedCourse1 = new PlannedCourse(course: courseId1, section: section1.Id, coursePlaceholder: null);
             degreePlan.AddCourse(plannedCourse1, termId);
             var courseId2 = "7704";
             var section2 = allSections.Where(s => s.CourseId == courseId2 && s.Number == "01").First();
@@ -3761,7 +3921,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             }
             Assert.IsTrue(section2.PrimarySectionMeetings.Count() > 0);
             Assert.IsTrue(section2.PrimarySectionMeetings.ElementAt(0).StartDate != null);
-            plannedCourse2 = new PlannedCourse(courseId2, section2.Id);
+            plannedCourse2 = new PlannedCourse(course: courseId2, section: section2.Id, coursePlaceholder: null);
             degreePlan.AddCourse(plannedCourse2, termId);
 
             // Act -- Check conflicts
@@ -3798,7 +3958,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             var section1 = allSections.Where(s => s.CourseId == courseId1 && s.TermId == termId && s.Number == "01").First();
             Assert.IsTrue(section1.Meetings.Count() > 0);
             Assert.IsTrue(section1.Meetings.ElementAt(0).StartDate != null);
-            plannedCourse1 = new PlannedCourse(courseId1, section1.Id);
+            plannedCourse1 = new PlannedCourse(course: courseId1, section: section1.Id, coursePlaceholder: null);
             degreePlan.AddCourse(plannedCourse1, termId);
             // Create academic credit
             var courseId2 = "7704";
@@ -3992,9 +4152,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
                 }
             }
         }
-
-
-
     }
 
     [TestClass]
@@ -4049,6 +4206,35 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             var course2Id = "42";
             var plannedCourse2 = new PlannedCourse(course2Id);
             degreePlan.AddCourse(plannedCourse2, foreverTermId);
+
+            // Action -- call method to get all planned courses. No date or credits to filter results.
+            // current date used as earliest term start date because no reg term provided.
+            var plannedTerms = degreePlan.GetPlannedCoursesForValidation(null, new TestTermRepository().Get(), await new TestTermRepository().GetRegistrationTermsAsync(), new List<AcademicCredit>(), new List<Section>());
+            var plannedCourses = plannedTerms.SelectMany(p => p.Value);
+            // Assert -- two courses for the "forever" term will always be returned because that term initialized in test repo with future dates
+            // With no term and no date in the call method, the returned courses must be in a term later than the current date.
+            Assert.AreEqual(2, plannedCourses.Count());
+            Assert.AreEqual(course1Id, plannedCourses.Where(pc => pc.CourseId == course1Id).FirstOrDefault().CourseId);
+            Assert.AreEqual(course2Id, plannedCourses.Where(pc => pc.CourseId == course2Id).FirstOrDefault().CourseId);
+        }
+
+        [TestMethod]
+        public async Task ReturnsAllPlannedCoursesForFutureTermExcludesCoursePlaceholders()
+        {
+            // Add two courses for 2017/SP term. This term is manipulated in the TestTermRepository
+            // so that it will never expire, and this will be true regardless of the today's date.
+            string foreverTermId = "2017/SP";
+            degreePlan.AddTerm(foreverTermId);
+            var course1Id = "139";
+            var plannedCourse1 = new PlannedCourse(course1Id, coursePlaceholder: null);
+            degreePlan.AddCourse(plannedCourse1, foreverTermId);
+            var course2Id = "42";
+            var plannedCourse2 = new PlannedCourse(course2Id, coursePlaceholder: null);
+            degreePlan.AddCourse(plannedCourse2, foreverTermId);
+
+            //add course placeholder that should be excluded
+            var plannedCourse3 = new PlannedCourse(course: null, section: null, coursePlaceholder: "abc");
+            degreePlan.AddCourse(plannedCourse3, foreverTermId);
 
             // Action -- call method to get all planned courses. No date or credits to filter results.
             // current date used as earliest term start date because no reg term provided.
@@ -4235,7 +4421,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             Assert.AreEqual(2, plannedCourses.Count());
         }
 
-
         [TestMethod]
         public void CompletesGracefullyWhenNoncourseAcademicCredits()
         {
@@ -4262,7 +4447,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             // Assert -- both planned courses returned
             Assert.AreEqual(2, plannedCourses.Count());
         }
-
 
         [TestMethod]
         public async Task OmitsPlannedItemsInCreditsOnlyOnce()
@@ -4458,6 +4642,42 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             Assert.IsTrue(plannedCourses is IEnumerable<PlannedCredit>);
         }
 
+        [TestMethod]
+        public void ReturnsIEnumerableListOfEvaluationPlannedCoursesExcludingCoursePlaceholders()
+        {
+            // Arrange--add courses two two terms in degree plan
+            string foreverTermId = "2017/SP";
+            degreePlan.AddTerm(foreverTermId);
+            var course1Id = "139";
+            var plannedCourse1 = new PlannedCourse(course1Id);
+            degreePlan.AddCourse(plannedCourse1, foreverTermId);
+            var course2Id = "42";
+            var plannedCourse2 = new PlannedCourse(course2Id);
+            degreePlan.AddCourse(plannedCourse2, foreverTermId);
+            var coursePlaceholder1 = new PlannedCourse(course: null, coursePlaceholder: "abc");
+            degreePlan.AddCourse(coursePlaceholder1, foreverTermId);
+
+            // 2012/FA is registration term, add courses for that term
+            var termId = "2016/FA";
+            var course3Id = "110";
+            var plannedCourse3 = new PlannedCourse(course3Id);
+            degreePlan.AddCourse(plannedCourse3, termId);
+            var course4Id = "21";
+            var plannedCourse4 = new PlannedCourse(course4Id);
+            degreePlan.AddCourse(plannedCourse4, termId);
+            var coursePlaceholder2 = new PlannedCourse(course: null, coursePlaceholder: "xyz");
+            degreePlan.AddCourse(coursePlaceholder2, termId);
+
+            // This will be the registration term for this test
+            var regTermId = "2016/FA";
+            regTerms = new TestTermRepository().Get().Where(t => t.Code == regTermId);
+
+            // Action -- call method to get all planned courses. 
+            var plannedCourses = degreePlan.GetCoursesForValidation(new TestTermRepository().Get(), regTerms, new List<AcademicCredit>(), allCourses);
+            // Assert -- The four items returned are flattened out to a simple list of courses
+            Assert.AreEqual(4, plannedCourses.Count());
+            Assert.IsTrue(plannedCourses is IEnumerable<PlannedCredit>);
+        }
     }
 
     [TestClass]
@@ -5526,13 +5746,13 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             degreePlanSource = new DegreePlan(degreePlanId, personId, 1);
             degreePlanSource.AddTerm("2012/FA");
             degreePlanSource.AddTerm("2013/SP");
-            degreePlanSource.AddCourse(new PlannedCourse("111"), "2012/FA");
+            degreePlanSource.AddCourse(new PlannedCourse(course: "111", coursePlaceholder: null), "2012/FA");
 
             degreePlanId = 1;
             degreePlanTarget = new DegreePlan(degreePlanId, personId, 1);
             degreePlanTarget.AddTerm("2013/SP");
             degreePlanTarget.AddTerm("2012/FA");
-            degreePlanTarget.AddCourse(new PlannedCourse("111"), "2012/FA");
+            degreePlanTarget.AddCourse(new PlannedCourse(course: "111", coursePlaceholder: null), "2012/FA");
             degreePlanTarget.AddApproval(personId, DegreePlanApprovalStatus.Approved, DateTime.Now, "111", "2012/FA");
 
             // Asserts are based off this constructor statement, unless another constructor is used in the test method
@@ -5541,7 +5761,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
         [TestCleanup]
         public void CleanUp()
         {
-
         }
 
         [TestMethod]
@@ -5557,7 +5776,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             DegreePlan degreePlanTarget2 = new DegreePlan(2, personId, 1);
             degreePlanTarget2.AddTerm("2013/SP");
             degreePlanTarget2.AddTerm("2012/FA");
-            degreePlanTarget2.AddCourse(new PlannedCourse("111"), "2012/FA");
+            degreePlanTarget2.AddCourse(new PlannedCourse(course: "111", coursePlaceholder: null), "2012/FA");
             bool result = degreePlanSource.ReviewOnlyChange(degreePlanTarget2);
             Assert.IsFalse(result);
         }
@@ -5568,7 +5787,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             DegreePlan degreePlanTarget3 = new DegreePlan(1, "1111111", 1);
             degreePlanTarget3.AddTerm("2013/SP");
             degreePlanTarget3.AddTerm("2012/FA");
-            degreePlanTarget3.AddCourse(new PlannedCourse("111"), "2012/FA");
+            degreePlanTarget3.AddCourse(new PlannedCourse(course: "111", coursePlaceholder: null), "2012/FA");
             bool result = degreePlanSource.ReviewOnlyChange(degreePlanTarget3);
             Assert.IsFalse(result);
         }
@@ -5579,7 +5798,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             DegreePlan degreePlanTarget4 = new DegreePlan(1, personId, 2);
             degreePlanTarget4.AddTerm("2013/SP");
             degreePlanTarget4.AddTerm("2012/FA");
-            degreePlanTarget4.AddCourse(new PlannedCourse("111"), "2012/FA");
+            degreePlanTarget4.AddCourse(new PlannedCourse(course: "111", coursePlaceholder: null), "2012/FA");
             bool result = degreePlanSource.ReviewOnlyChange(degreePlanTarget4);
             Assert.IsFalse(result);
         }
@@ -5616,7 +5835,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             DegreePlan degreePlanTarget6 = new DegreePlan(1, personId, 1);
             degreePlanTarget6.AddTerm("2013/SP");
             degreePlanTarget6.AddTerm("2013/FA");
-            degreePlanTarget6.AddCourse(new PlannedCourse("111"), "2012/FA");
+            degreePlanTarget6.AddCourse(new PlannedCourse(course: "111", coursePlaceholder: null), "2012/FA");
             bool result = degreePlanSource.ReviewOnlyChange(degreePlanTarget6);
             Assert.IsFalse(result);
         }
@@ -5625,7 +5844,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
         public void ReviewOnlyChange_SourceExtraCourse()
         {
             // Target has an extra course in term 2012/FA.
-            degreePlanSource.AddCourse(new PlannedCourse("112"), "2012/FA");
+            degreePlanSource.AddCourse(new PlannedCourse(course: "112", coursePlaceholder: null), "2012/FA");
             bool result = degreePlanSource.ReviewOnlyChange(degreePlanTarget);
             Assert.IsFalse(result);
         }
@@ -5634,14 +5853,12 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
         public void ReviewOnlyChange_SourceDifferentCourseGradingType()
         {
             // Target has an extra course in term 2012/FA.
-            PlannedCourse pc1 = new PlannedCourse("112", null, GradingType.Audit);
+            PlannedCourse pc1 = new PlannedCourse(course: "112", section: null, gradingType: GradingType.Audit, coursePlaceholder: null);
             degreePlanSource.AddCourse(pc1, "2012/FA");
-            degreePlanSource.AddCourse(new PlannedCourse("112"), "2012/FA");
+            degreePlanSource.AddCourse(new PlannedCourse(course: "112", coursePlaceholder: null), "2012/FA");
             bool result = degreePlanSource.ReviewOnlyChange(degreePlanTarget);
             Assert.IsFalse(result);
         }
-
-
     }
 
     [TestClass]
@@ -5677,7 +5894,6 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
 
             // Act
             var result = currentDP.HasProtectedChange(cachedDP);
-
         }
 
         [TestMethod]
@@ -5706,10 +5922,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
         {
             // Arrange
             // cached degree plan
-            cachedDP.NonTermPlannedCourses.Add(new PlannedCourse("13", "22", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null));
-            cachedDP.NonTermPlannedCourses.Add(new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true });
+            cachedDP.NonTermPlannedCourses.Add(new PlannedCourse(course: "13", section: "22", gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null));
+            cachedDP.NonTermPlannedCourses.Add(new PlannedCourse(course: "12", section: "21", gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null) { IsProtected = true });
             // current degree plan - unprotected course removed, protected course may not be removed
-            currentDP.NonTermPlannedCourses.Add(new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true });
+            currentDP.NonTermPlannedCourses.Add(new PlannedCourse(course: "12", section: "21", gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null) { IsProtected = true });
             var result = currentDP.HasProtectedChange(cachedDP);
             Assert.IsFalse(result);
         }
@@ -5719,10 +5935,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
         {
             // Arrange
             // cached degree plan
-            cachedDP.NonTermPlannedCourses.Add(new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true });
+            cachedDP.NonTermPlannedCourses.Add(new PlannedCourse(course: "12", section: "21", gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null) { IsProtected = true });
             // current degree plan - unprotected course add is ok
-            currentDP.NonTermPlannedCourses.Add(new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true });
-            currentDP.NonTermPlannedCourses.Add(new PlannedCourse("13", "22", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null));
+            currentDP.NonTermPlannedCourses.Add(new PlannedCourse(course: "12", section: "21", gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null) { IsProtected = true });
+            currentDP.NonTermPlannedCourses.Add(new PlannedCourse(course: "13", section: "22", gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null));
 
             // Act
             var result = currentDP.HasProtectedChange(cachedDP);
@@ -5735,10 +5951,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
         {
             // Arrange
             // Cached degree plan
-            cachedDP.AddCourse(new PlannedCourse("13", null, GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), termCode);
-            cachedDP.AddCourse(new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true }, termCode);
+            cachedDP.AddCourse(new PlannedCourse(course: "13", section: null, gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null), termCode);
+            cachedDP.AddCourse(new PlannedCourse(course: "12", section: "21", gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null) { IsProtected = true }, termCode);
             // Current degree plan - unprotected course removed, protected course must remain
-            currentDP.AddCourse(new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true }, termCode);
+            currentDP.AddCourse(new PlannedCourse(course: "12", section: "21", gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null) { IsProtected = true }, termCode);
             // Act
             var result = currentDP.HasProtectedChange(cachedDP);
             Assert.IsFalse(result);
@@ -5749,10 +5965,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
         {
             // Arrange
             // Cached degree plan
-            cachedDP.AddCourse(new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true }, termCode);
+            cachedDP.AddCourse(new PlannedCourse(course: "12", section: "21", gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null) { IsProtected = true }, termCode);
             // Current degree plan - unprotected course add is ok
-            currentDP.AddCourse(new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true }, termCode);
-            currentDP.AddCourse(new PlannedCourse("13", null, GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), termCode);
+            currentDP.AddCourse(new PlannedCourse(course: "12", section: "21", gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null) { IsProtected = true }, termCode);
+            currentDP.AddCourse(new PlannedCourse(course: "13", section: null, gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null), termCode);
 
             // Act
             var result = currentDP.HasProtectedChange(cachedDP);
@@ -5765,10 +5981,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
         {
             // Arrange
             // Cached degree plan
-            cachedDP.AddCourse(new PlannedCourse("13", null, GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), termCode);
-            cachedDP.AddCourse(new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true }, termCode);
+            cachedDP.AddCourse(new PlannedCourse(course: "13", section: null, gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null), termCode);
+            cachedDP.AddCourse(new PlannedCourse(course: "12", section: "21", gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null) { IsProtected = true }, termCode);
             // Current degree plan - attempt to remove protected course
-            currentDP.AddCourse(new PlannedCourse("13", null, GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), termCode);
+            currentDP.AddCourse(new PlannedCourse(course: "13", section: null, gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null), termCode);
 
             // Act
             var result = currentDP.HasProtectedChange(cachedDP);
@@ -5781,10 +5997,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
         {
             // Arrange
             // Cached degree plan
-            cachedDP.AddCourse(new PlannedCourse("13", null, GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), termCode);
+            cachedDP.AddCourse(new PlannedCourse(course: "13", section: null, gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null), termCode);
             // Current degree plan - attempt to add protected course
-            currentDP.AddCourse(new PlannedCourse("13", null, GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), termCode);
-            currentDP.AddCourse(new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true }, termCode);
+            currentDP.AddCourse(new PlannedCourse(course: "13", section: null, gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null), termCode);
+            currentDP.AddCourse(new PlannedCourse(course: "12", section: "21", gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null) { IsProtected = true }, termCode);
 
             // Act
             var result = currentDP.HasProtectedChange(cachedDP);
@@ -5797,10 +6013,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
         {
             // Arrange
             // Cached degree plan
-            cachedDP.NonTermPlannedCourses.Add(new PlannedCourse("13", null, GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null));
-            cachedDP.NonTermPlannedCourses.Add(new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true });
+            cachedDP.NonTermPlannedCourses.Add(new PlannedCourse(course: "13", section: null, gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null));
+            cachedDP.NonTermPlannedCourses.Add(new PlannedCourse(course: "12", section: "21", gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null) { IsProtected = true });
             // Current degree plan - attempt to remove protected course
-            currentDP.AddCourse(new PlannedCourse("13", null, GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), termCode);
+            currentDP.AddCourse(new PlannedCourse(course: "13", section: null, gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null), termCode);
 
             // Act
             var result = currentDP.HasProtectedChange(cachedDP);
@@ -5813,10 +6029,10 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
         {
             // Arrange
             // Cached degree plan
-            cachedDP.NonTermPlannedCourses.Add(new PlannedCourse("13", null, GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null));
+            cachedDP.NonTermPlannedCourses.Add(new PlannedCourse(course: "13", section: null, gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null));
             // Current degree plan - attempt to add protected course
-            currentDP.NonTermPlannedCourses.Add(new PlannedCourse("13", null, GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null));
-            currentDP.NonTermPlannedCourses.Add(new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true });
+            currentDP.NonTermPlannedCourses.Add(new PlannedCourse(course: "13", section: null, gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null));
+            currentDP.NonTermPlannedCourses.Add(new PlannedCourse(course: "12", section: "21", gradingType: GradingType.Graded, status: Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, addedBy: null, addedOn: null, coursePlaceholder: null) { IsProtected = true });
 
             // Act
             var result = currentDP.HasProtectedChange(cachedDP);
@@ -6055,9 +6271,9 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             var degreePlan = new DegreePlan("0000001");
             var term = "2014/FA";
             degreePlan.AddTerm(term);
-            var pc1 = new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true };
+            var pc1 = new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null) { IsProtected = true };
             degreePlan.AddCourse(pc1, term);
-            var pc2 = new PlannedCourse("13", null, GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null);
+            var pc2 = new PlannedCourse("13", null, GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null);
             degreePlan.AddCourse(pc2, term);
 
             // Assert
@@ -6072,9 +6288,9 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             var degreePlan = new DegreePlan("0000001");
             var term = "2014/FA";
             degreePlan.AddTerm(term);
-            var pc1 = new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true };
+            var pc1 = new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null) { IsProtected = true };
             degreePlan.NonTermPlannedCourses.Add(pc1);
-            var pc2 = new PlannedCourse("13", "31", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null);
+            var pc2 = new PlannedCourse("13", "31", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null);
             degreePlan.NonTermPlannedCourses.Add(pc2);
 
             // Assert
@@ -6089,11 +6305,11 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             var degreePlan = new DegreePlan("0000001");
             var term = "2014/FA";
             degreePlan.AddTerm(term);
-            var pc1 = new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = false };
+            var pc1 = new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null) { IsProtected = false };
             degreePlan.AddCourse(pc1, term);
-            var pc2 = new PlannedCourse("13", "31", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null);
+            var pc2 = new PlannedCourse("13", "31", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null);
             degreePlan.NonTermPlannedCourses.Add(pc2);
-            var pc3 = new PlannedCourse("14", "41", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null);
+            var pc3 = new PlannedCourse("14", "41", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null);
             degreePlan.NonTermPlannedCourses.Add(pc3);
 
             // Assert
@@ -6119,55 +6335,55 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             termCode = "2015SP";
             // Arrange current degree plan with planned courses without protection
             // Nonterm courses
-            currentDP.AddCourse(new PlannedCourse("11", "20", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), null);
-            currentDP.AddCourse(new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), null);
-            currentDP.AddCourse(new PlannedCourse("14", "24", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), null);
-            currentDP.AddCourse(new PlannedCourse("14", "25", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), null);
-            currentDP.AddCourse(new PlannedCourse("14", "26", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), null);
+            currentDP.AddCourse(new PlannedCourse("11", "20", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null), null);
+            currentDP.AddCourse(new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null), null);
+            currentDP.AddCourse(new PlannedCourse("14", "24", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null), null);
+            currentDP.AddCourse(new PlannedCourse("14", "25", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null), null);
+            currentDP.AddCourse(new PlannedCourse("14", "26", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null), null);
 
             // Term courses
-            currentDP.AddCourse(new PlannedCourse("21", "30", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), termCode);
-            currentDP.AddCourse(new PlannedCourse("22", "31", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), termCode);
-            currentDP.AddCourse(new PlannedCourse("23", "32", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), termCode);
-            currentDP.AddCourse(new PlannedCourse("23", "", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), termCode);
-            currentDP.AddCourse(new PlannedCourse("24", "33", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), termCode);
-            currentDP.AddCourse(new PlannedCourse("24", "34", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), termCode);
-            currentDP.AddCourse(new PlannedCourse("24", "35", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), termCode);
-            currentDP.AddCourse(new PlannedCourse("26", "", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), termCode);
-            currentDP.AddCourse(new PlannedCourse("26", "", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), termCode);
+            currentDP.AddCourse(new PlannedCourse("21", "30", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null), termCode);
+            currentDP.AddCourse(new PlannedCourse("22", "31", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null), termCode);
+            currentDP.AddCourse(new PlannedCourse("23", "32", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null), termCode);
+            currentDP.AddCourse(new PlannedCourse("23", "", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null), termCode);
+            currentDP.AddCourse(new PlannedCourse("24", "33", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null), termCode);
+            currentDP.AddCourse(new PlannedCourse("24", "34", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null), termCode);
+            currentDP.AddCourse(new PlannedCourse("24", "35", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null), termCode);
+            currentDP.AddCourse(new PlannedCourse("26", "", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null), termCode);
+            currentDP.AddCourse(new PlannedCourse("26", "", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null), termCode);
 
             // Arranged stored degree plan
             // NONTERM COURSES
 
             // Single exact match
-            storedDP.AddCourse(new PlannedCourse("11", "20", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true }, null);
+            storedDP.AddCourse(new PlannedCourse("11", "20", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null) { IsProtected = true }, null);
 
             // Unprotected
-            storedDP.AddCourse(new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), null);
+            storedDP.AddCourse(new PlannedCourse("12", "21", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null), null);
 
             // Course/Section not found - go to first one (Section is 24)
-            storedDP.AddCourse(new PlannedCourse("14", "42", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true }, null);
+            storedDP.AddCourse(new PlannedCourse("14", "42", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null) { IsProtected = true }, null);
 
             // plan is missing this protected item - none applied.
-            storedDP.AddCourse(new PlannedCourse("15", "43", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true }, null);
+            storedDP.AddCourse(new PlannedCourse("15", "43", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null) { IsProtected = true }, null);
 
             // course without a section - finds 2 on the plan so just take first one.
-            storedDP.AddCourse(new PlannedCourse("16", "", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true }, null);
+            storedDP.AddCourse(new PlannedCourse("16", "", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null) { IsProtected = true }, null);
 
             // NOW SOME TERM COURSES
 
             // Single exact match
-            storedDP.AddCourse(new PlannedCourse("21", "30", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true }, termCode);
+            storedDP.AddCourse(new PlannedCourse("21", "30", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null) { IsProtected = true }, termCode);
             // Unprotected
-            storedDP.AddCourse(new PlannedCourse("22", "31", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), termCode);
+            storedDP.AddCourse(new PlannedCourse("22", "31", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null), termCode);
             // Course/Section not found but should go to the one without a section
-            storedDP.AddCourse(new PlannedCourse("23", "52", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true }, termCode);
+            storedDP.AddCourse(new PlannedCourse("23", "52", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null) { IsProtected = true }, termCode);
             // Course/Section not found choose first in the list (
-            storedDP.AddCourse(new PlannedCourse("24", "53", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true }, termCode);
+            storedDP.AddCourse(new PlannedCourse("24", "53", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null) { IsProtected = true }, termCode);
             // Course 25 not on the current plan - can't protect it.
-            storedDP.AddCourse(new PlannedCourse("25", "54", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true }, termCode);
+            storedDP.AddCourse(new PlannedCourse("25", "54", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null) { IsProtected = true }, termCode);
             // Course 26 doesn't match either of the nonsection ones - just take first one.
-            storedDP.AddCourse(new PlannedCourse("26", "55", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true }, termCode);
+            storedDP.AddCourse(new PlannedCourse("26", "55", GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null, coursePlaceholder: null) { IsProtected = true }, termCode);
             currentDP.UpdateMissingProtectionFlags(storedDP);
         }
 
@@ -6334,8 +6550,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             allCourses = new List<Course>();
 
             // Create planned courses 
-            pc1 = new PlannedCourse("Course1", null, GradingType.Graded);
-            pc2 = new PlannedCourse("Course2", null, GradingType.Graded);
+            pc1 = new PlannedCourse(course: "Course1", section: null, gradingType: GradingType.Graded, coursePlaceholder: null);
+            pc2 = new PlannedCourse(course: "Course2", section: null, gradingType: GradingType.Graded, coursePlaceholder: null);
             RuleResults = new List<RuleResult>();
             logger = new Mock<ILogger>().Object;
         }

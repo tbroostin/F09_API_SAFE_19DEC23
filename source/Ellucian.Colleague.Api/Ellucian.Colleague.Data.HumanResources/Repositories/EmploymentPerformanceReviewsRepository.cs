@@ -1,9 +1,9 @@
-﻿using Ellucian.Colleague.Data.Base.DataContracts;
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
@@ -17,12 +17,17 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Colleague.Data.HumanResources.Transactions;
+using Ellucian.Colleague.Domain.Base.Services;
+using System.Text;
 
 namespace Ellucian.Colleague.Data.HumanResources.Repositories
 {
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class EmploymentPerformanceReviewsRepository : BaseColleagueRepository, IEmploymentPerformanceReviewsRepository
     {
+        const string AllEmploymentPerformanceReviewsRecordsCache = "AllEmploymentPerformanceReviewsRecordKeys";
+        const int AllEmploymentPerformanceReviewsRecordsCacheTimeout = 20;
+        private RepositoryException exception = new RepositoryException();
         public static char _VM = Convert.ToChar(DynamicArray.VM);
 
         /// <summary>
@@ -48,89 +53,212 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <returns>collection of EmploymentPerformanceReview domain entity objects</returns>
         public async Task<Tuple<IEnumerable<EmploymentPerformanceReview>, int>> GetEmploymentPerformanceReviewsAsync(int offset, int limit, bool bypassCache = false)
         {
-            var totalCount = 0;
-            var employmentPerformanceReviewEntities = new List<EmploymentPerformanceReview>();
-            var criteria = "";
+            string selectedRecordCacheKey = CacheSupport.BuildCacheKey(AllEmploymentPerformanceReviewsRecordsCache);
+            List<EmploymentPerformanceReview> employmentPerformanceReviewEntities = new List<EmploymentPerformanceReview>();
 
-            criteria = string.Concat(criteria, "WITH PERPOS.EVAL.RATINGS.DATE NE '' BY.EXP PERPOS.EVAL.RATINGS.DATE");
+            int totalCount = 0;
+            var selectionCriteria = new StringBuilder();
 
-            var perposIds = await DataReader.SelectAsync("PERPOS", criteria.ToString());
-
-            var perposIds2 = new List<string>();
-            foreach (var perposId in perposIds)
-            {
-                var perposKey = perposId.Split(_VM)[0];
-                perposIds2.Add(perposKey);
-            }
-
-            var criteria2 = "";
-            
-            criteria2 = string.Concat(criteria2, "WITH PERPOS.EVAL.RATINGS.DATE NE '' BY.EXP PERPOS.EVAL.RATINGS.DATE SAVING PERPOS.EVAL.RATINGS.DATE");
-
-            var perposDates = await DataReader.SelectAsync("PERPOS", criteria2.ToString());
-
-            var keys = new List<string>();
-            var idx = 0;
-            foreach (var perposId in perposIds2)
-            {
-                keys.Add(String.Concat(perposId, "|", perposDates.ElementAt(idx)));
-                idx++;
-            }
-
-            totalCount = keys.Count();
-            keys.Sort();
-            
-            var keysSubList = keys.Skip(offset).Take(limit).ToArray();
-            
-            if (keysSubList.Any())
-            {
-                var subList = new List<string>();
-
-                foreach (var key in keysSubList)
+            var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                selectedRecordCacheKey,
+                "",
+                offset,
+                limit,
+                AllEmploymentPerformanceReviewsRecordsCacheTimeout,
+                async () =>
                 {
-                    var perposKey = key.Split('|')[0];
-                    subList.Add(perposKey);
-                }
-                var perposCollection = await DataReader.BulkReadRecordAsync<Perpos>("PERPOS", subList.ToArray());
+                    var criteria = "WITH PERPOS.EVAL.RATINGS.DATE NE '' BY.EXP PERPOS.EVAL.RATINGS.DATE";
+                    var perposIds = await DataReader.SelectAsync("PERPOS", criteria.ToString());
 
-                foreach (var key in keysSubList)
-                {
-
-                    var perposKey = key.Split('|');
-                    var perpos = perposCollection.FirstOrDefault(x => x.Recordkey == perposKey[0]);
-                    //var perpos = perposCollection.FirstOrDefault(x => x.Recordkey == perposKey[0] && x.PerposEvalRatingsDate.Contains(perposKey[1]));
-                    //employmentPerformanceReviewEntities.Add(await BuildEmploymentPerformanceReviewsAsync(perpos, perbens, perposKey[1]));
-                    
-                    try
+                    var perposIds2 = new List<string>();
+                    foreach (var perposId in perposIds)
                     {
-                        //var perposRecords = perpos.PerposEvalsEntityAssociation.Where(i => i.PerposEvalRatingsDateAssocMember.Equals(perposKey[1]));
-                        foreach (var perposRecord in perpos.PerposEvalsEntityAssociation)
+                        var perposKey = perposId.Split(_VM)[0];
+                        perposIds2.Add(perposKey);
+                    }
+
+                    var criteria2 = "";
+
+                    criteria2 = string.Concat(criteria2, "WITH PERPOS.EVAL.RATINGS.DATE NE '' BY.EXP PERPOS.EVAL.RATINGS.DATE SAVING PERPOS.EVAL.RATINGS.DATE");
+
+                    var perposDates = await DataReader.SelectAsync("PERPOS", criteria2.ToString());
+
+                    var keys = new List<string>();
+                    var idx = 0;
+                    foreach (var perposId in perposIds2)
+                    {
+                        keys.Add(String.Concat(perposId, "|", perposDates.ElementAt(idx)));
+                        idx++;
+                    }
+                    keys.Sort();
+                    CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
+                    {
+                        limitingKeys = keys,
+                        criteria = ""
+                    };
+                    return requirements;
+                });
+
+            if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
+            {
+                return new Tuple<IEnumerable<EmploymentPerformanceReview>, int>(new List<EmploymentPerformanceReview>(), 0);
+            }
+
+            totalCount = keyCacheObject.TotalCount.Value;
+            var subList = keyCacheObject.Sublist.ToArray();
+            if (subList == null || !subList.Any())
+            {
+                return new Tuple<IEnumerable<EmploymentPerformanceReview>, int>(new List<EmploymentPerformanceReview>(), 0);
+            }
+
+            var thisSubList = new List<string>();            
+                
+            // build list of all perpos keys and bulk read them
+            var allPerposKeys = new List<string>();
+            foreach (var key in subList)
+            {
+                var perposKey = key.Split('|')[0];
+                allPerposKeys.Add(perposKey);
+            }
+            var perposContracts = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<Perpos>("PERPOS", allPerposKeys.ToArray());
+            if ((perposContracts.InvalidKeys != null && perposContracts.InvalidKeys.Any()) ||
+               perposContracts.InvalidRecords != null && perposContracts.InvalidRecords.Any())
+            {
+                if (perposContracts.InvalidKeys.Any())
+                {
+                    exception.AddErrors(perposContracts.InvalidKeys
+                        .Select(key => new RepositoryError("Bad.Data",
+                        string.Format("Unable to locate the following PERPOS key '{0}'.", key.ToString()))));
+                }
+                if (perposContracts.InvalidRecords.Any())
+                {
+                    exception.AddErrors(perposContracts.InvalidRecords
+                       .Select(r => new RepositoryError("Bad.Data",
+                       string.Format("Error: '{0}' ", r.Value))
+                       { SourceId = r.Key }));
+                }
+            }
+
+            Dictionary<string, string> dict = null;
+            try
+            {
+                dict = await GetGuidsCollectionAsync(subList);
+            }
+            catch (Exception ex)
+            {
+                // Suppress any possible exception with missing primary GUIDs.  We will report any missing GUIDs in a collection as
+                // we process the list of employee performance reviews              
+            }
+
+            // loop through list of concatenated perpos key and PERPOS.EVAL.RATINGS.DATE
+            foreach (var key in subList)
+            {
+                var perposKey = key.Split('|');
+                var perpos = perposContracts.BulkRecordsRead.FirstOrDefault(x => x.Recordkey == perposKey[0]);
+
+                if (perpos != null)
+                {
+                    foreach (var perposRecord in perpos.PerposEvalsEntityAssociation)
+                    {
+                        var effectiveDate = Convert.ToDateTime(perposRecord.PerposEvalRatingsDateAssocMember);
+                        ////convert a datetime to a unidata internal value 
+                        var offsetDate = DmiString.DateTimeToPickDate(effectiveDate);
+
+                        if (offsetDate.ToString().Equals(perposKey[1]))
                         {
-                            var effectiveDate = Convert.ToDateTime(perposRecord.PerposEvalRatingsDateAssocMember);
-                            ////convert a datetime to a unidata internal value 
-                            var offsetDate = DmiString.DateTimeToPickDate(effectiveDate);
-
-                            if (offsetDate.ToString().Equals(perposKey[1]))
+                            string guid = string.Empty;
+                            dict.TryGetValue(key, out guid);
+                            if (string.IsNullOrEmpty(guid))
                             {
-                                var employmentPerformanceReviewGuidInfo = await GetGuidFromRecordInfoAsync("PERPOS", perpos.Recordkey, "PERPOS.EVAL.RATINGS.DATE", perposKey[1]);
-
-                                employmentPerformanceReviewEntities.Add(new EmploymentPerformanceReview(employmentPerformanceReviewGuidInfo, 
-                                    perpos.PerposHrpId, perpos.Recordkey, perposRecord.PerposEvalRatingsDateAssocMember, perposRecord.PerposEvalRatingsCycleAssocMember, perposRecord.PerposEvalRatingsAssocMember)
+                                exception.AddError(new RepositoryError("Bad.Data", string.Format("Guid not found for perpos '{0}' for PERPOS.EVAL.RATINGS.DATE '{1}'",
+                                    perpos.Recordkey, perposRecord.PerposEvalRatingsDateAssocMember))
                                 {
-                                    ReviewedById = perposRecord.PerposEvalRatingsHrpidAssocMember,
-                                    Comment = perposRecord.PerposEvalRatingsCommentAssocMember
+                                    SourceId = perpos.Recordkey
                                 });
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    employmentPerformanceReviewEntities.Add(new EmploymentPerformanceReview(guid,
+                                        perpos.PerposHrpId, perpos.Recordkey, perposRecord.PerposEvalRatingsDateAssocMember, perposRecord.PerposEvalRatingsCycleAssocMember, perposRecord.PerposEvalRatingsAssocMember)
+                                    {
+                                        ReviewedById = perposRecord.PerposEvalRatingsHrpidAssocMember,
+                                        Comment = perposRecord.PerposEvalRatingsCommentAssocMember
+                                    });
+                                }
+                                catch (Exception ex)
+                                {
+                                    exception.AddError(new RepositoryError("Bad.Data", ex.Message)
+                                    {
+                                        Id = guid,
+                                        SourceId = string.Concat(perpos.Recordkey + ", " + perposRecord.PerposEvalRatingsDateAssocMember.ToString())
+                                    });
+                                }
                             }
                         }
                     }
-                    catch (Exception e)
+                }
+            }
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+            //}
+            return new Tuple<IEnumerable<EmploymentPerformanceReview>, int>(employmentPerformanceReviewEntities, totalCount);
+
+        }
+
+        /// <summary>
+        /// Using a collection of concatenated PERPOS and PERPOS.EVAL.RATINGS.DATE
+        ///  get a dictionary collection of associated guids
+        /// </summary>
+        /// <param name="ids">collection of ids</param>
+        /// <returns>Dictionary consisting of a perpos with guids from secondary key</returns>
+        public async Task<Dictionary<string, string>> GetGuidsCollectionAsync(IEnumerable<string> ids)
+        {
+            if (ids == null || !ids.Any())
+            {
+                return new Dictionary<string, string>();
+            }
+            var guidCollection = new Dictionary<string, string>();
+            try
+            {
+                var guidLookup = ids
+                   .Where(s => !string.IsNullOrWhiteSpace(s))
+                   .Distinct().ToList()
+                   .ConvertAll(key => new RecordKeyLookup("PERPOS", key.Split('|')[0],
+                   "PERPOS.EVAL.RATINGS.DATE", key.Split('|')[1], false))
+                   .ToArray();
+
+                var recordKeyLookupResults = await DataReader.SelectAsync(guidLookup);
+
+                if ((recordKeyLookupResults != null) && (recordKeyLookupResults.Any()))
+                {
+                    foreach (var recordKeyLookupResult in recordKeyLookupResults)
                     {
-                        throw new Exception(e.Message);
+                        if (recordKeyLookupResult.Value != null)
+                        {
+                            var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                            if (!guidCollection.ContainsKey(splitKeys[1]))
+                            {
+                                guidCollection.Add(string.Concat(splitKeys[1], "|", splitKeys[2]), recordKeyLookupResult.Value.Guid);
+                            }
+                        }
                     }
                 }
             }
-            return new Tuple<IEnumerable<EmploymentPerformanceReview>, int>(employmentPerformanceReviewEntities, totalCount);
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format("Error occured while getting guids for {0}.", "PERPOS"), ex);
+            }
 
+            return guidCollection;
         }
 
         /// <summary>
@@ -140,19 +268,35 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <returns>EmploymentPerformanceReview Objects</returns>
         public async Task<EmploymentPerformanceReview> GetEmploymentPerformanceReviewByIdAsync(string id)
         {
-            var employmentPerformanceReviewId = await GetRecordInfoFromGuidAsync(id);
-
-            if (employmentPerformanceReviewId == null)
+            var guidInfo = await GetRecordInfoFromGuidAsync(id);
+            
+            if (guidInfo == null)
                 throw new KeyNotFoundException();
 
-            var perpos = await DataReader.ReadRecordAsync<Perpos>("PERPOS", employmentPerformanceReviewId.PrimaryKey);
+            if (guidInfo.Entity != "PERPOS")
+            {
+                throw new RepositoryException("GUID " + id + " has different entity, " + guidInfo.Entity + ", than expected, PERPOS");
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(guidInfo.SecondaryKey))
+                {
+                    throw new RepositoryException("GUID " + id + " for PERPOS has no secondary key for PERPOS.EVAL.RATINGS.DATE");
+                }
+            }            
+
+            var perpos = await DataReader.ReadRecordAsync<Perpos>("PERPOS", guidInfo.PrimaryKey);
+            if (perpos == null && !string.IsNullOrEmpty(guidInfo.PrimaryKey))
+            {
+                throw new KeyNotFoundException("Invalid PERPOS ID: " + guidInfo.PrimaryKey);
+            }
             foreach (var perposRecord in perpos.PerposEvalsEntityAssociation)
             {
                 var effectiveDate = Convert.ToDateTime(perposRecord.PerposEvalRatingsDateAssocMember);
                 ////convert a datetime to a unidata internal value 
                 var offsetDate = DmiString.DateTimeToPickDate(effectiveDate);
 
-                if (offsetDate.ToString().Equals(employmentPerformanceReviewId.SecondaryKey))
+                if (offsetDate.ToString().Equals(guidInfo.SecondaryKey))
                 {
                     //var employmentPerformanceReviewGuidInfo = await GetGuidFromRecordInfoAsync("PERPOS", perpos.Recordkey, "PERPOS.EVAL.RATINGS.DATE", employmentPerformanceReviewId.SecondaryKey);
 
@@ -248,7 +392,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 throw new ArgumentNullException("employmentPerformanceReviewsEntity", "Must provide the guid of the employmentPerformanceReviewsEntity to update.");
 
             // verify the GUID exists to perform an update.  If not, perform a create instead
-            var employmentPerformanceReviewsEntityId = await GetIdFromGuidAsync(employmentPerformanceReviewsEntity.Guid);
+            var employmentPerformanceReviewsEntityId = await GetIdFromGuidAsync(employmentPerformanceReviewsEntity.Guid, "PERPOS");
 
             if (!string.IsNullOrEmpty(employmentPerformanceReviewsEntityId))
             {
@@ -426,21 +570,32 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public async Task<string> GetIdFromGuidAsync(string id)
+        public async Task<string> GetIdFromGuidAsync(string guid, string filename)
         {
-            try
+            if (string.IsNullOrEmpty(guid))
             {
-                return await GetRecordKeyFromGuidAsync(id);
+                throw new ArgumentNullException("guid");
             }
-            catch (ArgumentNullException)
+
+            var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
+            if (idDict == null || idDict.Count == 0)
             {
-                throw;
+                throw new KeyNotFoundException(filename + " GUID " + guid + " not found.");
             }
-            catch (RepositoryException ex)
+
+            var foundEntry = idDict.FirstOrDefault();
+            if (foundEntry.Value == null)
             {
-                ex.AddError(new RepositoryError("review.guid.NotFound", "GUID not found for employment performance review " + id));
-                throw ex;
+                throw new KeyNotFoundException(filename + " GUID " + guid + " lookup failed.");
             }
+
+            if (foundEntry.Value.Entity != filename)
+            {
+                throw new RepositoryException("GUID " + guid + " has different entity, " + foundEntry.Value.Entity + ", than expected, " + filename);
+            }
+
+            return foundEntry.Value.PrimaryKey;
+
         }
 
         /// <summary>
@@ -465,6 +620,48 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
         }
 
-    }
+        /// <summary>
+        /// Using a collection of  ids, get a dictionary collection of associated guids
+        /// </summary>
+        /// <param name="ids">collection of  ids</param>
+        /// <returns>Dictionary consisting of a ids (key) and guids (value)</returns>
+        public async Task<Dictionary<string, string>> GetGuidsCollectionAsync(IEnumerable<string> ids, string filename)
+        {
+            if ((ids == null) || (ids != null && !ids.Any()))
+            {
+                return new Dictionary<string, string>();
+            }
+            var guidCollection = new Dictionary<string, string>();
+            try
+            {
+                var guidLookup = ids
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct().ToList()
+                    .ConvertAll(p => new RecordKeyLookup(filename, p, false)).ToArray();
 
+                var recordKeyLookupResults = await DataReader.SelectAsync(guidLookup);
+
+                if ((recordKeyLookupResults != null) && (recordKeyLookupResults.Any()))
+                {
+                    foreach (var recordKeyLookupResult in recordKeyLookupResults)
+                    {
+                        if (recordKeyLookupResult.Value != null)
+                        {
+                            var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                            if (!guidCollection.ContainsKey(splitKeys[1]))
+                            {
+                                guidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format("Error occured while getting guids for {0}.", filename), ex); ;
+            }
+
+            return guidCollection;
+        }
+    }
 }

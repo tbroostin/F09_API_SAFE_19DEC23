@@ -108,5 +108,145 @@ namespace Ellucian.Colleague.Dtos.FinancialAid
         /// A list of custom messages, specific to the student, to print on the shopping sheet.
         /// </summary>
         public List<string> NextStepsMessages { get; set; }
+
+        /// <summary>
+        /// The version type associated with a college financing plan (UG or GR)
+        /// </summary>
+        public string CfpVersionType { get; set; }
+
+        /// <summary>
+        /// Interest rate for a sub loan
+        /// </summary>
+        public Decimal? SubInterestRate { get; set; }
+
+        /// <summary>
+        /// Origination fee for a sub loan
+        /// </summary>
+        public Decimal? SubOriginationFee { get; set; }
+
+        /// <summary>
+        /// Interest rate for an unsub loan
+        /// </summary>
+        public Decimal? UnsubInterestRate { get; set; }
+
+        /// <summary>
+        /// Origination fee for an unsub loan
+        /// </summary>
+        public Decimal? UnsubOriginationFee { get; set; }
+
+        /// <summary>
+        /// Interest rate associated with a private loan
+        /// </summary>
+        public Decimal? PrivateInterestRate { get; set; }
+
+        /// <summary>
+        /// Origination fee for a private loan
+        /// </summary>
+        public Decimal? PrivateOriginationFee { get; set; }
+
+        /// <summary>
+        /// Interest rate for an institutional loan
+        /// </summary>
+        public Decimal? InstitutionInterestRate { get; set; }
+
+        /// <summary>
+        /// Origination fee for an institutional loan
+        /// </summary>
+        public Decimal? InstitutionOriginationFee { get; set; }
+
+        /// <summary>
+        /// Interest rate for a grad plus loan
+        /// </summary>
+        public Decimal? GradPlusInterestRate { get; set; }
+
+        /// <summary>
+        /// Origination fee for a grad plus loan
+        /// </summary>
+        public Decimal? GradPlusOriginationFee { get; set; }
+
+        /// <summary>
+        /// Interest rate for HRSA loan
+        /// </summary>
+        public Decimal? HrsaInterestRate { get; set; }
+
+        /// <summary>
+        /// Origination fee for HRSA loan
+        /// </summary>
+        public Decimal? HrsaOriginationFee { get; set; }
+
+        /// <summary>
+        /// Interest rate for a plus loan
+        /// </summary>
+        public Decimal? PlusInterestRate { get; set; }
+
+        /// <summary>
+        /// Origination fee for a plus loan
+        /// </summary>
+        public Decimal? PlusOriginationFee { get; set; }
+
+        /// <summary>
+        /// Tuition benefits paid by an institution
+        /// </summary>
+        public int? SchoolPaidTuitionBenefits { get; set; }
+
+        /// <summary>
+        /// Tuition benefits paid by employer
+        /// </summary>
+        public int? EmployerPaidTuitionBenefits { get; set; }
+
+        /// <summary>
+        /// Tuition remission or waiver
+        /// </summary>
+        public int? TuitionRemWaiver { get; set; }
+
+        /// <summary>
+        /// Total scholarships for grad CFP
+        /// </summary>
+        public int? CfpGradTotalScholarships { get; set; }
+
+        /// <summary>
+        /// Scholarships for Disadvantaged Students
+        /// </summary>
+        public int? DisadvantagedStudentGrant { get; set; }
+
+        /// <summary>
+        /// The student's total grants awarded. Only used for years 2020 onward
+        /// </summary>
+        public int? CfpGradTotalGrants { get; set; }
+
+        /// <summary>
+        /// Assistantships
+        /// </summary>
+        public int? Assistantships { get; set; }
+
+        /// <summary>
+        /// Total amount of the income share
+        /// </summary>
+        public int? IncomeShare { get; set; }
+
+        /// <summary>
+        /// Total amount for CFP pell grants
+        /// </summary>
+        public int? CfpPellGrants { get; set; }
+
+        /// <summary>
+        /// Net costs for UG CFP
+        /// </summary>
+        public int? CfpUndergradNetCosts { get; set; }
+
+        /// <summary>
+        /// Net costs for Grad CFP
+        /// </summary>
+        public int? CfpGradNetCosts { get; set; }
+
+        /// <summary>
+        /// Total amount for GPLUS loans
+        /// </summary>
+        public int? GraduatePlusLoans { get; set; }
+
+        /// <summary>
+        /// Total amount for HRSA Loans
+        /// </summary>
+        public int? HrsaLoans { get; set; }
     }
 }

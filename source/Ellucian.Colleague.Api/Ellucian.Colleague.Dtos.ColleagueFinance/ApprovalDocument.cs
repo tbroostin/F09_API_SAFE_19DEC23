@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 
@@ -58,5 +58,15 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// The list of line items associated with the document.
         /// </summary>
         public List<ApprovalItem> DocumentItems { get; set; }
+
+        /// <summary>
+        /// List of approvers and next approvers for this document.
+        /// </summary>
+        public List<Approver> DocumentApprovers { get; set; }
+
+        /// <summary>
+        /// List of associated documents for this document.
+        /// </summary>
+        public List<AssociatedDocument> AssociatedDocuments { get; set; }
     }
 }

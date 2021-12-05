@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 
 namespace Ellucian.Colleague.Domain.Base.Entities
@@ -82,17 +82,19 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// <summary>
         /// Flag indicating whether access is being granted or revoked
         /// </summary>
-        public bool IsGranted { get { return StartDate <= DateTime.Today && (!EndDate.HasValue || EndDate.Value > DateTime.Today); } }
+        public bool IsGranted { get; set; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ProxyAccessPermission"/> class
+        /// Initializes a new instance of the <see cref="ProxyAccessPermission"/>
         /// </summary>
-        /// <param name="id">The ID of the proxy access permission record</param>
-        /// <param name="proxySubjectId">The ID of the user for whom access is being granted or revoked</param>
-        /// <param name="proxyUserId">The ID of the user to whom access is being granted or revoked</param>
-        /// <param name="workflowCode">The workflow for which the user's access is being granted or revoked</param>
-        /// <param name="startDate">Date on which proxy access starts</param>
-        public ProxyAccessPermission(string id, string proxySubjectId, string proxyUserId, string workflowCode, DateTime startDate)
+        /// <param name="id"></param>
+        /// <param name="proxySubjectId"></param>
+        /// <param name="proxyUserId"></param>
+        /// <param name="workflowCode"></param>
+        /// <param name="startDate"></param>
+        /// <param name="endDate"></param>
+        /// <param name="useEmployeeGroups"></param>
+        public ProxyAccessPermission(string id, string proxySubjectId, string proxyUserId, string workflowCode, DateTime startDate, DateTime? endDate, bool useEmployeeGroups = false)
         {
             if (string.IsNullOrEmpty(proxySubjectId))
             {
@@ -116,6 +118,16 @@ namespace Ellucian.Colleague.Domain.Base.Entities
             _proxyUserId = proxyUserId;
             _proxyWorkflowCode = workflowCode;
             _startDate = startDate;
-        }
+            EndDate = endDate;
+
+            if(useEmployeeGroups) // For Employee Proxy
+            {
+                IsGranted = (EndDate.HasValue && EndDate <= DateTime.Today) ? false : true;
+            }
+            else
+            {
+                IsGranted = StartDate <= DateTime.Today && (!EndDate.HasValue || EndDate.Value > DateTime.Today);
+            }
+        }       
     }
 }

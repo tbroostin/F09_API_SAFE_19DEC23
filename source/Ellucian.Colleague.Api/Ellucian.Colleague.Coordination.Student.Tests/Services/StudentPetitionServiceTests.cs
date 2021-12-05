@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -191,6 +191,136 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var facultyConsent4 = new StudentPetition(id: "4", courseId: "ART-101", sectionId: "SEC1", studentId: "0000123", type: StudentPetitionType.FacultyConsent, statusCode: "status") { Comment = "Student 789 ART-101 Consent comment. Line1 \ncomment line2\ncomment line3 the end", ReasonCode = "OVHM" };
                 petitions.Add(facultyConsent4);
 
+                return petitions;
+            }
+
+        }
+
+        [TestClass]
+        public class GetStudentOverloadPetitions : CurrentUserSetup
+        {
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private ILogger logger;
+            private Mock<IRoleRepository> roleRepositoryMock;
+            private IRoleRepository roleRepository;
+            private ICurrentUserFactory currentUserFactory;
+            private Mock<IStudentPetitionRepository> studentPetitionRepositoryMock;
+            private IStudentPetitionRepository studentPetitionRepository;
+            private Mock<ISectionRepository> sectionRepositoryMock;
+            private ISectionRepository sectionRepository;
+            private Mock<IStudentRepository> studentRepositoryMock;
+            private IStudentRepository studentRepository;
+            private IStudentReferenceDataRepository referenceDataRepository;
+            private IStudentPetitionService studentPetitionService;
+            private List<StudentOverloadPetition> studentOverloadPetitionsData;
+            private Section sectionData;
+            private IConfigurationRepository baseConfigurationRepository;
+            private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                roleRepositoryMock = new Mock<IRoleRepository>();
+                roleRepository = roleRepositoryMock.Object;
+
+                studentPetitionRepositoryMock = new Mock<IStudentPetitionRepository>();
+                studentPetitionRepository = studentPetitionRepositoryMock.Object;
+
+                sectionRepositoryMock = new Mock<ISectionRepository>();
+                sectionRepository = sectionRepositoryMock.Object;
+
+                studentRepositoryMock = new Mock<IStudentRepository>();
+                studentRepository = studentRepositoryMock.Object;
+
+                logger = new Mock<ILogger>().Object;
+
+                baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
+                baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+
+                // Mock section response
+                sectionData = new TestSectionRepository().GetAsync().Result.First();
+                sectionData.AddFaculty("1111100");
+                sectionRepositoryMock.Setup(repository => repository.GetSectionAsync("SEC1")).Returns(Task.FromResult(sectionData));
+
+                // Mock student petition response
+                studentOverloadPetitionsData = BuildStudentOverloadPetitionsRepositoryResponse();
+                studentPetitionRepositoryMock.Setup(repository => repository.GetStudentOverloadPetitionsAsync(It.IsAny<string>())).Returns(Task.FromResult(studentOverloadPetitionsData.AsEnumerable()));
+
+                // Mock Adapters
+                var overloaPetitionDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.StudentOverloadPetition, Ellucian.Colleague.Dtos.Student.StudentOverloadPetition>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.StudentOverloadPetition, Ellucian.Colleague.Dtos.Student.StudentOverloadPetition>()).Returns(overloaPetitionDtoAdapter);
+                
+                // Set up current user
+                currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
+                studentPetitionService = new StudentPetitionService(adapterRegistry, studentPetitionRepository, studentRepository, sectionRepository, referenceDataRepository, currentUserFactory, roleRepository, logger, baseConfigurationRepository);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                adapterRegistry = null;
+                studentPetitionRepository = null;
+                studentRepository = null;
+                sectionRepository = null;
+                roleRepository = null;
+                studentPetitionService = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetStudentOverloadPetitionAsync_ThrowsExceptionIfStudentStringNull()
+            {
+                studentPetitionRepositoryMock.Setup(repository => repository.GetStudentOverloadPetitionsAsync(It.IsAny<string>())).Throws(new PermissionsException());
+                var studentOverloadPetitionDto = await studentPetitionService.GetStudentOverloadPetitionsAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GetStudentOverloadPetitionAsync_ThrowsExceptionIfStudentStringIsEmpty()
+            {
+                studentPetitionRepositoryMock.Setup(repository => repository.GetStudentOverloadPetitionsAsync(It.IsAny<string>())).Throws(new PermissionsException());
+                var studentOverloadPetitionDto = await studentPetitionService.GetStudentOverloadPetitionsAsync(string.Empty);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
+            public async Task GetStudentOverloadPetitionAsync_ThrowsExceptionFromRepository()
+            {
+                studentPetitionRepositoryMock.Setup(repository => repository.GetStudentOverloadPetitionsAsync(It.IsAny<string>())).Throws(new Exception());
+                var studentOverloadPetitionDto = await studentPetitionService.GetStudentOverloadPetitionsAsync("0000011");
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task GetStudentOverloadPetitionAsync_ThrowsExceptionIfCurrentUserIsNotSelf()
+            {
+                var studentOverloadPetitionDto = await studentPetitionService.GetStudentOverloadPetitionsAsync("001122");
+            }
+
+            [TestMethod]
+            public async Task GetStudentOverloadPetitionAsync_ReturnsPetitionsIfCurrentUserIsSelf()
+            {
+                studentPetitionRepositoryMock.Setup(repository => repository.GetStudentOverloadPetitionsAsync("0000011")).Returns(Task.FromResult(studentOverloadPetitionsData.AsEnumerable()));
+
+                var studentOverloadPetitionDto = await studentPetitionService.GetStudentOverloadPetitionsAsync("0000011");
+
+                Assert.AreEqual(studentOverloadPetitionsData.Count(), studentOverloadPetitionDto.Count());
+                Assert.AreEqual(studentOverloadPetitionsData.ElementAt(0).StudentId, studentOverloadPetitionDto.ElementAt(0).StudentId);
+                Assert.AreEqual(studentOverloadPetitionsData.ElementAt(0).TermCode, studentOverloadPetitionDto.ElementAt(0).TermCode);
+                Assert.AreEqual(studentOverloadPetitionsData.ElementAt(0).StatusCode, studentOverloadPetitionDto.ElementAt(0).StatusCode);
+            }
+
+            private List<StudentOverloadPetition> BuildStudentOverloadPetitionsRepositoryResponse()
+            {
+                List<StudentOverloadPetition> petitions = new List<StudentOverloadPetition>();
+                var studentOverloadPetition1 = new StudentOverloadPetition(id: "1", studentId: "0000123", statusCode: "status") { TermCode = "2020/SP" };
+                petitions.Add(studentOverloadPetition1);
+
+                var studentOverloadPetition2 = new StudentOverloadPetition(id: "2", studentId: "0000123", statusCode: "status") { TermCode = "2020/FA" };
+                petitions.Add(studentOverloadPetition2);
                 return petitions;
             }
 

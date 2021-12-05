@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.HumanResources;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
@@ -661,7 +661,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
                     }
                 };
 
-                employeeLeaveRequestServiceMock.Setup(s => s.GetSuperviseesByPrimaryPositionForSupervisorAsync()).ReturnsAsync(new List<Dtos.HumanResources.HumanResourceDemographics>());
+                employeeLeaveRequestServiceMock.Setup(s => s.GetSuperviseesByPrimaryPositionForSupervisorAsync(null)).ReturnsAsync(new List<Dtos.HumanResources.HumanResourceDemographics>());
 
                 #endregion
 
@@ -679,7 +679,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             [ExpectedException(typeof(HttpResponseException))]
             public async Task GetSuperviseesByPrimaryPositionForSupervisorAsync_PermissionException()
             {
-                employeeLeaveRequestServiceMock.Setup(s => s.GetSuperviseesByPrimaryPositionForSupervisorAsync()).ThrowsAsync(new PermissionsException());
+                employeeLeaveRequestServiceMock.Setup(s => s.GetSuperviseesByPrimaryPositionForSupervisorAsync(null)).ThrowsAsync(new PermissionsException());
                 var result = await controllerUnderTest.GetSuperviseesByPrimaryPositionForSupervisorAsync();
             }
 
@@ -687,7 +687,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             [ExpectedException(typeof(HttpResponseException))]
             public async Task GetSuperviseesByPrimaryPositionForSupervisorAsync_GenericException()
             {
-                employeeLeaveRequestServiceMock.Setup(s => s.GetSuperviseesByPrimaryPositionForSupervisorAsync()).ThrowsAsync(new Exception());
+                employeeLeaveRequestServiceMock.Setup(s => s.GetSuperviseesByPrimaryPositionForSupervisorAsync(null)).ThrowsAsync(new Exception());
                 var result = await controllerUnderTest.GetSuperviseesByPrimaryPositionForSupervisorAsync();
             }
 

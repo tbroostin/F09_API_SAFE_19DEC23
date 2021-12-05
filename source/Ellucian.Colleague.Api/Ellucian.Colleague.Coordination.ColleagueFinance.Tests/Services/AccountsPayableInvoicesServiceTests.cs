@@ -23,6 +23,7 @@ using Ellucian.Colleague.Dtos;
 using Ellucian.Data.Colleague;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 {
@@ -812,7 +813,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(RepositoryException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task AccountsPayableInvoicesServiceTests_GetAccountsPayableInvoicesAsync_RepositoryException()
         {
             string voucherId = "1";
@@ -838,30 +839,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task AccountsPayableInvoicesServiceTests_GetAccountsPayableInvoicesByGuidAsync_NoApPermission()
-        {
-            string voucherId = "1";
-            var voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, "00000001", GlAccessLevel.Full_Access, null, versionNumber);
-
-            UserFactoryAll TestcurrentUserFactory = new GeneralLedgerCurrentUser.UserFactoryAll();
-            var adapterRegistry = new Mock<IAdapterRegistry>();
-            var loggerObject = new Mock<ILogger>().Object;
-
-            AccountsPayableInvoicesService = new AccountsPayableInvoicesService(mockcolleagueFinanceReferenceDataRepository.Object,
-                mockreferenceDataRepository.Object, mockAccountsPayableInvoices.Object, mockaddressRepository.Object, mockvendorsRepository.Object,
-                mockGeneralLedgerConfigurationRepository.Object, mockPersonRepository.Object, baseConfigurationRepository,
-                adapterRegistry.Object, TestcurrentUserFactory, roleRepositoryMock.Object, mockAccountFundsAvailable.Object, loggerObject);
-
-            AccountsPayableInvoicesEntity = ConvertVoucherEntityToAPI(voucherDomainEntity);
-            mockAccountsPayableInvoices.Setup(repo => repo.GetAccountsPayableInvoicesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(AccountsPayableInvoicesEntity);
-            mockvendorsRepository.Setup(repo => repo.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("VendorIDGuid");
-            mockaddressRepository.Setup(repo => repo.GetAddressGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("AddressGuid");
-
-            var actual = await AccountsPayableInvoicesService.GetAccountsPayableInvoices2ByGuidAsync(guid);
-
-        }
+        
 
         [TestMethod]
         [ExpectedException(typeof(KeyNotFoundException))]
@@ -885,14 +863,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var voucherDomainEntity = await testVoucherRepository.GetVoucherAsync(voucherId, "00000001", GlAccessLevel.Full_Access, null, versionNumber);
 
             AccountsPayableInvoicesEntity = ConvertVoucherEntityToAPI(voucherDomainEntity);
-            mockAccountsPayableInvoices.Setup(repo => repo.GetAccountsPayableInvoicesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+            mockAccountsPayableInvoices.Setup(repo => repo.GetAccountsPayableInvoicesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
 
             var actual = await AccountsPayableInvoicesService.GetAccountsPayableInvoices2ByGuidAsync(guid);
 
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task AccountsPayableInvoicesServiceTests_GetAccountsPayableInvoicesByGuidAsync_ArgumentExceptionn()
         {
             string voucherId = "1";
@@ -906,7 +884,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ApplicationException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task AccountsPayableInvoicesServiceTests_GetAccountsPayableInvoicesByGuidAsync_ApplicationException()
         {
             string voucherId = "1";
@@ -920,7 +898,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task AccountsPayableInvoicesServiceTests_GetAccountsPayableInvoicesByGuidAsync_NullGuid()
         {
             string voucherId = "1";
@@ -934,7 +912,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(InvalidOperationException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task AccountsPayableInvoicesServiceTests_GetAccountsPayableInvoicesByGuidAsync_InvalidOperExcept()
         {
             string voucherId = "1";
@@ -948,7 +926,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(RepositoryException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task AccountsPayableInvoicesServiceTests_GetAccountsPayableInvoicesByGuidAsync_RepoException()
         {
             string voucherId = "1";
@@ -962,7 +940,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task AccountsPayableInvoicesServiceTests_GetAccountsPayableInvoicesByGuidAsync_Exception()
         {
             string voucherId = "1";
@@ -1011,9 +989,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             //    It.IsAny<DateTime>(), It.IsAny<string>())).ReturnsAsync(checkFund);
 
             mockAccountFundsAvailable.Setup(x => x.CheckAvailableFundsAsync(It.IsAny<List<Domain.ColleagueFinance.Entities.FundsAvailable>>(),
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(() => null);
 
             mockPersonRepository.Setup(repo => repo.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("ebf585ad-cc1f-478f-a7a3-aefae87f873a");
+            var personGuidCollection = new Dictionary<string, string>();
+            personGuidCollection.Add("1", "ebf585ad-cc1f-478f-a7a3-aefae87f873a");
+            mockPersonRepository.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
 
             AccountsPayableInvoicesService = new AccountsPayableInvoicesService(mockcolleagueFinanceReferenceDataRepository.Object,
                 mockreferenceDataRepository.Object, mockAccountsPayableInvoices.Object, mockaddressRepository.Object, mockvendorsRepository.Object,
@@ -1630,9 +1611,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             updateAccountsPayableInvoicesRole.AddPermission(new Domain.Entities.Permission(Domain.ColleagueFinance.ColleagueFinancePermissionCodes.UpdateApInvoices));
             roleRepositoryMock.Setup(r => r.Roles).Returns(new List<Domain.Entities.Role>() { updateAccountsPayableInvoicesRole });
 
-            accountFundsAvailableMock.Setup(p => p.CheckAvailableFundsAsync(It.IsAny<List<Domain.ColleagueFinance.Entities.FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(fundsAvailable);
+            accountFundsAvailableMock.Setup(p => p.CheckAvailableFundsAsync(It.IsAny<List<Domain.ColleagueFinance.Entities.FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(fundsAvailable);
             personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
             personRepositoryMock.Setup(p => p.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
+            var personGuidCollection = new Dictionary<string, string>();
+            personGuidCollection.Add("1", guid);
+            personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
             vendorsRepositoryMock.Setup(p => p.GetVendorIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
             vendorsRepositoryMock.Setup(p => p.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
             addressRepositoryMock.Setup(p => p.GetAddressFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
@@ -1653,6 +1637,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             accountsPayableInvoicesMock.Setup(p => p.CreateAccountsPayableInvoicesAsync(It.IsAny<Domain.ColleagueFinance.Entities.AccountsPayableInvoices>())).ReturnsAsync(accountsPayableInvoiceEntity);
             generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
             accountsPayableInvoicesMock.Setup(p => p.GetIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(new GuidLookupResult() { Entity = "PURCHASE.ORDERS", PrimaryKey = "1" });
+            Dictionary<string, string> dict2 = new Dictionary<string, string>();
+            dict2.Add("1", "VendorIDGuid1");
+            dict2.Add("0001234", "VendorIDGuid");
+            vendorsRepositoryMock.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(dict2);
+            vendorsRepositoryMock.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict2);
         }
 
         #endregion
@@ -1721,7 +1710,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [ExpectedException(typeof(ArgumentNullException))]
         public async Task ActPayInvService_POST_When_Dto_Vendor_Id_Is_Null()
         {
-            vendorsRepositoryMock.Setup(p => p.GetVendorIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            vendorsRepositoryMock.Setup(p => p.GetVendorIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
         }
 
@@ -1729,7 +1718,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [ExpectedException(typeof(ArgumentNullException))]
         public async Task ActPayInvService_POST_When_Dto_Invalid_Address_Guid()
         {
-            addressRepositoryMock.Setup(p => p.GetAddressFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            addressRepositoryMock.Setup(p => p.GetAddressFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
         }
 
@@ -1755,7 +1744,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 Name = "Acme Tools",
                 Place = new AddressPlace() { Country = new AddressCountry { Title = "invalid" } }
             };
-            referenceDataRepositoryMock.Setup(p => p.GetCountryCodesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            referenceDataRepositoryMock.Setup(p => p.GetCountryCodesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
             await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
         }
 
@@ -2230,14 +2219,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task ActPayInvService_POST_PermissionException()
-        {
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-            await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
-        }
-
-        [TestMethod]
         [ExpectedException(typeof(Exception))]
         public async Task ActPayInvService_POST_Multiple_AccountDetails_With_Same_AccountingString()
         {
@@ -2268,7 +2249,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task ActPayInvService_POST_DtoToEntity_VendorId_NotFound()
         {
             accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Notapproved;
-            vendorsRepositoryMock.Setup(p => p.GetVendorIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            vendorsRepositoryMock.Setup(p => p.GetVendorIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
         }
 
@@ -2277,7 +2258,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task ActPayInvService_POST_DtoToEntity_Vendor_AlternateAddress_NotFound()
         {
             accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Outstanding;
-            addressRepositoryMock.Setup(p => p.GetAddressFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            addressRepositoryMock.Setup(p => p.GetAddressFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
         }
 
@@ -2338,7 +2319,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [ExpectedException(typeof(Exception))]
         public async Task ActPayInvService_POST_DtoToEntity_Repository_Returns_CommodityCodes_As_Null()
         {
-            colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
             await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
         }
 
@@ -2346,7 +2327,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [ExpectedException(typeof(Exception))]
         public async Task ActPayInvService_POST_DtoToEntity_Repository_Returns_FixedAssetDesignationId_As_Null()
         {
-            colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
             await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
         }
 
@@ -2378,7 +2359,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [ExpectedException(typeof(Exception))]
         public async Task ActPayInvService_POST_DtoToEntity_Repository_Returns_CommodityUnitTypes_As_Null()
         {
-            colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
             await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
         }
 
@@ -2425,16 +2406,16 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task ActPayInvService_POST_EntityToDto_Vendor_NotFound()
         {
-            vendorsRepositoryMock.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(null);
+            vendorsRepositoryMock.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(() => null);
             accountsPayableInvoiceEntity.VoucherMiscName = new List<string>();
             await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task ActPayInvService_POST_EntityToDto_VendorId_As_Null()
         {
             accountsPayableInvoiceEntity.CurrencyCode = string.Empty;
@@ -2516,15 +2497,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task ActPayInvService_POST_AvailableFunds_SubmittedId_NotFound()
         {
             accountsPayableInvoiceEntity.CurrencyCode = "A12";
             accountsPayableInvoiceEntity.HostCountry = "USA";
             accountsPayableInvoiceEntity.VoucherMiscCountry = String.Empty;
             accountsPayableInvoiceEntity.VoucherMiscState = "SA";
-
-            personRepositoryMock.SetupSequence(p => p.GetPersonGuidFromIdAsync(It.IsAny<string>())).Returns(Task.FromResult<string>(guid)).Returns(Task.FromResult<string>(null));
+            accountsPayableInvoiceEntity.SubmittedBy = "1";
+            var personGuidCollection = new Dictionary<string, string>();
+            personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
+            //personRepositoryMock.SetupSequence(p => p.GetPersonGuidFromIdAsync(It.IsAny<string>())).Returns(Task.FromResult<string>(guid)).Returns(Task.FromResult<string>(null));
 
             await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
         }
@@ -2643,7 +2626,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [ExpectedException(typeof(ArgumentNullException))]
         public async Task ActPayInvService_Post_glConfiguration_null()
         {
-            generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(null);
+            generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(() => null);
             await accountsPayableInvoicesService.PostAccountsPayableInvoices2Async(accountsPayableInvoice);
         }
 
@@ -3010,9 +2993,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             updateAccountsPayableInvoicesRole.AddPermission(new Domain.Entities.Permission(Domain.ColleagueFinance.ColleagueFinancePermissionCodes.UpdateApInvoices));
             roleRepositoryMock.Setup(r => r.Roles).Returns(new List<Domain.Entities.Role>() { updateAccountsPayableInvoicesRole });
 
-            accountFundsAvailableMock.Setup(p => p.CheckAvailableFundsAsync(It.IsAny<List<Domain.ColleagueFinance.Entities.FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(fundsAvailable);
+            accountFundsAvailableMock.Setup(p => p.CheckAvailableFundsAsync(It.IsAny<List<Domain.ColleagueFinance.Entities.FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(fundsAvailable);
             personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
             personRepositoryMock.Setup(p => p.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
+            var personGuidCollection = new Dictionary<string, string>();
+            personGuidCollection.Add("1", guid);
+            personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
             vendorsRepositoryMock.Setup(p => p.GetVendorIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
             vendorsRepositoryMock.Setup(p => p.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(guid);
             addressRepositoryMock.Setup(p => p.GetAddressFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
@@ -3032,6 +3018,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             accountsPayableInvoicesMock.Setup(p => p.CreateAccountsPayableInvoicesAsync(It.IsAny<Domain.ColleagueFinance.Entities.AccountsPayableInvoices>())).ReturnsAsync(accountsPayableInvoiceEntity);
             accountsPayableInvoicesMock.Setup(p => p.GetIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(new GuidLookupResult() { Entity = "PURCHASE.ORDERS", PrimaryKey = "1" });
             generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(testGlAccountStructure);
+            Dictionary<string, string> dict2 = new Dictionary<string, string>();
+            dict2.Add("1", "VendorIDGuid1");
+            dict2.Add("0001234", "VendorIDGuid");
+            vendorsRepositoryMock.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<string[]>())).ReturnsAsync(dict2);
+            vendorsRepositoryMock.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(dict2);
         }
 
         #endregion
@@ -3230,7 +3221,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task ActPayInvService_PUT_Dto_AllTaxCodeId_Is_Null()
         {
             accountsPayableInvoice.Taxes.FirstOrDefault().TaxCode.Id = "123";
-            referenceDataRepositoryMock.Setup(p => p.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            referenceDataRepositoryMock.Setup(p => p.GetCommerceTaxCodesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
             await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
         }
 
@@ -3598,14 +3589,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task ActPayInvService_PUT_PermissionException()
-        {
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-            await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
-        }
-
-        [TestMethod]
         [ExpectedException(typeof(Exception))]
         public async Task ActPayInvService_PUT_Multiple_AccountDetails_With_Same_AccountingString()
         {
@@ -3644,7 +3627,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task ActPayInvService_PUT_DtoToEntity_VendorId_NotFound()
         {
             accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Notapproved;
-            vendorsRepositoryMock.Setup(p => p.GetVendorIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            vendorsRepositoryMock.Setup(p => p.GetVendorIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
         }
 
@@ -3653,7 +3636,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task ActPayInvService_PUT_DtoToEntity_Vendor_AlternateAddress_NotFound()
         {
             accountsPayableInvoice.ProcessState = AccountsPayableInvoicesProcessState.Outstanding;
-            addressRepositoryMock.Setup(p => p.GetAddressFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            addressRepositoryMock.Setup(p => p.GetAddressFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
         }
 
@@ -3689,7 +3672,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task ActPayInvService_PUT_DtoToEntity_SubmittedBy_NotFound()
         {
             accountsPayableInvoice.SubmittedBy = new GuidObject2() {Id = "123"};
-            personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
         }
 
@@ -3697,7 +3680,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [ExpectedException(typeof(Exception))]
         public async Task ActPayInvService_PUT_DtoToEntity_Repository_Returns_CommodityCodes_As_Null()
         {
-            colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
             await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
         }
 
@@ -3705,7 +3688,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [ExpectedException(typeof(Exception))]
         public async Task ActPayInvService_PUT_DtoToEntity_Repository_Returns_FxaTransferFlag_As_Null()
         {
-            colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetFxaTransferFlagsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
             await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
         }
 
@@ -3729,7 +3712,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [ExpectedException(typeof(Exception))]
         public async Task ActPayInvService_PUT_DtoToEntity_Repository_Returns_CommodityUnitTypes_As_Null()
         {
-            colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            colleagueFinanceReferenceDataRepositoryMock.Setup(p => p.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
             await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
         }
 
@@ -3828,7 +3811,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [ExpectedException(typeof(ArgumentNullException))]
         public async Task ActPayInvService_PUT_glConfiguration_null()
         {
-            generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(null);
+            generalLedgerConfigurationRepositoryMock.Setup(repo => repo.GetAccountStructureAsync()).ReturnsAsync(() => null);
             await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
         }
 
@@ -3841,10 +3824,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task ActPayInvService_PUT_EntityToDto_Vendor_NotFound()
         {
-            vendorsRepositoryMock.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(null);
+            vendorsRepositoryMock.Setup(x => x.GetVendorGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(() => null);
 
             accountsPayableInvoiceEntity.VoucherMiscName = new List<string>();
 
@@ -3852,7 +3835,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task ActPayInvService_PUT_EntityToDto_VendorId_As_Null()
         {
             accountsPayableInvoiceEntity.CurrencyCode = string.Empty;
@@ -3889,7 +3872,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(Exception))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task ActPayInvService_PUT_AvailableFunds_SubmittedId_NotFound()
         {
             var testGlAccountStructure = await new TestGeneralLedgerConfigurationRepository().GetAccountStructureAsync();
@@ -3900,7 +3883,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             accountsPayableInvoiceEntity.HostCountry = "USA";
             accountsPayableInvoiceEntity.VoucherMiscCountry = String.Empty;
             accountsPayableInvoiceEntity.VoucherMiscState = "SA";
-
+            accountsPayableInvoiceEntity.SubmittedBy = "1";
+            var personGuidCollection = new Dictionary<string, string>();
+            personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
             personRepositoryMock.SetupSequence(p => p.GetPersonGuidFromIdAsync(It.IsAny<string>())).Returns(Task.FromResult<string>(guid)).Returns(Task.FromResult<string>(null));
 
             await accountsPayableInvoicesService.PutAccountsPayableInvoices2Async(guid, accountsPayableInvoice);
@@ -4080,7 +4065,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             accountsPayableInvoice.LineItems.FirstOrDefault().AccountDetails.FirstOrDefault().BudgetCheck = AccountsPayableInvoicesAccountBudgetCheck.Override;
 
-            accountsPayableInvoicesMock.Setup(p => p.GetAccountsPayableInvoicesIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            accountsPayableInvoicesMock.Setup(p => p.GetAccountsPayableInvoicesIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
             accountsPayableInvoiceEntity.VendorId = null;
             accountsPayableInvoiceEntity.VoucherMiscName = new List<string>() { "name1", "name2" };

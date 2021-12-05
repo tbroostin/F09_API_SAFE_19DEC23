@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 
@@ -47,5 +47,10 @@ namespace Ellucian.Colleague.Dtos.Student
         /// List of terms for which the Colleague Self-Service Quick Registration workflow may be used
         /// </summary>
         public IEnumerable<string> QuickRegistrationTermCodes { get; set; }
+
+        /// <summary>
+        /// Indicates whether or not Faculty can add authorization from the waitlist
+        /// </summary>
+        public bool AllowFacultyAddAuthFromWaitlist { get; set; }
     }
 }

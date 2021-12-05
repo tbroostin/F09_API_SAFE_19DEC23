@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -771,6 +771,341 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 petition1.UpdatedBy = "UpdateBy";
                 return petition1;
             }
+        }
+
+        [TestClass]
+        public class UpdateStudentPetition : CurrentUserSetup
+        {
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private ILogger logger;
+            private Mock<IRoleRepository> roleRepositoryMock;
+            private IRoleRepository roleRepository;
+            private ICurrentUserFactory currentUserFactory;
+            private Mock<ISectionPermissionRepository> sectionPermissionRepositoryMock;
+            private ISectionPermissionRepository sectionPermissionRepository;
+            private Mock<ISectionRepository> sectionRepositoryMock;
+            private ISectionRepository sectionRepository;
+            private Mock<IStudentRepository> studentRepositoryMock;
+            private IStudentRepository studentRepository;
+            private IStudentReferenceDataRepository referenceDataRepository;
+            private Mock<IStudentReferenceDataRepository> referenceDataRepositoryMock;
+            private ISectionPermissionService sectionPermissionService;
+            private Dtos.Student.StudentPetition badPetitionDto;
+            private Dtos.Student.StudentPetition goodPetitionDto;
+            private Dtos.Student.StudentPetition goodConsentDto;
+            private Domain.Student.Entities.StudentPetition studentPetitionEntityUpdated;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                roleRepositoryMock = new Mock<IRoleRepository>();
+                roleRepository = roleRepositoryMock.Object;
+
+                sectionPermissionRepositoryMock = new Mock<ISectionPermissionRepository>();
+                sectionPermissionRepository = sectionPermissionRepositoryMock.Object;
+
+                sectionRepositoryMock = new Mock<ISectionRepository>();
+                sectionRepository = sectionRepositoryMock.Object;
+
+                studentRepositoryMock = new Mock<IStudentRepository>();
+                studentRepository = studentRepositoryMock.Object;
+
+                referenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
+                referenceDataRepository = referenceDataRepositoryMock.Object;
+
+                logger = new Mock<ILogger>().Object;
+
+                goodPetitionDto = new Dtos.Student.StudentPetition()
+                {
+                    SectionId = "sectionId",
+                    StudentId = "studentId",
+                    StatusCode = "A",
+                    ReasonCode = "REASON",
+                    Comment = "MultiLineComment/nLine2",
+                    Type = Dtos.Student.StudentPetitionType.StudentPetition
+                };
+
+                goodConsentDto = new Dtos.Student.StudentPetition()
+                {
+                    SectionId = "sectionId",
+                    StudentId = "studentId",
+                    StatusCode = "A",
+                    ReasonCode = "REASON",
+                    Comment = "MultiLineComment/nLine2",
+                    Type = Dtos.Student.StudentPetitionType.FacultyConsent
+                };
+                // Set up reference data repository value for Reasons and statuses
+                var petitionReasons = BuildPetitionReasons();
+                referenceDataRepositoryMock.Setup(x => x.GetStudentPetitionReasonsAsync()).Returns(Task.FromResult(petitionReasons.AsEnumerable()));
+                var statusCodes = BuildStatusCodes();
+                referenceDataRepositoryMock.Setup(x => x.GetPetitionStatusesAsync()).Returns(Task.FromResult(statusCodes.AsEnumerable()));
+
+                // Mock Section Permission response
+                studentPetitionEntityUpdated = new StudentPetition("1", "courseId", "sectionId", "studentId", StudentPetitionType.FacultyConsent, "A") { Comment = "MultiLineComment/nLine2", ReasonCode = "REASON" };
+                sectionPermissionRepositoryMock.Setup(repository => repository.UpdateStudentPetitionAsync(studentPetitionEntityUpdated)).Returns(Task.FromResult(studentPetitionEntityUpdated));
+
+                // Mock Adapters
+                var studentPetitionDtoToEntityAdapter = new StudentPetitionDtoToEntityAdapter(adapterRegistry, logger);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<Ellucian.Colleague.Dtos.Student.StudentPetition, Ellucian.Colleague.Domain.Student.Entities.StudentPetition>()).Returns(studentPetitionDtoToEntityAdapter);
+                var studentPetitionEntityToDtoAdapter = new StudentPetitionEntityToDtoAdapter(adapterRegistry, logger);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.StudentPetition, Ellucian.Colleague.Dtos.Student.StudentPetition>()).Returns(studentPetitionEntityToDtoAdapter);
+                // Set up current user
+                currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
+
+                sectionPermissionService = new SectionPermissionService(adapterRegistry, sectionPermissionRepository, studentRepository, sectionRepository, referenceDataRepository, currentUserFactory, roleRepository, logger);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                adapterRegistry = null;
+                sectionPermissionRepository = null;
+                studentRepository = null;
+                sectionRepository = null;
+                roleRepository = null;
+                sectionPermissionService = null;
+                badPetitionDto = null;
+                goodPetitionDto = null;
+                currentUserFactory = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task UpdateStudentPetition_ThrowsExceptionIfStudentPetitionNull()
+            {
+                //sectionRepositoryMock.Setup(repository => repository.GetSectionAsync(It.IsAny<string>())).Throws(new ArgumentNullException());
+                var sectionPermissionDto = await sectionPermissionService.UpdateStudentPetitionAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task UpdateStudentPetition_ThrowsExceptionIfUserWithoutCreateStudentPetitionPermission()
+            {
+                // Set up faculty as the current user.
+                currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
+                roleRepositoryMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { facultyRole });
+                await sectionPermissionService.UpdateStudentPetitionAsync(goodPetitionDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task UpdateStudentPetition_ThrowsExceptionIfUserWithoutCreateFacultyConsentPermission()
+            {
+                // Set up faculty as the current user.
+                currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
+                roleRepositoryMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { facultyRole });
+                await sectionPermissionService.UpdateStudentPetitionAsync(goodConsentDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task UpdateStudentPetition_ThrowsExceptionIfProvidedPetitionHasNoSectionId()
+            {
+                // Set up faculty as the current user.
+                currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
+                facultyRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateFacultyConsent));
+                roleRepositoryMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { facultyRole });
+                var petitionDto = new Dtos.Student.StudentPetition()
+                {
+                    SectionId = null,
+                    StudentId = "12345",
+                    StatusCode = "A",
+                    Type = Dtos.Student.StudentPetitionType.FacultyConsent
+                };
+
+                var sectionPermissionDto = await sectionPermissionService.UpdateStudentPetitionAsync(petitionDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task UpdateStudentPetitionc_ThrowsExceptionIfProvidedPetitionHasEmptySectionId()
+            {
+                // Set up faculty as the current user.
+                currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
+                facultyRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateStudentPetition));
+                roleRepositoryMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { facultyRole });
+                var petitionDto = new Dtos.Student.StudentPetition()
+                {
+                    SectionId = string.Empty,
+                    StudentId = "12345",
+                    StatusCode = "A",
+                    Type = Dtos.Student.StudentPetitionType.StudentPetition
+                };
+
+                var sectionPermissionDto = await sectionPermissionService.UpdateStudentPetitionAsync(petitionDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task UpdateStudentPetitionc_ThrowsExceptionIfProvidedPetitionHasNoStudentId()
+            {
+                // Set up faculty as the current user.
+                currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
+                facultyRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateStudentPetition));
+                roleRepositoryMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { facultyRole });
+                var petitionDto = new Dtos.Student.StudentPetition()
+                {
+                    SectionId = "12345",
+                    StudentId = null,
+                    StatusCode = "A",
+                    Type = Dtos.Student.StudentPetitionType.StudentPetition
+                };
+
+                var sectionPermissionDto = await sectionPermissionService.UpdateStudentPetitionAsync(petitionDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task UpdateStudentPetition_ThrowsArgumentExceptionIfStatusCodeNull()
+            {
+                // Set up faculty as the current user.
+                currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
+                facultyRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateStudentPetition));
+                roleRepositoryMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { facultyRole });
+                var petitionDto = new Dtos.Student.StudentPetition()
+                {
+                    SectionId = "12345",
+                    StudentId = "456",
+                    StatusCode = null,
+                    Type = Dtos.Student.StudentPetitionType.StudentPetition
+                };
+                var sectionPermissionDto = await sectionPermissionService.UpdateStudentPetitionAsync(petitionDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task UpdateStudentPetition_ThrowsArgumentExceptionIfStatusCodeEmpty()
+            {
+                // Set up faculty as the current user.
+                currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
+                facultyRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateStudentPetition));
+                roleRepositoryMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { facultyRole });
+                var petitionDto = new Dtos.Student.StudentPetition()
+                {
+                    SectionId = "12345",
+                    StudentId = "456",
+                    StatusCode = string.Empty,
+                    Type = Dtos.Student.StudentPetitionType.StudentPetition
+                };
+                var sectionPermissionDto = await sectionPermissionService.UpdateStudentPetitionAsync(petitionDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
+            public async Task UpdateStudentPetition_ThrowsArgumentExceptionIfStatusCodeInvalid()
+            {
+                // Set up faculty as the current user.
+                currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
+                facultyRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateStudentPetition));
+                roleRepositoryMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { facultyRole });
+                var petitionDto = new Dtos.Student.StudentPetition()
+                {
+                    SectionId = "12345",
+                    StudentId = "456",
+                    StatusCode = "JUNK",
+                    ReasonCode = "REASON",
+                    Type = Dtos.Student.StudentPetitionType.StudentPetition
+                };
+                var sectionPermissionDto = await sectionPermissionService.UpdateStudentPetitionAsync(petitionDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
+            public async Task UpdateStudentPetition_ThrowsArgumentExceptionIfPetitionReasonInvalid()
+            {
+                // Set up faculty as the current user.
+                currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
+                facultyRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateStudentPetition));
+                roleRepositoryMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { facultyRole });
+                var petitionDto = new Dtos.Student.StudentPetition()
+                {
+                    SectionId = "12345",
+                    StudentId = "456",
+                    StatusCode = "A",
+                    ReasonCode = "JUNK",
+                    Type = Dtos.Student.StudentPetitionType.StudentPetition
+                };
+                var sectionPermissionDto = await sectionPermissionService.UpdateStudentPetitionAsync(petitionDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
+            public async Task UpdateStudentPetition_ThrowsExceptionIfNoReasonOrComment()
+            {
+                // Set up faculty as the current user.
+                currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
+                facultyRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateStudentPetition));
+                roleRepositoryMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { facultyRole });
+                var petitionDto = new Dtos.Student.StudentPetition()
+                {
+                    SectionId = "12345",
+                    StudentId = "456",
+                    StatusCode = "A",
+                    Type = Dtos.Student.StudentPetitionType.StudentPetition
+                };
+                var sectionPermissionDto = await sectionPermissionService.UpdateStudentPetitionAsync(petitionDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task UpdateStudentPetition_ThrowsExceptionIfAdapterErrorOccurs()
+            {
+                // Set up faculty as the current user.
+                currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
+                facultyRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateStudentPetition));
+                roleRepositoryMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { facultyRole });
+                var petitionDto = new Dtos.Student.StudentPetition()
+                {
+                    SectionId = "12345",
+                    StudentId = "456",
+                    StatusCode = "A",
+                    ReasonCode = "REASON",
+                    Type = Dtos.Student.StudentPetitionType.StudentPetition
+                };
+
+                // Null adapter registry to force adapter error
+                ITypeAdapter<Dtos.Student.StudentPetition, Domain.Student.Entities.StudentPetition> nullAdapter = null;
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<Dtos.Student.StudentPetition, Domain.Student.Entities.StudentPetition>()).Returns(nullAdapter);
+                sectionPermissionService = new SectionPermissionService(adapterRegistry, sectionPermissionRepository, studentRepository, sectionRepository, referenceDataRepository, currentUserFactory, roleRepository, logger);
+
+                var sectionPermissionDto = await sectionPermissionService.UpdateStudentPetitionAsync(petitionDto);
+            }
+
+            [TestMethod]
+            public async Task UpdateStudentPetition_Successful()
+            {
+                // Set up faculty as the current user.
+                currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
+                facultyRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.CreateStudentPetition));
+                roleRepositoryMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { facultyRole });
+
+                var updatedPetitionDto = await sectionPermissionService.UpdateStudentPetitionAsync(goodPetitionDto);
+                Assert.AreEqual(goodPetitionDto.StudentId, updatedPetitionDto.StudentId);
+                Assert.AreEqual(goodPetitionDto.SectionId, updatedPetitionDto.SectionId);
+                Assert.AreEqual(goodPetitionDto.StatusCode, updatedPetitionDto.StatusCode);
+                Assert.AreEqual(goodPetitionDto.ReasonCode, updatedPetitionDto.ReasonCode);
+                Assert.AreEqual(goodPetitionDto.Comment, updatedPetitionDto.Comment);
+            }
+
+            private List<PetitionStatus> BuildStatusCodes()
+            {
+                var results = new List<PetitionStatus>();
+                results.Add(new PetitionStatus("A", "Accepted", true));
+                results.Add(new PetitionStatus("D", "Denied", false));
+                return results;
+            }
+
+            private List<StudentPetitionReason> BuildPetitionReasons()
+            {
+                var results = new List<StudentPetitionReason>();
+                results.Add(new StudentPetitionReason("REASON", "Audition"));
+                results.Add(new StudentPetitionReason("NO", "No Audition"));
+                return results;
+            }
+
         }
     }
 }

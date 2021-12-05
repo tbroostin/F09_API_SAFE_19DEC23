@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Report xmlns="http://schemas.microsoft.com/sqlserver/reporting/2008/01/reportdefinition" xmlns:rd="http://schemas.microsoft.com/SQLServer/reporting/reportdesigner">
   <Body>
     <ReportItems>
@@ -12,7 +12,7 @@
                 <Value>=Parameters!TranscriptText.Value(0)</Value>
                 <Style>
                   <FontFamily>Courier New</FontFamily>
-                   <FontSize>=Parameters!ReportFontSize.value</FontSize>
+                  <FontSize>=Parameters!ReportFontSize.value</FontSize>
                 </Style>
               </TextRun>
             </TextRuns>
@@ -20,7 +20,7 @@
           </Paragraph>
         </Paragraphs>
         <Height>0.29167in</Height>
-        <Width>7.48959in</Width>
+        <Width>7.5in</Width>
         <Style>
           <Border>
             <Style>None</Style>
@@ -64,7 +64,7 @@
       <AllowBlank>true</AllowBlank>
       <Prompt>ReportParameter1</Prompt>
     </ReportParameter>
-	<ReportParameter Name="ReportFontSize">
+    <ReportParameter Name="ReportFontSize">
       <DataType>String</DataType>
       <AllowBlank>true</AllowBlank>
       <Prompt>ReportParameter1</Prompt>

@@ -150,10 +150,10 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                         {
                             null, // Nulls should be handled gracefully
                             new DegreePlanTermsPlannedCourses(), // Empties should be handled gracefully,
-                            new DegreePlanTermsPlannedCourses("223", "123", 3, null, "G", "0001234", DateTime.Today, DateTime.Now.AddHours(-1), "N"),
-                            new DegreePlanTermsPlannedCourses("224", "124", 4, null, "P", "0001234", DateTime.Today, DateTime.Now.AddHours(-2), "N"),
-                            new DegreePlanTermsPlannedCourses("225", "125", null, null, "A", "0001234", DateTime.Today, DateTime.Now.AddHours(-3), "N"),
-                            new DegreePlanTermsPlannedCourses("226", "126", 5, null, "X", "0001234", DateTime.Today, DateTime.Now.AddHours(-4), "N"),
+                            new DegreePlanTermsPlannedCourses("223", "123", 3, null, "G", "0001234", DateTime.Today, DateTime.Now.AddHours(-1), "N",""),
+                            new DegreePlanTermsPlannedCourses("224", "124", 4, null, "P", "0001234", DateTime.Today, DateTime.Now.AddHours(-2), "N",""),
+                            new DegreePlanTermsPlannedCourses("225", "125", null, null, "A", "0001234", DateTime.Today, DateTime.Now.AddHours(-3), "N",""),
+                            new DegreePlanTermsPlannedCourses("226", "126", 5, null, "X", "0001234", DateTime.Today, DateTime.Now.AddHours(-4), "N",""),
                         }
                     }
                 };
@@ -229,10 +229,10 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                         {
                             null, // Nulls should be handled gracefully
                             new DegreePlanTermsPlannedCourses(), // Empties should be handled gracefully,
-                            new DegreePlanTermsPlannedCourses("223", "123", 3, null, "G", "0001234", DateTime.Today, DateTime.Now.AddHours(-1), "N"),
-                            new DegreePlanTermsPlannedCourses("224", "124", 4, null, "P", "0001234", DateTime.Today, DateTime.Now.AddHours(-2), "N"),
-                            new DegreePlanTermsPlannedCourses("225", "125", null, null, "A", "0001234", DateTime.Today, DateTime.Now.AddHours(-3), "N"),
-                            new DegreePlanTermsPlannedCourses("226", "126", 5, null, "X", "0001234", DateTime.Today, DateTime.Now.AddHours(-4), "N"),
+                            new DegreePlanTermsPlannedCourses("223", "123", 3, null, "G", "0001234", DateTime.Today, DateTime.Now.AddHours(-1), "N",""),
+                            new DegreePlanTermsPlannedCourses("224", "124", 4, null, "P", "0001234", DateTime.Today, DateTime.Now.AddHours(-2), "N",""),
+                            new DegreePlanTermsPlannedCourses("225", "125", null, null, "A", "0001234", DateTime.Today, DateTime.Now.AddHours(-3), "N",""),
+                            new DegreePlanTermsPlannedCourses("226", "126", 5, null, "X", "0001234", DateTime.Today, DateTime.Now.AddHours(-4), "N",""),
                         }
                     }
                 };
@@ -333,10 +333,10 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                         {
                             null, // Nulls should be handled gracefully
                             new DegreePlanTermsPlannedCourses(), // Empties should be handled gracefully,
-                            new DegreePlanTermsPlannedCourses("223", "123", 3, null, "G", "0001234", DateTime.Today, DateTime.Now.AddHours(-1), "N"),
-                            new DegreePlanTermsPlannedCourses("224", "124", 4, null, "P", "0001234", DateTime.Today, DateTime.Now.AddHours(-2), "N"),
-                            new DegreePlanTermsPlannedCourses("225", "125", null, null, "A", "0001234", DateTime.Today, DateTime.Now.AddHours(-3), "N"),
-                            new DegreePlanTermsPlannedCourses("226", "126", 5, null, "X", "0001234", DateTime.Today, DateTime.Now.AddHours(-4), "N"),
+                            new DegreePlanTermsPlannedCourses("223", "123", 3, null, "G", "0001234", DateTime.Today, DateTime.Now.AddHours(-1), "N",""),
+                            new DegreePlanTermsPlannedCourses("224", "124", 4, null, "P", "0001234", DateTime.Today, DateTime.Now.AddHours(-2), "N",""),
+                            new DegreePlanTermsPlannedCourses("225", "125", null, null, "A", "0001234", DateTime.Today, DateTime.Now.AddHours(-3), "N",""),
+                            new DegreePlanTermsPlannedCourses("226", "126", 5, null, "X", "0001234", DateTime.Today, DateTime.Now.AddHours(-4), "N",""),
                         }
                     }
                 };
@@ -437,10 +437,10 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                         {
                             null, // Nulls should be handled gracefully
                             new DegreePlanTermsPlannedCourses(), // Empties should be handled gracefully,
-                            new DegreePlanTermsPlannedCourses("223", "123", 3, null, "G", "0001234", DateTime.Today, DateTime.Now.AddHours(-1), "N"),
-                            new DegreePlanTermsPlannedCourses("224", "124", 4, null, "P", "0001234", DateTime.Today, DateTime.Now.AddHours(-2), "N"),
-                            new DegreePlanTermsPlannedCourses("225", "125", null, null, "A", "0001234", DateTime.Today, DateTime.Now.AddHours(-3), "N"),
-                            new DegreePlanTermsPlannedCourses("226", "126", 5, null, "X", "0001234", DateTime.Today, DateTime.Now.AddHours(-4), "N"),
+                            new DegreePlanTermsPlannedCourses("223", "123", 3, null, "G", "0001234", DateTime.Today, DateTime.Now.AddHours(-1), "N",null),
+                            new DegreePlanTermsPlannedCourses("224", "124", 4, null, "P", "0001234", DateTime.Today, DateTime.Now.AddHours(-2), "N",null),
+                            new DegreePlanTermsPlannedCourses("225", "125", null, null, "A", "0001234", DateTime.Today, DateTime.Now.AddHours(-3), "N",null),
+                            new DegreePlanTermsPlannedCourses("226", "126", 5, null, "X", "0001234", DateTime.Today, DateTime.Now.AddHours(-4), "N",null),
                         }
                     }
                 };
@@ -539,10 +539,10 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                         {
                             null, // Nulls should be handled gracefully
                             new DegreePlanTermsPlannedCourses(), // Empties should be handled gracefully,
-                            new DegreePlanTermsPlannedCourses("223", "123", 3, null, "G", "0001234", DateTime.Today, DateTime.Now.AddHours(-1), "N"),
-                            new DegreePlanTermsPlannedCourses("224", "124", 4, null, "P", "0001234", DateTime.Today, DateTime.Now.AddHours(-2), "N"),
-                            new DegreePlanTermsPlannedCourses("225", "125", null, null, "A", "0001234", DateTime.Today, DateTime.Now.AddHours(-3), "N"),
-                            new DegreePlanTermsPlannedCourses("226", "126", 5, null, "X", "0001234", DateTime.Today, DateTime.Now.AddHours(-4), "N"),
+                            new DegreePlanTermsPlannedCourses("223", "123", 3, null, "G", "0001234", DateTime.Today, DateTime.Now.AddHours(-1), "N",null),
+                            new DegreePlanTermsPlannedCourses("224", "124", 4, null, "P", "0001234", DateTime.Today, DateTime.Now.AddHours(-2), "N",null),
+                            new DegreePlanTermsPlannedCourses("225", "125", null, null, "A", "0001234", DateTime.Today, DateTime.Now.AddHours(-3), "N",null),
+                            new DegreePlanTermsPlannedCourses("226", "126", 5, null, "X", "0001234", DateTime.Today, DateTime.Now.AddHours(-4), "N",null),
                         }
                     }
                 };

@@ -1,16 +1,21 @@
 ﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using Ellucian.Colleague.Api.Controllers.HumanResources;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -296,6 +301,187 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             {
                 await controller.DeletePersonEmploymentProficienciesAsync(guid);
             }
+
+
+            //Permissions
+
+            // Success
+            // Get 10
+            //GetPersonEmploymentProficienciesAsync
+            [TestMethod]
+            public async Task PersonEmploymentProficienciesController_GetPersonEmploymentProficienciesAsync_Permissions()
+            {
+                int offset = 0;
+                int limit = 10;
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonEmploymentProficiencies" },
+                    { "action", "GetPersonEmploymentProficienciesAsync" }
+                };
+                HttpRoute route = new HttpRoute("person-employment-proficiencies", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                controller.Request.SetRouteData(data);
+                controller.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.ViewPersonEmpProficiencies);
+
+                var controllerContext = controller.ControllerContext;
+                var actionDescriptor = controller.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var cancelToken = new System.Threading.CancellationToken(false);
+
+                var tupleResult = new Tuple<IEnumerable<Dtos.PersonEmploymentProficiencies>, int>(personEmploymentProficiencies, 1);
+
+                serviceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                serviceMock.Setup(x => x.GetPersonEmploymentProficienciesAsync(offset, limit, false)).ReturnsAsync(tupleResult);
+                var res = await controller.GetPersonEmploymentProficienciesAsync(new Paging(10, 0));
+
+                Object filterObject;
+                controller.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewPersonEmpProficiencies));
+
+            }
+
+
+            // Exception
+            // Get 10
+            //GetPayrollDeductionArrangementsAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PersonEmploymentProficienciesController_GetPersonEmploymentProficienciesAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonEmploymentProficiencies" },
+                    { "action", "GetPersonEmploymentProficienciesAsync" }
+                };
+                HttpRoute route = new HttpRoute("person-employment-proficiencies", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                controller.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = controller.ControllerContext;
+                var actionDescriptor = controller.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                    var tuple = new Tuple<IEnumerable<Dtos.PersonEmploymentProficiencies>, int>(personEmploymentProficiencies, 5);
+
+                    serviceMock.Setup(s => s.GetPersonEmploymentProficienciesAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ThrowsAsync(new PermissionsException());
+                    serviceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view person-employment-proficiencies."));
+                    var resp = await controller.GetPersonEmploymentProficienciesAsync(null);
+
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+            //Permissions
+
+            // Success
+            // Get By Id 10
+            //GetPersonEmploymentProficienciesByGuidAsync
+            [TestMethod]
+            public async Task PersonEmploymentProficienciesController_GetPersonEmploymentProficienciesByGuidAsync_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonEmploymentProficiencies" },
+                    { "action", "GetPersonEmploymentProficienciesByGuidAsync" }
+                };
+                HttpRoute route = new HttpRoute("person-employment-proficiencies", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                controller.Request.SetRouteData(data);
+                controller.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.ViewPersonEmpProficiencies);
+
+                var controllerContext = controller.ControllerContext;
+                var actionDescriptor = controller.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                var tuple = new Tuple<IEnumerable<Dtos.PersonEmploymentProficiencies>, int>(personEmploymentProficiencies, 1);
+                serviceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                serviceMock.Setup(s => s.GetPersonEmploymentProficienciesByGuidAsync(It.IsAny<string>())).ReturnsAsync(personEmploymentProficiencies.FirstOrDefault());
+                var result = await controller.GetPersonEmploymentProficienciesByGuidAsync(guid);
+
+                Object filterObject;
+                controller.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewPersonEmpProficiencies));
+
+            }
+
+
+            // Exception
+            // Get By Id 10
+            //GetPersonEmploymentProficienciesByGuidAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task PersonEmploymentProficienciesController_GetPersonEmploymentProficienciesByGuidAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonEmploymentProficiencies" },
+                    { "action", "GetPersonEmploymentProficienciesByGuidAsync" }
+                };
+                HttpRoute route = new HttpRoute("person-employment-proficiencies", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                controller.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = controller.ControllerContext;
+                var actionDescriptor = controller.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                    var tuple = new Tuple<IEnumerable<Dtos.PersonEmploymentProficiencies>, int>(personEmploymentProficiencies, 5);
+
+                    serviceMock.Setup(s => s.GetPersonEmploymentProficienciesByGuidAsync(It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+                    serviceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view person-employment-proficiencies."));
+                    var resp = await controller.GetPersonEmploymentProficienciesByGuidAsync(guid);
+
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
         }
     }
 }

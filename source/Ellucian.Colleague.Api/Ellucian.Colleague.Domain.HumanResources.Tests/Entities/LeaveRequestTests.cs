@@ -40,7 +40,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 status = LeaveStatusAction.Draft;
                 leaveRequestDetails = new List<LeaveRequestDetail>()
                 {
-                    new LeaveRequestDetail("38","13",DateTime.Today,8.00m)                    
+                    new LeaveRequestDetail("38","13",DateTime.Today,8.00m, false)                    
                 };             
             }
 
@@ -137,7 +137,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 status = LeaveStatusAction.Draft;
                 leaveRequestDetails = new List<LeaveRequestDetail>()
                 {
-                    new LeaveRequestDetail("38","13",DateTime.Today,8.00m)
+                    new LeaveRequestDetail("38","13",DateTime.Today,8.00m, false)
                 };
 
                 leaveRequestComments = new List<LeaveRequestComment>()

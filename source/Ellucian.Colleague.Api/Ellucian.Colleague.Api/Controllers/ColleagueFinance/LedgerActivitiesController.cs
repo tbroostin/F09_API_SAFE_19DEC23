@@ -4,6 +4,7 @@ using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Dtos.Filters;
 using Ellucian.Web.Http;
@@ -54,7 +55,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="fiscalYear"></param>
         /// <returns></returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter, ValidateQueryStringFilter()]
+        [HttpGet, EedmResponseFilter, ValidateQueryStringFilter(), PermissionsFilter(ColleagueFinancePermissionCodes.ViewLedgerActivities)]
         [QueryStringFilterFilter("criteria", typeof(LedgerActivityFilter)), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("fiscalYear", typeof(FiscalYearFilter))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
@@ -70,6 +71,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                _ledgerActivityService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -79,7 +81,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 var fiscalYearObj = GetFilterObject<Dtos.Filters.FiscalYearFilter>(_logger, "fiscalYear");
 
                 if (CheckForEmptyFilterParameters())
-                   return new PagedHttpActionResult<IEnumerable<Dtos.LedgerActivity>>(new List<Dtos.LedgerActivity>(), page, 0, this.Request);
+                    return new PagedHttpActionResult<IEnumerable<Dtos.LedgerActivity>>(new List<Dtos.LedgerActivity>(), page, 0, this.Request);
 
                 if (ledgerActivityFilter != null)
                 {
@@ -91,7 +93,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                     if ((ledgerActivityFilter.FiscalPeriod != null) && !(string.IsNullOrEmpty(ledgerActivityFilter.FiscalPeriod.Id))
                         && (ledgerActivityFilter.Period != null) && !(string.IsNullOrEmpty(ledgerActivityFilter.Period.Id))
                         && ledgerActivityFilter.Period.Id != ledgerActivityFilter.FiscalPeriod.Id)
-                    {                   
+                    {
                         return new PagedHttpActionResult<IEnumerable<Dtos.LedgerActivity>>(new List<Dtos.LedgerActivity>(), page, 0, this.Request);
                     }
                     if ((ledgerActivityFilter.FiscalPeriod != null) && !(string.IsNullOrEmpty(ledgerActivityFilter.FiscalPeriod.Id)))
@@ -102,7 +104,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                     if (!string.IsNullOrEmpty(ledgerActivityFilter.ReportingSegment))
                         reportingSegment = ledgerActivityFilter.ReportingSegment;
                     if (ledgerActivityFilter.TransactionDate.HasValue)
-                        transactionDate = ledgerActivityFilter.TransactionDate.ToString(); 
+                        transactionDate = ledgerActivityFilter.TransactionDate.ToString();
                 }
 
                 if (fiscalYearObj != null && fiscalYearObj.FiscalYear != null)
@@ -143,7 +145,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
-            
+
             catch (RepositoryException e)
             {
                 _logger.Error(e.ToString());
@@ -172,7 +174,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="guid">GUID to desired ledgerActivities</param>
         /// <returns>A ledgerActivities object <see cref="Dtos.LedgerActivity"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(ColleagueFinancePermissionCodes.ViewLedgerActivities)]
         public async Task<Dtos.LedgerActivity> GetLedgerActivitiesByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -190,6 +192,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                _ledgerActivityService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                   await _ledgerActivityService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                   await _ledgerActivityService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),

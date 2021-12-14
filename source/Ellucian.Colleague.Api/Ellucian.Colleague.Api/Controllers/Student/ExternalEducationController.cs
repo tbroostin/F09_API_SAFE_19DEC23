@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Net;
@@ -20,6 +20,7 @@ using Ellucian.Web.Http;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -50,7 +51,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Retrieves all External Education
         /// </summary>
         /// <returns>All <see cref="Dtos.ExternalEducation">External Education.</see></returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(StudentPermissionCodes.ViewExternalEducation)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         [FilteringFilter(IgnoreFiltering = true)]
         [ValidateQueryStringFilter(new string[] { "person" }, false, true)]
@@ -66,6 +67,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }       
            try
             {
+                _externalEducationService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -87,7 +89,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -116,7 +118,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Retrieves an External Education by GUID.
         /// </summary>
         /// <returns>A <see cref="Dtos.ExternalEducation">External Education.</see></returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewExternalEducation)]
         public async Task<Dtos.ExternalEducation> GetExternalEducationByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -130,6 +132,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _externalEducationService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                     await _externalEducationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await _externalEducationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -145,7 +148,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {

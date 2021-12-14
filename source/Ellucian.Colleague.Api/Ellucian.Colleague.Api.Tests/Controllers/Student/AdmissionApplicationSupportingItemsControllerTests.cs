@@ -1,5 +1,6 @@
 ﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -7,15 +8,19 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -253,6 +258,89 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 }
             }
 
+            //Get
+            //Version 12
+            //GetAdmissionApplicationSupportingItemsAsync
+
+            //Example success 
+            [TestMethod]
+            public async Task AdmissionApplicationSupportingItemsController_GetAdmissionApplicationSupportingItemsAsync_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AdmissionApplicationSupportingItems" },
+                    { "action", "GetAdmissionApplicationSupportingItemsAsync" }
+                };
+                HttpRoute route = new HttpRoute("admission-application-supporting-items", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                admissionApplicationSupportingItemsController.Request.SetRouteData(data);
+                admissionApplicationSupportingItemsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.ViewApplicationSupportingItems, StudentPermissionCodes.UpdateApplicationSupportingItems });
+
+                var controllerContext = admissionApplicationSupportingItemsController.ControllerContext;
+                var actionDescriptor = admissionApplicationSupportingItemsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                admissionApplicationSupportingItemsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                admissionApplicationSupportingItemsServiceMock.Setup(a => a.GetAdmissionApplicationSupportingItemsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(admissionApplicationSupportingItemsTuple);
+                var results = await admissionApplicationSupportingItemsController.GetAdmissionApplicationSupportingItemsAsync(new Paging(10, 100));
+
+                Object filterObject;
+                admissionApplicationSupportingItemsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewApplicationSupportingItems));
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.UpdateApplicationSupportingItems));
+
+            }
+
+            //Example exception
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task AdmissionApplicationSupportingItemsController_GetPersonsActiveHoldsAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AdmissionApplicationSupportingItems" },
+                    { "action", "GetAdmissionApplicationSupportingItemsAsync" }
+                };
+                HttpRoute route = new HttpRoute("admission-application-supporting-items", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                admissionApplicationSupportingItemsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = admissionApplicationSupportingItemsController.ControllerContext;
+                var actionDescriptor = admissionApplicationSupportingItemsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    admissionApplicationSupportingItemsServiceMock.Setup(a => a.GetAdmissionApplicationSupportingItemsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                    admissionApplicationSupportingItemsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view admission-application-supporting-items."));
+                    var resp = await admissionApplicationSupportingItemsController.GetAdmissionApplicationSupportingItemsAsync(new Paging(0, 100));
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
             #endregion
 
             #region GETBYID
@@ -331,6 +419,93 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.AreEqual(expected.Status.Detail.Id, actual.Status.Detail.Id);
                 Assert.AreEqual(expected.Application.Id, actual.Application.Id);
             }
+
+
+            //Get by Id
+            //Version 12
+            //GetAdmissionApplicationSupportingItemsByGuidAsync
+
+            //Example success 
+            [TestMethod]
+            public async Task AdmissionApplicationSupportingItemsController_GetAdmissionApplicationSupportingItemsByGuidAsync_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AdmissionApplicationSupportingItems" },
+                    { "action", "GetAdmissionApplicationSupportingItemsByGuidAsync" }
+                };
+                HttpRoute route = new HttpRoute("admission-application-supporting-items", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                admissionApplicationSupportingItemsController.Request.SetRouteData(data);
+                admissionApplicationSupportingItemsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.ViewApplicationSupportingItems, StudentPermissionCodes.UpdateApplicationSupportingItems });
+
+                var controllerContext = admissionApplicationSupportingItemsController.ControllerContext;
+                var actionDescriptor = admissionApplicationSupportingItemsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                admissionApplicationSupportingItemsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                admissionApplicationSupportingItemsServiceMock.Setup(a => a.GetAdmissionApplicationSupportingItemsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(admissionApplicationSupportingItemsCollection.FirstOrDefault()); 
+                var resp = await admissionApplicationSupportingItemsController.GetAdmissionApplicationSupportingItemsByGuidAsync(guid);
+
+                Object filterObject;
+                admissionApplicationSupportingItemsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewApplicationSupportingItems));
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.UpdateApplicationSupportingItems));
+
+            }
+
+            //Example exception
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task AdmissionApplicationSupportingItemsController_GetAdmissionApplicationSupportingItemsByGuidAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AdmissionApplicationSupportingItems" },
+                    { "action", "GetAdmissionApplicationSupportingItemsAsync" }
+                };
+                HttpRoute route = new HttpRoute("admission-application-supporting-items", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                admissionApplicationSupportingItemsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = admissionApplicationSupportingItemsController.ControllerContext;
+                var actionDescriptor = admissionApplicationSupportingItemsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    admissionApplicationSupportingItemsServiceMock.Setup(a => a.GetAdmissionApplicationSupportingItemsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                    admissionApplicationSupportingItemsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view admission-application-supporting-items."));
+                    var resp = await admissionApplicationSupportingItemsController.GetAdmissionApplicationSupportingItemsByGuidAsync(guid);
+
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
+
 
             #endregion
 
@@ -501,6 +676,92 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
 
+            //Post
+            //Version 12
+            //PostAdmissionApplicationSupportingItemsAsync
+
+            //Example success 
+            [TestMethod]
+            public async Task AdmissionApplicationSupportingItemsController_PostAdmissionApplicationSupportingItemsAsync_Permissions()
+            {
+                admissionApplicationSupportingItems.Id = Guid.Empty.ToString();
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AdmissionApplicationSupportingItems" },
+                    { "action", "PostAdmissionApplicationSupportingItemsAsync" }
+                };
+                HttpRoute route = new HttpRoute("admission-application-supporting-items", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                admissionApplicationSupportingItemsController.Request.SetRouteData(data);
+                admissionApplicationSupportingItemsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.ViewApplicationSupportingItems, StudentPermissionCodes.UpdateApplicationSupportingItems });
+
+                var controllerContext = admissionApplicationSupportingItemsController.ControllerContext;
+                var actionDescriptor = admissionApplicationSupportingItemsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                admissionApplicationSupportingItemsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                admissionApplicationSupportingItemsServiceMock.Setup(x => x.CreateAdmissionApplicationSupportingItemsAsync(It.IsAny<AdmissionApplicationSupportingItems>())).ReturnsAsync(admissionApplicationSupportingItems);
+
+                var result = await admissionApplicationSupportingItemsController.PostAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+
+                Object filterObject;
+                admissionApplicationSupportingItemsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewApplicationSupportingItems));
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.UpdateApplicationSupportingItems));
+                
+            }
+
+            //Example exception
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task AdmissionApplicationSupportingItemsController_PostAdmissionApplicationSupportingItemsAsync_Invalid_Permissions()
+            {
+                admissionApplicationSupportingItems.Id = "11182180-b897-46f3-8435-df25caaca920";
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AdmissionApplicationSupportingItems" },
+                    { "action", "PostAdmissionApplicationSupportingItemsAsync" }
+                };
+                HttpRoute route = new HttpRoute("admission-application-supporting-items", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                admissionApplicationSupportingItemsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = admissionApplicationSupportingItemsController.ControllerContext;
+                var actionDescriptor = admissionApplicationSupportingItemsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    admissionApplicationSupportingItemsServiceMock.Setup(x => x.CreateAdmissionApplicationSupportingItemsAsync(It.IsAny<AdmissionApplicationSupportingItems>())).ThrowsAsync(new PermissionsException());
+                    admissionApplicationSupportingItemsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to create admission-application-supporting-items."));
+                    var resp = await admissionApplicationSupportingItemsController.PostAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
             #endregion
 
             #region PUT
@@ -610,6 +871,93 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 Assert.IsNotNull(result);
                 Assert.AreEqual(result.Id, admissionApplicationSupportingItems.Id);
+            }
+
+
+
+            //Put
+            //Version 12
+            //PutAdmissionApplicationSupportingItemsAsync
+
+            //Example success 
+            [TestMethod]
+            public async Task AdmissionApplicationSupportingItemsController_PutAdmissionApplicationSupportingItemsAsync_Permissions()
+            {
+                admissionApplicationSupportingItems.Id = "11182180-b897-46f3-8435-df25caaca920";
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AdmissionApplicationSupportingItems" },
+                    { "action", "PutAdmissionApplicationSupportingItemsAsync" }
+                };
+                HttpRoute route = new HttpRoute("admission-application-supporting-items", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                admissionApplicationSupportingItemsController.Request.SetRouteData(data);
+                admissionApplicationSupportingItemsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.ViewApplicationSupportingItems, StudentPermissionCodes.UpdateApplicationSupportingItems });
+
+                var controllerContext = admissionApplicationSupportingItemsController.ControllerContext;
+                var actionDescriptor = admissionApplicationSupportingItemsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                admissionApplicationSupportingItemsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                admissionApplicationSupportingItemsServiceMock.Setup(x => x.UpdateAdmissionApplicationSupportingItemsAsync(It.IsAny<AdmissionApplicationSupportingItems>())).ReturnsAsync(admissionApplicationSupportingItems);
+
+                var result = await admissionApplicationSupportingItemsController.PutAdmissionApplicationSupportingItemsAsync(guid, admissionApplicationSupportingItems); ;
+
+                Object filterObject;
+                admissionApplicationSupportingItemsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewApplicationSupportingItems));
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.UpdateApplicationSupportingItems));
+                
+            }
+
+            //Example exception
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task AdmissionApplicationSupportingItemsController_PutAdmissionApplicationSupportingItemsAsync_Invalid_Permissions()
+            {
+                admissionApplicationSupportingItems.Id = "11182180-b897-46f3-8435-df25caaca920";
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AdmissionApplicationSupportingItems" },
+                    { "action", "PutAdmissionApplicationSupportingItemsAsync" }
+                };
+                HttpRoute route = new HttpRoute("admission-application-supporting-items", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                admissionApplicationSupportingItemsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = admissionApplicationSupportingItemsController.ControllerContext;
+                var actionDescriptor = admissionApplicationSupportingItemsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    admissionApplicationSupportingItemsServiceMock.Setup(x => x.UpdateAdmissionApplicationSupportingItemsAsync(It.IsAny<AdmissionApplicationSupportingItems>())).ThrowsAsync(new PermissionsException());
+                    admissionApplicationSupportingItemsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to update admission-application-supporting-items."));
+                    var resp = await admissionApplicationSupportingItemsController.PutAdmissionApplicationSupportingItemsAsync(guid, admissionApplicationSupportingItems);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
             }
 
             #endregion

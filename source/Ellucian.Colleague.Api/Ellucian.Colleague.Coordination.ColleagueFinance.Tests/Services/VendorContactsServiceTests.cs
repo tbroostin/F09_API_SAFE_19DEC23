@@ -1,4 +1,4 @@
-﻿//Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
@@ -578,7 +578,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             public async Task VendorContactsService_GetVendorContactsByGuidAsync_EmptyVendorGuids()
             {
 
-                _vendorsRepositoryMock.Setup(vrm => vrm.GetVendorGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(null);
+                _vendorsRepositoryMock.Setup(vrm => vrm.GetVendorGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(() => null);
 
                 var organizationContact = organizationContactTuple.Item1.FirstOrDefault();
 
@@ -621,15 +621,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(IntegrationApiException))]
-            public async Task VendorContactsService_GetVendorContactsAsync_PermissionsException()
-            {
-                _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
-                _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+            //[TestMethod]
+            //[ExpectedException(typeof(IntegrationApiException))]
+            //public async Task VendorContactsService_GetVendorContactsAsync_PermissionsException()
+            //{
+            //    _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
+            //    _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
 
-                await _vendorContactsRequestsService.GetVendorContactsAsync(offset, limit, null, true);
-            }
+            //    await _vendorContactsRequestsService.GetVendorContactsAsync(offset, limit, null, true);
+            //}
 
             [TestMethod]
             public async Task CreateVendorContactInitiationProcessAsync_VendorContact()

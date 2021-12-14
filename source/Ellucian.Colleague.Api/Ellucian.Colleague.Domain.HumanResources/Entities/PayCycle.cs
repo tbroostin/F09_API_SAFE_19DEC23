@@ -1,9 +1,6 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Domain.HumanResources.Entities
 {
@@ -27,7 +24,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         public DayOfWeek WorkWeekStartDay { get; set; }
 
         /// <summary>
-        /// The pay cycle description
+        /// The pay cycle description: Self-Service description if present,
+        /// otherwise, default
         /// </summary>
         public string Description {
             get { return description; } 
@@ -52,6 +50,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// List of pay period date ranges associated with the pay cycle
         /// </summary>
         public List<PayPeriod> PayPeriods { get; set; }
+
+        /// <summary>
+        /// Flag indicating whether to display this pay cycle in Self-Service
+        /// </summary>
+        public bool DisplayInSelfService { get; set; }
 
         /// <summary>
         /// PayCycle constructor

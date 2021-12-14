@@ -46,6 +46,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             private InstantEnrollmentController IeController;
             private Mock<IInstantEnrollmentService> IeServiceMock;
+            private Mock<ICourseService> courseServiceMock;
             private Mock<ILogger> loggerMock;
             private Dtos.Student.InstantEnrollment.InstantEnrollmentStartPaymentGatewayRegistrationResult IeStartPGResult;
             private Dtos.Student.InstantEnrollment.InstantEnrollmentPaymentGatewayRegistration GoodDto;
@@ -57,8 +58,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
 
                 loggerMock = new Mock<ILogger>();
+                courseServiceMock = new Mock<ICourseService>();
                 IeServiceMock = new Mock<IInstantEnrollmentService>();
-                IeController = new InstantEnrollmentController(IeServiceMock.Object, loggerMock.Object);
+                IeController = new InstantEnrollmentController(courseServiceMock.Object, IeServiceMock.Object, loggerMock.Object);
 
                 GoodDto = new Dtos.Student.InstantEnrollment.InstantEnrollmentPaymentGatewayRegistration();
                 GoodDto.ProposedSections = new List<Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseSectionToRegister>();
@@ -197,6 +199,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             private InstantEnrollmentController _ieController;
             private Mock<IInstantEnrollmentService> _ieServiceMock;
+            private Mock<ICourseService> _courseServiceMock;
             private Mock<ILogger> _loggerMock;
             private Dtos.Student.InstantEnrollment.InstantEnrollmentZeroCostRegistration _zeroCostRegistration;
             private Dtos.Student.InstantEnrollment.InstantEnrollmentZeroCostRegistrationResult _zeroCostRegistrationResult;
@@ -208,8 +211,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
 
                 _loggerMock = new Mock<ILogger>();
+                _courseServiceMock = new Mock<ICourseService>();
                 _ieServiceMock = new Mock<IInstantEnrollmentService>();
-                _ieController = new InstantEnrollmentController(_ieServiceMock.Object, _loggerMock.Object);
+                _ieController = new InstantEnrollmentController(_courseServiceMock.Object,_ieServiceMock.Object, _loggerMock.Object);
 
                 _zeroCostRegistration = new Dtos.Student.InstantEnrollment.InstantEnrollmentZeroCostRegistration();
                 _zeroCostRegistration.ProposedSections = new List<Dtos.Student.InstantEnrollment.InstantEnrollmentRegistrationBaseSectionToRegister>();
@@ -370,6 +374,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             private InstantEnrollmentController ieController;
             private Mock<IInstantEnrollmentService> ieServiceMock;
+            private Mock<ICourseService> courseServiceMock;
             private Mock<ILogger> loggerMock;
 
             [TestInitialize]
@@ -379,8 +384,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
 
                 loggerMock = new Mock<ILogger>();
+                courseServiceMock = new Mock<ICourseService>();
                 ieServiceMock = new Mock<IInstantEnrollmentService>();
-                ieController = new InstantEnrollmentController(ieServiceMock.Object, loggerMock.Object);
+                ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
             }
 
             [TestMethod]
@@ -401,7 +407,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     CashReceiptId = "123",
                     PersonId = "0001234"
                 };
-                ieController = new InstantEnrollmentController(ieServiceMock.Object, loggerMock.Object);
+                ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
 
                 var text = await ieController.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
             }
@@ -417,7 +423,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     CashReceiptId = "123",
                     PersonId = "0001234"
                 };
-                ieController = new InstantEnrollmentController(ieServiceMock.Object, loggerMock.Object);
+                ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
 
                 var text = await ieController.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
             }
@@ -437,7 +443,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     CashReceiptId = "123",
                     PersonId = "0001234"
                 };
-                ieController = new InstantEnrollmentController(ieServiceMock.Object, loggerMock.Object);
+                ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
 
                 var text = await ieController.GetInstantEnrollmentPaymentAcknowledgementParagraphTextAsync(request);
                 CollectionAssert.AreEqual(response, text.ToList());
@@ -450,6 +456,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         public class QueryPersonMatchResultsInstantEnrollmentByPostAsyncTests
         {
             private Mock<IInstantEnrollmentService> _ieServiceMock;
+            private Mock<ICourseService> _courseServiceMock;
             private InstantEnrollmentController _ieController;
             ILogger logger = new Mock<ILogger>().Object;
 
@@ -482,8 +489,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
 
                 _ieServiceMock = new Mock<IInstantEnrollmentService>();
-
-                _ieController = new InstantEnrollmentController(_ieServiceMock.Object, logger);
+                _courseServiceMock = new Mock<ICourseService>();
+            _ieController = new InstantEnrollmentController(_courseServiceMock.Object,_ieServiceMock.Object, logger);
 
             }
 
@@ -556,6 +563,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             private InstantEnrollmentController ieController;
             private Mock<IInstantEnrollmentService> ieServiceMock;
+            private Mock<ICourseService> courseServiceMock;
             private Mock<ILogger> loggerMock;
 
             [TestInitialize]
@@ -565,8 +573,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
 
                 loggerMock = new Mock<ILogger>();
+                courseServiceMock = new Mock<ICourseService>();
                 ieServiceMock = new Mock<IInstantEnrollmentService>();
-                ieController = new InstantEnrollmentController(ieServiceMock.Object, loggerMock.Object);
+                ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
             }
 
             [TestMethod]
@@ -588,7 +597,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     CashReceiptId = "123",
                     PersonId = ""
                 };
-                ieController = new InstantEnrollmentController(ieServiceMock.Object, loggerMock.Object);
+                ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
 
                 await ieController.GetInstantEnrollmentCashReceiptAcknowledgementAsync(request);
             }
@@ -605,7 +614,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     CashReceiptId = "",
                     PersonId = ""
                 };
-                ieController = new InstantEnrollmentController(ieServiceMock.Object, loggerMock.Object);
+                ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
 
                 await ieController.GetInstantEnrollmentCashReceiptAcknowledgementAsync(request);
             }
@@ -651,7 +660,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     CashReceiptId = "123",
                     PersonId = ""
                 };
-                ieController = new InstantEnrollmentController(ieServiceMock.Object, loggerMock.Object);
+                ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
 
                 var cashReceiptAcknowledgement = await ieController.GetInstantEnrollmentCashReceiptAcknowledgementAsync(request);
 
@@ -717,7 +726,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     CashReceiptId = "",
                     PersonId = ""
                 };
-                ieController = new InstantEnrollmentController(ieServiceMock.Object, loggerMock.Object);
+                ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
 
                 var cashReceiptAcknowledgement = await ieController.GetInstantEnrollmentCashReceiptAcknowledgementAsync(request);
 
@@ -765,6 +774,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             private InstantEnrollmentController ieController;
             private Mock<IInstantEnrollmentService> ieServiceMock;
+            private Mock<ICourseService> courseServiceMock;
             private Mock<ILogger> loggerMock;
 
             private IEnumerable<StudentProgram> sprog;
@@ -777,7 +787,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 loggerMock = new Mock<ILogger>();
                 ieServiceMock = new Mock<IInstantEnrollmentService>();
-                ieController = new InstantEnrollmentController(ieServiceMock.Object, loggerMock.Object);
+                courseServiceMock = new Mock<ICourseService>();
+                ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
             }
 
             [TestMethod]
@@ -800,7 +811,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             {
 
                 ieServiceMock.Setup(svc => svc.GetInstantEnrollmentStudentPrograms2Async(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
-                ieController = new InstantEnrollmentController(ieServiceMock.Object, loggerMock.Object);
+                ieController = new InstantEnrollmentController(courseServiceMock.Object, ieServiceMock.Object, loggerMock.Object);
                 await ieController.GetInstantEnrollmentStudentPrograms2Async("0001", true);
             }
         }

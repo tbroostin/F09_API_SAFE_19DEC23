@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Dtos.BudgetManagement;
 using Ellucian.Rest.Client.Exceptions;
 using Ellucian.Web.Utility;
@@ -27,6 +27,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<BudgetConfiguration>(await response.Content.ReadAsStringAsync());
@@ -63,6 +64,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<WorkingBudget>(await response.Content.ReadAsStringAsync());
@@ -106,6 +108,7 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
 
                 // Use URL path and request data to call the web api method (including query string)
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<WorkingBudget>(await response.Content.ReadAsStringAsync());
@@ -148,6 +151,7 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
 
                 // Use URL path and request data to call the web api method (including query string)
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<WorkingBudget2>(await response.Content.ReadAsStringAsync());
@@ -181,6 +185,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePutRequestWithResponseAsync(budgetLineItems, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<List<BudgetLineItem>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -207,6 +212,7 @@ namespace Ellucian.Colleague.Api.Client
                 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<BudgetOfficer>>(await response.Content.ReadAsStringAsync());
@@ -235,6 +241,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(combinedUrl, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<BudgetReportingUnit>>(await response.Content.ReadAsStringAsync());

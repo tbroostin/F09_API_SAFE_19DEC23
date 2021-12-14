@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -19,6 +19,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         public PayrollRegisterEarningsEntry payrollRegisterEarningsEntry;
         public List<Position> positions;
         public PayStatementReferenceDataUtility referenceUtility;
+        public bool isAdj;
 
         [TestInitialize]
         public void Initialize()
@@ -55,7 +56,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 PreviousYearsCount = 5
             };  
            
-            payrollRegisterEarningsEntry = new PayrollRegisterEarningsEntry("REG", 1000, 1000, 0, 40, 20, HourlySalaryIndicator.Hourly);
+            payrollRegisterEarningsEntry = new PayrollRegisterEarningsEntry("REG", 1000, 1000, 0, 40, 20, HourlySalaryIndicator.Hourly, isAdj);
 
             referenceUtility = new PayStatementReferenceDataUtility(earningsTypes, earningsDifferentials, taxCodes, benefitDeductionTypes, leaveTypes, positions, payStatementConfiguration);
         }

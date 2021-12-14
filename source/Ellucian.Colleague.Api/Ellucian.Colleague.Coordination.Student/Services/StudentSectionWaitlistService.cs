@@ -18,6 +18,7 @@ using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -48,20 +49,27 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Collection of StudentSectionWaitlists DTO objects</returns>
         public async Task<Tuple<IEnumerable<Dtos.StudentSectionWaitlist>, int>> GetStudentSectionWaitlistsAsync(int offset, int limit, bool bypassCache = false)
         {
-            CheckStudentSectionWaitlistPermission();
-            var studentSectionWaitlistsCollection = new List<Ellucian.Colleague.Dtos.StudentSectionWaitlist>();
-            var returnedEntitiesTuple = await _sectionRepository.GetWaitlistsAsync(offset, limit);
-
-            if (returnedEntitiesTuple.Item1 != null)
+            try
             {
+                var studentSectionWaitlistsCollection = new List<Ellucian.Colleague.Dtos.StudentSectionWaitlist>();
+                var returnedEntitiesTuple = await _sectionRepository.GetWaitlistsAsync(offset, limit);
 
-                foreach (var wl in returnedEntitiesTuple.Item1)
+                if (returnedEntitiesTuple.Item1 != null)
                 {
-                    studentSectionWaitlistsCollection.Add(ConvertStudentSectionWaitlistsEntityToDto(wl));
-                }
 
+                    foreach (var wl in returnedEntitiesTuple.Item1)
+                    {
+                        studentSectionWaitlistsCollection.Add(ConvertStudentSectionWaitlistsEntityToDto(wl));
+                    }
+
+                }
+                return new Tuple<IEnumerable<Dtos.StudentSectionWaitlist>, int>(studentSectionWaitlistsCollection, returnedEntitiesTuple.Item2);
             }
-            return new Tuple<IEnumerable<Dtos.StudentSectionWaitlist>, int>(studentSectionWaitlistsCollection, returnedEntitiesTuple.Item2);
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -76,7 +84,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new ArgumentException("Guid argument is required");
             }
-            CheckStudentSectionWaitlistPermission();
             try
             {
                 var waitEntity = await _sectionRepository.GetWaitlistFromGuidAsync(guid);
@@ -86,6 +93,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 }
                 return ConvertStudentSectionWaitlistsEntityToDto(waitEntity);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
             }
             catch (KeyNotFoundException ex)
             {
@@ -109,24 +121,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             waitListDto.Priority = source.Priority;
             waitListDto.Id = source.Guid;
             return waitListDto;
-        }
-
-        /// <summary>
-        /// Helper method to determine if the user has permission to view student-section-waitlists
-        /// </summary>
-        /// <permission cref="StudentPermissionCodes.ViewStudentSectionWaitlist"></permission>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckStudentSectionWaitlistPermission()
-        {
-            bool hasSectionPermission = HasPermission(StudentPermissionCodes.ViewStudentSectionWaitlist);
-
-            // User is not allowed to create or update sections without the appropriate permissions
-            if (!hasSectionPermission)
-            {
-                var message = "User " + CurrentUser.UserId + " does not have permission to view waitlists.";
-                logger.Error(message);
-                throw new PermissionsException(message);
-            }
         }
     }
 }

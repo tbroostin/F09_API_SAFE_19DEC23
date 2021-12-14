@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Web.Adapters;
@@ -10,7 +10,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Colleague.Domain.Base.Repositories;
 using System;
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Dtos.EnumProperties;
@@ -277,6 +276,16 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 referenceRepositoryMock.Setup(i => i.GetVocationsAsync(It.IsAny<bool>())).ReturnsAsync(_employmentVocations);
 
                 personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(personGuids.FirstOrDefault().Value);
+
+                var personGuidDictionary = new Dictionary<string, string>() { };
+                personGuidDictionary.Add("1", "1dd56e2d-9b99-4a5b-ab84-55131a31f2e3");
+                personGuidDictionary.Add("2", "a7cbdbbe-131e-4b91-9c99-d9b65c41f1c8");
+                personGuidDictionary.Add("3", "ae91ddf9-0b25-4008-97c5-76ac5fe570a3");
+                personGuidDictionary.Add("4", "9we1ddf9-0b25-4008-97c5-76ac5fe570a3");
+                personGuidDictionary.Add("ORG1", "149195b8-fe43-4538-aa90-16fbe240a2d5");
+
+                personRepositoryMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>()))
+                    .ReturnsAsync(personGuidDictionary);
             }
 
             [TestMethod]

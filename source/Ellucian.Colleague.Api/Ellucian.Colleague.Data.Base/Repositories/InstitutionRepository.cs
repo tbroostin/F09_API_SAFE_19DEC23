@@ -46,7 +46,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="limit"></param>
         /// <param name="instType"></param>
         /// <returns></returns>
-        public async Task<Tuple<IEnumerable<Institution>, int>> GetInstitutionAsync(int offset, int limit, InstType? instType = null)
+        public async Task<Tuple<IEnumerable<Institution>, int>> GetInstitutionAsync(int offset, int limit, InstType? instType = null,
+             List<Tuple<string, string>> creds = null)
         {
             List<Institution> institutions = new List<Institution>();
             int totalCount = 0;
@@ -115,9 +116,40 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         criteria = "WITH INST.TYPE EQ " + typeCriteria;
                     }
 
+                    var colleaguePersonIds = new List<string>();
+
+                    if (creds != null)
+                    {
+                        foreach (var cred in creds)
+                        {
+                            if (cred.Item1.ToLowerInvariant() == "colleaguepersonid")
+                            {
+                                colleaguePersonIds = new List<string>();
+                                // to address issue if there is single quote around ColleagueId
+                                var personId = cred.Item2;
+                                if (personId.Contains("'"))
+                                {
+                                    personId = personId.Replace("'", string.Empty);
+                                }
+                                var ids = await DataReader.SelectAsync("PERSON", new string[] { personId }, string.Empty);
+                                if (ids == null || !ids.Any())
+                                {
+                                    return new CacheSupport.KeyCacheRequirements()
+                                    {
+                                        NoQualifyingRecords = true
+                                    };
+                                }
+                                else
+                                {
+                                    colleaguePersonIds.AddRange(ids);
+                                }
+                            }
+                        }
+                    }
                     return new CacheSupport.KeyCacheRequirements()
                     {
-                        criteria = criteria.ToString()
+                        criteria = criteria.ToString(),
+                        limitingKeys = colleaguePersonIds
                     };
                 });
 
@@ -679,7 +711,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                     catch (Exception exception)
                     {
-                        logger.Error(exception, string.Format("Could not load email address for person id '{0}' with GUID '{1}'", personData.Recordkey, personData.RecordGuid));
+                       // do not log error
+                        //logger.Error(exception, string.Format("Could not load email address for person id '{0}' with GUID '{1}'", personData.Recordkey, personData.RecordGuid));
                     }
                 }
             }

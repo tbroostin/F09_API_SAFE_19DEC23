@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
 
 namespace Ellucian.Web.Http.EthosExtend
 {
@@ -15,6 +16,11 @@ namespace Ellucian.Web.Http.EthosExtend
         /// Name of the resource (api)
         /// </summary>
         public string ResourceName { get; set; }
+
+        /// <summary>
+        /// Name of the parent resource (used for alternative representations)
+        /// </summary>
+        public string ParentName { get; set; }
 
         /// <summary>
         /// Version Number for the resource
@@ -34,7 +40,7 @@ namespace Ellucian.Web.Http.EthosExtend
         /// <summary>
         /// Extended Filters from URI
         /// </summary>
-        public Dictionary<string, List<string>> ExtendedFilterDefinitions { get; set; }
+        public Dictionary<string, Tuple<List<string>, string>> ExtendedFilterDefinitions { get; set; }
 
         /// <summary>
         /// Bulk representation version
@@ -51,10 +57,11 @@ namespace Ellucian.Web.Http.EthosExtend
         /// spec driven APIs.
         /// </summary>
         public bool ReportEthosExtendedErrors { get; set; }
+        public HttpMethod RequestMethod { get; set; }
 
         public EthosResourceRouteInfo()
         {
-            ExtendedFilterDefinitions = new Dictionary<string, List<string>>();
+            ExtendedFilterDefinitions = new Dictionary<string, Tuple<List<string>, string>> ();
             ReportEthosExtendedErrors = false;
         }
     }

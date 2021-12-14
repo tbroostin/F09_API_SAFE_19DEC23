@@ -48,7 +48,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             IEnumerable<StudentAdvisement> studentAdvisementsData;
             List<StudentAdvisorRelationship> studentAdvisorRelationshipsEntities = new List<StudentAdvisorRelationship>();
-            //Tuple<IEnumerable<StudentAdvisorRelationship>, int> emptySet = new Tuple<IEnumerable<StudentAdvisorRelationship>, int>(new List<StudentAdvisorRelationship>(), 0);
+
             var totalCount = 0;
             List<string> limitingKeys = new List<string>();
             var criteria = "WITH STAD.STUDENT NE '' AND WITH STAD.FACULTY NE '' AND STAD.START.DATE NE ''";
@@ -69,7 +69,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                    AllStudentAdvisorsCacheTimeout,
                    async () =>
                    {
-                       string[] keys = null;
                        List<string> stLimitingKeys = new List<string>();
                        List<string> advLimitingKeys = new List<string>();
                        if (!string.IsNullOrWhiteSpace(student))
@@ -110,21 +109,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                            limitingKeys = advLimitingKeys;
                        }
 
-                       if (limitingKeys != null && limitingKeys.Any())
-                       {
-                           limitingKeys = limitingKeys.Distinct().ToList();
-                       }
-
-                       keys = await DataReader.SelectAsync("STUDENT.ADVISEMENT", limitingKeys.ToArray(), criteria);
-
-                       if(keys == null || !keys.Any())
-                       {
-                           return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                       }
-
                        return new CacheSupport.KeyCacheRequirements()
                        {
-                           limitingKeys = keys != null && keys.Any() ? keys.Distinct().ToList() : null,
+                           limitingKeys = limitingKeys != null && limitingKeys.Any() ? limitingKeys.Distinct().ToList() : null,
                            criteria = criteria,
                        };
                    });
@@ -142,25 +129,22 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                 if (studentAdvisementsData == null)
                 {
-                    exception.AddError(new RepositoryError("Bad.Data", "No records selected from STUDENT.ADVISEMENT file in Colleague."));
-                    throw exception;
+                    return new Tuple<IEnumerable<StudentAdvisorRelationship>, int>(new List<StudentAdvisorRelationship>(), 0);
                 }
-                // Build the entities
-                foreach (var studentAdvisement in studentAdvisementsData)
+                else
                 {
-                    try
+                    // Build the entities
+                    foreach (var studentAdvisement in studentAdvisementsData)
                     {
-                        studentAdvisorRelationshipsEntities.Add(BuildStudentAdvisorRelationship(studentAdvisement));
+                        try
+                        {
+                            studentAdvisorRelationshipsEntities.Add(BuildStudentAdvisorRelationship(studentAdvisement));
+                        }
+                        catch (Exception e)
+                        {
+                            exception.AddError(new RepositoryError("Bad.Data", e.Message));
+                        }
                     }
-                    catch (Exception e)
-                    {
-                        exception.AddError(new RepositoryError("Bad.Data", e.Message));
-                    }
-                }
-
-                if (exception != null && exception.Errors != null && exception.Errors.Any())
-                {
-                    throw exception;
                 }
             }
             catch (RepositoryException ex)
@@ -170,6 +154,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             catch (Exception e)
             {
                 exception.AddError(new RepositoryError("Bad.Data", e.Message));
+            }
+
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
                 throw exception;
             }
 
@@ -244,6 +232,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 StudentAdvisorRelationshipsEntity.Add(BuildStudentAdvisorRelationship(studentAdvisement));
             }
 
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+
             return new Tuple<IEnumerable<StudentAdvisorRelationship>, int>(StudentAdvisorRelationshipsEntity.AsEnumerable(), totalCount);
 
         }
@@ -255,7 +248,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns></returns>
         public async Task<StudentAdvisorRelationship> GetStudentAdvisorRelationshipsByGuidAsync(string guid)
         {
-           
+            StudentAdvisorRelationship studentAdvisorRelationshipEntity = null;
             try
             {
                 //tranlate the GUID to a valid ID
@@ -265,7 +258,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     throw new KeyNotFoundException(string.Concat("Id not found for Student Advisement guid:", guid));
                 }
                 //Parse the ID to the Entity
-                return await GetStudentAdvisementAsync(id);
+                studentAdvisorRelationshipEntity = await GetStudentAdvisementAsync(id);
             }
             catch (ArgumentNullException e)
             {
@@ -293,7 +286,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 logger.Error(e.Message);
                 throw new KeyNotFoundException("STUDENT.ADVISEMENT GUID " + guid + " lookup failed.");
             }
-            
+
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+
+            return studentAdvisorRelationshipEntity;
         }
 
         /// <summary>
@@ -325,7 +324,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (foundEntry.Value.Entity != "STUDENT.ADVISEMENT")
             {
                 //GUID record was not from a STUDENT.ADVISEMENT record
-                throw new RepositoryException("GUID used '" + guid + "' is for a different entity in colleague, it is for" + foundEntry.Value.Entity + ". We need the entity to be STUDENT.ADVISEMENT");
+                exception.AddError(new RepositoryError("GUID.Wrong.Type", "GUID used '" + guid + "' is for a different entity in colleague, it is for " + foundEntry.Value.Entity + ". We need the entity to be STUDENT.ADVISEMENT")
+                {
+                    Id = guid
+                });
             }
 
             return foundEntry.Value.PrimaryKey;
@@ -359,14 +361,61 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns></returns>
         private StudentAdvisorRelationship BuildStudentAdvisorRelationship(StudentAdvisement studentAdvisement)
         {
-            StudentAdvisorRelationship sar = new StudentAdvisorRelationship(studentAdvisement.Recordkey, studentAdvisement.RecordGuid, 
-                studentAdvisement.StadFaculty, studentAdvisement.StadStudent, studentAdvisement.StadStartDate)
+            try
             {
-                AdvisorType = studentAdvisement.StadType,
-                Program = studentAdvisement.StadAcadProgram,
-                EndOn = studentAdvisement.StadEndDate
-            };
-            return sar;
+                StudentAdvisorRelationship sar = new StudentAdvisorRelationship(studentAdvisement.Recordkey, studentAdvisement.RecordGuid,
+                    studentAdvisement.StadFaculty, studentAdvisement.StadStudent, studentAdvisement.StadStartDate)
+                {
+                    AdvisorType = studentAdvisement.StadType,
+                    Program = studentAdvisement.StadAcadProgram,
+                    EndOn = studentAdvisement.StadEndDate
+                };
+                return sar;
+            }
+            catch (Exception)
+            {
+                if (studentAdvisement == null || string.IsNullOrEmpty(studentAdvisement.Recordkey))
+                {
+                    exception.AddError(new RepositoryError("Bad.Data", "Unable to read STUDENT.ADVISEMENT record"));
+                }
+                else
+                {
+                    if (string.IsNullOrEmpty(studentAdvisement.RecordGuid))
+                    {
+                        exception.AddError(new RepositoryError("Bad.Data", string.Format("The GUID is missing for STUDENT.ADVISEMENT '{0}'", studentAdvisement.Recordkey))
+                        {
+                            SourceId = studentAdvisement.Recordkey,
+                            Id = studentAdvisement.RecordGuid
+                        });
+                    }
+                    if (string.IsNullOrEmpty(studentAdvisement.StadFaculty))
+                    {
+                        exception.AddError(new RepositoryError("Bad.Data", string.Format("STAD.FACULTY is missing for STUDENT.ADVISEMENT '{0}'", studentAdvisement.Recordkey))
+                        {
+                            SourceId = studentAdvisement.Recordkey,
+                            Id = studentAdvisement.RecordGuid
+                        });
+                    }
+                    if (string.IsNullOrEmpty(studentAdvisement.StadStudent))
+                    {
+                        exception.AddError(new RepositoryError("Bad.Data", string.Format("STAD.STUDENT is missing for STUDENT.ADVISEMENT '{0}'", studentAdvisement.Recordkey))
+                        {
+                            SourceId = studentAdvisement.Recordkey,
+                            Id = studentAdvisement.RecordGuid
+                        });
+                    }
+                    if (studentAdvisement.StadStartDate == null || !studentAdvisement.StadStartDate.HasValue)
+                    {
+                        exception.AddError(new RepositoryError("Bad.Data", string.Format("STAD.START.DATE is missing for STUDENT.ADVISEMENT '{0}'", studentAdvisement.Recordkey))
+                        {
+                            SourceId = studentAdvisement.Recordkey,
+                            Id = studentAdvisement.RecordGuid
+                        });
+                    }
+                }
+            }
+
+            return null;
         }
     }
 }

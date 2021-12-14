@@ -22,6 +22,11 @@ using Ellucian.Web.Http.Models;
 using System.Reflection;
 using Ellucian.Colleague.Dtos.Attributes;
 using Newtonsoft.Json;
+using System.Web.Http.Routing;
+using System.Collections;
+using System.Web.Http.Controllers;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -288,7 +293,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
         }
 
-
         [TestMethod]
         public void AdmissionDecisionsController_DecidedOn_SupportedFilterOperators()
         {
@@ -333,7 +337,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             Assert.IsFalse(expected.Value.Contains("$ne"), "Contains $ne");
 
         }
-
         
         [TestMethod]
         public async Task AdmissionDecisionsController_GetById()
@@ -404,7 +407,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             var actual = await admissionDecisionsController.GetAdmissionDecisionsByGuidAsync(It.IsAny<string>());
         }
-
       
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
@@ -467,8 +469,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         [ExpectedException(typeof(HttpResponseException))]
         public async Task AdmissionDecisionsController_GetAdmissionDecisionsByGuid_PermissionsException()
         {
-            admissionDecisionsServiceMock.Setup(x => x.GetAdmissionDecisionsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>()))
-                .Throws<PermissionsException>();
+            admissionDecisionsServiceMock.Setup(x => x.GetAdmissionDecisionsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
             await admissionDecisionsController.GetAdmissionDecisionsByGuidAsync(expectedGuid);
         }
 
@@ -643,5 +644,265 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             admissionDecisionsServiceMock.Setup(i => i.CreateAdmissionDecisionAsync(It.IsAny<Dtos.AdmissionDecisions>())).ThrowsAsync(new Exception());
             await admissionDecisionsController.PostAdmissionDecisionsAsync(admissionDecisionDTO);
         }
+
+        // Permissions tests
+
+        //Get
+        //Version 11 / 11.1.0
+        //GetAdmissionDecisionsAsync
+
+        //Example success 
+        [TestMethod]
+        public async Task AdmissionDecisionsController_GetAdmissionDecisionsAsync_Permissions()
+        {
+            Ellucian.Web.Http.Models.QueryStringFilter criteriaFilter = new Web.Http.Models.QueryStringFilter("criteria", "");
+            Ellucian.Web.Http.Models.QueryStringFilter personFilter = new Web.Http.Models.QueryStringFilter("personFilter", "");
+
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AdmissionDecisions" },
+                    { "action", "GetAdmissionDecisionsAsync" }
+                };
+            HttpRoute route = new HttpRoute("admission-decisions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            admissionDecisionsController.Request.SetRouteData(data);
+            admissionDecisionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.ViewAdmissionDecisions, StudentPermissionCodes.UpdateAdmissionDecisions });
+
+            var controllerContext = admissionDecisionsController.ControllerContext;
+            var actionDescriptor = admissionDecisionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.AdmissionDecisions>, int>(admissionDecisionsDtos, 5);
+            admissionDecisionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            admissionDecisionsServiceMock.Setup(ci => ci.GetAdmissionDecisionsAsync(offset, limit, string.Empty, It.IsAny<DateTimeOffset?>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), false)).ReturnsAsync(tuple);
+            var resp = await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter, personFilter);
+
+            Object filterObject;
+            admissionDecisionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewAdmissionDecisions));
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.UpdateAdmissionDecisions));
+
+        }
+
+        //Example exception
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AdmissionDecisionsController_GetAdmissionDecisionsAsync_Invalid_Permissions()
+        {
+            Ellucian.Web.Http.Models.QueryStringFilter criteriaFilter = new Web.Http.Models.QueryStringFilter("criteria", "");
+            Ellucian.Web.Http.Models.QueryStringFilter personFilter = new Web.Http.Models.QueryStringFilter("personFilter", "");
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AdmissionDecisions" },
+                    { "action", "GetAdmissionDecisionsAsync" }
+                };
+            HttpRoute route = new HttpRoute("admission-applications", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            admissionDecisionsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = admissionDecisionsController.ControllerContext;
+            var actionDescriptor = admissionDecisionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                admissionDecisionsServiceMock.Setup(x => x.GetAdmissionDecisionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<DateTimeOffset?>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                admissionDecisionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view admission-decisions."));
+                var resp = await admissionDecisionsController.GetAdmissionDecisionsAsync(new Paging(limit, offset), criteriaFilter, personFilter);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //Get by Id
+        //Version 11 / 11.1.0
+        //GetAdmissionDecisionsByGuidAsync
+        //Example success 
+        [TestMethod]
+        public async Task AdmissionDecisionsController_GetAdmissionDecisionsByGuidAsync_Permissions()
+        {
+            var id = "bbd216fb-0fc5-4f44-ae45-42d3cdd1e89a";
+            var admissionDecisions = admissionDecisionsDtos.FirstOrDefault(i => i.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AdmissionDecisions" },
+                    { "action", "GetAdmissionDecisionsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("admission-decisions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            admissionDecisionsController.Request.SetRouteData(data);
+            admissionDecisionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.ViewAdmissionDecisions, StudentPermissionCodes.UpdateAdmissionDecisions });
+
+            var controllerContext = admissionDecisionsController.ControllerContext;
+            var actionDescriptor = admissionDecisionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.AdmissionDecisions>, int>(admissionDecisionsDtos, 5);
+            admissionDecisionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            admissionDecisionsServiceMock.Setup(ci => ci.GetAdmissionDecisionsByGuidAsync(id, false)).ReturnsAsync(admissionDecisions);
+            var resp = await admissionDecisionsController.GetAdmissionDecisionsByGuidAsync(id);
+
+            Object filterObject;
+            admissionDecisionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewAdmissionDecisions));
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.UpdateAdmissionDecisions));
+
+        }
+
+        //Example exception
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AdmissionDecisionsController_GetAdmissionDecisionsByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AdmissionDecisions" },
+                    { "action", "GetAdmissionDecisionsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("admission-applications", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            admissionDecisionsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = admissionDecisionsController.ControllerContext;
+            var actionDescriptor = admissionDecisionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                admissionDecisionsServiceMock.Setup(x => x.GetAdmissionDecisionsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                admissionDecisionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view admission-decisions."));
+                var resp = await admissionDecisionsController.GetAdmissionDecisionsByGuidAsync(expectedGuid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //Post
+        //Version 11 / 11.1.0
+        //PostAdmissionDecisionsAsync
+        //Example success 
+        [TestMethod]
+        public async Task AdmissionDecisionsController_PostAdmissionDecisionsAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AdmissionDecisions" },
+                    { "action", "PostAdmissionDecisionsAsync" }
+                };
+            HttpRoute route = new HttpRoute("admission-decisions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            admissionDecisionsController.Request.SetRouteData(data);
+            admissionDecisionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.UpdateAdmissionDecisions );
+
+            var controllerContext = admissionDecisionsController.ControllerContext;
+            var actionDescriptor = admissionDecisionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.AdmissionDecisions>, int>(admissionDecisionsDtos, 5);
+            admissionDecisionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            admissionDecisionsServiceMock.Setup(i => i.CreateAdmissionDecisionAsync(It.IsAny<Dtos.AdmissionDecisions>())).ReturnsAsync(admissionDecisionsDtos[0]);
+            var result = await admissionDecisionsController.PostAdmissionDecisionsAsync(admissionDecisionDTO);
+
+            Object filterObject;
+            admissionDecisionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.UpdateAdmissionDecisions));
+
+        }
+
+        //Example exception
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AdmissionDecisionsController_PostAdmissionDecisionsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AdmissionDecisions" },
+                    { "action", "PostAdmissionDecisionsAsync" }
+                };
+            HttpRoute route = new HttpRoute("admission-applications", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            admissionDecisionsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = admissionDecisionsController.ControllerContext;
+            var actionDescriptor = admissionDecisionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                admissionDecisionsServiceMock.Setup(i => i.CreateAdmissionDecisionAsync(It.IsAny<Dtos.AdmissionDecisions>())).ThrowsAsync(new PermissionsException());
+                admissionDecisionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to create admission-applications."));
+                var resp = await admissionDecisionsController.PostAdmissionDecisionsAsync(admissionDecisionDTO);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
     }
 }

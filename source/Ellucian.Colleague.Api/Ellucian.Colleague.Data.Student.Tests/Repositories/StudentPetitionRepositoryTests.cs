@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Runtime.Caching;
@@ -66,11 +66,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task GetsAllStudentPetitions()
             {
                 var studentPetitions = await studentPetitionRepository.GetStudentPetitionsAsync("0000123");
-                Assert.AreEqual(5, studentPetitions.Count(s=>s.Type==StudentPetitionType.StudentPetition));
+                Assert.AreEqual(5, studentPetitions.Count(s=>s.Type == StudentPetitionType.StudentPetition));
                 Assert.AreEqual(5, studentPetitions.Count(s => s.Type == StudentPetitionType.FacultyConsent));
             }
 
-     
+
 
             [TestMethod]
             [ExpectedException(typeof(Exception))]
@@ -85,7 +85,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task EmptyRepositoryDataReturnsEmptyLists()
             {
                 var sectionPermissions = await studentPetitionRepository.GetStudentPetitionsAsync("0000999");
-                Assert.AreEqual(0, sectionPermissions.Where(s=>s.Type==StudentPetitionType.StudentPetition).Count());
+                Assert.AreEqual(0, sectionPermissions.Where(s => s.Type == StudentPetitionType.StudentPetition).Count());
                 Assert.AreEqual(0, sectionPermissions.Where(s => s.Type == StudentPetitionType.FacultyConsent).Count());
             }
 
@@ -150,7 +150,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // Verify that the original section permission response items are returned even though an additional item has invalid data
                 var sectionPermissions = await studentPetitionRepository.GetStudentPetitionsAsync("0000123");
-                Assert.AreEqual(5, sectionPermissions.Where(s=>s.Type==StudentPetitionType.StudentPetition).Count());
+                Assert.AreEqual(5, sectionPermissions.Where(s => s.Type == StudentPetitionType.StudentPetition).Count());
                 Assert.AreEqual(5, sectionPermissions.Where(s => s.Type == StudentPetitionType.FacultyConsent).Count());
             }
 
@@ -425,9 +425,147 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 StudentPetitionRepository repository = new StudentPetitionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
                 return repository;
             }
-
         }
 
-         }
+        [TestClass]
+        public class StudentPetitionRepository_GetStudentOverloadPetitionsAsync
+        {
+            Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<IColleagueDataReader> dataAccessorMock;
+            Mock<ICacheProvider> cacheProviderMock;
+            Mock<ILogger> loggerMock;
+            ApiSettings apiSettings;
+
+            Collection<StudentPetitions> studentPetitionsResponseData;
+            StudentPetitionRepository studentPetitionRepository;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                loggerMock = new Mock<ILogger>();
+                apiSettings = new ApiSettings("TEST");
+
+                // Collection of data accessor responses
+                studentPetitionsResponseData = BuildStudentOverloadPetitionsResponse();
+                studentPetitionRepository = BuildValidStudentPetitionRepository();
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                transFactoryMock = null;
+                dataAccessorMock = null;
+                cacheProviderMock = null;
+                studentPetitionsResponseData = null;
+                studentPetitionRepository = null;
+            }
+
+            [TestMethod]
+            public async Task GetsAllStudentPetitions()
+            {
+                var studentOverloadPetitions = await studentPetitionRepository.GetStudentOverloadPetitionsAsync("0000123");
+                Assert.AreEqual(2, studentOverloadPetitions.Count());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task ThrowsExceptionIfAccessReturnsException()
+            {
+                StudentPetitionRepository studentPetitionRepository = BuildInvalidStudentPetitionRepository();
+                var studentOverloadPetitions = await studentPetitionRepository.GetStudentOverloadPetitionsAsync("0000123");
+            }
+
+            [TestMethod]
+            public async Task EmptyRepositoryDataReturnsEmptyLists()
+            {
+                var studentOverloadPetitions = await studentPetitionRepository.GetStudentOverloadPetitionsAsync("0000999");
+                Assert.AreEqual(0, studentOverloadPetitions.Count());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task ThrowsExceptionIfStudentStringNull()
+            {
+                var studentOverloadPetitions = await studentPetitionRepository.GetStudentOverloadPetitionsAsync(null);
+            }
+
+            [TestMethod]
+            public async Task NullRepositoryDataReturnsEmptyLists()
+            {
+                var nullResponse = new Collection<StudentPetitions>();
+                nullResponse = null;
+                dataAccessorMock.Setup<Task<Collection<StudentPetitions>>>(acc => acc.BulkReadRecordAsync<StudentPetitions>(It.IsAny<string>(), true)).Returns(Task.FromResult<Collection<StudentPetitions>>(nullResponse));
+                var studentOverloadPetitions = await studentPetitionRepository.GetStudentOverloadPetitionsAsync("0000123");
+                Assert.AreEqual(0, studentOverloadPetitions.Count());
+            }
+
+            private Collection<StudentPetitions> BuildStudentOverloadPetitionsResponse()
+            {
+                Collection<StudentPetitions> repoStudentPetitions = new Collection<StudentPetitions>();
+
+                // This student has reason codes but does not have a petition comment or consent comment
+                var studentPetitionsData1 = new StudentPetitions();
+                studentPetitionsData1.Recordkey = "1";
+                studentPetitionsData1.StpeStudent = "0000123";
+                studentPetitionsData1.StpeTerm = "2016/SP";
+                studentPetitionsData1.StpeOverloadPetition = "A";
+                studentPetitionsData1.StudentPetitionsChgdate = new DateTime(2015, 01, 14);
+                var chTime1 = DateTime.MinValue;
+                chTime1.AddHours(14);
+                chTime1.AddMinutes(01);
+                chTime1.AddSeconds(15);
+                studentPetitionsData1.StudentPetitionsChgtime = chTime1;
+                studentPetitionsData1.StudentPetitionsChgopr = "SSS";
+                repoStudentPetitions.Add(studentPetitionsData1);
+
+                // This student has a petition comment and consent comment and reason codes
+                var studentPetitionsData2 = new StudentPetitions();
+                studentPetitionsData2.Recordkey = "2";
+                studentPetitionsData2.StpeStudent = "0000123";
+                studentPetitionsData2.StpeTerm = "2016/SP";
+                studentPetitionsData2.StpeOverloadPetition = "D";
+                studentPetitionsData2.StudentPetitionsChgdate = new DateTime(2015, 01, 21);
+                var chTime2 = DateTime.MinValue;
+                chTime2.AddHours(21);
+                chTime2.AddMinutes(01);
+                chTime2.AddSeconds(15);
+                studentPetitionsData2.StudentPetitionsChgtime = chTime2;
+                studentPetitionsData2.StudentPetitionsChgopr = "LDG";
+                repoStudentPetitions.Add(studentPetitionsData2);
+                return repoStudentPetitions;
+            }
+
+            private StudentPetitionRepository BuildValidStudentPetitionRepository()
+            {
+                transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                dataAccessorMock = new Mock<IColleagueDataReader>();
+                cacheProviderMock = new Mock<ICacheProvider>();
+
+                // Set up data accessor for the transaction factory 
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                // Set up repo response for petition request
+                dataAccessorMock.Setup<Task<Collection<StudentPetitions>>>(acc => acc.BulkReadRecordAsync<StudentPetitions>(It.IsAny<string>(), true)).Returns(Task.FromResult<Collection<StudentPetitions>>(studentPetitionsResponseData));
+
+                StudentPetitionRepository repository = new StudentPetitionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                return repository;
+            }
+
+            private StudentPetitionRepository BuildInvalidStudentPetitionRepository()
+            {
+                var transFactoryMock = new Mock<IColleagueTransactionFactory>();
+
+                // Set up data accessor for mocking 
+                var dataAccessorMock = new Mock<IColleagueDataReader>();
+                transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+
+                Exception expectedFailure = new Exception("fail");
+                dataAccessorMock.Setup<Task<Collection<StudentPetitions>>>(acc => acc.BulkReadRecordAsync<StudentPetitions>(It.IsAny<string>(), true)).Throws(expectedFailure);
+
+                StudentPetitionRepository repository = new StudentPetitionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                return repository;
+            }
+        }
+    }
 }
 

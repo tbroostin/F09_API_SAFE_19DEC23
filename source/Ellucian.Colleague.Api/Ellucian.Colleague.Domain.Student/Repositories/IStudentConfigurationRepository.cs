@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Entities.InstantEnrollment;
 using System;
@@ -76,9 +76,39 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<CourseCatalogConfiguration> GetCourseCatalogConfiguration3Async();
 
         /// <summary>
+        /// Retrieves the course catalog configuration asynchronously
+        /// </summary>
+        /// <returns>CourseCatalogConfiguration entity</returns>
+        Task<CourseCatalogConfiguration> GetCourseCatalogConfiguration4Async();
+
+        /// <summary>
         /// Gets the unofficial transcript configuration asynchronously.
         /// </summary>
         /// <returns>UnofficialTranscriptConfiguration entity</returns>
         Task<UnofficialTranscriptConfiguration> GetUnofficialTranscriptConfigurationAsync();
+
+        /// <summary>
+        /// Get My Progress configuration information
+        /// </summary>
+        ///  <returns>The MyProgressConfiguration entity</returns>
+        Task<MyProgressConfiguration> GetMyProgressConfigurationAsync();
+
+        /// <summary>
+        /// Get the section census configuration information
+        /// </summary>
+        ///  <returns>The SectionCensusConfiguration entity</returns>
+        Task<SectionCensusConfiguration> GetSectionCensusConfigurationAsync();
+
+        /// <summary>
+        /// Retrieves Course Delimiter
+        /// </summary>
+        /// <returns></returns>
+        Task<string> GetCourseDelimiterAsync();
+
+        /// <summary>
+        /// Get Academic Record configuration information
+        /// </summary>
+        /// <returns>The AcademicRecordConfiguration entity</returns>
+        Task<AcademicRecordConfiguration> GetAcademicRecordConfigurationAsync();
     }
 }

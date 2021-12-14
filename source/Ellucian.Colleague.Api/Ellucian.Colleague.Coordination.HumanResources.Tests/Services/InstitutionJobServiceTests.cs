@@ -1,4 +1,4 @@
-﻿//Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -1004,18 +1004,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task InstitutionJobsService_PostInstitutionJobsAsync_PermissionException()
-        {
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-            await institutionJobService.PostInstitutionJobsAsync(new Dtos.InstitutionJobs3() { Id = guid });
-        }
-
-        [TestMethod]
         [ExpectedException(typeof(Exception))]
         public async Task InstitutionJobsService_PostInstitutionJobsAsync_Invalid_HostCountry()
         {
-            personRepositoryMock.Setup(p => p.GetHostCountryAsync()).ReturnsAsync(null);
+            personRepositoryMock.Setup(p => p.GetHostCountryAsync()).ReturnsAsync(() => null);
             await institutionJobService.PostInstitutionJobsAsync(new Dtos.InstitutionJobs3() { Id = guid });
         }
 
@@ -1047,7 +1039,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         [ExpectedException(typeof(Exception))]
         public async Task PostInstitutionJobsAsync_DtoToEntity_Empty_PersonId_From_Repository()
         {
-            personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             await institutionJobService.PostInstitutionJobsAsync(institutionJobs);
         }
 
@@ -1071,7 +1063,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         [ExpectedException(typeof(Exception))]
         public async Task PostInstitutionJobsAsync_DtoToEntity_Position_Null_From_Repository()
         {
-            positionRepositoryMock.Setup(p => p.GetPositionByGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            positionRepositoryMock.Setup(p => p.GetPositionByGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             await institutionJobService.PostInstitutionJobsAsync(institutionJobs);
         }
 
@@ -1247,7 +1239,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         [ExpectedException(typeof(Exception))]
         public async Task PostInstitutionJobsAsync_EntityToDto_Repository_Returns_InstitutionJob_As_Null()
         {
-            institutionJobsRepositoryMock.Setup(i => i.CreateInstitutionJobsAsync(It.IsAny<Domain.HumanResources.Entities.InstitutionJobs>())).ReturnsAsync(null);
+            institutionJobsRepositoryMock.Setup(i => i.CreateInstitutionJobsAsync(It.IsAny<Domain.HumanResources.Entities.InstitutionJobs>())).ReturnsAsync(() => null);
             await institutionJobService.PostInstitutionJobsAsync(institutionJobs);
         }
 
@@ -1286,20 +1278,13 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             domainInstitutionJobs.IsSalary = false;
             domainInstitutionJobs.HostCountry = "CAN";
 
-            institutionJobsRepositoryMock.Setup(i => i.GetInstitutionJobsIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            institutionJobsRepositoryMock.Setup(i => i.GetInstitutionJobsIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             var result = await institutionJobService.PutInstitutionJobsAsync(institutionJobs);
 
             Assert.IsNotNull(result);
         }
 
-        [TestMethod]
-        [ExpectedException(typeof( PermissionsException ) )]
-        public async Task InstitutionJobsService_PutInstitutionJobsAsync_PermissionException()
-        {
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-
-            await institutionJobService.PutInstitutionJobsAsync(institutionJobs);
-        }
+        
 
         [TestMethod]
         [ExpectedException(typeof(RepositoryException))]

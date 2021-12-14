@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Base.Tests.UserFactories;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -188,7 +188,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task ContentKeyService_GetContentKeyAsync_KeyNotFoundException()
             {
-                encrRepositoryMock.Setup(r => r.GetKeyAsync(It.IsAny<string>())).ReturnsAsync(null);
+                encrRepositoryMock.Setup(r => r.GetKeyAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 BuildContentKeyService();
                 await contentKeyService.GetContentKeyAsync("fakekey");
             }
@@ -273,7 +273,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task ContentKeyService_PostContentKeyAsync_KeyNotFoundException()
             {
-                encrRepositoryMock.Setup(r => r.GetKeyAsync(It.IsAny<string>())).ReturnsAsync(null);
+                encrRepositoryMock.Setup(r => r.GetKeyAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 BuildContentKeyService();
                 await contentKeyService.PostContentKeyAsync(fakeContentKeyRequest);
             }

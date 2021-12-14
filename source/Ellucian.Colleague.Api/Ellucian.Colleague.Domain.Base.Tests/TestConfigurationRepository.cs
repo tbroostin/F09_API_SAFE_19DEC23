@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Linq;
@@ -11,6 +11,22 @@ namespace Ellucian.Colleague.Domain.Base.Tests
 {
     public class TestConfigurationRepository : IConfigurationRepository
     {
+        /// <summary>
+        /// Dictionary of string, string that contains the Ethos Extended Data to send into the CTX
+        /// key is column name
+        /// value is value to save in, if empty string then this means it is meant to remove the data from colleague
+        /// </summary>
+        public Dictionary<string, string> EthosExtendedDataDictionary { get; set; }
+
+        /// <summary>
+        /// Takes the EthosExtendedDataList dictionary and splits it into two List string to be passed to Colleague CTX 
+        /// </summary>
+        /// <returns>T1 is the list of keys, T2 is a list values that match up. Returns null if the list is empty</returns>
+        public Tuple<List<string>, List<string>> GetEthosExtendedDataLists()
+        {
+            return new Tuple<List<string>, List<string>>(new List<string>(), new List<string>());
+        }
+
         public ExternalMapping GetExternalMapping(string mappingId)
         {
             return new ExternalMapping("mappingCode", "mappingDescription");
@@ -66,7 +82,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
 
         public async Task<ProxyConfiguration> GetProxyConfigurationAsync()
         {
-            return await Task.Run(() => new ProxyConfiguration(true, "DISCLOSURE.ID", "EMAIL.ID", true, true));
+            return await Task.Run(() => new ProxyConfiguration(true, "DISCLOSURE.ID", "EMAIL.ID", true, true, new List<ProxyAndUserPermissionsMap>()));
         }
 
         public async Task<RestrictionConfiguration> GetRestrictionConfigurationAsync()
@@ -99,7 +115,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
             return null;
         }
 
-        public async Task<IEnumerable<EthosExtensibleData>> GetExtendedEthosDataByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, IEnumerable<string> resournceIds, bool reportEthosApiErrors = false, bool bypassCache = false)
+        public async Task<IEnumerable<EthosExtensibleData>> GetExtendedEthosDataByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, IEnumerable<string> resournceIds, bool reportEthosApiErrors = false, bool bypassCache = false, bool useRecordKey = false)
         {
             var ethosExtensibleData = new List<EthosExtensibleData>();
 
@@ -162,10 +178,47 @@ namespace Ellucian.Colleague.Domain.Base.Tests
                 PageLimit = 50,
                 SelectFileName = "PERSON",
                 SelectionCriteria = new List<EthosApiSelectCriteria>() { new EthosApiSelectCriteria("WITH", "PERSON.CORP.INDICATOR", "NE", "''") },
-                HttpMethods = new List<EthosApiSupportedMethods>() {  new EthosApiSupportedMethods("GET", "VIEW.ANY.PERSON") }
+                HttpMethods = new List<EthosApiSupportedMethods>() {
+                    new EthosApiSupportedMethods("GET", "VIEW.ANY.PERSON"),
+                    new EthosApiSupportedMethods("POST", "UPDATE.PERSON"),
+                    new EthosApiSupportedMethods("PUT", "UPDATE.PERSON"),
+                    new EthosApiSupportedMethods("DELETE", "DELETE.PERSON.CONTACT")
+                }
             };
 
             return ethosApiConfiguration;
+        }
+
+        /// <summary>
+        /// Encode a primary key for use in Extensibility
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns>Encoded string to use as guid on a non-guid based API.</returns>
+        public string EncodePrimaryKey(string id)
+        {
+            // Preserve all lower case and dashes in original key by manually escaping those characters.
+            var returnData = Uri.EscapeDataString(id).Replace("-", "%2D").Replace("a", "%61").
+                Replace("b", "%62").Replace("c", "%63").Replace("d", "%64").
+                Replace("e", "%65").Replace("f", "%66").Replace("g", "%67").
+                Replace("h", "%68").Replace("i", "%69").Replace("j", "%6a").
+                Replace("k", "%6b").Replace("l", "%6c").Replace("m", "%6d").
+                Replace("n", "%6e").Replace("o", "%6f").Replace("p", "%70").
+                Replace("q", "%71").Replace("r", "%72").Replace("s", "%73").
+                Replace("t", "%74").Replace("u", "%75").Replace("v", "%76").
+                Replace("w", "%77").Replace("x", "%78").Replace("y", "%79").
+                Replace("z", "%7a");
+            return returnData.Replace("%", "-").ToLower();
+        }
+
+        /// <summary>
+        /// Un-Encode a primary key for use in Extensibility
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns>Un-Encoded string taken from a non-guid based API guid.</returns>
+        public string UnEncodePrimaryKey(string id)
+        {
+            var primaryKey = id.Replace("-", "%").ToUpper();
+            return Uri.UnescapeDataString(primaryKey);
         }
 
         public async Task<SelfServiceConfiguration> GetSelfServiceConfigurationAsync()
@@ -251,15 +304,17 @@ namespace Ellucian.Colleague.Domain.Base.Tests
 
             this.TaxFormConfigurations2.Add(new TaxFormConfiguration2(TaxFormTypes.FormT4)
             {
+                HideConsent = true,
                 ConsentParagraphs = new TaxFormConsentParagraph()
                 {
                     ConsentText = "I consent to receive my T4 online, version 2.",
                     ConsentWithheldText = "I withhold to receiving my T4 online, version 2."
                 }
-            });
+            }); ;
 
             this.TaxFormConfigurations2.Add(new TaxFormConfiguration2(TaxFormTypes.FormT4A)
             {
+                HideConsent = true,
                 ConsentParagraphs = new TaxFormConsentParagraph()
                 {
                     ConsentText = "I consent to receive my T4A online, version 2.",
@@ -269,6 +324,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests
 
             this.TaxFormConfigurations2.Add(new TaxFormConfiguration2(TaxFormTypes.FormT2202A)
             {
+                HideConsent = true,
                 ConsentParagraphs = new TaxFormConsentParagraph()
                 {
                     ConsentText = "I consent to receive my T2202A online, version 2.",

@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
 
 
 namespace Ellucian.Colleague.Dtos.Student
@@ -23,6 +23,18 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Holds the section waitlist enroll no of days
         /// </summary>
         public int? NoOfDaysToEnroll { get; set; }
+        /// <summary>
+        /// Boolean value to sort order by Rank
+        /// </summary>
+        public bool? SortOrderByRank { get; set; }
+        /// <summary>
+        /// Boolean value to sort by waitlist date
+        /// </summary>
+        public bool? WaitlistSortByDate { get; set; }
+        /// <summary>
+        /// Include the cross listed sections based on FCWP setting
+        /// </summary>
+        public bool? InlcudeCrossListedSections { get; set; }
     }
 }
 

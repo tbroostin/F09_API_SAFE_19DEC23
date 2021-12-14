@@ -87,7 +87,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         public async Task MealPlanAssignmentRepository_GET_KeyNotFoundException()
         {
             dataAccessorMock.Setup(repo => repo.SelectAsync("MEAL.PLAN.ASSIGNMENT", It.IsAny<string>())).ReturnsAsync(new[] { "1", "200" });
-            dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.MealPlanAssignment>("MEAL.PLAN.ASSIGNMENT", It.IsAny<string[]>(), true)).ReturnsAsync(null);
+            dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.MealPlanAssignment>("MEAL.PLAN.ASSIGNMENT", It.IsAny<string[]>(), true)).ReturnsAsync(() => null);
 
             var results = await _mealPlanAssignmentRepository.GetAsync(It.IsAny<int>(), It.IsAny<int>());
         }
@@ -118,7 +118,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task MealPlanAssignmentRepository_GETById_MealPlanAssignments_Null_KeyNotFoundException()
         {
-            dataAccessorMock.Setup(acc => acc.ReadRecordAsync<DataContracts.MealPlanAssignment>(It.IsAny<string>(), true)).ReturnsAsync(null);
+            dataAccessorMock.Setup(acc => acc.ReadRecordAsync<DataContracts.MealPlanAssignment>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
             var results = await _mealPlanAssignmentRepository.GetByIdAsync("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc");
         }
 

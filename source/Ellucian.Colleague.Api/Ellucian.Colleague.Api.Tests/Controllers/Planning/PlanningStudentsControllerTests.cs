@@ -323,5 +323,88 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Planning
             Assert.AreEqual(2, result.Count());
         }
 
+        //Tests for versioned Controller Methods for version 4
+        [TestMethod]
+        public async Task GetEvaluation4Async()
+        {
+            // arrange
+            var studentId = "0000001";
+            var programCode = "ENGL.BA";
+            var programEvaluation = new Domain.Student.Entities.ProgramEvaluation(new List<Domain.Student.Entities.AcademicCredit>(), "ENGL.BA", "2013");
+            programEvaluationServiceMock.Setup(svc => svc.EvaluateAsync(It.IsAny<string>(), It.IsAny<List<string>>(), null)).Returns(Task.FromResult((new List<Domain.Student.Entities.ProgramEvaluation>() { programEvaluation }).AsEnumerable()));
+            var programEvaluationDto4Adapter = new AutoMapperAdapter<Domain.Student.Entities.ProgramEvaluation, Dtos.Planning.ProgramEvaluation4>(adapterRegistry, logger);
+            adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.ProgramEvaluation, Dtos.Planning.ProgramEvaluation4>()).Returns(programEvaluationDto4Adapter);
+
+            // act
+            var result = await planningStudentsController.GetEvaluation4Async(studentId, programCode, null);
+
+            // assert
+            Assert.IsTrue(result is ProgramEvaluation4);
+        }
+
+
+        [TestMethod]
+        public async Task GetEvaluation4WithCatalogAsync()
+        {
+            // arrange
+            var studentId = "0000001";
+            var programCode = "ENGL.BA";
+            var programEvaluation = new Domain.Student.Entities.ProgramEvaluation(new List<Domain.Student.Entities.AcademicCredit>(), "ENGL.BA", "2013");
+            programEvaluationServiceMock.Setup(svc => svc.EvaluateAsync(It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>())).Returns(Task.FromResult((new List<Domain.Student.Entities.ProgramEvaluation>() { programEvaluation }).AsEnumerable()));
+            var programEvaluationDto4Adapter = new AutoMapperAdapter<Domain.Student.Entities.ProgramEvaluation, Dtos.Planning.ProgramEvaluation4>(adapterRegistry, logger);
+            adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.ProgramEvaluation, Dtos.Planning.ProgramEvaluation4>()).Returns(programEvaluationDto4Adapter);
+
+            // act
+            var result = await planningStudentsController.GetEvaluation4Async(studentId, programCode, null);
+
+            // assert
+            Assert.IsTrue(result is ProgramEvaluation4);
+        }
+
+
+        [TestMethod]
+        public async Task QueryEvaluations4Async()
+        {
+            // arrange
+            var studentId = "0000001";
+            var programCodes = new List<string>() { "ENGL.BA", "MATH.BA" };
+            var programEvaluations = new List<Domain.Student.Entities.ProgramEvaluation>() {
+                new Domain.Student.Entities.ProgramEvaluation(new List<Domain.Student.Entities.AcademicCredit>(), "ENGL.BA", "2013"),
+                new Domain.Student.Entities.ProgramEvaluation(new List<Domain.Student.Entities.AcademicCredit>(), "MATH.BA", "2014")
+            };
+            programEvaluationServiceMock.Setup(svc => svc.EvaluateAsync(It.IsAny<string>(), It.IsAny<List<string>>(), null)).Returns(Task.FromResult(programEvaluations.AsEnumerable()));
+            var programEvaluationDto4Adapter = new AutoMapperAdapter<Domain.Student.Entities.ProgramEvaluation, Dtos.Planning.ProgramEvaluation4>(adapterRegistry, logger);
+            adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.ProgramEvaluation, Dtos.Planning.ProgramEvaluation4>()).Returns(programEvaluationDto4Adapter);
+
+            // act
+            var result = await planningStudentsController.QueryEvaluations4Async(studentId, programCodes);
+
+            // assert
+            Assert.IsTrue(result is List<ProgramEvaluation4>);
+            Assert.AreEqual(2, result.Count());
+        }
+
+        [TestMethod]
+        public async Task QueryEvaluations4WithCatalogAsync()
+        {
+            // arrange
+            var studentId = "0000001";
+            var programCodes = new List<string>() { "ENGL.BA", "MATH.BA" };
+            var programEvaluations = new List<Domain.Student.Entities.ProgramEvaluation>() {
+                new Domain.Student.Entities.ProgramEvaluation(new List<Domain.Student.Entities.AcademicCredit>(), "ENGL.BA", "2013"),
+                new Domain.Student.Entities.ProgramEvaluation(new List<Domain.Student.Entities.AcademicCredit>(), "MATH.BA", "2014")
+            };
+            programEvaluationServiceMock.Setup(svc => svc.EvaluateAsync(It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>())).Returns(Task.FromResult(programEvaluations.AsEnumerable()));
+            var programEvaluationDto4Adapter = new AutoMapperAdapter<Domain.Student.Entities.ProgramEvaluation, Dtos.Planning.ProgramEvaluation4>(adapterRegistry, logger);
+            adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.ProgramEvaluation, Dtos.Planning.ProgramEvaluation4>()).Returns(programEvaluationDto4Adapter);
+
+            // act
+            var result = await planningStudentsController.QueryEvaluations4Async(studentId, programCodes);
+
+            // assert
+            Assert.IsTrue(result is List<ProgramEvaluation4>);
+            Assert.AreEqual(2, result.Count());
+        }
+
     }
 }

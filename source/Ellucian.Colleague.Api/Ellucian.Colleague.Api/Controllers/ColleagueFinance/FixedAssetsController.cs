@@ -1,9 +1,10 @@
-//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
@@ -46,11 +47,12 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         }
 
         /// <summary>
-        /// Return all fixedAssets
+        /// Return all fixed-assets
         /// </summary>
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <returns>List of FixedAssets <see cref="Dtos.FixedAssets"/> objects representing matching fixedAssets</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2),  EedmResponseFilter]
+        [PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewFixedAssets })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetFixedAssetsAsync(Paging page)
@@ -65,6 +67,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                _fixedAssetsService.ValidatePermissions(GetPermissionsMetaData());
+
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -87,7 +91,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -112,11 +116,12 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         }
 
         /// <summary>
-        /// Read (GET) a fixedAssets using a GUID
+        /// Read (GET) a fixed-assets using a GUID
         /// </summary>
         /// <param name="guid">GUID to desired fixedAssets</param>
         /// <returns>A fixedAssets object <see cref="Dtos.FixedAssets"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2),  EedmResponseFilter]
+        [PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewFixedAssets }) ]
         public async Task<Dtos.FixedAssets> GetFixedAssetsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -134,6 +139,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                _fixedAssetsService.ValidatePermissions(GetPermissionsMetaData());
+
                 AddEthosContextProperties(
                    await _fixedAssetsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                    await _fixedAssetsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -149,7 +156,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {

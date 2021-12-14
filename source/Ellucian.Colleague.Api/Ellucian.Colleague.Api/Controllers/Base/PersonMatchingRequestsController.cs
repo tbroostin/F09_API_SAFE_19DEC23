@@ -4,6 +4,7 @@ using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
@@ -56,7 +57,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="personFilter">Selection from SaveListParms definition or person-filters.</param>
         /// <returns>List of PersonMatchingRequests <see cref="Dtos.PersonMatchingRequests"/> objects representing matching personMatchingRequests</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { BasePermissionCodes.ViewPersonMatchRequest, BasePermissionCodes.CreatePersonMatchRequestProspects })]
         [QueryStringFilterFilter("criteria", typeof(Dtos.PersonMatchingRequests))]
         [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter2))]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
@@ -73,6 +74,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
+                _personMatchingRequestsService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -141,7 +143,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="guid">GUID to desired personMatchingRequests</param>
         /// <returns>A personMatchingRequests object <see cref="Dtos.PersonMatchingRequests"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { BasePermissionCodes.ViewPersonMatchRequest, BasePermissionCodes.CreatePersonMatchRequestProspects })]
         public async Task<Dtos.PersonMatchingRequests> GetPersonMatchingRequestsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -159,6 +161,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
+                _personMatchingRequestsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                    await _personMatchingRequestsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                    await _personMatchingRequestsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -230,7 +233,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="personMatchingRequests">DTO of the new personMatchingRequests</param>
         /// <returns>A personMatchingRequests object <see cref="Dtos.PersonMatchingRequests"/> in EEDM format</returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(BasePermissionCodes.CreatePersonMatchRequestProspects)]
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.PersonMatchingRequests> PostPersonMatchingRequestsInitiationsProspectsAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.PersonMatchingRequestsInitiationsProspects personMatchingRequests)
         {
@@ -246,6 +249,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _personMatchingRequestsService.ValidatePermissions(GetPermissionsMetaData());
                 var dpList = await _personMatchingRequestsService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
                 await _personMatchingRequestsService.ImportExtendedEthosData(await ExtractExtendedData(await _personMatchingRequestsService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 

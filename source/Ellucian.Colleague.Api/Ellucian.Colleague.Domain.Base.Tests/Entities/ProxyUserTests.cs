@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -54,8 +54,8 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         public void ProxyUser_EffectiveDate_AtLeastOnePermission()
         {
             var entity = new ProxyUser(id);
-            entity.AddPermission(new ProxyAccessPermission("1", "0001235", id, "SFAA", DateTime.Today.AddDays(-3)));
-            entity.AddPermission(new ProxyAccessPermission("2", "0001235", id, "SFMAP", DateTime.Today.AddDays(-1)));
+            entity.AddPermission(new ProxyAccessPermission("1", "0001235", id, "SFAA", DateTime.Today.AddDays(-3), DateTime.Today.AddDays(1)));
+            entity.AddPermission(new ProxyAccessPermission("2", "0001235", id, "SFMAP", DateTime.Today.AddDays(-1), DateTime.Today.AddDays(1)));
             Assert.AreEqual(DateTime.Today.AddDays(-1), entity.EffectiveDate);
         }
 
@@ -79,14 +79,14 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         public void ProxyUser_AddPermission_PermissionProxyUserIdMismatch()
         {
             var entity = new ProxyUser(id);
-            entity.AddPermission(new ProxyAccessPermission("1", "0001235", id + "1", "SFAA", DateTime.Today));
+            entity.AddPermission(new ProxyAccessPermission("1", "0001235", id + "1", "SFAA", DateTime.Today, DateTime.Today.AddDays(1)));
         }
 
         [TestMethod]
         public void ProxyUser_AddPermission_Valid()
         {
             var entity = new ProxyUser(id);
-            entity.AddPermission(new ProxyAccessPermission("1", "0001235", id, "SFAA", DateTime.Today));
+            entity.AddPermission(new ProxyAccessPermission("1", "0001235", id, "SFAA", DateTime.Today, DateTime.Today.AddDays(1)));
             Assert.AreEqual(1, entity.Permissions.Count);
         }
     }

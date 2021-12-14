@@ -180,7 +180,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 StudentCourseSec studentCourseSec = BuildValidScsResponse(academicCredit);
 
                 // Now mock that response
-                dataAccessorMock.Setup<Task<StudentAcadCred>>(acc => acc.ReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataAccessorMock.Setup<Task<StudentAcadCred>>(acc => acc.ReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 dataAccessorMock.Setup<Task<StudentCourseSec>>(acc => acc.ReadRecordAsync<StudentCourseSec>("STUDENT.COURSE.SEC", It.IsAny<string>(), true)).ReturnsAsync(studentCourseSec);
                 var guid = studentAcadCred.RecordGuid;
                 var id = studentAcadCred.Recordkey;
@@ -210,7 +210,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // Now mock that response
                 dataAccessorMock.Setup<Task<StudentAcadCred>>(acc => acc.ReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", It.IsAny<string>(), true)).ReturnsAsync(studentAcadCred);
-                dataAccessorMock.Setup<Task<StudentCourseSec>>(acc => acc.ReadRecordAsync<StudentCourseSec>("STUDENT.COURSE.SEC", It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataAccessorMock.Setup<Task<StudentCourseSec>>(acc => acc.ReadRecordAsync<StudentCourseSec>("STUDENT.COURSE.SEC", It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 var guid = studentAcadCred.RecordGuid;
                 var id = studentAcadCred.Recordkey;
                 var guidLookupResult = new GuidLookupResult() { Entity = "STUDENT.ACAD.CRED", PrimaryKey = id };
@@ -569,7 +569,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 StudentCourseSec studentCourseSec = BuildValidScsResponse(academicCredit);
 
                 // Now mock that response
-                dataAccessorMock.Setup<Task<StudentAcadCred>>(acc => acc.ReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataAccessorMock.Setup<Task<StudentAcadCred>>(acc => acc.ReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 dataAccessorMock.Setup<Task<StudentCourseSec>>(acc => acc.ReadRecordAsync<StudentCourseSec>("STUDENT.COURSE.SEC", It.IsAny<string>(), true)).ReturnsAsync(studentCourseSec);
                 var guid = studentAcadCred.RecordGuid;
                 var id = studentAcadCred.Recordkey;
@@ -599,7 +599,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // Now mock that response
                 dataAccessorMock.Setup<Task<StudentAcadCred>>(acc => acc.ReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", It.IsAny<string>(), true)).ReturnsAsync(studentAcadCred);
-                dataAccessorMock.Setup<Task<StudentCourseSec>>(acc => acc.ReadRecordAsync<StudentCourseSec>("STUDENT.COURSE.SEC", It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataAccessorMock.Setup<Task<StudentCourseSec>>(acc => acc.ReadRecordAsync<StudentCourseSec>("STUDENT.COURSE.SEC", It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 var guid = studentAcadCred.RecordGuid;
                 var id = studentAcadCred.Recordkey;
                 var guidLookupResult = new GuidLookupResult() { Entity = "STUDENT.ACAD.CRED", PrimaryKey = id };
@@ -969,7 +969,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     .ReturnsAsync(resp);
                 sectReg = new SectionRegistrationResponse(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), new List<RegistrationMessage>());
                 dataAccessorMock.Setup(dr => dr.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new[] { "1" });
-                dataAccessorMock.Setup(dr => dr.SelectAsync(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(null);
+                dataAccessorMock.Setup(dr => dr.SelectAsync(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(() => null);
 
                 var response = await sectionRegistrationRepo.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistrationResponse>(), It.IsAny<string>(), "1");
                 Assert.IsNotNull(response);
@@ -1168,7 +1168,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task SectionRegistration_GetSectionRegistrationByIdAsync_WrongId_KeyNotFoundException()
             {
-                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 var response = await sectionRegistrationRepo.GetSectionRegistrationByIdAsync("BadId");
             }
 
@@ -1186,7 +1186,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task SectionRegistration_GetSectionRegistrationByIdAsync_StudentCourseSecNull_KeyNotFoundException()
             {
                 dataAccessorMock.Setup(acc => acc.ReadRecordAsync<StudentAcadCred>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(studentAcadCred);
-                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<StudentCourseSec>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<StudentCourseSec>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 studentAcadCred.StcStudentCourseSec = "Bad Key";
                 var response = await sectionRegistrationRepo.GetSectionRegistrationByIdAsync("1");
             }
@@ -1458,7 +1458,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task SectionRegistration_GetSectionRegistrationGradeOptionsAsync_EmptyResults()
             {
-                dataAccessorMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
+                dataAccessorMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(() => null);
                 var response = await sectionRegistrationRepo.GetSectionRegistrationGradeOptionsAsync(0, 1, It.IsAny<StudentAcadCredCourseSecInfo>());
                 Assert.IsNotNull(response);
                 Assert.AreEqual(0, response.Item2);
@@ -1481,7 +1481,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task SectionRegistration_GetSectionRegistrationGradeOptionsAsync_SectionFilter_EmptyResults()
             {
                 var request = new StudentAcadCredCourseSecInfo("8003");
-                dataAccessorMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
+                dataAccessorMock.Setup(repo => repo.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(() => null);
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentAcadCred>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<StudentAcadCred>() { studentAcadCred });
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<StudentCourseSec>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<StudentCourseSec>() { studentCourseSec });
                 var response = await sectionRegistrationRepo.GetSectionRegistrationGradeOptionsAsync(0, 1, request);
@@ -1502,7 +1502,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task SectionRegistration_GetSectionRegistrationGradeOptionsByIdAsync_KeyNotFound()
             {
-                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<StudentAcadCred>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<StudentAcadCred>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 var response = await sectionRegistrationRepo.GetSectionRegistrationGradeOptionsByIdAsync("1");
             }
 
@@ -1530,7 +1530,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task SectionRegistration_GetSectionRegistrationGradeOptionsByIdAsync_NoScsRecord()
             {
                 dataAccessorMock.Setup(acc => acc.ReadRecordAsync<StudentAcadCred>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(studentAcadCred);
-                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<StudentCourseSec>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<StudentCourseSec>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 var response = await sectionRegistrationRepo.GetSectionRegistrationGradeOptionsByIdAsync("1");
             }
             

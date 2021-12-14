@@ -82,7 +82,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                 {"0000050", "Float", "Shelly", "X", "", "", "", "", ""},
                 {"0000051", "Gualtieri", "Chris", "T", "", "", "", "", ""},
                 {"0000052", "Hrabcak", "John", "B", "", "", "", "", ""},
-                {"0000053", "Ivancic", "Jay", "T", "", "", "", "", ""}
+                {"0000053", "Ivancic", "Jay", "T", "", "", "", "", ""},
+                {"FAC1",    "Bohr", "Tina", "T", "", "", "", "", ""}
             };
             int columns = 9;
             int count = facultyData.Length / columns;
@@ -133,6 +134,12 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         public Task<IEnumerable<FacultyOfficeHours>> GetFacultyOfficeHoursByIdsAsync(IEnumerable<string> facultyIds)
         {
             throw new NotImplementedException();
+        }
+
+        public async Task<FacultyDropRegistrationPermissions> GetFacultyRegistrationEligibilityAsync(string personId)
+        {
+            var facultyElig = new FacultyDropRegistrationPermissions(true, true);
+            return await Task.FromResult(facultyElig);
         }
     }
 }

@@ -1,10 +1,11 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
@@ -50,7 +51,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <returns>List of PersonEmploymentProficiencies <see cref="Dtos.PersonEmploymentProficiencies"/> objects representing matching personEmploymentProficiencies</returns>
-        [HttpGet]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), PermissionsFilter(HumanResourcesPermissionCodes.ViewPersonEmpProficiencies)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetPersonEmploymentProficienciesAsync(Paging page)
@@ -65,6 +66,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                _personEmploymentProficienciesService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -87,7 +89,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -116,7 +118,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="guid">GUID to desired personEmploymentProficiencies</param>
         /// <returns>A personEmploymentProficiencies object <see cref="Dtos.PersonEmploymentProficiencies"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter, PermissionsFilter(HumanResourcesPermissionCodes.ViewPersonEmpProficiencies)]
         public async Task<Dtos.PersonEmploymentProficiencies> GetPersonEmploymentProficienciesByGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -135,6 +137,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
+                _personEmploymentProficienciesService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                   await _personEmploymentProficienciesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                   await _personEmploymentProficienciesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -150,7 +153,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -179,7 +182,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="personEmploymentProficiencies">DTO of the new personEmploymentProficiencies</param>
         /// <returns>A personEmploymentProficiencies object <see cref="Dtos.PersonEmploymentProficiencies"/> in EEDM format</returns>
-        [HttpPost]
+        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.PersonEmploymentProficiencies> PostPersonEmploymentProficienciesAsync([FromBody] Dtos.PersonEmploymentProficiencies personEmploymentProficiencies)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
@@ -193,7 +196,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="guid">GUID of the personEmploymentProficiencies to update</param>
         /// <param name="personEmploymentProficiencies">DTO of the updated personEmploymentProficiencies</param>
         /// <returns>A personEmploymentProficiencies object <see cref="Dtos.PersonEmploymentProficiencies"/> in EEDM format</returns>
-        [HttpPut]
+        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.PersonEmploymentProficiencies> PutPersonEmploymentProficienciesAsync([FromUri] string guid, [FromBody] Dtos.PersonEmploymentProficiencies personEmploymentProficiencies)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
@@ -205,7 +208,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Delete (DELETE) a personEmploymentProficiencies
         /// </summary>
         /// <param name="guid">GUID to desired personEmploymentProficiencies</param>
-        [HttpDelete]
+        [HttpDelete, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task DeletePersonEmploymentProficienciesAsync(string guid)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.

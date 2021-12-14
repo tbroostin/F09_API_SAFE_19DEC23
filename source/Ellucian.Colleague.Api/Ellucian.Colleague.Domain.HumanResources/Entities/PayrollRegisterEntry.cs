@@ -1,4 +1,4 @@
-﻿/*Copyright 2019 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2019-2021 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 
@@ -47,6 +47,10 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// The Reference Id of the Paycheck, also known as the check number.
         /// </summary>
         public string PaycheckReferenceId { get; private set; }
+        /// <summary>
+        /// Paycheck date
+        /// </summary>
+        public DateTime? PaycheckDate { get; private set; }
 
         /// <summary>
         /// The Reference Id of the Pay Statement, also known as the advice number.
@@ -98,13 +102,22 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         public List<PayrollRegisterTaxableBenefitEntry> TaxableBenefitEntries { get; private set; }
 
         /// <summary>
+        /// Flag to indicate whether the current entry is an adjustment
+        /// </summary>
+        public bool IsAdjustment { get; private set; }
+
+        /// <summary>
         /// Constructor.
         /// </summary>
         /// <param name="id"></param>
         /// <param name="sequenceNumber"></param>
         /// <param name="paycheckReferenceId"></param>
         /// <param name="payStatementReferenceId"></param>
-        public PayrollRegisterEntry(string id, string employeeId, DateTime? payPeriodStartDate, DateTime payPeriodEndDate, string payCycleId, int sequenceNumber, string paycheckReferenceId, string payStatementReferenceId, bool newW4Flag)
+        public PayrollRegisterEntry(string id, string employeeId, DateTime? payPeriodStartDate, 
+            DateTime payPeriodEndDate, string payCycleId, int sequenceNumber, 
+            string paycheckReferenceId, string payStatementReferenceId, bool newW4Flag,
+            DateTime? checkDate,
+            bool isAdjustment = false)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -118,11 +131,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             {
                 throw new ArgumentNullException("payCycleId");
             }
-            if (string.IsNullOrEmpty(paycheckReferenceId) && string.IsNullOrEmpty(payStatementReferenceId))
-            {
-                throw new ArgumentException("paycheckReferenceId or payStatementReferenceId is required");
-            }
-
+            
             Id = id;
             EmployeeId = employeeId;
             PayCycleId = payCycleId;
@@ -132,6 +141,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             PayPeriodEndDate = payPeriodEndDate;
             SequenceNumber = sequenceNumber;
             Apply2020W4Rules = newW4Flag;
+            PaycheckDate = checkDate;
+            IsAdjustment = isAdjustment;
 
             EarningsEntries = new List<PayrollRegisterEarningsEntry>();
             TaxEntries = new List<PayrollRegisterTaxEntry>();

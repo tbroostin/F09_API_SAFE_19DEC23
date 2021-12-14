@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -17,6 +17,7 @@ using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -544,7 +545,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 var record = _studentNonCoursesCollection.FirstOrDefault(x => !string.IsNullOrEmpty(x.StudentId));
 
-                _referenceRepositoryMock.Setup(i => i.GetPersonIdsByPersonFilterGuidAsync(It.IsAny<string>())).ReturnsAsync(null); ;
+                _referenceRepositoryMock.Setup(i => i.GetPersonIdsByPersonFilterGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null); ;
 
                 var actualResult =
                     await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessments3Async("", "", "invalid", offset, limit, true);
@@ -596,7 +597,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessmentsByGuidAsync_InvalidId()
             {
-                _studentAptitudeAssessmentRepositoryMock.Setup(rp => rp.GetStudentTestScoresByGuidAsync("ABC")).ReturnsAsync(null);
+                _studentAptitudeAssessmentRepositoryMock.Setup(rp => rp.GetStudentTestScoresByGuidAsync("ABC")).ReturnsAsync(() => null);
                 await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessmentsByGuidAsync("ABC");
             }
 
@@ -663,7 +664,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task StudentAptitudeAssessmentsService_GetStudentAptitudeAssessmentsByGuid2Async_InvalidId()
             {
-                _studentAptitudeAssessmentRepositoryMock.Setup(rp => rp.GetStudentTestScoresByGuidAsync("ABC")).ReturnsAsync(null);
+                _studentAptitudeAssessmentRepositoryMock.Setup(rp => rp.GetStudentTestScoresByGuidAsync("ABC")).ReturnsAsync(() => null);
                 await _studentAptitudeAssessmentsService.GetStudentAptitudeAssessmentsByGuid2Async("ABC");
             }
 
@@ -967,7 +968,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAptitudeAssessmentsService_CreateStudentAptitudeAssessments2_ArgumentNullException()
             {
                 await _studentAptitudeAssessmentsService.CreateStudentAptitudeAssessments2Async(null);
@@ -1026,7 +1027,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAptitudeAssessmentsService_Post2_NullId()
             {
                 var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
@@ -1040,7 +1041,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAptitudeAssessmentsService_Put2_PopulateStatus()
             {
                 var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
@@ -1051,7 +1052,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAptitudeAssessmentsService_Put2_NullId()
             {
                 var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
@@ -1063,7 +1064,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAptitudeAssessmentsService_Put2_RepositoryException()
             {
                 var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
@@ -1075,7 +1076,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAptitudeAssessmentsService_Put2_KeyNotFoundException()
             {
                 var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
@@ -1087,7 +1088,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAptitudeAssessmentsService_Put2_ArgumentException()
             {
                 var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
@@ -1099,7 +1100,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAptitudeAssessmentsService_Put2_Exception()
             {
                 var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
@@ -1111,14 +1112,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAptitudeAssessmentsService_Put2_NullArguments()
             {
                 await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessments2Async(null);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAptitudeAssessmentsService_Put2_EmptyStudent()
             {
 
@@ -1134,7 +1135,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }          
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAptitudeAssessmentsService_Put2_EmptyAssessment()
             {
 
@@ -1150,7 +1151,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAptitudeAssessmentsService_Put2_InvalidAssessment()
             {
 
@@ -1166,7 +1167,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAptitudeAssessmentsService_Put2_EmptyAssessedOn()
             {
 
@@ -1182,7 +1183,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAptitudeAssessmentsService_Put2_EmptyScore()
             {
 
@@ -1199,7 +1200,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
            
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentAptitudeAssessmentsService_Put2_InvalidSource()
             {
 
@@ -1262,7 +1263,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var studentAptitudeAssessment = _studentAptitudeAssessmentsDtos2.FirstOrDefault(x => x.Id == studentAptitudeAssessmentsGuid);
                 var studentTestScore = _studentNonCoursesCollection.FirstOrDefault(x => x.Guid == studentAptitudeAssessmentsGuid);
                 _studentAptitudeAssessmentRepositoryMock.Setup(x => x.CreateStudentTestScoresAsync(It.IsAny<StudentTestScores>())).ReturnsAsync(studentTestScore);
-                _studentAptitudeAssessmentRepositoryMock.Setup(x => x.GetStudentTestScoresIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                _studentAptitudeAssessmentRepositoryMock.Setup(x => x.GetStudentTestScoresIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
                 studentAptitudeAssessment.Status = Dtos.EnumProperties.StudentAptitudeAssessmentsStatus.NotSet;
                 var result = await _studentAptitudeAssessmentsService.UpdateStudentAptitudeAssessments2Async(studentAptitudeAssessment);

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -312,7 +312,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
            
             public async Task CommerceTaxCodeService_CommerceTaxCodeRates_Repo_NoRecords()
             {
-                _referenceDataRepositoryMock.Setup(repo => repo.GetCommerceTaxCodeRatesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+                _referenceDataRepositoryMock.Setup(repo => repo.GetCommerceTaxCodeRatesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
                 var results = await _commerceTaxCodeService.GetCommerceTaxCodeRatesAsync();
                 Assert.AreEqual(0, results.Count());

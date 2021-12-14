@@ -1,11 +1,12 @@
-﻿using Ellucian.Colleague.Coordination.HumanResources.Services;
-using Ellucian.Colleague.Domain.Base;
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+
+using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.HumanResources;
-using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -13,7 +14,6 @@ using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
@@ -262,15 +262,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
-            public async Task InstitutionPositions_GETAllAsync_NoPermissions_Exception()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                var actualsTuple = await institutionPositionService.GetInstitutionPositionsAsync(offset, limit, It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
-            }
+            
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentException))]
@@ -371,7 +363,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             public async Task InstitutionPositions_GET_ById_ReturnsNullEntity_KeyNotFoundException()
             {
                 var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
-                positionRepositoryMock.Setup(i => i.GetPositionByGuidAsync(id)).ReturnsAsync(null);
+                positionRepositoryMock.Setup(i => i.GetPositionByGuidAsync(id)).ReturnsAsync(() => null);
                 var actual = await institutionPositionService.GetInstitutionPositionByGuidAsync(id);
             }
 
@@ -766,15 +758,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
 
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
-            public async Task InstitutionPositions_GETAll2Async_NoPermissions_Exception()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                var actualsTuple = await institutionPositionService.GetInstitutionPositions2Async(offset, limit, It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
-            }
+            
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentException))]
@@ -875,7 +859,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             public async Task InstitutionPositions_GET_ById2_ReturnsNullEntity_KeyNotFoundException()
             {
                 var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
-                positionRepositoryMock.Setup(i => i.GetPositionByGuidAsync(id)).ReturnsAsync(null);
+                positionRepositoryMock.Setup(i => i.GetPositionByGuidAsync(id)).ReturnsAsync(() => null);
                 var actual = await institutionPositionService.GetInstitutionPositionByGuid2Async(id);
             }
 
@@ -1277,62 +1261,126 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 Assert.AreEqual(expected.Title, actual.Title);
             }
 
+            
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
-            public async Task InstitutionPositions_GETAll3Async_NoPermissions_Exception()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task InstitutionPositions_GETAll3Async_CovertMethodTryCatch_Exception()
             {
                 loggerMock.Setup(l => l.IsErrorEnabled).Returns(true);
                 referenceDataRepositoryMock.Setup(i => i.GetLocationsAsync(It.IsAny<bool>())).ThrowsAsync(new Exception());
-                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
+
+                try
+                {
+                    var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
+                                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
+                                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message.Contains("Unable to retrieve the institution-positions resource.") && error.Code == "Bad.Data")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, string.Format("error.Message == '{0}' error.Code == '{1}'", ex.Errors.FirstOrDefault().Message, ex.Errors.FirstOrDefault().Code));
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task InstitutionPositions_GETAll3_DateError_Async()
             {
                 referenceDataRepositoryMock.Setup(i => i.GetUnidataFormattedDate(It.IsAny<string>())).ThrowsAsync(new Exception());
-                var actualsTuple =
-                    await
-                        institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), "2012-07-01", It.IsAny<bool>());
+                try
+                {
+                    var actualsTuple =
+                        await
+                            institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
+                                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
+                                It.IsAny<string>(), It.IsAny<string>(), "2012-07-01", It.IsAny<bool>());
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "Invalid Date format in arguments" && error.Code == "Bad.Data")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, string.Format("error.Message == '{0}' error.Code == '{1}'", ex.Errors.FirstOrDefault().Message, ex.Errors.FirstOrDefault().Code));
+                    throw ex;
+                }
             }
 
             [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task InstitutionPositions_GETAll3Async_SupervisorPositionId_Exception()
             {
                 loggerMock.Setup(l => l.IsErrorEnabled).Returns(true);
                 positionRepositoryMock.Setup(i => i.GetPositionGuidFromIdAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentOutOfRangeException());
-                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
+
+                try
+                {
+                    var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
+                                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
+                                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "Unable to find the GUID for the supervisor position '1'" && error.Code == "Bad.Data")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, string.Format("error.Message == '{0}' error.Code == '{1}'", ex.Errors.FirstOrDefault().Message, ex.Errors.FirstOrDefault().Code));
+                    throw ex;
+                }
             }
 
             [TestMethod]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task InstitutionPositions_GETAll3Async_AlternateSupervisorPositionId_Exception()
             {
                 loggerMock.Setup(l => l.IsErrorEnabled).Returns(true);
                 positionRepositoryMock.Setup(i => i.GetPositionGuidFromIdAsync("1")).ReturnsAsync("50aadc94-3b09-4bec-bca6-a9c588ee8c11");
                 positionRepositoryMock.Setup(i => i.GetPositionGuidFromIdAsync("2")).ThrowsAsync(new ArgumentOutOfRangeException());
-                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
+
+                try
+                {
+                    var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
+                                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
+                                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "Unable to find the GUID for the alternate supervisor position '2'" && error.Code == "Bad.Data")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, string.Format("error.Message == '{0}' error.Code == '{1}'", ex.Errors.FirstOrDefault().Message, ex.Errors.FirstOrDefault().Code));
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task InstitutionPositions_GETAll3Async_ArgumentException()
             {
                 var nullEntities = positionEntities = new List<Domain.HumanResources.Entities.Position>() 
@@ -1348,13 +1396,31 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(positionEntityTuple);
-                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
+
+                try
+                {
+                    var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
+                                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
+                                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "Position Entity is required." && error.Code == "Validation.Exception")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, string.Format("error.Message == '{0}' error.Code == '{1}'", ex.Errors.FirstOrDefault().Message, ex.Errors.FirstOrDefault().Code));
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task InstitutionPositions_GETAll3Async_NullGuid_ArgumentException()
             {
                 positionEntities = new List<Domain.HumanResources.Entities.Position>() 
@@ -1369,9 +1435,27 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 positionRepositoryMock.Setup(i => i.GetPositionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
                             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(positionEntityTuple);
-                var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
+
+                try
+                {
+                    var actualsTuple = await institutionPositionService.GetInstitutionPositions3Async(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
+                                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
+                                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "The position entity is missing the GUID." && error.Code == "Validation.Exception")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, string.Format("error.Message == '{0}' error.Code == '{1}'", ex.Errors.FirstOrDefault().Message, ex.Errors.FirstOrDefault().Code));
+                    throw ex;
+                }
             }
 
             [TestMethod]
@@ -1382,12 +1466,30 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task InstitutionPositions_GET_ById3_ReturnsNullEntity_KeyNotFoundException()
             {
                 var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
-                positionRepositoryMock.Setup(i => i.GetPositionByGuidAsync(id)).ReturnsAsync(null);
-                var actual = await institutionPositionService.GetInstitutionPositionByGuid3Async(id);
+                positionRepositoryMock.Setup(i => i.GetPositionByGuidAsync(id)).ReturnsAsync(() => null);
+
+                try
+                {
+                    var actual = await institutionPositionService.GetInstitutionPositionByGuid3Async(id);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "No institution-positions was found for GUID 'ce4d68f6-257d-4052-92c8-17eed0f088fa'." && error.Code == "GUID.Not.Found")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, string.Format("error.Message == '{0}' error.Code == '{1}'", ex.Errors.FirstOrDefault().Message, ex.Errors.FirstOrDefault().Code));
+                    throw ex;
+                }
             }
 
             private void BuildData()

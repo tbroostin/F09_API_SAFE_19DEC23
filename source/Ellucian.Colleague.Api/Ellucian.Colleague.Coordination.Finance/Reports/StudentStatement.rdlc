@@ -4657,9 +4657,6 @@
               <TablixMembers>
                 <TablixMember />
               </TablixMembers>
-              <Visibility>
-                <Hidden>=IsNothing(Fields!Id.Value)</Hidden>
-              </Visibility>
             </TablixMember>
             <TablixMember>
               <KeepWithGroup>Before</KeepWithGroup>
@@ -4677,11 +4674,7 @@
         <Width>7.49in</Width>
         <ZIndex>5</ZIndex>
         <Visibility>
-          <Hidden>=IIF(Parameters!DisplayByTerm.Value=True,
-	IIF(Parameters!IncludeDetail.Value=False,
-		True,
-		IsNothing(First(Fields!Id.Value, "StudentPayments"))),
-	True)</Hidden>
+          <Hidden>=IIF((Parameters!DisplayByTerm.Value=False Or Parameters!IncludeDetail.Value=false Or IsNothing(First(Fields!Amount.Value, "StudentPayments"))), True, False)</Hidden>
         </Visibility>
         <Style>
           <Border>
@@ -24372,9 +24365,6 @@
               <TablixMembers>
                 <TablixMember />
               </TablixMembers>
-              <Visibility>
-                <Hidden>=Microsoft.VisualBasic.Information.IsNothing(Fields!Id.Value)</Hidden>
-              </Visibility>
             </TablixMember>
             <TablixMember>
               <KeepWithGroup>Before</KeepWithGroup>
@@ -24392,11 +24382,7 @@
         <Width>7.49in</Width>
         <ZIndex>40</ZIndex>
         <Visibility>
-          <Hidden>=IIF(Parameters!DisplayByTerm.Value=True,
-	True,
-	IIF(Parameters!IncludeDetail.Value=false,
-		True,
-		IsNothing(First(Fields!Id.Value, "StudentPayments"))))</Hidden>
+          <Hidden>=IIF((Parameters!DisplayByTerm.Value=True Or Parameters!IncludeDetail.Value=false Or IsNothing(First(Fields!Amount.Value, "StudentPayments"))), True, False)</Hidden>
         </Visibility>
         <Style>
           <Border>
@@ -30388,7 +30374,7 @@
         <Width>1.97965in</Width>
         <ZIndex>49</ZIndex>
         <Visibility>
-          <Hidden>=Parameters!OverdueAmount.Value&lt;=0</Hidden>
+          <Hidden>=Parameters!OverdueAmount.Value&lt;=0 Or Parameters!DisplayDueDates.Value = False</Hidden>
         </Visibility>
         <Style>
           <Border>
@@ -30425,7 +30411,7 @@
         <Width>1.65092in</Width>
         <ZIndex>50</ZIndex>
         <Visibility>
-          <Hidden>=Parameters!OverdueAmount.Value&lt;=0</Hidden>
+          <Hidden>=Parameters!OverdueAmount.Value&lt;=0 Or Parameters!DisplayDueDates.Value = False</Hidden>
         </Visibility>
         <Style>
           <Border>
@@ -32385,6 +32371,10 @@
     </ReportParameter>
     <ReportParameter Name="TotalAmountDue">
       <DataType>String</DataType>
+      <Prompt>ReportParameter1</Prompt>
+    </ReportParameter>
+    <ReportParameter Name="DisplayDueDates">
+      <DataType>Boolean</DataType>
       <Prompt>ReportParameter1</Prompt>
     </ReportParameter>
   </ReportParameters>

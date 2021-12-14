@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Ellucian.Colleague.Dtos.Student
 {
     /// <summary>
-    /// Represents a response to importing student section grades
+    /// Represents the response for one student when importing section grades
     /// </summary>
     public class SectionGradeResponse
     {

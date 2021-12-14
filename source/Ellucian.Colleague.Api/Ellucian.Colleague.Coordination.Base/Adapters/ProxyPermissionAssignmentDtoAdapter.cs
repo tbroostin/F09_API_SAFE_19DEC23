@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Web.Adapters;
 using slf4net;
@@ -39,7 +39,11 @@ namespace Ellucian.Colleague.Coordination.Base.Adapters
                     {
                         endDate = DateTime.Today;
                     }
-                    var perm = new Domain.Base.Entities.ProxyAccessPermission(access.Id, access.ProxySubjectId, access.ProxyUserId, access.ProxyWorkflowCode, access.StartDate)
+                    if(access.EndDate.HasValue) // If the source alredy has a value for end date, use that value.
+                    {
+                        endDate = access.EndDate;
+                    }
+                    var perm = new Domain.Base.Entities.ProxyAccessPermission(access.Id, access.ProxySubjectId, access.ProxyUserId, access.ProxyWorkflowCode, access.StartDate, endDate)
                     {
                         EndDate = endDate,
                         ApprovalEmailDocumentId = access.ApprovalEmailDocumentId,

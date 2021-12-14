@@ -1,18 +1,23 @@
 //Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using Ellucian.Colleague.Api.Controllers.HumanResources;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -310,6 +315,184 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
                 .Throws<Exception>();
             await employmentPerformanceReviewsController.GetEmploymentPerformanceReviewsByGuidAsync(expectedGuid);
         }
+
+        //Permissions Tests
+
+        //Success
+        //Get 10
+        //GetEmploymentPerformanceReviewsAsync
+        [TestMethod]
+        public async Task EmploymentPerformanceReviewsController_GetEmploymentPerformanceReviewsAsync_Permissions()
+        {
+            var employmentPerformanceReviewsTuple = new Tuple<IEnumerable<EmploymentPerformanceReviews>, int>(employmentPerformanceReviewsCollection, employmentPerformanceReviewsCollection.Count);
+            Paging paging = new Paging(employmentPerformanceReviewsCollection.Count(), 0);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "EmploymentPerformanceReviews" },
+                { "action", "GetEmploymentPerformanceReviewsAsync" }
+            };
+            HttpRoute route = new HttpRoute("employment-performance-reviews", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            employmentPerformanceReviewsController.Request.SetRouteData(data);
+            employmentPerformanceReviewsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewEmploymentPerformanceReview, 
+                HumanResourcesPermissionCodes.CreateUpdateEmploymentPerformanceReview });
+
+            var controllerContext = employmentPerformanceReviewsController.ControllerContext;
+            var actionDescriptor = employmentPerformanceReviewsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            employmentPerformanceReviewsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            employmentPerformanceReviewsServiceMock.Setup(s => s.GetEmploymentPerformanceReviewsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(employmentPerformanceReviewsTuple);
+            var employmentPerformanceReviews = (await employmentPerformanceReviewsController.GetEmploymentPerformanceReviewsAsync(paging));
+
+            Object filterObject;
+            employmentPerformanceReviewsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewEmploymentPerformanceReview));
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.CreateUpdateEmploymentPerformanceReview));
+
+        }
+
+        //Exception
+        //Get 10
+        //GetEmploymentPerformanceReviewsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task EmploymentPerformanceReviewsController_GetEmploymentPerformanceReviewsAsync_Invalid_Permissions()
+        {
+            Paging paging = new Paging(employmentPerformanceReviewsCollection.Count(), 0);
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "EmploymentPerformanceReviews" },
+                { "action", "GetEmploymentPerformanceReviewsAsync" }
+            };
+            HttpRoute route = new HttpRoute("employment-performance-reviews", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            employmentPerformanceReviewsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = employmentPerformanceReviewsController.ControllerContext;
+            var actionDescriptor = employmentPerformanceReviewsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                employmentPerformanceReviewsServiceMock.Setup(x => x.GetEmploymentPerformanceReviewsAsync(It.IsAny<int>(),It.IsAny<int>(), It.IsAny<bool>())).Throws<PermissionsException>(); employmentPerformanceReviewsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view employment-performance-reviews."));
+                await employmentPerformanceReviewsController.GetEmploymentPerformanceReviewsAsync(paging);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
+        //Success
+        //Get By Id 10
+        //GetEmploymentPerformanceReviewsByGuidAsync
+        [TestMethod]
+        public async Task EmploymentPerformanceReviewsController_GetEmploymentPerformanceReviewsByGuidAsync_Permissions()
+        {
+            var expected = employmentPerformanceReviewsCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "EmploymentPerformanceReviews" },
+                { "action", "GetEmploymentPerformanceReviewsByGuidAsync" }
+            };
+            HttpRoute route = new HttpRoute("employment-performance-reviews", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            employmentPerformanceReviewsController.Request.SetRouteData(data);
+            employmentPerformanceReviewsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewEmploymentPerformanceReview,
+                HumanResourcesPermissionCodes.CreateUpdateEmploymentPerformanceReview });
+
+            var controllerContext = employmentPerformanceReviewsController.ControllerContext;
+            var actionDescriptor = employmentPerformanceReviewsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            employmentPerformanceReviewsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            employmentPerformanceReviewsServiceMock.Setup(x => x.GetEmploymentPerformanceReviewsByGuidAsync(expected.Id)).ReturnsAsync(expected);
+            var actual = await employmentPerformanceReviewsController.GetEmploymentPerformanceReviewsByGuidAsync(expected.Id);
+
+
+            Object filterObject;
+            employmentPerformanceReviewsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewEmploymentPerformanceReview));
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.CreateUpdateEmploymentPerformanceReview));
+
+        }
+
+
+        //Exception
+        //Get By Id 10
+        //GetEmploymentPerformanceReviewsByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task EmploymentPerformanceReviewsController_GetEmploymentPerformanceReviewsByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "EmploymentPerformanceReviews" },
+                { "action", "GetEmploymentPerformanceReviewsByGuidAsync" }
+            };
+            HttpRoute route = new HttpRoute("employment-performance-reviews", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            employmentPerformanceReviewsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = employmentPerformanceReviewsController.ControllerContext;
+            var actionDescriptor = employmentPerformanceReviewsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                employmentPerformanceReviewsServiceMock.Setup(x => x.GetEmploymentPerformanceReviewsByGuidAsync(It.IsAny<string>())).Throws<PermissionsException>(); 
+                employmentPerformanceReviewsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view employment-performance-reviews."));
+                await employmentPerformanceReviewsController.GetEmploymentPerformanceReviewsByGuidAsync(expectedGuid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion
 
         #region PUT
@@ -370,6 +553,92 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             employmentPerformanceReviewsServiceMock.Setup(i => i.PutEmploymentPerformanceReviewsAsync(It.IsAny<string>(), It.IsAny<Dtos.EmploymentPerformanceReviews>())).ThrowsAsync(new Exception());
             await employmentPerformanceReviewsController.PutEmploymentPerformanceReviewsAsync("id", employmentPerformanceReviewsCollection.FirstOrDefault());
         }
+
+        //Permissions Tests
+
+        //Success
+        //Put 10
+        //PutEmploymentPerformanceReviewsAsync
+        [TestMethod]
+        public async Task EmploymentPerformanceReviewsController_PutEmploymentPerformanceReviewsAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "EmploymentPerformanceReviews" },
+                { "action", "PutEmploymentPerformanceReviewsAsync" }
+            };
+            HttpRoute route = new HttpRoute("employment-performance-reviews", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            employmentPerformanceReviewsController.Request.SetRouteData(data);
+            employmentPerformanceReviewsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.CreateUpdateEmploymentPerformanceReview);
+
+            var controllerContext = employmentPerformanceReviewsController.ControllerContext;
+            var actionDescriptor = employmentPerformanceReviewsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            employmentPerformanceReviewsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            employmentPerformanceReviewsServiceMock.Setup(i => i.PutEmploymentPerformanceReviewsAsync(employmentPerformanceReviewsCollection.FirstOrDefault().Id, employmentPerformanceReviewsCollection.FirstOrDefault())).ReturnsAsync(employmentPerformanceReviewsCollection.FirstOrDefault());
+            var result = await employmentPerformanceReviewsController.PutEmploymentPerformanceReviewsAsync(employmentPerformanceReviewsCollection.FirstOrDefault().Id, employmentPerformanceReviewsCollection.FirstOrDefault());
+
+            Object filterObject;
+            employmentPerformanceReviewsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.CreateUpdateEmploymentPerformanceReview));
+
+        }
+
+        //Exception
+        //Put 10
+        //PutEmploymentPerformanceReviewsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task EmploymentPerformanceReviewsController_PutEmploymentPerformanceReviewsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "EmploymentPerformanceReviews" },
+                { "action", "PutEmploymentPerformanceReviewsAsync" }
+            };
+            HttpRoute route = new HttpRoute("employment-performance-reviews", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            employmentPerformanceReviewsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = employmentPerformanceReviewsController.ControllerContext;
+            var actionDescriptor = employmentPerformanceReviewsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                employmentPerformanceReviewsServiceMock.Setup(i => i.PutEmploymentPerformanceReviewsAsync(It.IsAny<string>(), It.IsAny<Dtos.EmploymentPerformanceReviews>())).Throws<PermissionsException>();
+                employmentPerformanceReviewsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to update employment-performance-reviews."));
+                await employmentPerformanceReviewsController.PutEmploymentPerformanceReviewsAsync("id", employmentPerformanceReviewsCollection.FirstOrDefault());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion
 
         #region POST
@@ -430,6 +699,92 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             employmentPerformanceReviewsServiceMock.Setup(i => i.PostEmploymentPerformanceReviewsAsync(It.IsAny<Dtos.EmploymentPerformanceReviews>())).ThrowsAsync(new Exception());
             await employmentPerformanceReviewsController.PostEmploymentPerformanceReviewsAsync(employmentPerformanceReviewsCollection.FirstOrDefault());
         }
+
+        //Permissions Tests
+
+        //Success
+        //Post 10
+        //PostEmploymentPerformanceReviewsAsync
+        [TestMethod]
+        public async Task EmploymentPerformanceReviewsController_PostEmploymentPerformanceReviewsAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "EmploymentPerformanceReviews" },
+                { "action", "PostEmploymentPerformanceReviewsAsync" }
+            };
+            HttpRoute route = new HttpRoute("employment-performance-reviews", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            employmentPerformanceReviewsController.Request.SetRouteData(data);
+            employmentPerformanceReviewsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.CreateUpdateEmploymentPerformanceReview);
+
+            var controllerContext = employmentPerformanceReviewsController.ControllerContext;
+            var actionDescriptor = employmentPerformanceReviewsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            employmentPerformanceReviewsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            employmentPerformanceReviewsServiceMock.Setup(i => i.PostEmploymentPerformanceReviewsAsync(employmentPerformanceReviewsCollection.FirstOrDefault())).ReturnsAsync(employmentPerformanceReviewsCollection.FirstOrDefault());
+            var result = await employmentPerformanceReviewsController.PostEmploymentPerformanceReviewsAsync(employmentPerformanceReviewsCollection.FirstOrDefault());
+
+            Object filterObject;
+            employmentPerformanceReviewsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.CreateUpdateEmploymentPerformanceReview));
+
+        }
+
+        //Exception
+        //Post 10
+        //PostEmploymentPerformanceReviewsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task EmploymentPerformanceReviewsController_PostEmploymentPerformanceReviewsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "EmploymentPerformanceReviews" },
+                { "action", "PostEmploymentPerformanceReviewsAsync" }
+            };
+            HttpRoute route = new HttpRoute("employment-performance-reviews", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            employmentPerformanceReviewsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = employmentPerformanceReviewsController.ControllerContext;
+            var actionDescriptor = employmentPerformanceReviewsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                employmentPerformanceReviewsServiceMock.Setup(i => i.PostEmploymentPerformanceReviewsAsync(It.IsAny<Dtos.EmploymentPerformanceReviews>())).Throws<PermissionsException>();
+                employmentPerformanceReviewsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to create employment-performance-reviews."));
+                await employmentPerformanceReviewsController.PostEmploymentPerformanceReviewsAsync(employmentPerformanceReviewsCollection.FirstOrDefault());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion
 
         #region DELETE
@@ -440,6 +795,94 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             employmentPerformanceReviewsServiceMock.Setup(i => i.DeleteEmploymentPerformanceReviewAsync(id)).Returns(Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
             await employmentPerformanceReviewsController.DeleteEmploymentPerformanceReviewsAsync(id);
         }
+
+        //Permissions Tests
+
+        //Success
+        //Delete 
+        //DeleteEmploymentPerformanceReviewsAsync
+        [TestMethod]
+        public async Task EmploymentPerformanceReviewsController_DeleteEmploymentPerformanceReviewsAsync_Permissions()
+        {
+            string id = "375ef15b-f2d2-40ed-ac47-f0d2d45260f0";
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "EmploymentPerformanceReviews" },
+                { "action", "DeleteEmploymentPerformanceReviewsAsync" }
+            };
+            HttpRoute route = new HttpRoute("employment-performance-reviews", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            employmentPerformanceReviewsController.Request.SetRouteData(data);
+            employmentPerformanceReviewsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.DeleteEmploymentPerformanceReview);
+
+            var controllerContext = employmentPerformanceReviewsController.ControllerContext;
+            var actionDescriptor = employmentPerformanceReviewsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            employmentPerformanceReviewsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            employmentPerformanceReviewsServiceMock.Setup(i => i.DeleteEmploymentPerformanceReviewAsync(id)).Returns(Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
+            await employmentPerformanceReviewsController.DeleteEmploymentPerformanceReviewsAsync(id);
+
+            Object filterObject;
+            employmentPerformanceReviewsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.DeleteEmploymentPerformanceReview));
+
+        }
+
+        //Exception
+        //Get 8
+        //DeleteEmploymentPerformanceReviewsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task EmploymentPerformanceReviewsController_DeleteEmploymentPerformanceReviewsAsync_Invalid_Permissions()
+        {
+            string id = "375ef15b-f2d2-40ed-ac47-f0d2d45260f0";
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "EmploymentPerformanceReviews" },
+                { "action", "DeleteEmploymentPerformanceReviewsAsync" }
+            };
+            HttpRoute route = new HttpRoute("employment-performance-reviews", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            employmentPerformanceReviewsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = employmentPerformanceReviewsController.ControllerContext;
+            var actionDescriptor = employmentPerformanceReviewsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                employmentPerformanceReviewsServiceMock.Setup(i => i.DeleteEmploymentPerformanceReviewAsync(id)).Throws<PermissionsException>();
+                employmentPerformanceReviewsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to delete employee-leave-plans."));
+                await employmentPerformanceReviewsController.DeleteEmploymentPerformanceReviewsAsync(id);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion
     }
 

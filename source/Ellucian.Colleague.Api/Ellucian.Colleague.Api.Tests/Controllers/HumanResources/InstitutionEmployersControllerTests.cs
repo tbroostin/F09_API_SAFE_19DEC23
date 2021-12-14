@@ -107,7 +107,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             {
                 var thisInstitutionEmployers = InstitutionEmployersList.Where(m => m.Id == institutionEmployersGuid).FirstOrDefault();
 
-                institutionEmployersServiceMock.Setup(x => x.GetInstitutionEmployersByGuidAsync(It.IsAny<string>())).ReturnsAsync(thisInstitutionEmployers);
+                institutionEmployersServiceMock.Setup(x => x.GetInstitutionEmployersByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(thisInstitutionEmployers);
 
                 var institutionEmployers = await InstitutionEmployersController.GetInstitutionEmployersByGuidAsync(institutionEmployersGuid);
                 Assert.AreEqual(thisInstitutionEmployers.Id, institutionEmployers.Id);
@@ -180,7 +180,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             {
                 var thisInstitutionEmployers = InstitutionEmployersList.Where(m => m.Id == "81fda6ce-77aa-4283-a878-75bbea227937").FirstOrDefault();
 
-                institutionEmployersServiceMock.Setup(x => x.GetInstitutionEmployersByGuidAsync(It.IsAny<string>())).ReturnsAsync(thisInstitutionEmployers);
+                institutionEmployersServiceMock.Setup(x => x.GetInstitutionEmployersByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(thisInstitutionEmployers);
 
                 var institutionEmployers = await InstitutionEmployersController.GetInstitutionEmployersByGuidAsync("81fda6ce-77aa-4283-a878-75bbea227937");
                 Assert.AreEqual(thisInstitutionEmployers.Id, institutionEmployers.Id);
@@ -255,7 +255,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             [ExpectedException(typeof(HttpResponseException))]
             public async Task InstitutionEmployersController_GetByIdThrowsIntAppiExc()
             {
-                institutionEmployersServiceMock.Setup(gc => gc.GetInstitutionEmployersByGuidAsync(It.IsAny<string>())).Throws<Exception>();
+                institutionEmployersServiceMock.Setup(gc => gc.GetInstitutionEmployersByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<Exception>();
 
                 await InstitutionEmployersController.GetInstitutionEmployersByGuidAsync("sdjfh");
             }
@@ -264,7 +264,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             [ExpectedException(typeof(HttpResponseException))]
             public async Task InstitutionEmployersController_GetByIdThrowsKeyNotFoundException()
             {
-                institutionEmployersServiceMock.Setup(gc => gc.GetInstitutionEmployersByGuidAsync(It.IsAny<string>())).Throws<KeyNotFoundException>();
+                institutionEmployersServiceMock.Setup(gc => gc.GetInstitutionEmployersByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<KeyNotFoundException>();
 
                 await InstitutionEmployersController.GetInstitutionEmployersByGuidAsync("sdjfh");
             }
@@ -272,7 +272,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             [ExpectedException(typeof(HttpResponseException))]
             public async Task InstitutionEmployersController_GetByIdThrowsPermissionsException()
             {
-                institutionEmployersServiceMock.Setup(gc => gc.GetInstitutionEmployersByGuidAsync(It.IsAny<string>())).Throws<PermissionsException>();
+                institutionEmployersServiceMock.Setup(gc => gc.GetInstitutionEmployersByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
 
                 await InstitutionEmployersController.GetInstitutionEmployersByGuidAsync("sdjfh");
             }
@@ -280,7 +280,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             [ExpectedException(typeof(HttpResponseException))]
             public async Task InstitutionEmployersController_GetByIdThrowsArgumentException()
             {
-                institutionEmployersServiceMock.Setup(gc => gc.GetInstitutionEmployersByGuidAsync(It.IsAny<string>())).Throws<ArgumentException>();
+                institutionEmployersServiceMock.Setup(gc => gc.GetInstitutionEmployersByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<ArgumentException>();
 
                 await InstitutionEmployersController.GetInstitutionEmployersByGuidAsync("sdjfh");
             }
@@ -288,7 +288,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             [ExpectedException(typeof(HttpResponseException))]
             public async Task InstitutionEmployersController_GetByIdThrowsRepositoryException()
             {
-                institutionEmployersServiceMock.Setup(gc => gc.GetInstitutionEmployersByGuidAsync(It.IsAny<string>())).Throws<RepositoryException>();
+                institutionEmployersServiceMock.Setup(gc => gc.GetInstitutionEmployersByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<RepositoryException>();
 
                 await InstitutionEmployersController.GetInstitutionEmployersByGuidAsync("sdjfh");
             }
@@ -296,7 +296,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             [ExpectedException(typeof(HttpResponseException))]
             public async Task InstitutionEmployersController_GetByIdThrowsIntegrationApiException()
             {
-                institutionEmployersServiceMock.Setup(gc => gc.GetInstitutionEmployersByGuidAsync(It.IsAny<string>())).Throws<IntegrationApiException>();
+                institutionEmployersServiceMock.Setup(gc => gc.GetInstitutionEmployersByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<IntegrationApiException>();
 
                 await InstitutionEmployersController.GetInstitutionEmployersByGuidAsync("sdjfh");
             }

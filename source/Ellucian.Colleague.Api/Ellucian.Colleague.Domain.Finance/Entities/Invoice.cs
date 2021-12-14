@@ -59,6 +59,11 @@ namespace Ellucian.Colleague.Domain.Finance.Entities
         public DateTime DueDate { get { return _dueDate; } }
 
         /// <summary>
+        /// The due date offset by CTZS
+        /// </summary>
+        public DateTimeOffset? DueDateOffset { get; set; }
+
+        /// <summary>
         /// Billing start date
         /// </summary>
         public DateTime BillingStart { get { return _billingStart; } }

@@ -193,7 +193,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             public async Task NullStudentNsldsInformationReceived_ExceptionHandledTest()
             {
                 nsldsInformationRepositoryMock.Setup(r => r.GetStudentNsldsInformationAsync(It.IsAny<string>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 BuildStudentNsldsInformationService();
                 Assert.IsNull(await studentNsldsInformationService.GetStudentNsldsInformationAsync(studentId));

@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Dtos.ColleagueFinance;
 using Ellucian.Rest.Client.Exceptions;
@@ -30,6 +30,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<BudgetAdjustmentConfiguration>(await response.Content.ReadAsStringAsync());
@@ -56,6 +57,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<BudgetAdjustmentsEnabled>(await response.Content.ReadAsStringAsync());
@@ -83,6 +85,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(draftBudgetAdjustment, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<DraftBudgetAdjustment>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -109,6 +112,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePutRequestWithResponseAsync(draftBudgetAdjustment, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<DraftBudgetAdjustment>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -136,6 +140,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_draftBudgetAdjustmentsPath, id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<DraftBudgetAdjustment>(await response.Content.ReadAsStringAsync());
@@ -170,6 +175,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_draftBudgetAdjustmentsPath, id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteDeleteRequestWithResponseAsync(urlPath, headers: headers);
             }
             catch (Exception e)
@@ -194,6 +200,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(budgetAdjustment, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<BudgetAdjustment>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -220,6 +227,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePutRequestWithResponseAsync(budgetAdjustment, urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<BudgetAdjustment>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -247,6 +255,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_budgetAdjustmentsPath, id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<BudgetAdjustment>(await response.Content.ReadAsStringAsync());
@@ -281,6 +290,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_budgetAdjustmentsPendingApprovalDetailPath, id);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<BudgetAdjustment>(await response.Content.ReadAsStringAsync());
@@ -322,6 +332,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(budgetAdjustmentApproval, urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<BudgetAdjustment>(await response.Content.ReadAsStringAsync());
@@ -350,6 +361,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_budgetAdjustmentsSummaryPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<BudgetAdjustmentSummary>>(await response.Content.ReadAsStringAsync());
@@ -373,6 +385,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_budgetAdjustmentsPendingApprovalPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<BudgetAdjustmentPendingApprovalSummary>>(await response.Content.ReadAsStringAsync());
@@ -408,6 +421,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<CostCenter>>(await response.Content.ReadAsStringAsync());
@@ -446,6 +460,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<CostCenter>(await response.Content.ReadAsStringAsync());
@@ -486,6 +501,7 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
 
                 // Use URL path and request data to call web api method (including query string)
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<CostCenter>>(await response.Content.ReadAsStringAsync());
@@ -526,6 +542,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<IEnumerable<GlAccount>>(await response.Content.ReadAsStringAsync());
@@ -568,6 +585,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<GlAccountValidationResponse>(await response.Content.ReadAsStringAsync());
@@ -605,6 +623,7 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
 
                 // Use URL path and request data to call web api method (including query string)
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<GlAccountActivityDetail>(await response.Content.ReadAsStringAsync());
@@ -648,6 +667,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<NextApproverValidationResponse>(await response.Content.ReadAsStringAsync());
@@ -690,6 +710,7 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
 
                 // Use URL path and request data to call the web api method (including query string)
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<NextApprover>>(await response.Content.ReadAsStringAsync());
@@ -709,7 +730,7 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         #endregion
-        
+
         #region General Ledger Configuration
 
         /// <summary>
@@ -727,6 +748,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<GeneralLedgerConfiguration>(await response.Content.ReadAsStringAsync());
@@ -760,6 +782,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<GlFiscalYearConfiguration>(await response.Content.ReadAsStringAsync());
@@ -800,6 +823,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<string>(await response.Content.ReadAsStringAsync());
@@ -835,6 +859,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<IEnumerable<string>>(await response.Content.ReadAsStringAsync());
@@ -855,6 +880,8 @@ namespace Ellucian.Colleague.Api.Client
 
         #endregion
 
+        #region Vouchers
+
         /// <summary>
         /// Get a voucher document.
         /// </summary>
@@ -871,6 +898,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<Voucher>(response.Content.ReadAsStringAsync().Result);
@@ -907,6 +935,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<Voucher>(await response.Content.ReadAsStringAsync());
@@ -942,6 +971,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<Voucher2>(await response.Content.ReadAsStringAsync());
@@ -960,6 +990,10 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+        #endregion
+
+        #region Purchase Orders
+
         /// <summary>
         /// Get a purchase order document.
         /// </summary>
@@ -976,6 +1010,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<PurchaseOrder>(response.Content.ReadAsStringAsync().Result);
@@ -1011,6 +1046,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<PurchaseOrder>(await response.Content.ReadAsStringAsync());
@@ -1029,6 +1065,10 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+        #endregion
+
+        #region BPO
+
         /// <summary>
         /// Get a blanket purchase orders document.
         /// </summary>
@@ -1045,6 +1085,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<BlanketPurchaseOrder>(response.Content.ReadAsStringAsync().Result);
@@ -1080,6 +1121,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<BlanketPurchaseOrder>(await response.Content.ReadAsStringAsync());
@@ -1098,6 +1140,10 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+        #endregion
+
+        #region Requisitions
+
         /// <summary>
         /// Get a requisition document.
         /// </summary>
@@ -1114,6 +1160,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<Requisition>(response.Content.ReadAsStringAsync().Result);
@@ -1149,6 +1196,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<Requisition>(await response.Content.ReadAsStringAsync());
@@ -1167,6 +1215,10 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+        #endregion
+
+        #region Journal Entries
+
         /// <summary>
         /// Get a journal entry
         /// </summary>
@@ -1183,6 +1235,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<JournalEntry>(response.Content.ReadAsStringAsync().Result);
@@ -1218,6 +1271,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<JournalEntry>(await response.Content.ReadAsStringAsync());
@@ -1236,6 +1290,11 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+        #endregion
+
+
+        #region Recurring Vouchers
+
         /// <summary>
         /// Get a recurring voucher document
         /// </summary>
@@ -1252,7 +1311,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent); var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<RecurringVoucher>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -1287,7 +1346,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent); var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<RecurringVoucher>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -1305,6 +1364,8 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+        #endregion
+
         /// <summary>
         /// Get all AP tax codes
         /// </summary>
@@ -1319,6 +1380,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_accountsPayableTaxCodesPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<AccountsPayableTax>>(response.Content.ReadAsStringAsync().Result);
@@ -1351,6 +1413,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_accountsPayableTaxCodesPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<AccountsPayableTax>>(await response.Content.ReadAsStringAsync());
@@ -1383,6 +1446,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_accountsPayableTypeCodesPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<AccountsPayableType>>(response.Content.ReadAsStringAsync().Result);
@@ -1415,6 +1479,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(_accountsPayableTypeCodesPath);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<AccountsPayableType>>(await response.Content.ReadAsStringAsync());
@@ -1449,6 +1514,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<GeneralLedgerAccount>(await response.Content.ReadAsStringAsync());
@@ -1488,6 +1554,7 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
 
                 // Use URL path and request data to call web api method (including query string)
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<GlObjectCode>>(await response.Content.ReadAsStringAsync());
@@ -1528,7 +1595,7 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
 
                 // Use URL path and request data to call web api method (including query string)
-                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent); var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<FinanceQuery>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -1554,6 +1621,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <returns>list of requisition summary.</returns>
         /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
         /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        [Obsolete("Obsolete as of Colleague Web API 1.30. Use QueryRequisitionSummariesAsync.")]
         public async Task<IEnumerable<RequisitionSummary>> GetRequisitionsSummaryByPersonIdAsync(string personId)
         {
             try
@@ -1564,6 +1632,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<RequisitionSummary>>(await response.Content.ReadAsStringAsync());
@@ -1598,6 +1667,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<List<ShipToCode>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -1631,6 +1701,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<List<Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementCommodityCode>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -1664,6 +1735,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<ColleagueFinanceWebConfiguration>(await response.Content.ReadAsStringAsync());
@@ -1701,6 +1773,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(requisitionCreateUpdateRequest, urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<RequisitionCreateUpdateResponse>(await response.Content.ReadAsStringAsync());
@@ -1737,6 +1810,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(requisitionDeleteRequest, urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<RequisitionDeleteResponse>(await response.Content.ReadAsStringAsync());
@@ -1773,6 +1847,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(purchaseOrderCreateUpdateRequest, urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<PurchaseOrderCreateUpdateResponse>(await response.Content.ReadAsStringAsync());
@@ -1809,6 +1884,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(purchaseOrderVoidRequest, urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<PurchaseOrderVoidResponse>(await response.Content.ReadAsStringAsync());
@@ -1833,6 +1909,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <returns>list of purchase order summary.</returns>
         /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
         /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        [Obsolete("Obsolete as of Colleague Web API 1.30. Use QueryPurchaseOrderSummariesAsync.")]
         public async Task<IEnumerable<PurchaseOrderSummary>> GetPurchaseOrderSummaryByPersonIdAsync(string personId)
         {
             try
@@ -1843,6 +1920,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<PurchaseOrderSummary>>(await response.Content.ReadAsStringAsync());
@@ -1885,6 +1963,7 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
 
                 // Use URL path and request data to call the web api method (including query string)
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<VendorSearchResult>>(await response.Content.ReadAsStringAsync());
@@ -1927,6 +2006,7 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
 
                 // Use URL path and request data to call the web api method (including query string)
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<VendorsVoucherSearchResult>>(await response.Content.ReadAsStringAsync());
@@ -1964,6 +2044,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(voucherCreateUpdateRequest, urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<VoucherCreateUpdateResponse>(await response.Content.ReadAsStringAsync());
@@ -1990,11 +2071,12 @@ namespace Ellucian.Colleague.Api.Client
             try
             {
                 // Create and execute a request to a specified purchase order
-                string[] pathStrings = new string[] {_reimbursePersonAddressPath};
+                string[] pathStrings = new string[] { _reimbursePersonAddressPath };
                 string urlPath = UrlUtility.CombineUrlPath(pathStrings);
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<VendorsVoucherSearchResult>(await response.Content.ReadAsStringAsync());
@@ -2031,6 +2113,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(voucherVoidRequest, urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<VoucherVoidResponse>(await response.Content.ReadAsStringAsync());
@@ -2062,6 +2145,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<List<Ellucian.Colleague.Dtos.CommodityUnitType>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -2095,6 +2179,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<List<FixedAssetsFlag>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -2128,6 +2213,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<List<TaxForm>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -2163,6 +2249,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<ModifyRequisition>(await response.Content.ReadAsStringAsync());
@@ -2180,7 +2267,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
-                
+
         /// <summary>
         /// Get a list of procurement receiving items summary.
         /// </summary>
@@ -2198,6 +2285,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<ReceiveProcurementSummary>>(await response.Content.ReadAsStringAsync());
@@ -2235,6 +2323,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(procurementAcceptReturnItemInformationRequest, urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<ProcurementAcceptReturnItemInformationResponse>(await response.Content.ReadAsStringAsync());
@@ -2268,6 +2357,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<List<ShipViaCode>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -2301,6 +2391,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<List<ProcurementReturnReason>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -2318,6 +2409,8 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+        #region Approve Documents
+
         /// <summary>
         /// Get document approvals.
         /// </summary>
@@ -2334,6 +2427,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<DocumentApproval>(await response.Content.ReadAsStringAsync());
@@ -2375,6 +2469,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(documentApprovalUpdateRequest, urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<DocumentApprovalResponse>(await response.Content.ReadAsStringAsync());
@@ -2393,11 +2488,53 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
+        /// Retrieves documents approved by the user.
+        /// </summary>
+        /// <param name="filterCriteria">Approved documents filter criteria.</param>
+        /// <returns>List of document approved DTOs</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<ApprovedDocument>> QueryApprovedDocumentsAsync(ApprovedDocumentFilterCriteria filterCriteria)
+        {
+            try
+            {
+                // Create and execute a request to get approved documents.
+                string[] pathStrings = new string[] { _qapiPath, _approvedDocumentsPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                // Add version header
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                // Use URL path and request data to call web api method (including query string)
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecutePostRequestWithResponseAsync(filterCriteria, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<ApprovedDocument>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get approved documents.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get approved documents.");
+                throw;
+            }
+        }
+
+        #endregion
+
+        /// <summary>
         /// Get a list of voucher summary for the given user
         /// </summary>
         /// <returns>list of voucher summary.</returns>
         /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
         /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        [Obsolete("Obsolete as of Colleague Web API 1.30. Use QueryVoucherSummariesAsync.")]
         public async Task<IEnumerable<VoucherSummary>> GetVoucherSummariesAsync(string personId)
         {
             try
@@ -2406,6 +2543,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPathAndArguments(_voucherSummariesPath, query);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<List<VoucherSummary>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -2436,7 +2574,8 @@ namespace Ellucian.Colleague.Api.Client
             {
                 var urlPath = UrlUtility.CombineUrlPath(new[] { _commodityCodesPath, commodityCode });
                 var headers = new NameValueCollection();
-                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);                
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<ProcurementCommodityCode>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -2465,12 +2604,13 @@ namespace Ellucian.Colleague.Api.Client
         public async Task<VendorDefaultTaxFormInfo> GetVendorDefaultTaxFormInfoAsync(string vendorId, string apType)
         {
             try
-            {   
+            {
                 var query = UrlUtility.BuildEncodedQueryString(new[] { "apType", apType });
                 var urlPath = UrlUtility.CombineUrlPath(new[] { _vendorsPath, vendorId, "default-taxform-info" });
                 urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, query);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<VendorDefaultTaxFormInfo>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -2504,6 +2644,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPathAndArguments(_vendorCommoditiesPath, query);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<VendorCommodity>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -2545,6 +2686,7 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
 
                 // Use URL path and request data to call the web api method (including query string)
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<Initiator>>(await response.Content.ReadAsStringAsync());
@@ -2584,6 +2726,7 @@ namespace Ellucian.Colleague.Api.Client
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
 
                 // Use URL path and request data to call web api method (including query string)
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
 
                 var resource = JsonConvert.DeserializeObject<List<Project>>(await response.Content.ReadAsStringAsync());
@@ -2611,13 +2754,14 @@ namespace Ellucian.Colleague.Api.Client
         /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
         /// <exception cref="Exception">The requested resource cannot be found.</exception>
         public async Task<IEnumerable<Voucher2>> GetVouchersByVendorAndInvoiceNoAsync(string vendorId, string invoiceNo)
-        {           
+        {
             try
             {
                 var query = UrlUtility.BuildEncodedQueryString(new[] { "vendorId", vendorId, "invoiceNo", invoiceNo });
                 string urlPath = UrlUtility.CombineUrlPathAndArguments(_vouchersPath, query);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<IEnumerable<Voucher2>>(await response.Content.ReadAsStringAsync());
                 return resource;
@@ -2635,6 +2779,171 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
+        /// <summary>
+        /// Retrieves list of requisitions based on filter criteria.
+        /// </summary>
+        /// <param name="criteria">The <see cref="Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria"> criteria</see> to query by.</param>
+        /// <returns>list of Requisition Summary DTO.</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<RequisitionSummary>> QueryRequisitionSummariesAsync(ProcurementDocumentFilterCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria", "procurement document filter criteria cannot be null.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _requisitionSummariesPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                // Add version header
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                // Use URL path and request data to call web api method (including query string)
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<RequisitionSummary>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get filtered requisitions.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get filtered requisitions.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves list of purchase orders based on filter criteria.
+        /// </summary>
+        /// <param name="criteria">The <see cref="Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria"> criteria</see> to query by.</param>
+        /// <returns>list of Purchase Order Summary DTO.</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<PurchaseOrderSummary>> QueryPurchaseOrderSummariesAsync(ProcurementDocumentFilterCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria", "procurement document filter criteria cannot be null.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _purchaseOrderSummariesPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                // Add version header
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                // Use URL path and request data to call web api method (including query string)
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<PurchaseOrderSummary>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get filtered purchase orders.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get filtered purchase orders.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves list of vouchers based on filter criteria.
+        /// </summary>
+        /// <param name="criteria">The <see cref="Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria"> criteria</see> to query by.</param>
+        /// <returns>list of Voucher Summary DTO.</returns>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        /// <exception cref="Exception">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<VoucherSummary>> QueryVoucherSummariesAsync(ProcurementDocumentFilterCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria", "procurement document filter criteria cannot be null.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _voucherSummariesPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                // Add version header
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                // Use URL path and request data to call web api method (including query string)
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<VoucherSummary>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get filtered vouchers.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get filtered vouchers.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get the gl accounts balances for specified gl accounts and fiscal year.
+        /// </summary>
+        /// <param name="criteria">The <see cref="Dtos.ColleagueFinance.GlAccountBalancesQueryCriteria"> criteria</see> to query by.</param>
+        /// <returns>GL account balances.</returns>
+        public async Task<IEnumerable<GlAccountBalances>> QueryGlAccountBalancesAsync(GlAccountBalancesQueryCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria", "GlAccountBalances query criteria cannot be null.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _glAccountBalancesPath };
+                string urlPath = UrlUtility.CombineUrlPath(pathStrings);
+
+                // Add version header
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                // Use URL path and request data to call web api method (including query string)
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogRequestContent | Core.LoggingRestrictions.DoNotLogResponseContent);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
+
+                var resource = JsonConvert.DeserializeObject<List<GlAccountBalances>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException ex)
+            {
+                logger.Error(ex, "Unable to get GL account balances.");
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unable to get GL account balances.");
+                throw;
+            }
+        }
 
     }
 }

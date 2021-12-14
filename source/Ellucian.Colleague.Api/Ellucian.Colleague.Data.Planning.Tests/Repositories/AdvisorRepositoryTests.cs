@@ -823,7 +823,7 @@ namespace Ellucian.Colleague.Data.Planning.Tests.Repositories
                 // Mock the call to get a person key list
                 transManagerMock.Setup(manager => manager
                         .ExecuteAsync<GetPersonSearchKeyListRequest, GetPersonSearchKeyListResponse>(It.IsAny<GetPersonSearchKeyListRequest>()))
-                        .ReturnsAsync(null);
+                        .ReturnsAsync(() => null);
                 var lastName = "Gerbil";
                 var result = await advisorRepository.SearchAdvisorByNameForExactMatchAsync(lastName);
                 Assert.AreEqual(0, result.Count());

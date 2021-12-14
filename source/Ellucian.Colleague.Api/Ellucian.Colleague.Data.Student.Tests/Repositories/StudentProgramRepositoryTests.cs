@@ -55,7 +55,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 // Set up response for the exceptions request
                 var StudentDaExcptsResponseData = BuildStudentDaExcptsResponse();
-                dataReaderMock.Setup<Task<Collection<StudentDaExcpts>>>(acc => acc.BulkReadRecordAsync<StudentDaExcpts>("STUDENT.DA.EXCPTS", It.IsAny<string[]>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup<Task<Collection<StudentDaExcpts>>>(acc => acc.BulkReadRecordAsync<StudentDaExcpts>("STUDENT.DA.EXCPTS", It.IsAny<string[]>(), true)).ReturnsAsync(() => null);
 
 
                 var studentProgram = await studentProgramRepo.GetAsync("0000894", "MATH.BS");

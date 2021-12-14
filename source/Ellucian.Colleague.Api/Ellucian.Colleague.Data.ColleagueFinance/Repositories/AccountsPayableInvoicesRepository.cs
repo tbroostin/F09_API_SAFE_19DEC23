@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -30,6 +30,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         // setting for Cache
         const string AllAccountsPayableInvoicesCache = "AllAccountsPayableInvoices";
         const int AllAccountsPayableInvoicesCacheTimeout = 20; // Clear from cache every 20 minutes
+        private RepositoryException exception = new RepositoryException();
 
         /// <summary>
         /// This constructor allows us to instantiate a AccountsPayableInvoices repository object.
@@ -95,14 +96,23 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         }
                         // if voucher does not have line items, then it is not valid
                         IEnumerable<Items> itemsData = null;
-                        if (voucher.VouItemsId == null || !voucher.VouItemsId.Any())
+                        if (voucher.VouItemsId != null && voucher.VouItemsId.Any())
                         {
-                            return new Tuple<IEnumerable<AccountsPayableInvoices>, int>(new List<AccountsPayableInvoices>(), totalCount);
+                            itemsData = await DataReader.BulkReadRecordAsync<Items>(voucher.VouItemsId.ToArray());
+                            if (itemsData == null)
+                            {
+                                exception.AddError(new RepositoryError("Bad.Data", string.Concat(string.Format("Items record {0} does not exist.", string.Join(",", voucher.VouItemsId)), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"))
+                                {
+                                    Id = voucher.RecordGuid,
+                                    SourceId = voucher.Recordkey,
+                                });
+                            }
                         }
                         else
                         {
-                            itemsData = await DataReader.BulkReadRecordAsync<Items>(voucher.VouItemsId.ToArray());
+                            return new Tuple<IEnumerable<AccountsPayableInvoices>, int>(new List<AccountsPayableInvoices>(), totalCount);
                         }
+
                         if ((apTypes != null) && (!(apTypes.ToList().Contains(voucher.VouApType))))
                         {
                             return new Tuple<IEnumerable<AccountsPayableInvoices>, int>(new List<AccountsPayableInvoices>(), totalCount);
@@ -113,7 +123,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             person = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", voucher.VouVendor);
                             if (person == null)
                             {
-                                throw new ArgumentOutOfRangeException("Person Id " + voucher.VouVendor + " is not returning any data. Person may be corrupted.");
+                                exception.AddError(new RepositoryError("Bad.Data", "Person Id " + voucher.VouVendor + " is not returning any data. Person may be corrupted.")
+                                {
+                                    Id = voucher.RecordGuid,
+                                    SourceId = voucher.Recordkey,
+                                });
                             }
                         }
                         PurchaseOrders purchaseOrder = null;
@@ -122,7 +136,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             purchaseOrder = await DataReader.ReadRecordAsync<PurchaseOrders>(voucher.VouPoNo);
                             if (purchaseOrder == null)
                             {
-                                throw new ArgumentException(string.Concat(string.Format("Purchase Order record {0} does not exist.", voucher.VouPoNo), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"));
+                                exception.AddError(new RepositoryError("Bad.Data", string.Concat(string.Format("Purchase Order record {0} does not exist.", voucher.VouPoNo), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"))
+                                {
+                                    Id = voucher.RecordGuid,
+                                    SourceId = voucher.Recordkey,
+                                });
                             }
                         }
                         RcVouSchedules recurringVoucher = null;
@@ -131,10 +149,19 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             recurringVoucher = await DataReader.ReadRecordAsync<RcVouSchedules>(voucher.VouRcvsId);
                             if (recurringVoucher == null)
                             {
-                                throw new ArgumentException(string.Concat(string.Format("Recurring Voucher record {0} does not exist.", voucher.VouRcvsId), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"));
+                                exception.AddError(new RepositoryError("Bad.Data", (string.Concat(string.Format("Recurring Voucher record {0} does not exist.", voucher.VouRcvsId), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'")))
+                                {
+                                    Id = voucher.RecordGuid,
+                                    SourceId = voucher.Recordkey,
+                                });
                             }
                         }
-                        var accountsPayableInvoice = await BuildAccountsPayableInvoice(voucher, person, purchaseOrder, itemsData, recurringVoucher); 
+                        var accountsPayableInvoice = await BuildAccountsPayableInvoice(voucher, person, purchaseOrder, itemsData, recurringVoucher);
+                        if (exception != null && exception.Errors != null && exception.Errors.Any())
+                        {
+                            throw exception;
+                        }
+
                         if (accountsPayableInvoice != null)
                         {
                             return new Tuple<IEnumerable<AccountsPayableInvoices>, int>(new List<AccountsPayableInvoices> { accountsPayableInvoice }, 1);
@@ -174,32 +201,35 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                     totalCount = keyCacheObject.TotalCount.Value;
                     subList = keyCacheObject.Sublist.ToArray();
-
-
-                    var voucherData = await DataReader.BulkReadRecordAsync<DataContracts.Vouchers>("VOUCHERS", subList);
-
-
-                    if (voucherData == null)
+                    IEnumerable<AccountsPayableInvoices> accountsPayableInvoices = null;
+                    try
                     {
-                        throw new KeyNotFoundException("No records selected from Vouchers file in Colleague.");
+                        var voucherData = await DataReader.BulkReadRecordAsync<DataContracts.Vouchers>("VOUCHERS", subList);
+                        var personSubList = voucherData.Where(x => !string.IsNullOrEmpty(x.VouVendor)).Select(c => c.VouVendor).Distinct().ToArray();
+                        var personsData = await DataReader.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", personSubList);
+                        var purchaseOrdersSubList = voucherData.Where(x => !string.IsNullOrEmpty(x.VouPoNo)).Select(c => c.VouPoNo).Distinct().ToArray();
+                        IEnumerable<PurchaseOrders> purchaseOrdersData = null;
+                        if (purchaseOrdersSubList != null && purchaseOrdersSubList.Any())
+                            purchaseOrdersData = await DataReader.BulkReadRecordAsync<PurchaseOrders>("PURCHASE.ORDERS", purchaseOrdersSubList);
+                        var recurringVoucherSubList = voucherData.Where(x => !string.IsNullOrEmpty(x.VouRcvsId)).Select(c => c.VouRcvsId).Distinct().ToArray();
+                        IEnumerable<RcVouSchedules> recurringVoucherData = null;
+                        if (recurringVoucherSubList != null && recurringVoucherSubList.Any())
+                            recurringVoucherData = await DataReader.BulkReadRecordAsync<RcVouSchedules>("RC.VOU.SCHEDULES", recurringVoucherSubList);
+                        var itemsSubList = voucherData.Where(x => x.VouItemsId != null && x.VouItemsId.Any()).SelectMany(c => c.VouItemsId).Distinct().ToArray();
+                        IEnumerable<Items> itemsData = null;
+                        if (itemsSubList != null && itemsSubList.Any())
+                            itemsData = await DataReader.BulkReadRecordAsync<Items>("ITEMS", itemsSubList);
+                        accountsPayableInvoices = await BuildAccountsPayableInvoices(voucherData, personsData, purchaseOrdersData, itemsData, recurringVoucherData);
+                    }
+                    catch (Exception ex)
+                    {
+                        exception.AddError(new RepositoryError("Bad.Data", ex.Message));
                     }
 
-                    var personSubList = voucherData.Where(x => !string.IsNullOrEmpty(x.VouVendor)).Select(c => c.VouVendor).Distinct().ToArray();
-                    var personsData = await DataReader.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", personSubList);
-                    var purchaseOrdersSubList = voucherData.Where(x => !string.IsNullOrEmpty(x.VouPoNo)).Select(c => c.VouPoNo).Distinct().ToArray();
-                    IEnumerable<PurchaseOrders> purchaseOrdersData = null;
-                    if (purchaseOrdersSubList != null && purchaseOrdersSubList.Any())
-                        purchaseOrdersData = await DataReader.BulkReadRecordAsync<PurchaseOrders>("PURCHASE.ORDERS", purchaseOrdersSubList);
-                    var recurringVoucherSubList = voucherData.Where(x => !string.IsNullOrEmpty(x.VouRcvsId)).Select(c => c.VouRcvsId).Distinct().ToArray();
-                    IEnumerable<RcVouSchedules> recurringVoucherData = null;
-                    if (recurringVoucherSubList != null && recurringVoucherSubList.Any())
-                        recurringVoucherData = await DataReader.BulkReadRecordAsync<RcVouSchedules>("RC.VOU.SCHEDULES", recurringVoucherSubList);
-                    var itemsSubList = voucherData.Where(x => x.VouItemsId != null && x.VouItemsId.Any()).SelectMany(c => c.VouItemsId).Distinct().ToArray();
-                    IEnumerable<Items> itemsData = null;
-                    if (itemsSubList != null && itemsSubList.Any())
-                        itemsData = await DataReader.BulkReadRecordAsync<Items>("ITEMS", itemsSubList);
-                    var accountsPayableInvoices = await BuildAccountsPayableInvoices(voucherData, personsData, purchaseOrdersData, itemsData, recurringVoucherData);
-
+                    if (exception != null && exception.Errors != null && exception.Errors.Any())
+                    {
+                        throw exception;
+                    }
                     return new Tuple<IEnumerable<AccountsPayableInvoices>, int>(accountsPayableInvoices, totalCount);
                 }
 
@@ -237,7 +267,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// </summary>
         /// <param name="guid">The voucher guid</param>
         /// <returns>The AccountsPayableInvoices domain entity</returns>
-        public async Task<AccountsPayableInvoices> GetAccountsPayableInvoicesByGuidAsync(string guid, bool allowVoid)
+        public async Task<AccountsPayableInvoices> GetAccountsPayableInvoicesByGuidAsync(string guid, bool allowInProgress)
         {
             try
             {
@@ -257,23 +287,60 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                 if (voucher.VouStatus.Contains("X"))
                 {
-                    throw new ArgumentException("The guid specified " + guid + " for record key " + voucher.Recordkey + " from file VOUCHERS is not valid for accounts-payable-invoices.");
+                    exception.AddError(new RepositoryError("Bad.Data", "The guid specified " + guid + " for record key " + voucher.Recordkey + " from file VOUCHERS has been cancelled and is not valid for accounts-payable-invoices.")
+                    {
+                        Id = voucher.RecordGuid, 
+                        SourceId = voucher.Recordkey,
+                    });
                 }
                 IEnumerable<Items> itemsData = null;
                 if (voucher.VouItemsId == null || !voucher.VouItemsId.Any())
                 {
-                    throw new ArgumentException("The guid specified " + guid + " for record key " + voucher.Recordkey + " from file VOUCHERS is not valid for accounts-payable-invoices.");
+                    exception.AddError(new RepositoryError("Bad.Data", "The guid specified " + guid + " for record key " + voucher.Recordkey + " from file VOUCHERS has no line items and is not valid for accounts-payable-invoices.")
+                    {
+                        Id = voucher.RecordGuid,
+                        SourceId = voucher.Recordkey,
+                    });
                 }
                 else
                 {
                     itemsData = await DataReader.BulkReadRecordAsync<Items>(voucher.VouItemsId.ToArray());
+                    if (itemsData == null)
+                    {
+                        exception.AddError(new RepositoryError("Bad.Data", string.Concat(string.Format("Items record {0} does not exist.", string.Join(",", voucher.VouItemsId)), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"))
+                        {
+                            Id = voucher.RecordGuid,
+                            SourceId = voucher.Recordkey,
+                        });
+                    }
+                    else
+                    {
+                        // exclude those Vouchers that are inprogress
+                        if (!allowInProgress && voucher != null && voucher.VouStatus != null && voucher.VouStatus.Any() && voucher.VouStatus.FirstOrDefault().Equals("U", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var awaitingReceipt = itemsData != null && itemsData.Any(iData => !string.IsNullOrEmpty(iData.ItmPoId) && iData.ItmPoStatus != null && iData.ItmPoStatus.Any() && iData.ItmPoStatus.FirstOrDefault().Equals("H", StringComparison.OrdinalIgnoreCase));
+                            if (awaitingReceipt)
+                            {
+                                exception.AddError(new RepositoryError("Bad.Data", "The guid specified " + guid + " for record key " + voucher.Recordkey + " from file VOUCHERS has one or more line items with an 'awaitingReceipt' status and is not valid for accounts-payable-invoices.")
+                                {
+                                    Id = voucher.RecordGuid,
+                                    SourceId = voucher.Recordkey,
+                                });
+                            }
+                            else
+                            {
+                                exception.AddError(new RepositoryError("Bad.Data", "The guid specified " + guid + " for record key " + voucher.Recordkey + " from file VOUCHERS has an 'inProgress' status and is not valid for accounts-payable-invoices.")
+                                {
+                                    Id = voucher.RecordGuid,
+                                    SourceId = voucher.Recordkey,
+                                });
+                            }
+                        }
+                    }
+
                 }
 
-                // exclude those Vouchers that are inprogress
-                if (voucher != null && voucher.VouStatus != null && voucher.VouStatus.Any() && voucher.VouStatus.FirstOrDefault().Equals("U", StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new ArgumentException("The guid specified " + guid + " for record key " + voucher.Recordkey + " from file VOUCHERS is not valid for accounts-payable-invoices.");
-                }
+                
 
                 Ellucian.Colleague.Data.Base.DataContracts.Person person = null;
                 if (!string.IsNullOrEmpty(voucher.VouVendor))
@@ -281,7 +348,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     person = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", voucher.VouVendor);
                     if (person == null)
                     {
-                        throw new ArgumentOutOfRangeException("Person Id " + voucher.VouVendor + " is not returning any data. Person may be corrupted.");
+                        exception.AddError(new RepositoryError("Bad.Data", "Person Id " + voucher.VouVendor + " is not returning any data. Person may be corrupted.")
+                        {
+                            Id = voucher.RecordGuid,
+                            SourceId = voucher.Recordkey,
+                        });
                     }
                 }
                 PurchaseOrders purchaseOrder = null;
@@ -290,7 +361,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     purchaseOrder = await DataReader.ReadRecordAsync<PurchaseOrders>(voucher.VouPoNo);
                     if (purchaseOrder == null)
                     {
-                        throw new ArgumentException(string.Concat(string.Format("Purchange Order record {0} does not exist.", voucher.VouPoNo), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"));
+                        exception.AddError(new RepositoryError("Bad.Data", string.Concat(string.Format("Purchange Order record {0} does not exist.", voucher.VouPoNo), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"))
+                        {
+                            Id = voucher.RecordGuid,
+                            SourceId = voucher.Recordkey,
+                        });
                     }
                 }
                 RcVouSchedules recurringVoucher = null;
@@ -299,27 +374,41 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     recurringVoucher = await DataReader.ReadRecordAsync<RcVouSchedules>(voucher.VouRcvsId);
                     if (recurringVoucher == null)
                     {
-                        throw new ArgumentException(string.Concat(string.Format("Recurring Voucher record {0} does not exist.", voucher.VouRcvsId), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"));
+                        exception.AddError(new RepositoryError("Bad.Data", string.Concat(string.Format("Recurring Voucher record {0} does not exist.", voucher.VouRcvsId), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"))
+                        {
+                            Id = voucher.RecordGuid,
+                            SourceId = voucher.Recordkey,
+                        });
                     }
                 }
                 var apTypesToInclude = await GetValidApTypes();
 
                 if ((apTypesToInclude != null) && (!(apTypesToInclude.ToList().Contains(voucher.VouApType))))
                 {
-                    throw new ArgumentException("The guid specified " + guid + " for record key " + voucher.Recordkey + " from file VOUCHERS is not valid for accounts-payable-invoices.");
+                    exception.AddError(new RepositoryError("Bad.Data", "The guid specified " + guid + " for record key " + voucher.Recordkey + " from file VOUCHERS is not valid for accounts-payable-invoices.")
+                    {
+                        Id = voucher.RecordGuid,
+                        SourceId = voucher.Recordkey,
+                    });
                 }
-               
-                accountsPayableInvoice = await BuildAccountsPayableInvoice(voucher, person, purchaseOrder, itemsData, recurringVoucher); 
-
+                if (exception != null && exception.Errors != null && exception.Errors.Any())
+                {
+                    throw exception;
+                }
+                accountsPayableInvoice = await BuildAccountsPayableInvoice(voucher, person, purchaseOrder, itemsData, recurringVoucher);
+                if (exception != null && exception.Errors != null && exception.Errors.Any())
+                {
+                    throw exception;
+                }
                 return accountsPayableInvoice;
             }
             catch (KeyNotFoundException e)
             {
-                throw new KeyNotFoundException(e.Message);
+                throw e;
             }
             catch (RepositoryException e)
             {
-                throw new RepositoryException(e.Message);
+                throw e;
             }
             catch (ArgumentException e)
             {
@@ -448,7 +537,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             if (foundEntry.Value.Entity != "VOUCHERS")
             {
-                throw new RepositoryException(string.Format("GUID {0} has different entity, {1}, than expected, VOUCHERS", guid, foundEntry.Value.Entity));
+                exception.AddError(new RepositoryError("GUID.Wrong.Type", string.Format("GUID {0} has different entity, {1}, than expected, VOUCHERS", guid, foundEntry.Value.Entity))
+                {
+                    Id = guid                   
+                });
+                throw exception;
+                
             }
 
             return foundEntry.Value.PrimaryKey;
@@ -697,23 +791,46 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 {
                     if (persons == null)
                     {
-                        throw new ArgumentNullException("Expected person record for: " + voucher.Recordkey);
+                        exception.AddError(new RepositoryError("Bad.Data", string.Concat(string.Format("Person record { 0 } does not exist.", voucher.VouVendor), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"))
+                        {
+                            Id = voucher.RecordGuid,
+                            SourceId = voucher.Recordkey,
+                        });
                     }
-                    person = persons.FirstOrDefault(p => p.Recordkey == voucher.VouVendor);
+                    else
+                    {
+                        person = persons.FirstOrDefault(p => p.Recordkey == voucher.VouVendor);
+                        if (person == null)
+                        {
+                            exception.AddError(new RepositoryError("Bad.Data", string.Concat(string.Format("Person record { 0 } does not exist.", voucher.VouVendor), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"))
+                            {
+                                Id = voucher.RecordGuid,
+                                SourceId = voucher.Recordkey,
+                            });
+                        }
+                    }
                 }
                 PurchaseOrders purchaseOrder = null;
                 if (!string.IsNullOrEmpty(voucher.VouPoNo))
                 {
                     if (purchaseOrders == null)
                     {
-                        throw new ArgumentException(string.Concat(string.Format("Purchase Order record {0} does not exist.", voucher.VouPoNo), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"));
+                        exception.AddError(new RepositoryError("Bad.Data", string.Concat(string.Format("Purchase Order record {0} does not exist.", voucher.VouPoNo), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"))
+                        {
+                            Id = voucher.RecordGuid,
+                            SourceId = voucher.Recordkey,
+                        });
                     }
                     else
                     {
                         purchaseOrder = purchaseOrders.FirstOrDefault(p => p.Recordkey == voucher.VouPoNo);
                         if (purchaseOrder == null)
                         {
-                            throw new ArgumentException(string.Concat(string.Format("Purchase Order record {0} does not exist.", voucher.VouPoNo), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"));
+                            exception.AddError(new RepositoryError("Bad.Data", string.Concat(string.Format("Purchase Order record {0} does not exist.", voucher.VouPoNo), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"))
+                            {
+                                Id = voucher.RecordGuid,
+                                SourceId = voucher.Recordkey,
+                            });
                         }
                     }
                 }
@@ -722,14 +839,22 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 {
                     if (recurringVouchers == null)
                     {
-                        throw new ArgumentException(string.Concat(string.Format("Recurring voucher record {0} does not exist.", voucher.VouRcvsId), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"));
+                        exception.AddError(new RepositoryError("Bad.Data", string.Concat(string.Format("Recurring voucher record {0} does not exist.", voucher.VouRcvsId), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"))
+                        {
+                            Id = voucher.RecordGuid,
+                            SourceId = voucher.Recordkey,
+                        });
                     }
                     else
                     {
                         recurringVoucher = recurringVouchers.FirstOrDefault(p => p.Recordkey == voucher.VouRcvsId);
                         if (recurringVoucher == null)
                         {
-                            throw new ArgumentException(string.Concat(string.Format("Recurring voucher record {0} does not exist.", voucher.VouRcvsId), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"));
+                            exception.AddError(new RepositoryError("Bad.Data", string.Concat(string.Format("Recurring voucher record {0} does not exist.", voucher.VouRcvsId), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"))
+                            {
+                                Id = voucher.RecordGuid,
+                                SourceId = voucher.Recordkey,
+                            });
                         }
                     }
                 }
@@ -739,23 +864,36 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 {
                     if (items == null)
                     {
-                        throw new ArgumentException(string.Concat(string.Format("Items records {0} does not exist.", string.Join(",", voucher.VouItemsId)), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"));
+                        exception.AddError(new RepositoryError("Bad.Data", string.Concat(string.Format("Items records {0} does not exist.", string.Join(",", voucher.VouItemsId)), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"))
+                        {
+                            Id = voucher.RecordGuid,
+                            SourceId = voucher.Recordkey,
+                        });
                     }
                     else
                     {
                         itemsData = items.Where(p => voucher.VouItemsId.Contains(p.Recordkey));
                         if (itemsData == null)
                         {
-                            throw new ArgumentException(string.Concat(string.Format("Items record {0} does not exist.", string.Join(",", voucher.VouItemsId)), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"));
+                            exception.AddError(new RepositoryError("Bad.Data", string.Concat(string.Format("Items record {0} does not exist.", string.Join(",", voucher.VouItemsId)), " Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"))
+                            {
+                                Id = voucher.RecordGuid,
+                                SourceId = voucher.Recordkey,
+                            });
                         }
                     }
                 }
                 else
                 {
-                    throw new ArgumentException(string.Concat("Missing valid Items records.", "  Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"));
+                    exception.AddError(new RepositoryError("Bad.Data", string.Concat("Missing valid Items records.", "  Entity: 'VOUCHERS', Record ID: '", voucher.Recordkey, "'"))
+                    {
+                        Id = voucher.RecordGuid,
+                        SourceId = voucher.Recordkey,
+                    });
                 }
-
-                accountsPayableInvoicesCollection.Add(await BuildAccountsPayableInvoice(voucher, person, purchaseOrder, itemsData, recurringVoucher)); 
+                var voucherEntity = await BuildAccountsPayableInvoice(voucher, person, purchaseOrder, itemsData, recurringVoucher);
+                if (voucherEntity != null)
+                accountsPayableInvoicesCollection.Add(voucherEntity);
             }
 
             return accountsPayableInvoicesCollection.AsEnumerable();
@@ -773,14 +911,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             IEnumerable<Items> lineItemRecords,
             RcVouSchedules recurringVoucher)
         {
-            if (voucher == null)
-            {
-                throw new KeyNotFoundException(string.Format("Voucher record does not exist."));
-            }
-
             // Translate the status code into a VoucherStatus enumeration value
             var voucherStatus = new VoucherStatus();
-            DateTime? voucherStatusDate;
+            DateTime? voucherStatusDate = new DateTime() ;
 
             var voucherStatusEntity = voucher.VoucherStatusEntityAssociation.FirstOrDefault();
 
@@ -816,33 +949,74 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             break;
                         default:
                             // if we get here, we have corrupt data.
-                            throw new ApplicationException("Invalid voucher status for voucher: " + voucher.Recordkey);
+                            exception.AddError(new RepositoryError("Bad.Data", "Invalid voucher status for voucher: " + voucher.Recordkey)
+                            {
+                                Id = voucher.RecordGuid,
+                                SourceId = voucher.Recordkey,
+                            });
+                            break;
+
                     }
                 }
             }
             else
             {
-                throw new ApplicationException("Missing status for voucher: " + voucher.Recordkey);
+                exception.AddError(new RepositoryError( "Bad.Data", "Missing status for voucher: " + voucher.Recordkey)
+                {
+                    Id = voucher.RecordGuid,
+                    SourceId = voucher.Recordkey,
+                });
             }
 
 
             if (!voucher.VouDate.HasValue)
             {
-                throw new ApplicationException("Missing voucher date for voucher: " + voucher.Recordkey);
+                exception.AddError(new RepositoryError( "Bad.Data", "Missing voucher date for voucher: " + voucher.Recordkey)
+                {
+                    Id = voucher.RecordGuid,
+                    SourceId = voucher.Recordkey,
+                });
             }
 
             if ((string.IsNullOrEmpty(voucher.VouApType)) && (voucherStatus != VoucherStatus.Cancelled))
             {
-                throw new ApplicationException("Missing AP type for voucher: " + voucher.Recordkey);
+                exception.AddError(new RepositoryError( "Bad.Data", "Missing AP type for voucher: " + voucher.Recordkey)
+                {
+                    Id = voucher.RecordGuid,
+                    SourceId = voucher.Recordkey,
+                });
+            }
+            AccountsPayableInvoices voucherDomainEntity = null;
+            //retrive string array of applicable guids
+            if (string.IsNullOrEmpty(voucher.RecordGuid))
+            {
+                exception.AddError(new RepositoryError("GUID.Not.Found", "Unable to find the GUID for accounts-payable-invoices.")
+                {
+                    Id = voucher.RecordGuid,
+                    SourceId = voucher.Recordkey,
+                });
+            }
+            else
+            {
+                var guid = voucher.RecordGuid;                
+                try
+                {
+                    voucherDomainEntity = new AccountsPayableInvoices(guid, voucher.Recordkey, voucher.VouDate.Value, voucherStatus, "", voucher.VouDefaultInvoiceNo, voucher.VouDefaultInvoiceDate);
+
+                }
+                catch (Exception ex)
+                {
+                    exception.AddError(new RepositoryError("Bad.Data", ex.Message)
+                    {
+                        Id = voucher.RecordGuid,
+                        SourceId = voucher.Recordkey,
+                    });
+                }
             }
 
-            //retrive string array of applicable guids
-            var guid = voucher.RecordGuid;
-            var voucherDomainEntity = new AccountsPayableInvoices(guid, voucher.Recordkey, voucher.VouDate.Value, voucherStatus, "", voucher.VouDefaultInvoiceNo, voucher.VouDefaultInvoiceDate);
-            voucherDomainEntity.Amount = 0;
-
-            try
+            if (voucherDomainEntity != null)
             {
+                voucherDomainEntity.Amount = 0;
                 if (!string.IsNullOrEmpty(voucher.VouPoNo))
                 {
                     voucherDomainEntity.PurchaseOrderId = voucher.VouPoNo;
@@ -862,114 +1036,122 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     if (recurringVoucher != null)
                         voucherDomainEntity.RecurringVoucherId = recurringVoucher.RcvsRcVoucher;
                 }
-            }
 
-            catch (ApplicationException ae)
-            {
-                throw new ApplicationException("Voucher " + voucher.Recordkey + " has a problem with parent documents. " + ae.Message);
-            }
+                voucherDomainEntity.CurrencyCode = voucher.VouCurrencyCode;
+                if (!string.IsNullOrEmpty(voucher.VouRequestor))
+                    voucherDomainEntity.VoucherRequestor = voucher.VouRequestor;
+                voucherDomainEntity.HostCountry = await GetHostCountryAsync();
+                voucherDomainEntity.VoucherStatusDate = voucherStatusDate;
+                if (!string.IsNullOrEmpty(voucher.VouVendor))
+                    voucherDomainEntity.VendorId = voucher.VouVendor;
 
-
-            voucherDomainEntity.CurrencyCode = voucher.VouCurrencyCode;
-            if (!string.IsNullOrEmpty(voucher.VouRequestor))
-                voucherDomainEntity.VoucherRequestor = voucher.VouRequestor;
-            voucherDomainEntity.HostCountry = await GetHostCountryAsync();
-
-            voucherDomainEntity.VoucherStatusDate = voucherStatusDate;
-            if (!string.IsNullOrEmpty(voucher.VouVendor))
-                voucherDomainEntity.VendorId = voucher.VouVendor;
-
-            voucherDomainEntity.VoucherPayFlag = voucher.VouPayFlag;
-            voucherDomainEntity.VoucherInvoiceAmt = voucher.VouInvoiceAmt;
-            //display the discount amount only if it is manualiis
-            if (voucher.VouManualCashDisc == "Y")
-            {
-                voucherDomainEntity.VoucherDiscAmt = voucher.VouDiscAmt;
-            }
-
-            if (!string.IsNullOrEmpty(voucher.VouVendorTerms))
-                voucherDomainEntity.VoucherVendorTerms = voucher.VouVendorTerms;
-
-            voucherDomainEntity.VoucherNet = voucher.VouNet;
-            voucherDomainEntity.VoucherReferenceNo = voucher.VouReferenceNo;
-            voucherDomainEntity.VoucherVoidGlTranDate = voucher.VouVoidGlTranDate;
-
-            voucherDomainEntity.VoucherAddressId = voucher.VouAddressId;
-
-            if ((person != null) && (!string.IsNullOrEmpty(person.PreferredAddress)))
-                voucherDomainEntity.VendorAddressId = person.PreferredAddress;
-
-            var voucherTaxes = new List<LineItemTax>();
-            foreach (var tax in voucher.VouTaxesEntityAssociation)
-            {
-                if (!string.IsNullOrEmpty(tax.VouTaxCodesAssocMember))
+                voucherDomainEntity.VoucherPayFlag = voucher.VouPayFlag;
+                voucherDomainEntity.VoucherInvoiceAmt = voucher.VouInvoiceAmt;
+                //display the discount amount only if it is manualiis
+                if (voucher.VouManualCashDisc == "Y")
                 {
-                    var voucherTax = new LineItemTax(tax.VouTaxCodesAssocMember, Convert.ToDecimal(tax.VouTaxAmtsAssocMember));
-
-                    voucherTaxes.Add(voucherTax);
+                    voucherDomainEntity.VoucherDiscAmt = voucher.VouDiscAmt;
                 }
-            }
-            voucherDomainEntity.VoucherTaxes = voucherTaxes;
 
-            if (voucher.VouMaintGlTranDate.HasValue)
-            {
-                voucherDomainEntity.MaintenanceDate = voucher.VouMaintGlTranDate.Value.Date;
-            }
-            voucherDomainEntity.ApType = voucher.VouApType;
-            if (voucher.VouDueDate.HasValue)
-            {
-                voucherDomainEntity.DueDate = voucher.VouDueDate;
-            }
+                if (!string.IsNullOrEmpty(voucher.VouVendorTerms))
+                    voucherDomainEntity.VoucherVendorTerms = voucher.VouVendorTerms;
 
-            // Get just the check number instead of the bank code and check number
-            if (!string.IsNullOrEmpty(voucher.VouCheckNo))
-            {
-                // Parse the check number field, which contains the bank code, an asterisk, and the check number.
-                var bankLength = voucher.VouCheckNo.IndexOf('*');
-                var checkLength = voucher.VouCheckNo.Length;
+                voucherDomainEntity.VoucherNet = voucher.VouNet;
+                voucherDomainEntity.VoucherReferenceNo = voucher.VouReferenceNo;
+                voucherDomainEntity.VoucherVoidGlTranDate = voucher.VouVoidGlTranDate;
 
-                voucherDomainEntity.CheckNumber = voucher.VouCheckNo.Substring(bankLength + 1, checkLength - (bankLength + 1));
-            }
+                voucherDomainEntity.VoucherAddressId = voucher.VouAddressId;
 
-            if (voucher.VouCheckDate.HasValue)
-            {
-                voucherDomainEntity.CheckDate = voucher.VouCheckDate;
-            }
+                if ((person != null) && (!string.IsNullOrEmpty(person.PreferredAddress)))
+                    voucherDomainEntity.VendorAddressId = person.PreferredAddress;
 
-            // Load in all MISC data fields for vouchers without any Vendor in Colleague.
-            voucherDomainEntity.VoucherUseAltAddress = (!string.IsNullOrEmpty(voucher.VouAltFlag) && voucher.VouAltFlag.ToUpper() == "Y" ? true : false);
-            voucherDomainEntity.VoucherMiscName = voucher.VouMiscName;
-            voucherDomainEntity.VoucherMiscType = voucher.VouIntgCorpPersonInd;
-            voucherDomainEntity.VoucherMiscAddress = voucher.VouMiscAddress;
-            voucherDomainEntity.VoucherMiscCity = voucher.VouMiscCity;
-            voucherDomainEntity.VoucherMiscState = voucher.VouMiscState;
-            voucherDomainEntity.VoucherMiscZip = voucher.VouMiscZip;
-            voucherDomainEntity.VoucherMiscCountry = voucher.VouMiscCountry;
-
-            voucherDomainEntity.Comments = voucher.VouComments;
-
-            //get submitted by
-            if (!string.IsNullOrEmpty(voucher.VouIntgSubmittedBy))
-                voucherDomainEntity.SubmittedBy = voucher.VouIntgSubmittedBy;
-
-            if (lineItemRecords != null && lineItemRecords.Any())
-            {                
-                foreach (var lineItem in lineItemRecords)
+                var voucherTaxes = new List<LineItemTax>();
+                foreach (var tax in voucher.VouTaxesEntityAssociation)
                 {
-                    //voucherDomainEntity.AddLineItem(lineItemDomainEntity);
-                    var item = await GetLineItem(lineItem, voucher.VouCurrencyCode);
-                    if (item != null)
+                    if (!string.IsNullOrEmpty(tax.VouTaxCodesAssocMember))
                     {
-                        voucherDomainEntity.AddAccountsPayableInvoicesLineItem(item.Item1);
-                        voucherDomainEntity.Amount += item.Item2;
+                        var voucherTax = new LineItemTax(tax.VouTaxCodesAssocMember, Convert.ToDecimal(tax.VouTaxAmtsAssocMember));
+
+                        voucherTaxes.Add(voucherTax);
                     }
                 }
-                //if there is no line items then we want to throw an exception
-                if (voucherDomainEntity.LineItems == null || !voucherDomainEntity.LineItems.Any())
+                voucherDomainEntity.VoucherTaxes = voucherTaxes;
+
+                if (voucher.VouMaintGlTranDate.HasValue)
                 {
-                    throw new ArgumentNullException("lineItem", string.Concat("Voucher contains invalid line items with id ", string.Join(",", voucher.VouItemsId), " .  Entity: 'VOUCHERS', Record ID: '", voucherDomainEntity.Id, "'"));
+                    voucherDomainEntity.MaintenanceDate = voucher.VouMaintGlTranDate.Value.Date;
+                }
+                voucherDomainEntity.ApType = voucher.VouApType;
+                if (voucher.VouDueDate.HasValue)
+                {
+                    voucherDomainEntity.DueDate = voucher.VouDueDate;
+                }
+
+                // Get just the check number instead of the bank code and check number
+                if (!string.IsNullOrEmpty(voucher.VouCheckNo))
+                {
+                    // Parse the check number field, which contains the bank code, an asterisk, and the check number.
+                    var bankLength = voucher.VouCheckNo.IndexOf('*');
+                    var checkLength = voucher.VouCheckNo.Length;
+
+                    voucherDomainEntity.CheckNumber = voucher.VouCheckNo.Substring(bankLength + 1, checkLength - (bankLength + 1));
+                }
+
+                if (voucher.VouCheckDate.HasValue)
+                {
+                    voucherDomainEntity.CheckDate = voucher.VouCheckDate;
+                }
+
+                // Load in all MISC data fields for vouchers without any Vendor in Colleague.
+                voucherDomainEntity.VoucherUseAltAddress = (!string.IsNullOrEmpty(voucher.VouAltFlag) && voucher.VouAltFlag.ToUpper() == "Y" ? true : false);
+                voucherDomainEntity.VoucherMiscName = voucher.VouMiscName;
+                voucherDomainEntity.VoucherMiscType = voucher.VouIntgCorpPersonInd;
+                voucherDomainEntity.VoucherMiscAddress = voucher.VouMiscAddress;
+                voucherDomainEntity.VoucherMiscCity = voucher.VouMiscCity;
+                voucherDomainEntity.VoucherMiscState = voucher.VouMiscState;
+                voucherDomainEntity.VoucherMiscZip = voucher.VouMiscZip;
+                voucherDomainEntity.VoucherMiscCountry = voucher.VouMiscCountry;
+
+                voucherDomainEntity.Comments = voucher.VouComments;
+
+                //get submitted by
+                if (!string.IsNullOrEmpty(voucher.VouIntgSubmittedBy))
+                    voucherDomainEntity.SubmittedBy = voucher.VouIntgSubmittedBy;
+
+                if (lineItemRecords != null && lineItemRecords.Any())
+                {
+                    foreach (var lineItem in lineItemRecords)
+                    {
+                        try
+                        {
+                            var item = await GetLineItem(lineItem, voucher.VouCurrencyCode);
+                            if (item != null)
+                            {
+                                voucherDomainEntity.AddAccountsPayableInvoicesLineItem(item.Item1);
+                                voucherDomainEntity.Amount += item.Item2;
+                            }
+                        }
+                        catch(Exception ex)
+                        {
+                            exception.AddError(new RepositoryError("Bad.Data", ex.Message)
+                            {
+                                Id = voucher.RecordGuid,
+                                SourceId = voucher.Recordkey,
+                            });
+                        }
+                    }
+                    //if there is no line items then we want to throw an exception
+                    if (voucherDomainEntity.LineItems == null || !voucherDomainEntity.LineItems.Any())
+                    {
+                        exception.AddError(new RepositoryError("Bad.Data", string.Concat("Voucher contains invalid line items with id ", string.Join(",", voucher.VouItemsId), " .  Entity: 'VOUCHERS', Record ID: '", voucherDomainEntity.Id, "'"))
+                        {
+                            Id = voucher.RecordGuid,
+                            SourceId = voucher.Recordkey,
+                        });
+                    }
                 }
             }
+        
             return voucherDomainEntity;
         }
 

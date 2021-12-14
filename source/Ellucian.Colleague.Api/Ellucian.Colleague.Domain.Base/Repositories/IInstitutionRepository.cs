@@ -25,7 +25,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="limit"></param>
         /// <param name="instType"></param>
         /// <returns></returns>
-        Task<Tuple<IEnumerable<Institution>, int>> GetInstitutionAsync(int offset, int limit, InstType? instType = null);
+        Task<Tuple<IEnumerable<Institution>, int>> GetInstitutionAsync(int offset, int limit, InstType? instType = null, List<Tuple<string, string>> creds = null);
 
         /// <summary>
         /// GetInstitutionByGuidAsync

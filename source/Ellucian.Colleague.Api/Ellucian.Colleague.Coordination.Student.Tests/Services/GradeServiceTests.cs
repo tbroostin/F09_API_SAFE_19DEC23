@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Student.Entities.Requirements;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -33,13 +33,18 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private Mock<IGradeRepository> gradeRepositoryMock;
             private Mock<IAdapterRegistry> adapterRegistryMock;
             private Mock<IRoleRepository> roleRepositoryMock;
-            
+            private IAdapterRegistry adapterRegistry;
+
             private GradeUser currentUserFactoryMock;
 
             private Mock<IStudentRepository> studentRepositoryMock;
             private IStudentRepository studentRepository;
             private Mock<IAcademicCreditRepository> academicCreditRepositoryMock;
             private IAcademicCreditRepository academicCreditRepository;
+            private Mock<IStudentConfigurationRepository> studentConfigurationRepositoryMock;
+            private IStudentConfigurationRepository studentConfigurationRepository;
+            private Mock<ISectionRepository> sectionRepositoryMock;
+            private ISectionRepository sectionRepository;
             private ILogger logger;
             private GradeService gradeService;
             private ICollection<Ellucian.Colleague.Domain.Student.Entities.GradeScheme> gradeSchemeCollection;
@@ -65,14 +70,20 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 academicCreditRepository = academicCreditRepositoryMock.Object;
                 baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
                 baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+                studentConfigurationRepositoryMock = new Mock<IStudentConfigurationRepository>();
+                studentConfigurationRepository = studentConfigurationRepositoryMock.Object;
+                sectionRepositoryMock = new Mock<ISectionRepository>();
+                sectionRepository = sectionRepositoryMock.Object;
 
                 logger = new Mock<ILogger>().Object;
-            
+
                 gradeSchemeCollection = (await new TestStudentReferenceDataRepository().GetGradeSchemesAsync()).ToList();
                 acadLevelCollection = (await new TestAcademicLevelRepository().GetAsync()).ToList();
                 gradeCollection = (await new TestGradeRepository().GetHedmAsync()).ToList();
-                               
-                gradeService = new GradeService(gradeRepositoryMock.Object, studentReferenceRepositoryMock.Object, adapterRegistryMock.Object, currentUserFactoryMock, roleRepositoryMock.Object, logger, studentRepositoryMock.Object, academicCreditRepository, baseConfigurationRepository);
+
+                gradeService = new GradeService(gradeRepositoryMock.Object, studentReferenceRepositoryMock.Object, adapterRegistryMock.Object, 
+                    currentUserFactoryMock, roleRepositoryMock.Object, logger, studentRepositoryMock.Object, academicCreditRepository, baseConfigurationRepository,
+                    studentConfigurationRepository, sectionRepository);
             }
 
             [TestCleanup]
@@ -86,6 +97,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 adapterRegistryMock = null;
                 roleRepositoryMock = null;
                 currentUserFactoryMock = null;
+                studentConfigurationRepositoryMock = null;
+                sectionRepositoryMock = null;
                 logger = null;
                 gradeService = null;               
             }
@@ -160,7 +173,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(ArgumentNullException))]
             public void GradeService_Grade_NullLogger()
             {
-                new GradeService(gradeRepositoryMock.Object, studentReferenceRepositoryMock.Object, adapterRegistryMock.Object, currentUserFactoryMock, roleRepositoryMock.Object, null, studentRepositoryMock.Object, academicCreditRepository, baseConfigurationRepository);
+               new GradeService(gradeRepositoryMock.Object, studentReferenceRepositoryMock.Object, adapterRegistryMock.Object, currentUserFactoryMock, 
+                    roleRepositoryMock.Object, null, studentRepositoryMock.Object, academicCreditRepository, baseConfigurationRepository,
+                    studentConfigurationRepository, sectionRepository);
             }
                 
             [TestMethod]
@@ -338,6 +353,121 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.IsNotNull(grade.GradeScheme);
             }
             #endregion
+
+            #region Anonymous Grading Ids
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task GradeService_QueryAnonymousGradingIdsAsync_NullCriteria()
+            {
+                await gradeService.QueryAnonymousGradingIdsAsync(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task GradeService_QueryAnonymousGradingIdsAsync_InvalidCriteria()
+            {
+                var criteria = new Dtos.Student.AnonymousGradingQueryCriteria() 
+                { StudentId = "0000001", TermIds = new List<string> { "TermId1" }, SectionIds = new List<string> { "SectionId1" } };
+                await gradeService.QueryAnonymousGradingIdsAsync(criteria);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task GradeService_QueryAnonymousGradingIdsAsync_PermissionsException()
+            {
+                var criteria = new Dtos.Student.AnonymousGradingQueryCriteria() { StudentId = "abc" };
+                await gradeService.QueryAnonymousGradingIdsAsync(criteria);
+            }
+
+            [TestMethod]
+            public async Task GradeService_QueryAnonymousGradingIdsAsync_GradingTypeNone_ReturnsEmptyGradingIds()
+            {
+                var criteria = new Dtos.Student.AnonymousGradingQueryCriteria() { StudentId = "0000004" };
+                var emptyGradingIdsEntity = new List<StudentAnonymousGrading>();
+
+                var configurationEntity = new AcademicRecordConfiguration(anonymousGradingType: AnonymousGradingType.None);
+
+                studentConfigurationRepositoryMock.Setup(repo => repo.GetAcademicRecordConfigurationAsync()).ReturnsAsync(configurationEntity);
+                academicCreditRepositoryMock.Setup(repo => repo.GetAnonymousGradingIdsAsync(AnonymousGradingType.None, "0000004", new List<string>(), new List<string>())).ReturnsAsync(emptyGradingIdsEntity);
+
+                // Mock the adapters
+                var dtoAdapter = new AutoMapperAdapter<StudentAnonymousGrading, Dtos.Student.StudentAnonymousGrading>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<StudentAnonymousGrading, Dtos.Student.StudentAnonymousGrading>()).Returns(dtoAdapter);
+
+                var studentGradingIds = (await gradeService.QueryAnonymousGradingIdsAsync(criteria)).ToList();
+                Assert.AreEqual(studentGradingIds.Count(), emptyGradingIdsEntity.Count);
+            }
+
+            [TestMethod]
+            public async Task GradeService_QueryAnonymousGradingIdsAsync_GradingTypeTerm_ReturnsStudentTermGradingIds()
+            {
+                var criteria = new Dtos.Student.AnonymousGradingQueryCriteria() { StudentId = "0000004", TermIds = null, SectionIds = null };
+                var termGradingIdsEntity = new List<StudentAnonymousGrading>() 
+                { 
+                    new StudentAnonymousGrading(string.Empty, null, null, "Student 0000004 does not have a anonymous grading ID for term: 2019/FA"),
+                    new StudentAnonymousGrading("2", "2021/FA", null, ""),
+                    new StudentAnonymousGrading("3", "2021/SP", null, ""),
+                };
+
+                var configurationEntity = new AcademicRecordConfiguration(anonymousGradingType: AnonymousGradingType.Term);
+
+                studentConfigurationRepositoryMock.Setup(repo => repo.GetAcademicRecordConfigurationAsync()).ReturnsAsync(configurationEntity);
+                academicCreditRepositoryMock.Setup(repo => repo.GetAnonymousGradingIdsAsync(AnonymousGradingType.Term, "0000004", new List<string>(), new List<string>())).ReturnsAsync(termGradingIdsEntity);
+
+                // Mock the adapters
+                var dtoAdapter = new AutoMapperAdapter<StudentAnonymousGrading, Dtos.Student.StudentAnonymousGrading>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<StudentAnonymousGrading, Dtos.Student.StudentAnonymousGrading>()).Returns(dtoAdapter);
+
+                var studentGradingIds = (await gradeService.QueryAnonymousGradingIdsAsync(criteria)).ToList();
+
+                Assert.AreEqual(studentGradingIds.Count, termGradingIdsEntity.Count);
+                for (int i = 0; i < studentGradingIds.Count(); i++)
+                {
+                    Assert.IsInstanceOfType(studentGradingIds[i], typeof(Dtos.Student.StudentAnonymousGrading));
+                    Assert.AreEqual(studentGradingIds[i].AnonymousGradingId, termGradingIdsEntity[i].AnonymousGradingId);
+                    Assert.AreEqual(studentGradingIds[i].SectionId, termGradingIdsEntity[i].SectionId);
+                    Assert.AreEqual(studentGradingIds[i].TermId, termGradingIdsEntity[i].TermId);
+                    Assert.AreEqual(studentGradingIds[i].Message, termGradingIdsEntity[i].Message);
+                }
+            }
+
+            [TestMethod]
+            public async Task GradeService_QueryAnonymousGradingIdsAsync_GradingTypeSection_ReturnsStudentSectionGradingIds()
+            {
+                var criteria = new Dtos.Student.AnonymousGradingQueryCriteria() { StudentId = "0000004", TermIds = null, SectionIds = null };
+
+                var sectionGradingIdsEntity = new List<StudentAnonymousGrading>()
+                {
+                    new StudentAnonymousGrading(string.Empty, null, "123", "Student 0000004 does not have a anonymous grading ID for course section: 123"),
+                    new StudentAnonymousGrading("2", "2021/FA", "1", ""),
+                    new StudentAnonymousGrading("3", "2021/SP", "2", ""),
+                };
+
+                var configurationEntity = new AcademicRecordConfiguration(anonymousGradingType: AnonymousGradingType.Section);
+
+                studentConfigurationRepositoryMock.Setup(repo => repo.GetAcademicRecordConfigurationAsync()).ReturnsAsync(configurationEntity);
+                academicCreditRepositoryMock.Setup(repo => repo.GetAnonymousGradingIdsAsync(AnonymousGradingType.Section, "0000004", new List<string>(), new List<string>())).ReturnsAsync(sectionGradingIdsEntity);
+
+                // Mock the adapters
+                var dtoAdapter = new AutoMapperAdapter<StudentAnonymousGrading, Dtos.Student.StudentAnonymousGrading>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<StudentAnonymousGrading, Dtos.Student.StudentAnonymousGrading>()).Returns(dtoAdapter);
+
+                var studentGradingIds = (await gradeService.QueryAnonymousGradingIdsAsync(criteria)).ToList();
+
+                Assert.AreEqual(studentGradingIds.Count, sectionGradingIdsEntity.Count);
+                for (int i = 0; i < studentGradingIds.Count(); i++)
+                {
+                    Assert.IsInstanceOfType(studentGradingIds[i], typeof(Dtos.Student.StudentAnonymousGrading));
+                    Assert.AreEqual(studentGradingIds[i].AnonymousGradingId, sectionGradingIdsEntity[i].AnonymousGradingId);
+                    Assert.AreEqual(studentGradingIds[i].SectionId, sectionGradingIdsEntity[i].SectionId);
+                    Assert.AreEqual(studentGradingIds[i].TermId, sectionGradingIdsEntity[i].TermId);
+                    Assert.AreEqual(studentGradingIds[i].Message, sectionGradingIdsEntity[i].Message);
+                }
+
+            }
+            #endregion Anonymous Grading Ids
+
         }
     }
 }

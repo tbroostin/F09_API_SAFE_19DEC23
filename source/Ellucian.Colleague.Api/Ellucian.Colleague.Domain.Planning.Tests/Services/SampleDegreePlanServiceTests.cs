@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -34,10 +34,12 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Services
             {
                 personId = "123";
                 degreePlan = new DegreePlan(personId);
+
                 term1 = "2012/FA";
                 term2 = "2013/SP";
-                block1 = new CourseBlocks("block1", new List<string>() { "1", "2" });
-                block2 = new CourseBlocks("block2", new List<string>() { "3", "4" });
+
+                block1 = new CourseBlocks("block1", new List<string>() { "1", "2" }, new List<string>());
+                block2 = new CourseBlocks("block2", new List<string>() { "3", "4" }, new List<string>());
                 curriculumTrack = new SampleDegreePlan("CT1", "track1", new List<CourseBlocks>() { block1, block2 });
                 terms = new TestTermRepository().Get();
                 emptyAcademicCredits = new List<AcademicCredit>();
@@ -131,7 +133,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Services
                 // Assert--needed terms added to the plan, no more, no less
                 Assert.AreEqual(2, degreePlan.TermIds.Count());
 
-                // Assert--Courses in curriculum track ar now on the degree plan
+                // Assert--Courses in curriculum track are now on the degree plan
                 var courses = degreePlan.GetPlannedCourses(testTerm1.Code);
                 Assert.AreEqual(2, courses.Count());
                 Assert.AreEqual(block1.CourseIds.ElementAt(0), courses.ElementAt(0).CourseId);
@@ -226,8 +228,8 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Services
                 // Set up degree plan, sample plan, and credits
                 degreePlan.AddTerm(term1);
                 degreePlan.AddTerm(term2);
-                block1 = new CourseBlocks("block1", new List<string>() { "139", "2" });
-                block2 = new CourseBlocks("block2", new List<string>() { "3", "4" });
+                block1 = new CourseBlocks("block1", new List<string>() { "139", "2" }, new List<string>());
+                block2 = new CourseBlocks("block2", new List<string>() { "3", "4" }, new List<string>());
                 SampleDegreePlan curriculumTrack = new SampleDegreePlan("CT1", "track1", new List<CourseBlocks>() { block1, block2 });
 
                 // Get specific academic credits for the student
@@ -246,8 +248,8 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Services
                 // Set up degree plan, sample plan, and credits
                 degreePlan.AddTerm(term1);
                 degreePlan.AddTerm(term2);
-                block1 = new CourseBlocks("block1", new List<string>() { "110", "2" });
-                block2 = new CourseBlocks("block2", new List<string>() { "3", "4" });
+                block1 = new CourseBlocks("block1", new List<string>() { "110", "2" }, new List<string>());
+                block2 = new CourseBlocks("block2", new List<string>() { "3", "4" }, new List<string>());
                 SampleDegreePlan curriculumTrack = new SampleDegreePlan("CT1", "track1", new List<CourseBlocks>() { block1, block2 });
 
                 // Get specific academic credits for the student
@@ -266,8 +268,8 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Services
                 // Set up degree plan, sample plan, and credits
                 degreePlan.AddTerm(term1);
                 degreePlan.AddTerm(term2);
-                block1 = new CourseBlocks("block1", new List<string>() { "2450", "2" });
-                block2 = new CourseBlocks("block2", new List<string>() { "3", "4" });
+                block1 = new CourseBlocks("block1", new List<string>() { "2450", "2" }, new List<string>());
+                block2 = new CourseBlocks("block2", new List<string>() { "3", "4" }, new List<string>());
                 SampleDegreePlan curriculumTrack = new SampleDegreePlan("CT1", "track1", new List<CourseBlocks>() { block1, block2 });
 
                 // Get specific academic credits for the student
@@ -286,8 +288,8 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Services
                 // Set up degree plan, sample plan, and credits
                 degreePlan.AddTerm(term1);
                 degreePlan.AddTerm(term2);
-                block1 = new CourseBlocks("block1", new List<string>() { "2450", "2" });
-                block2 = new CourseBlocks("block2", new List<string>() { "3", "4" });
+                block1 = new CourseBlocks("block1", new List<string>() { "2450", "2" }, new List<string>());
+                block2 = new CourseBlocks("block2", new List<string>() { "3", "4" }, new List<string>());
                 SampleDegreePlan curriculumTrack = new SampleDegreePlan("CT1", "track1", new List<CourseBlocks>() { block1, block2 });
 
                 // Get specific academic credits for the student
@@ -304,8 +306,8 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Services
                 // Set up degree plan, sample plan, and credits
                 degreePlan.AddTerm(term1);
                 degreePlan.AddTerm(term2);
-                block1 = new CourseBlocks("block1", new List<string>() { "2450", "2" });
-                block2 = new CourseBlocks("block2", new List<string>() { "3", "4" });
+                block1 = new CourseBlocks("block1", new List<string>() { "2450", "2" }, new List<string>());
+                block2 = new CourseBlocks("block2", new List<string>() { "3", "4" }, new List<string>());
                 SampleDegreePlan curriculumTrack = new SampleDegreePlan("CT1", "track1", new List<CourseBlocks>() { block1, block2 });
 
                 // Get specific academic credits for the student
@@ -328,8 +330,8 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Services
                 degreePlan.AddTerm(term1);
                 degreePlan.AddCourse(new PlannedCourse("01", null, GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null) { IsProtected = true }, term1);
                 // Curriculum track to add courses to two terms
-                block1 = new CourseBlocks("block1", new List<string>() { "2450", "2" });
-                block2 = new CourseBlocks("block2", new List<string>() { "3", "4" });
+                block1 = new CourseBlocks("block1", new List<string>() { "2450", "2" }, new List<string>());
+                block2 = new CourseBlocks("block2", new List<string>() { "3", "4" }, new List<string>());
                 SampleDegreePlan curriculumTrack = new SampleDegreePlan("CT1", "track1", new List<CourseBlocks>() { block1, block2 });
 
                 // Act -- apply sample degree plan - user is not equal to degree plan person id to imply advisor
@@ -362,8 +364,8 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Services
                 degreePlan.AddTerm(term1);
                 degreePlan.AddCourse(new PlannedCourse("01", null, GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), term1);
                 // Curriculum track to add courses to two terms
-                block1 = new CourseBlocks("block1", new List<string>() { "2450", "2" });
-                block2 = new CourseBlocks("block2", new List<string>() { "3", "4" });
+                block1 = new CourseBlocks("block1", new List<string>() { "2450", "2" }, new List<string>());
+                block2 = new CourseBlocks("block2", new List<string>() { "3", "4" }, new List<string>());
                 SampleDegreePlan curriculumTrack = new SampleDegreePlan("CT1", "track1", new List<CourseBlocks>() { block1, block2 });
 
                 // Act -- apply sample degree plan - user is not equal to degree plan person id to imply advisor
@@ -395,8 +397,8 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Services
                 degreePlan.AddTerm(term1);
                 degreePlan.AddCourse(new PlannedCourse("01", null, GradingType.Graded, Student.Entities.DegreePlans.WaitlistStatus.NotWaitlisted, null, null), term1);
                 // Curriculum track to add courses to two terms
-                block1 = new CourseBlocks("block1", new List<string>() { "2450", "2" });
-                block2 = new CourseBlocks("block2", new List<string>() { "3", "4" });
+                block1 = new CourseBlocks("block1", new List<string>() { "2450", "2" }, new List<string>());
+                block2 = new CourseBlocks("block2", new List<string>() { "3", "4" }, new List<string>());
                 SampleDegreePlan curriculumTrack = new SampleDegreePlan("CT1", "track1", new List<CourseBlocks>() { block1, block2 });
 
                 // Act -- apply sample degree plan - user is not equal to degree plan person id to imply advisor
@@ -427,8 +429,8 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Services
                 // Set up an existing planned course that is protected
                 degreePlan.AddTerm(term1);
                 // Curriculum track to add courses to two terms
-                block1 = new CourseBlocks("block1", new List<string>() { "2450", "2" });
-                block2 = new CourseBlocks("block2", new List<string>() { "3", "4" });
+                block1 = new CourseBlocks("block1", new List<string>() { "2450", "2" }, new List<string>());
+                block2 = new CourseBlocks("block2", new List<string>() { "3", "4" }, new List<string>());
                 SampleDegreePlan curriculumTrack = new SampleDegreePlan("CT1", "track1", new List<CourseBlocks>() { block1, block2 });
 
                 // Act -- apply sample degree plan - user is not equal to degree plan person id to imply advisor

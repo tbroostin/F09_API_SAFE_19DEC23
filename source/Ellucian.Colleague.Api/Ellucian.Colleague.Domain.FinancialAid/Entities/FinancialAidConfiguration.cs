@@ -361,6 +361,42 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         public string StudentAwardLetterBudgetDetailsDescription { get; set; }
 
         /// <summary>
+        /// Flag that indicates whether to display the Student Loan Checklist Items
+        /// </summary>
+        public bool ShowStudentLoanInfo { get; set; }
+
+        /// <summary>
+        /// Flag that indicates whether to display the Parent Loan Checklist Items
+        /// </summary>
+        public bool ShowParentLoanInfo { get; set; }
+
+        /// <summary>
+        /// Flag that indicates whether to display the Plus Application Information
+        /// </summary>
+        public bool ShowPlusApplicationInfo { get; set; }
+
+        /// <summary>
+        /// Flag that indicates whether to display the ASLA Checklist Item
+        /// </summary>
+        public bool ShowAslaInfo { get; set; }
+
+        /// <summary>
+        /// Message to display if no status is assigned for required documents
+        /// </summary>
+        public string FaBlankStatusText { get; set; }
+
+
+        /// <summary>
+        /// Message to display if no due date is assigned for required documents
+        /// </summary>
+        public string FaBlankDueDateText { get; set; }
+
+        /// <summary>
+        /// Message to display as an alert on all FA pages
+        /// </summary>
+        public string FspNotificationText { get; set; }
+
+        /// <summary>
         /// Configuration constructor
         /// </summary>
         /// <param name="officeId">The id of the office to which this configuration applies</param>

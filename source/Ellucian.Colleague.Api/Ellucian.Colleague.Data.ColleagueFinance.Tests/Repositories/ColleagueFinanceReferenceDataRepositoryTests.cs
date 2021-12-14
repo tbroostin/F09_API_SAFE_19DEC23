@@ -26,6 +26,7 @@ using Projects = Ellucian.Colleague.Data.ColleagueFinance.DataContracts.Projects
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Exceptions;
 using GlAcctsMemos = Ellucian.Colleague.Data.ColleagueFinance.DataContracts.GlAcctsMemos;
+using Ellucian.Colleague.Domain.Base.Transactions;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 {
@@ -388,7 +389,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             public async Task GetsAssetTypesNonCacheAsync_Null_DataContract()
             {
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.AssetTypes>("ASSET.TYPES", "", true))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
                 var result = await referenceDataRepo.GetAssetTypesAsync(true);
                 Assert.IsNotNull(result);
             }
@@ -994,7 +995,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues_Component_NullProjectIds()
             {
-                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(null);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(() => null);
                 var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "PROJECT", "", "");
                 Assert.IsNotNull(actuals);
                 Assert.AreEqual(0, actuals.Item2);
@@ -1003,7 +1004,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues_Component_NullGLAcctsIds()
             {
-                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(null);
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(() => null);
                 var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "GL.ACCT", "", "");
                 Assert.IsNotNull(actuals);
                 Assert.AreEqual(0, actuals.Item2);
@@ -1012,8 +1013,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [TestMethod]
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues_Component_NullGLAcctsPrjIds()
             {
-                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(null);
-                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(null);
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(() => null);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(() => null);
 
                 var actuals = await _referenceDataRepo.GetAccountingStringComponentValues2Async(offset, limit, "", "", "");
                 Assert.IsNotNull(actuals);
@@ -1786,6 +1787,36 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                         null,
                         new SemaphoreSlim(1, 1)
                         )));
+              
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 100,
+                    CacheName = "AllAccountingStringComponentValues",
+                    Entity = "",
+                    Sublist = ids.ToList(),
+                    TotalCount = ids.Length,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+                };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
             }
 
             [TestCleanup]
@@ -1923,6 +1954,29 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 //dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", glIds, It.IsAny<string>())).ReturnsAsync(glIds);
                 dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", It.IsAny<string>())).ReturnsAsync(prIds);
                 dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", prIds, It.IsAny<string>())).ReturnsAsync(prIds);
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 100,
+                    CacheName = "AllAccountingStringComponentValues",
+                    Entity = "",
+                    Sublist = new List<string>() { "1", "2", "3", "4", "5" },
+                    TotalCount = 5,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    }
+
+                }
+                };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
 
                 var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "", "available", null, date);
                 Assert.IsNotNull(actuals);
@@ -1936,6 +1990,32 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
                 dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
                 dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
+
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS",It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(prIds);
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 100,
+                    CacheName = "AllAccountingStringComponentValues",
+                    Entity = "",
+                    Sublist = new List<string>() { "1" },
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    }
+                    
+                }
+                };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
 
                 var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "asset", "", null, null);
                 Assert.IsNotNull(actuals);
@@ -2031,10 +2111,37 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             {
                 var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
                 var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
+
                 dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(glIds);
                 dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(glIds);
                 dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(glIds); 
                 dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(prIds);
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 100,
+                    CacheName = "AllAccountingStringComponentValues",
+                    Entity = "",
+                    Sublist = new List<string>() { "1" , "2", "3", "4", "5"},
+                    TotalCount = 5,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    }
+
+                }
+                };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
 
                 var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "", "", "", new List<string>() { "1" }, null);
 
@@ -2047,7 +2154,31 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             {
                 var glIds = _glAcctsDataContract.Select(i => i.Recordkey).ToArray();
                 dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(glIds);
-                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(null);
+                dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(() => null);
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 100,
+                    CacheName = "AllAccountingStringComponentValues",
+                    Entity = "",
+                    Sublist = new List<string>() { "1" , "2"},
+                    TotalCount = 2,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    }
+
+                }
+                };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
 
                 var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "GL.ACCT", "", "", null, null);
 
@@ -2059,8 +2190,31 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             public async Task ColleagueFinanceReferenceData_GetAccountingStringComponentValues3_PROJECT()
             {
                 var prIds = _projectsDataContract.Select(i => i.Recordkey).ToArray();
-                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(null);
+                dataReaderMock.Setup(acc => acc.SelectAsync("GL.ACCTS", string.Empty)).ReturnsAsync(() => null);
                 dataReaderMock.Setup(acc => acc.SelectAsync("PROJECTS", string.Empty)).ReturnsAsync(prIds);
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 100,
+                    CacheName = "AllAccountingStringComponentValues",
+                    Entity = "",
+                    Sublist = new List<string>() { "1" , "2", "3"},
+                    TotalCount = 3,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    }
+
+                }
+                };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
 
                 var actuals = await _referenceDataRepo.GetAccountingStringComponentValues3Async(offset, limit, "PROJECT", "", "", null, null);
 
@@ -3504,7 +3658,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     .ReturnsAsync(_fiscalYrDataContract);
 
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<GenLdgr>("GEN.LDGR", It.IsAny<string>(), true))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 dataAccessorMock.Setup(repo => repo.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Corp>("PERSON", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(corp);
 

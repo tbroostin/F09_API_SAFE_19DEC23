@@ -354,6 +354,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         configurationSetting.SourceTitle = await GetDuplicateCriteriaAsync(configurationSetting.SourceValue, bypassCache);
                         break;
                     }
+                case "LDMD.ALLOW.MOVE.TO.STU":
+                    {
+                        if (!string.IsNullOrEmpty(ldmDefaults.LdmdAllowMoveToStu))
+                        {
+                            configurationSetting.SourceValue = ldmDefaults.LdmdAllowMoveToStu;
+                            configurationSetting.SourceTitle = ldmDefaults.LdmdAllowMoveToStu.Equals("Y", StringComparison.OrdinalIgnoreCase) ? "Yes" : "No";
+                        }
+                        break;
+                    }
             }
 
             return configurationSetting;
@@ -417,7 +426,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return await GetOrAddToCacheAsync<Dictionary<string, string>>(cacheControlKey,
                 async () =>
                 {
-                    var cashierKeys = await DataReader.SelectAsync("CASHIERS", "");
+                    var cashierKeys = await DataReader.SelectAsync("CASHIERS", "WITH CSHR.ECOMMERCE.FLAG NE 'Y'");
                     if (cashierKeys != null)
                     {
                         var personContracts = await DataReader.BulkReadRecordAsync<DataContracts.Person>("PERSON", cashierKeys);

@@ -217,6 +217,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         }
 
         [TestMethod]
+        [Ignore]
         public void StudentStatementScheduleItem_Constructor_Valid_SectionWithNoMeetings()
         {
             scheduleItem = new StudentStatementScheduleItem(academicCredit, section4);

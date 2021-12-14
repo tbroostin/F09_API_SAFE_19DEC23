@@ -1,5 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -25,6 +24,7 @@ using System.Net.Http;
 using System.Web.Http.ModelBinding;
 using Ellucian.Web.Http.ModelBinding;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 
 namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 {
@@ -95,8 +95,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 logger.Error(ex, ex.Message);
                 throw CreateHttpResponseException("Unable to get the requisition.", HttpStatusCode.BadRequest);
             }
-        }        
-        
+        }
+
         /// <summary>
         /// Retrieves list of requistion summary
         /// </summary>
@@ -105,6 +105,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <accessComments>
         /// Requires Staff record, requires permission VIEW.REQUISITION.
         /// </accessComments>
+        [Obsolete("Obsolete as of Colleague Web API 1.30. Use QueryRequisitionSummariesAsync.")]
         [HttpGet]
         public async Task<IEnumerable<RequisitionSummary>> GetRequisitionsSummaryByPersonIdAsync(string personId)
         {
@@ -233,6 +234,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
         }
 
+      
         /// <summary>
         /// Delete a requisition.
         /// </summary>
@@ -240,7 +242,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <returns>The requisition delete response DTO.</returns>
         /// <accessComments>
         /// Requires Staff record, requires permission DELETE.REQUISITION.
-        /// </accessComments>
+        /// </accessComments>        
         [HttpPost]
         public async Task<Dtos.ColleagueFinance.RequisitionDeleteResponse> DeleteRequisitionAsync([FromBody] Dtos.ColleagueFinance.RequisitionDeleteRequest requisitionDeleteRequest)
         {
@@ -275,35 +277,89 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
         }
 
+        /// <summary>
+        /// Retrieves list of requistion summary
+        /// </summary>
+        /// <param name="filterCriteria">procurement filter criteria</param>
+        /// <returns>list of Requisition Summary DTO</returns>
+        /// <accessComments>
+        /// Requires Staff record, requires permission VIEW.REQUISITION or CREATE.UPDATE.REQUISITION.
+        /// </accessComments>
+        [HttpPost]
+        public async Task<IEnumerable<RequisitionSummary>> QueryRequisitionSummariesAsync([FromBody] Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria filterCriteria)
+        {
+            if (filterCriteria == null)
+            {
+                throw CreateHttpResponseException("Request body must contain a valid search criteria.", HttpStatusCode.BadRequest);
+            }
+
+            try
+            {
+                return await requisitionService.QueryRequisitionSummariesAsync(filterCriteria);
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex.Message);
+                throw CreateHttpResponseException("Insufficient permissions to search requisitions.", HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException anex)
+            {
+                logger.Error(anex, anex.Message);
+                throw CreateHttpResponseException("Invalid argument to search requisitions.", HttpStatusCode.BadRequest);
+            }
+            catch (KeyNotFoundException knfex)
+            {
+                logger.Error(knfex, knfex.Message);
+                throw CreateHttpResponseException("Record not found to search requisitions.", HttpStatusCode.NotFound);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message);
+                throw CreateHttpResponseException("Unable to search the requisition.", HttpStatusCode.BadRequest);
+            }
+        }
+
         #endregion
 
         #region Requisitions(EEDM) DTO entity methods
+
         /// <summary>
         /// Return all requisitions
         /// </summary>
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
+        /// <param name="criteria"></param>
         /// <returns>List of Requisitions <see cref="Dtos.Requisitions"/> objects representing matching requisitions</returns>
-        [HttpGet, EedmResponseFilter]            
+        [HttpGet, EedmResponseFilter, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewRequisitions,
+           ColleagueFinancePermissionCodes.UpdateRequisitions })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
+        [QueryStringFilterFilter("criteria", typeof(Dtos.Requisitions))]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
-        public async Task<IHttpActionResult> GetRequisitionsAsync(Paging page)
+        public async Task<IHttpActionResult> GetRequisitionsAsync(Paging page, QueryStringFilter criteria)
         {
-            var bypassCache = false;
-            if (Request.Headers.CacheControl != null)
-            {
-                if (Request.Headers.CacheControl.NoCache)
-                {
-                    bypassCache = true;
-                }
-            }
             try
             {
+                requisitionService.ValidatePermissions(GetPermissionsMetaData());
+
+                var bypassCache = false;
+                if (Request.Headers.CacheControl != null)
+                {
+                    if (Request.Headers.CacheControl.NoCache)
+                    {
+                        bypassCache = true;
+                    }
+                }
+
                 if (page == null)
                 {
                     page = new Paging(100, 0);
                 }
 
-                var pageOfItems = await requisitionService.GetRequisitionsAsync(page.Offset, page.Limit, bypassCache);
+                var criteriaObject = GetFilterObject<Dtos.Requisitions>(logger, "criteria");
+                if (CheckForEmptyFilterParameters())
+                    return new PagedHttpActionResult<IEnumerable<Dtos.Requisitions>>(new List<Dtos.Requisitions>(), page, 0, this.Request);
+
+                var pageOfItems = await requisitionService.GetRequisitionsAsync(page.Offset, page.Limit, criteriaObject, bypassCache);
 
                 AddEthosContextProperties(
                     await requisitionService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -349,24 +405,29 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="guid">GUID to desired requisitions</param>
         /// <returns>A requisitions object <see cref="Dtos.Requisitions"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewRequisitions,
+           ColleagueFinancePermissionCodes.UpdateRequisitions })]
         public async Task<Dtos.Requisitions> GetRequisitionsByGuidAsync(string guid)
         {
-            var bypassCache = false;
-            if (Request.Headers.CacheControl != null)
-            {
-                if (Request.Headers.CacheControl.NoCache)
-                {
-                    bypassCache = true;
-                }
-            }
-            if (string.IsNullOrEmpty(guid))
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("Null id argument",
-                    IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
-            }
             try
             {
+                requisitionService.ValidatePermissions(GetPermissionsMetaData());
+                
+                var bypassCache = false;
+                if (Request.Headers.CacheControl != null)
+                {
+                    if (Request.Headers.CacheControl.NoCache)
+                    {
+                        bypassCache = true;
+                    }
+                }
+                if (string.IsNullOrEmpty(guid))
+                {
+                    throw CreateHttpResponseException(new IntegrationApiException("Null id argument",
+                        IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
+                }
+
                 AddEthosContextProperties(
                     await requisitionService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await requisitionService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -413,6 +474,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="requisitions">DTO of the updated requisitions</param>
         /// <returns>A Requisitions object <see cref="Dtos.Requisitions"/> in EEDM format</returns>
         [HttpPut, EedmResponseFilter]
+        [PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.UpdateRequisitions})]
         public async Task<Dtos.Requisitions> PutRequisitionsAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.Requisitions requisitions)
         {
             if (string.IsNullOrEmpty(guid))
@@ -441,6 +503,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
             try
             {
+                requisitionService.ValidatePermissions(GetPermissionsMetaData());
+                
                 //get Data Privacy List
                 var dpList = await requisitionService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
@@ -500,6 +564,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="requisitions">DTO of the new requisitions</param>
         /// <returns>A requisitions object <see cref="Dtos.Requisitions"/> in HeDM format</returns>
         [HttpPost, EedmResponseFilter]
+        [PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.UpdateRequisitions })]
         public async Task<Dtos.Requisitions> PostRequisitionsAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.Requisitions requisitions)
         {
             if (requisitions == null)
@@ -514,6 +579,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
             try
             {
+                requisitionService.ValidatePermissions(GetPermissionsMetaData());
+                
                 //call import extend method that needs the extracted extension data and the config
                 await requisitionService.ImportExtendedEthosData(await ExtractExtendedData(await requisitionService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), logger));
 
@@ -568,10 +635,13 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="guid">GUID to desired requisitions</param>
         /// <returns>HttpResponseMessage</returns>
         [HttpDelete]
+        [PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.DeleteRequisitions })]
         public async Task DeleteRequisitionsAsync([FromUri] string guid)
         {
             try
             {
+                requisitionService.ValidatePermissions(GetPermissionsMetaData());
+
                 if (string.IsNullOrEmpty(guid))
                 {
                     throw new ArgumentNullException("id", "guid is a required for delete");

@@ -1,4 +1,4 @@
-﻿// Copyright 2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,6 +27,11 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
             AddMappingDependency<Ellucian.Colleague.Domain.Student.Entities.SectionBook, Ellucian.Colleague.Dtos.Student.SectionBook>();
             AddMappingDependency<Ellucian.Colleague.Domain.Student.Entities.Requisite, Ellucian.Colleague.Dtos.Student.Requisite>();
             AddMappingDependency<Ellucian.Colleague.Domain.Student.Entities.SectionRequisite, Ellucian.Colleague.Dtos.Student.SectionRequisite>();
+            AddMappingDependency<Ellucian.Colleague.Domain.Student.Entities.SectionFaculty, Ellucian.Colleague.Dtos.Student.SectionFaculty>();
+            AddMappingDependency<Ellucian.Colleague.Domain.Student.Entities.SectionInstructionalMethod, Ellucian.Colleague.Dtos.Student.SectionInstructionalMethod>();
+            AddMappingDependency<Ellucian.Colleague.Domain.Student.Entities.SectionCourseType, Ellucian.Colleague.Dtos.Student.SectionCourseType>();
+
         }
+
     }
 }

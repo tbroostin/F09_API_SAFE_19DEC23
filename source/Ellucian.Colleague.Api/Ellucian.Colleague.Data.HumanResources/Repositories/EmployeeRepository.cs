@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2019 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
@@ -28,6 +28,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         private readonly int bulkReadSize;
         private const string AllEmployeesCache = "AllEmployeesCache";
         private const int AllEmployeesCacheTimeout = 20; // Clear from cache every 20 minutes
+        private RepositoryException exception = new RepositoryException();
 
         public EmployeeRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings settings)
             : base(cacheProvider, transactionFactory, logger)
@@ -481,8 +482,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         public async Task<Tuple<IEnumerable<Domain.HumanResources.Entities.Employee>, int>> GetEmployees2Async(int offset, int limit, string person = "",
             string campus = "", string status = "", string startOn = "", string endOn = "", string rehireableStatusEligibility = "", string rehireableStatusType = "",
             IEnumerable<string> contractTypeCodes = null, string contractDetailTypeCode = "")
-        {
-           
+        {           
             var employeeEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>();
             int totalCount = 0;
             var criteria = string.Empty;
@@ -491,12 +491,22 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             // - list of benefits to exclude for consideration of employee benefit status
             // - list of HR.STATUSES indication a leave status.
             var ldmDefaults = DataReader.ReadRecord<LdmDefaults>("CORE.PARMS", "LDM.DEFAULTS");
+            //get all HR Statuses
+            IEnumerable<HrStatuses> hrStatuses = null;
+            try
+            {
+                hrStatuses = await GetHrStatusesAsync(true);
+            }
+            catch (Exception ex)
+            {
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message));
+                throw exception;
+            }
             // Get HR statuses that allow employees to be added to positions
             string employeesCacheKey = CacheSupport.BuildCacheKey(AllEmployeesCache, person, campus, status, startOn, endOn, rehireableStatusEligibility,
                 rehireableStatusType, contractTypeCodes, contractDetailTypeCode);
             try
             {
-
                 var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
                     this,
                     ContainsKey,
@@ -511,11 +521,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
                     async () =>
                     {
-                        var keys = await GetEmployeesFiltersAsync(ldmDefaults, person, campus, status, startOn, endOn, rehireableStatusEligibility, rehireableStatusType, contractTypeCodes, contractDetailTypeCode);
+                        var keys = await GetEmployeesFiltersAsync(ldmDefaults, hrStatuses, person, campus, status, startOn, endOn, rehireableStatusEligibility, rehireableStatusType, contractTypeCodes, contractDetailTypeCode);
 
                         if (keys == null || !keys.Any())
                         {
-                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true} ;
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
                         }
 
                         CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
@@ -525,7 +535,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         };
 
                         return requirements;
-                });
+                    });
 
                 if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
                 {
@@ -618,7 +628,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     }
                 }
 
-
                 //build the Employee objects
                 if (hrperRecords.Any())
                 {
@@ -626,32 +635,35 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     {
                         if (hrPersonRecord != null)
                         {
-                            try
-                            {
-                                var employeeRecord = employeeRecords.FirstOrDefault(e => e.Recordkey == hrPersonRecord.Recordkey);
-                                var personPositionRecords = perposRecords.Where(pp => pp.PerposHrpId == hrPersonRecord.Recordkey);
-                                var personPositionWages = perposwgRecords.Where(ppw => ppw.PpwgHrpId == hrPersonRecord.Recordkey);
-                                var personStatusRecords = perstatRecords.Where(ps => ps.PerstatHrpId == hrPersonRecord.Recordkey);
-                                var personBenefitsRecords = perbenRecords.Where(pb => pb.PerbenHrpId == hrPersonRecord.Recordkey);
-                                employeeEntities.Add(
-                                    BuildEmployee2(hrPersonRecord, employeeRecord, personPositionRecords,
-                                    personPositionWages, personStatusRecords, personBenefitsRecords, ldmDefaults));
-                            }
-                            catch (Exception e)
-                            {
-                                LogDataError("Employees", hrPersonRecord.Recordkey, hrPersonRecord, e, e.Message);
-                            }
+
+                            var employeeRecord = employeeRecords.FirstOrDefault(e => e.Recordkey == hrPersonRecord.Recordkey);
+                            var personPositionRecords = perposRecords.Where(pp => pp.PerposHrpId == hrPersonRecord.Recordkey);
+                            var personPositionWages = perposwgRecords.Where(ppw => ppw.PpwgHrpId == hrPersonRecord.Recordkey);
+                            var personStatusRecords = perstatRecords.Where(ps => ps.PerstatHrpId == hrPersonRecord.Recordkey);
+                            var personBenefitsRecords = perbenRecords.Where(pb => pb.PerbenHrpId == hrPersonRecord.Recordkey);
+                            var employeeEntity = BuildEmployee2(hrPersonRecord, employeeRecord, personPositionRecords,
+                                personPositionWages, personStatusRecords, personBenefitsRecords, ldmDefaults);
+                            if (employeeEntity != null)
+                                employeeEntities.Add(employeeEntity);
                         }
+
                     }
+
+                }
+            }
+            catch (Exception ex)
+            {
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message));
+            }
+                if (exception != null && exception.Errors != null && exception.Errors.Any())
+                {
+                    throw exception;
                 }
 
                 return new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Employee>, int>(employeeEntities, totalCount);
-            }
+            
 
-            catch (RepositoryException e)
-            {
-                throw e;
-            }
+
         }
 
         /// <summary>
@@ -783,17 +795,17 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <param name="guid">guid of the employees record.</param>
         /// <returns>Employee Entity <see cref="Employee"./></returns>
         public async Task<Ellucian.Colleague.Domain.HumanResources.Entities.Employee> GetEmployee2ByGuidAsync(string guid)
-        {
-            // Get HR statuses that allow employees to be added to positions
-            var hrStatuses = await GetHrStatusesAsync(true);
+        { 
+            var hrperId = await GetEmployeeIdFromGuidAsync(guid);
+            if (string.IsNullOrEmpty(hrperId))
+            {
+                throw new KeyNotFoundException("No employees was found for GUID " + guid);
 
-            var guidLookUp = new GuidLookup(guid);
-            var hrPersonRecord = await DataReader.ReadRecordAsync<Hrper>(guidLookUp);
+            }
+            var hrPersonRecord = await DataReader.ReadRecordAsync<Hrper>(hrperId);
             if (hrPersonRecord == null)
             {
-                var exception = new RepositoryException();
-                exception.AddError(new Domain.Entities.RepositoryError("employee.guid", string.Format("No employee was found for guid '{0}'.", guid)));
-                throw exception;
+                throw new KeyNotFoundException("No employees was found for GUID " + guid);
             }
 
             var personId = hrPersonRecord.Recordkey;
@@ -817,19 +829,42 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             }
             // If no qualifying records selected from PERSTAT than this is not an employee
             bool IsEmployeeCode = false;
-            foreach (var ps in perstatRecords)
+            if (perstatRecords != null && perstatRecords.Any())
             {
-                var status = hrStatuses.FirstOrDefault(hr => hr.Code == ps.PerstatStatus);
-                if (status != null && status.IsEmployeeStatus)
+                // Get HR statuses that allow employees to be added to positions
+                IEnumerable<HrStatuses> hrStatuses = null;
+                try
                 {
-                    IsEmployeeCode = true;
+                    hrStatuses = await GetHrStatusesAsync(false);
+                    if (hrStatuses != null && hrStatuses.Any())
+                    {
+                        foreach (var ps in perstatRecords)
+                        {
+                            var status = hrStatuses.FirstOrDefault(hr => hr.Code == ps.PerstatStatus);
+                            if (status != null && status.IsEmployeeStatus)
+                            {
+                                IsEmployeeCode = true;
+                            }
+                        }
+                    }
                 }
+                catch (Exception ex)
+                {
+                    exception.AddError(new RepositoryError("Bad.Data", ex.Message)
+                    {
+                        SourceId = personId,
+                        Id = guid
+                    });
+                }
+
             }
             if (!IsEmployeeCode)
             {
-                var exception = new RepositoryException();
-                exception.AddError(new Domain.Entities.RepositoryError("employee.guid", string.Format("No employee was found for guid '{0}'.", guid)));
-                throw exception;
+                exception.AddError(new Domain.Entities.RepositoryError("GUID.Not.Found", string.Format("No employee was found for guid '{0}'.", guid))
+                {
+                    SourceId = personId,
+                    Id = guid
+                });
             }
 
             // select all the PERPOS ids with the HRP.ID equal to the input person id.
@@ -883,9 +918,27 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             var ldmDefaults = DataReader.ReadRecord<LdmDefaults>("CORE.PARMS", "LDM.DEFAULTS");
 
             //build the Employee objects
+            Ellucian.Colleague.Domain.HumanResources.Entities.Employee employeeEntity = null;
+            try
+            {
+                employeeEntity = BuildEmployee2(hrPersonRecord, employeeRecord, perposRecords,
+                        perposwgRecords, perstatRecords, perbenRecords, ldmDefaults);
+            }
 
-            return BuildEmployee2(hrPersonRecord, employeeRecord, perposRecords,
-                    perposwgRecords, perstatRecords, perbenRecords, ldmDefaults);
+            catch (Exception ex)
+            {
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message)
+                {
+                    SourceId = personId,
+                    Id = guid
+                });
+            }        
+
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+            return employeeEntity;
         }
 
         /// <summary>
@@ -990,12 +1043,33 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <returns>The employee ID</returns>
         public async Task<string> GetEmployeeIdFromGuidAsync(string guid)
         {
-            var guidInfo = await GetRecordInfoFromGuidAsync(guid);
-            if (guidInfo != null && guidInfo.Entity.ToUpperInvariant() == "HRPER")
+            if (string.IsNullOrEmpty(guid))
             {
-                return guidInfo.PrimaryKey;
+                throw new ArgumentNullException("guid");
             }
-            return null;
+
+            var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
+            if (idDict == null || idDict.Count == 0)
+            {
+                throw new KeyNotFoundException("No employees was found for GUID " + guid);
+            }
+
+            var foundEntry = idDict.FirstOrDefault();
+            if (foundEntry.Value == null)
+            {
+                throw new KeyNotFoundException("No employees was found for GUID " + guid);
+            }
+
+            if (foundEntry.Value.Entity != "HRPER")
+            {
+                exception.AddError(new RepositoryError("GUID.Wrong.Type", string.Format("GUID {0} has different entity, {1}, than expected, HRPER", guid, foundEntry.Value.Entity))
+                {
+                    Id = guid
+                });
+                throw exception;
+            }
+
+            return foundEntry.Value.PrimaryKey;
         }
         #endregion
 
@@ -1014,21 +1088,22 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <param name="contractTypeCodes"></param>
         /// <param name="contractDetailTypeCode"></param>
         /// <returns>collection of valid keys</returns>
-        private async Task<List<string>> GetEmployeesFiltersAsync(LdmDefaults ldmDefaults, string person = "",
+        private async Task<List<string>> GetEmployeesFiltersAsync(LdmDefaults ldmDefaults, IEnumerable<HrStatuses> hrStatuses, string person = "",
            string campus = "", string status = "", string startOn = "", string endOn = "", string rehireableStatusEligibility = "", string rehireableStatusType = "",
            IEnumerable<string> contractTypeCodes = null, string contractDetailTypeCode = "")
         {
-            var employeeKeys = new List<string>();
-
-            var hrStatuses = await GetHrStatusesAsync(true);
+            var employeeKeys = new List<string>();            
             string perStatValues = string.Empty;
             var perstatEmployeeValues = new List<string>();//list for merging with contract.type or contract.detail.id filter
-            foreach (var hrStatus in hrStatuses)
+            if (hrStatuses != null && hrStatuses.Any())
             {
-                if (hrStatus != null && hrStatus.IsEmployeeStatus)
+                foreach (var hrStatus in hrStatuses)
                 {
-                    perstatEmployeeValues.Add(hrStatus.Code);
-                    perStatValues = string.Concat(perStatValues, "'", hrStatus.Code, "'");
+                    if (hrStatus != null && hrStatus.IsEmployeeStatus)
+                    {
+                        perstatEmployeeValues.Add(hrStatus.Code);
+                        perStatValues = string.Concat(perStatValues, "'", hrStatus.Code, "'");
+                    }
                 }
             }
             if (perstatEmployeeValues == null)
@@ -1060,7 +1135,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             if (!string.IsNullOrWhiteSpace(contractDetailTypeCode))
             {
                 // incoming detail type code must be in the list of valid ones for an employee (special processing 1 = "Y" in HR.STATUSES)
-                if (perStatValues.Contains(contractDetailTypeCode))
+                if (!string.IsNullOrEmpty(perStatValues) && perStatValues.Contains(contractDetailTypeCode))
                 {
                     // if user provided contract.type as well as contract.detail.id, we need to make sure
                     // contract.detail.id is in the translated list in persatContractTypeValues
@@ -1362,123 +1437,140 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
           )
         {
             Domain.HumanResources.Entities.Employee employeeEntity = null;
-            var guid = hrPersonRecord.RecordGuid;
-            var personId = hrPersonRecord.Recordkey;
-            if (!string.IsNullOrEmpty(guid) && !string.IsNullOrEmpty(personId))
+            if (string.IsNullOrEmpty(hrPersonRecord.RecordGuid))
             {
-                // Build the Employees Entity from the gathered data.
-                employeeEntity = new Domain.HumanResources.Entities.Employee(guid, personId);
-
-                if (employeeRecord != null)
+                exception.AddError(new RepositoryError("GUID.Not.Found", "Unable to find GUID for employees.")
                 {
-                    employeeEntity.HasOnlineEarningsStatementConsent = employeeRecord.EmpViewChkAdvOnline != null && employeeRecord.EmpViewChkAdvOnline.Equals("Y", StringComparison.InvariantCultureIgnoreCase);
-                }
+                    SourceId = hrPersonRecord.Recordkey,
+                    Id = string.Empty
+                });
+                return null;
+            }
 
-                // HRPER values for employee
-                employeeEntity.Location = hrPersonRecord.HrpPriCampusLocation;
-                employeeEntity.StartDate = hrPersonRecord.HrpEffectEmployDate;
-                employeeEntity.EndDate = hrPersonRecord.HrpEffectTermDate;
-                employeeEntity.RehireEligibilityCode = hrPersonRecord.HrpRehireEligibility;
-                employeeEntity.EmploymentStatus = EmployeeStatus.Active;
-                if (hrPersonRecord.HrpEffectTermDate != null && hrPersonRecord.HrpEffectTermDate <= DateTime.Today)
+            try
+            {
+                employeeEntity = new Domain.HumanResources.Entities.Employee(hrPersonRecord.RecordGuid, hrPersonRecord.Recordkey);
+            }
+            catch (Exception ex)
+            {
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message)
                 {
-                    employeeEntity.EmploymentStatus = EmployeeStatus.Terminated;
-                }
+                    SourceId = hrPersonRecord.Recordkey,
+                    Id = string.Empty
+                });
+            }
 
-                List<string> leaveCodes = new List<string>();
+            if (employeeRecord != null)
+            {
+                employeeEntity.HasOnlineEarningsStatementConsent = employeeRecord.EmpViewChkAdvOnline != null && employeeRecord.EmpViewChkAdvOnline.Equals("Y", StringComparison.InvariantCultureIgnoreCase);
+            }
+
+            // HRPER values for employee
+            employeeEntity.Location = hrPersonRecord.HrpPriCampusLocation;
+            employeeEntity.StartDate = hrPersonRecord.HrpEffectEmployDate;
+            employeeEntity.EndDate = hrPersonRecord.HrpEffectTermDate;
+            employeeEntity.RehireEligibilityCode = hrPersonRecord.HrpRehireEligibility;
+            employeeEntity.EmploymentStatus = EmployeeStatus.Active;
+            if (hrPersonRecord.HrpEffectTermDate != null && hrPersonRecord.HrpEffectTermDate <= DateTime.Today)
+            {
+                employeeEntity.EmploymentStatus = EmployeeStatus.Terminated;
+            }
+
+            List<string> leaveCodes = new List<string>();
+            if (ldmDefaults != null)
+            {
+                leaveCodes = ldmDefaults.LdmdLeaveStatusCodes;
+            }
+
+            // PERSTAT records
+            if (personStatusRecords.Any())
+            {
+                foreach (var perstat in personStatusRecords)
+                {
+                    if (perstat.PerstatEndDate == null || perstat.PerstatEndDate > DateTime.Today)
+                    {
+                        if (perstat.PerstatStartDate <= DateTime.Today)
+                        {
+                            employeeEntity.StatusCode = perstat.PerstatStatus;
+                            if (employeeEntity.EmploymentStatus != EmployeeStatus.Terminated)
+                            {
+                                if (leaveCodes.Contains(employeeEntity.StatusCode))
+                                {
+                                    employeeEntity.EmploymentStatus = EmployeeStatus.Leave;
+                                    break;
+                                }
+                            }
+                            //v12 addition: Department
+                            employeeEntity.PrimaryPosition = perstat.PerstatPrimaryPosId;
+                        }
+                    }
+                    if (hrPersonRecord.HrpEffectTermDate != null && hrPersonRecord.HrpEffectTermDate <= DateTime.Today)
+                    {
+                        employeeEntity.StatusEndReasonCode = perstat.PerstatEndReason;
+                    }
+                }
+                if (string.IsNullOrEmpty(employeeEntity.StatusCode))
+                {
+                    // If we didn't find an active PERSTAT record than
+                    // Take the most recent status.
+                    var perstat = personStatusRecords.OrderByDescending(i => i.PerstatEndDate).FirstOrDefault();
+                    employeeEntity.StatusCode = perstat.PerstatStatus;
+                }
+            }
+
+            // PERPOSWG records
+            employeeEntity.PayStatus = PayStatus.WithoutPay;
+            ////var payPeriodHours = new List<decimal?>();
+            if (personPositionWages.Any())
+            {
+                foreach (var perwage in personPositionWages)
+                {
+                    if (perwage.PpwgEndDate == null || perwage.PpwgEndDate > DateTime.Today)
+                    {
+                        employeeEntity.PayStatus = PayStatus.WithPay;
+                        //v12 NEW LOGIC FOR hoursPerPeriod property
+                        if (!string.IsNullOrEmpty(perwage.PpwgCycleWorkTimeUnits) && perwage.PpwgCycleWorkTimeUnits.Equals("HRS"))
+                        {
+                            employeeEntity.PpwgCycleWorkTimeAmt = perwage.PpwgCycleWorkTimeAmt;
+                        }
+                        if (!string.IsNullOrEmpty(perwage.PpwgYearWorkTimeUnits) && perwage.PpwgYearWorkTimeUnits.Equals("HRS"))
+                        {
+                            employeeEntity.PpwgYearWorkTimeAmt = perwage.PpwgYearWorkTimeAmt;
+                        }
+                        //v12 addition: PayClass is just for primary positiohn
+                        if (perwage.PpwgStartDate <= DateTime.Today && !string.IsNullOrEmpty(perwage.PpwgPositionId) && perwage.PpwgPositionId.Equals(employeeEntity.PrimaryPosition, StringComparison.OrdinalIgnoreCase))
+                        {
+                            employeeEntity.PayClass = perwage.PpwgPayclassId;
+                        }
+                    }
+                }
+            }
+            ////employeeEntity.PayPeriodHours = payPeriodHours;
+            // PERBEN records
+            employeeEntity.BenefitsStatus = BenefitsStatus.WithoutBenefits;
+            if (personBenefitsRecords.Any())
+            {
+                List<string> excludeBenefits = new List<string>();
                 if (ldmDefaults != null)
                 {
-                    leaveCodes = ldmDefaults.LdmdLeaveStatusCodes;
+                    excludeBenefits = ldmDefaults.LdmdExcludeBenefits;
                 }
-
-                // PERSTAT records
-                if (personStatusRecords.Any())
+                foreach (var perben in personBenefitsRecords)
                 {
-                    foreach (var perstat in personStatusRecords)
+                    var benefit = perben.PerbenBdId;
+                    // Make sure this benefit is not on the list for exclusion before using it to determine
+                    // employee benefit status
+                    if (excludeBenefits == null || (excludeBenefits != null && !excludeBenefits.Contains(benefit)))
                     {
-                        if (perstat.PerstatEndDate == null || perstat.PerstatEndDate > DateTime.Today)
+                        if (perben.PerbenCancelDate == null || perben.PerbenCancelDate > DateTime.Today)
                         {
-                            if (perstat.PerstatStartDate <= DateTime.Today)
-                            {
-                                employeeEntity.StatusCode = perstat.PerstatStatus;
-                                if (employeeEntity.EmploymentStatus != EmployeeStatus.Terminated)
-                                {
-                                    if (leaveCodes.Contains(employeeEntity.StatusCode))
-                                    {
-                                        employeeEntity.EmploymentStatus = EmployeeStatus.Leave;
-                                        break;
-                                    }
-                                }
-                                //v12 addition: Department
-                                employeeEntity.PrimaryPosition = perstat.PerstatPrimaryPosId;
-                            }
+                            employeeEntity.BenefitsStatus = BenefitsStatus.WithBenefits;
+                            break;
                         }
-                        if (hrPersonRecord.HrpEffectTermDate != null && hrPersonRecord.HrpEffectTermDate <= DateTime.Today)
-                        {
-                            employeeEntity.StatusEndReasonCode = perstat.PerstatEndReason;
-                        }
-                    }
-                    if (string.IsNullOrEmpty(employeeEntity.StatusCode))
-                    {
-                        // If we didn't find an active PERSTAT record than
-                        // Take the most recent status.
-                        var perstat = personStatusRecords.OrderByDescending(i => i.PerstatEndDate).FirstOrDefault();
-                        employeeEntity.StatusCode = perstat.PerstatStatus;
                     }
                 }
 
-                // PERPOSWG records
-                employeeEntity.PayStatus = PayStatus.WithoutPay;
-                ////var payPeriodHours = new List<decimal?>();
-                if (personPositionWages.Any())
-                {
-                    foreach (var perwage in personPositionWages)
-                    {
-                        if (perwage.PpwgEndDate == null || perwage.PpwgEndDate > DateTime.Today)
-                        {
-                            employeeEntity.PayStatus = PayStatus.WithPay;
-                            //v12 NEW LOGIC FOR hoursPerPeriod property
-                            if (!string.IsNullOrEmpty(perwage.PpwgCycleWorkTimeUnits) && perwage.PpwgCycleWorkTimeUnits.Equals("HRS"))
-                            {
-                                employeeEntity.PpwgCycleWorkTimeAmt = perwage.PpwgCycleWorkTimeAmt;
-                            }
-                            if (!string.IsNullOrEmpty(perwage.PpwgYearWorkTimeUnits) && perwage.PpwgYearWorkTimeUnits.Equals("HRS"))
-                            {
-                                employeeEntity.PpwgYearWorkTimeAmt = perwage.PpwgYearWorkTimeAmt;
-                            }
-                            //v12 addition: PayClass is just for primary positiohn
-                            if (perwage.PpwgStartDate <= DateTime.Today && perwage.PpwgPositionId.Equals(employeeEntity.PrimaryPosition, StringComparison.OrdinalIgnoreCase))
-                            {
-                                employeeEntity.PayClass = perwage.PpwgPayclassId;
-                            }
-                        }
-                    }
-                }
-                ////employeeEntity.PayPeriodHours = payPeriodHours;
-                // PERBEN records
-                employeeEntity.BenefitsStatus = BenefitsStatus.WithoutBenefits;
-                if (personBenefitsRecords.Any())
-                {
-                    List<string> excludeBenefits = new List<string>();
-                    if (ldmDefaults != null)
-                    {
-                        excludeBenefits = ldmDefaults.LdmdExcludeBenefits;
-                    }
-                    foreach (var perben in personBenefitsRecords)
-                    {
-                        var benefit = perben.PerbenBdId;
-                        // Make sure this benefit is not on the list for exclusion before using it to determine
-                        // employee benefit status
-                        if (excludeBenefits == null || (excludeBenefits != null && !excludeBenefits.Contains(benefit)))
-                        {
-                            if (perben.PerbenCancelDate == null || perben.PerbenCancelDate > DateTime.Today)
-                            {
-                                employeeEntity.BenefitsStatus = BenefitsStatus.WithBenefits;
-                                break;
-                            }
-                        }
-                    }
-                }
+
             }
             return employeeEntity;
         }

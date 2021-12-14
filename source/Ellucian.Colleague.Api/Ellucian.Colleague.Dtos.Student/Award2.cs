@@ -29,7 +29,7 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Null if award is not a loan.
         /// </summary>
         [JsonConverter(typeof(StringEnumConverter))]
-        public LoanType? LoanType { get; set; }
+        public LoanType2? LoanType { get; set; }
 
         /// <summary>
         /// Field for Category which can define Loan, Grant, Scholarship or Work.

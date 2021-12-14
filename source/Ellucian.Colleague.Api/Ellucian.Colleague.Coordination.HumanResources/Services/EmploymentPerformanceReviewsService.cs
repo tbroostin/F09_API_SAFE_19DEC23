@@ -1,4 +1,4 @@
-//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -13,8 +13,8 @@ using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Coordination.Base.Services;
-using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Services
 {
@@ -53,29 +53,38 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns>Collection of EmploymentPerformanceReviews DTO objects</returns>
         public async Task<Tuple<IEnumerable<Dtos.EmploymentPerformanceReviews>, int>> GetEmploymentPerformanceReviewsAsync(int offset, int limit, bool bypassCache = false)
         {
-           CheckUserEmploymentPerformanceReviewsViewPermissions();
-
             var employmentPerformanceReviewsCollection = new List<Ellucian.Colleague.Dtos.EmploymentPerformanceReviews>();
+            Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.EmploymentPerformanceReview>, int> employmentPerformanceReviewsData = null;
 
-            var pageOfItems = await _employmentPerformanceReviewRepository.GetEmploymentPerformanceReviewsAsync(offset, limit, bypassCache);
-            
-            var employmentPerformanceReviewsEntities = pageOfItems.Item1;
-            int totalRecords = pageOfItems.Item2;
-
-            if (employmentPerformanceReviewsEntities != null && employmentPerformanceReviewsEntities.Any())
+            try
             {
-                foreach (var employmentPerformanceReviews in employmentPerformanceReviewsEntities)
-                {
-                    employmentPerformanceReviewsCollection.Add(await ConvertEmploymentPerformanceReviewsEntityToDto(employmentPerformanceReviews, bypassCache));
-                }
+                employmentPerformanceReviewsData = await _employmentPerformanceReviewRepository.GetEmploymentPerformanceReviewsAsync(offset, limit, bypassCache);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
 
-                return new Tuple<IEnumerable<Dtos.EmploymentPerformanceReviews>, int>(employmentPerformanceReviewsCollection, totalRecords);
+            if (employmentPerformanceReviewsData != null)
+            {
+                var employmentPerformanceReviewsEntities = employmentPerformanceReviewsData.Item1;
+                int totalRecords = employmentPerformanceReviewsData.Item2;
+
+                if (employmentPerformanceReviewsEntities != null && employmentPerformanceReviewsEntities.Any())
+                {
+                    employmentPerformanceReviewsCollection = (await BuildEmploymentPerformanceReviewsDtoAsync(employmentPerformanceReviewsEntities, bypassCache)).ToList();
+                    return new Tuple<IEnumerable<Dtos.EmploymentPerformanceReviews>, int>(employmentPerformanceReviewsCollection, totalRecords);
+                }
+                else
+                {
+                    return new Tuple<IEnumerable<Dtos.EmploymentPerformanceReviews>, int>(new List<Dtos.EmploymentPerformanceReviews>(), 0);
+                }
             }
             else
             {
-                return new Tuple<IEnumerable<Dtos.EmploymentPerformanceReviews>, int>(new List<Dtos.EmploymentPerformanceReviews>(), 0);
+                return new Tuple<IEnumerable<Dtos.EmploymentPerformanceReviews>, int>(employmentPerformanceReviewsCollection, 0);
             }
-            
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -85,27 +94,42 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns>EmploymentPerformanceReviews DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.EmploymentPerformanceReviews> GetEmploymentPerformanceReviewsByGuidAsync(string guid)
         {
-            CheckUserEmploymentPerformanceReviewsViewPermissions();
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid", "A GUID is required to obtain employment-performance-reviews.");
+            }
+
             try
             {
                 var entity = await _employmentPerformanceReviewRepository.GetEmploymentPerformanceReviewByIdAsync(guid);
+                var employmentPerformanceReviewsDto = await BuildEmploymentPerformanceReviewsDtoAsync(new List<Domain.HumanResources.Entities.EmploymentPerformanceReview>(){entity});
 
-                if (entity != null) 
+                if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
                 {
-                    return await ConvertEmploymentPerformanceReviewsEntityToDto(entity, true);
+                    throw IntegrationApiException;
+                }
+
+                if (employmentPerformanceReviewsDto.Any())
+                {
+                    return employmentPerformanceReviewsDto.FirstOrDefault();
                 }
                 else
                 {
-                    throw new KeyNotFoundException();
+                    throw new KeyNotFoundException("No employment-performance-reviews found for GUID " + guid);
                 }
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex, guid: guid);
+                throw IntegrationApiException;
             }
             catch (KeyNotFoundException ex)
             {
-                throw new KeyNotFoundException("employment-performance-reviews not found for GUID " + guid, ex);
+                throw new KeyNotFoundException("No employment-performance-reviews found for GUID " + guid, ex);
             }
             catch (InvalidOperationException ex)
             {
-                throw new KeyNotFoundException("employment-performance-reviews not found for GUID " + guid, ex);
+                throw new KeyNotFoundException("No employment-performance-reviews found for GUID " + guid, ex);
             }
         }
 
@@ -123,7 +147,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 throw new ArgumentNullException("employmentPerformanceReviewsDto", "Must provide a guid for employmentPerformanceReviews create");
             }
             // verify the user has the permission to create a employmentPerformanceReviews
-            CheckUserEmploymentPerformanceReviewsCreateUpdatePermissions();
+            //CheckUserEmploymentPerformanceReviewsCreateUpdatePermissions();
 
             _employmentPerformanceReviewRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -134,7 +158,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             var newEntity = await _employmentPerformanceReviewRepository.CreateEmploymentPerformanceReviewsAsync(employmentPerformanceReviewsEntity);
 
             return await ConvertEmploymentPerformanceReviewsEntityToDto(newEntity, true);
-            
+
         }
 
         #endregion
@@ -156,13 +180,13 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 throw new ArgumentNullException("employmentPerformanceReviews", "Must provide a guid for employmentPerformanceReviews update");
 
             // get the person ID associated with the incoming guid
-            var EmploymentPerformanceReviewsId = await _employmentPerformanceReviewRepository.GetIdFromGuidAsync(employmentPerformanceReviewsDto.Id);
+            var EmploymentPerformanceReviewsId = await _employmentPerformanceReviewRepository.GetIdFromGuidAsync(employmentPerformanceReviewsDto.Id, "PERPOS");
 
             // verify the GUID exists to perform an update.  If not, perform a create instead
             if (!string.IsNullOrEmpty(EmploymentPerformanceReviewsId))
             {
                 // verify the user has the permission to update a employmentPerformanceReviews
-                CheckUserEmploymentPerformanceReviewsCreateUpdatePermissions();
+                //CheckUserEmploymentPerformanceReviewsCreateUpdatePermissions();
 
                 _employmentPerformanceReviewRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -176,7 +200,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
                 return await ConvertEmploymentPerformanceReviewsEntityToDto(updatedEmploymentPerformanceReviewsEntity, true);
 
-                
+
             }
             // perform a create instead
             return await PostEmploymentPerformanceReviewsAsync(employmentPerformanceReviewsDto);
@@ -192,7 +216,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         public async Task DeleteEmploymentPerformanceReviewAsync(string employmentPerformanceReviewsId)
         {
             // get user permissions
-            CheckUserEmploymentPerformanceReviewsDeletePermissions();
+            //CheckUserEmploymentPerformanceReviewsDeletePermissions();
 
             try
             {
@@ -207,7 +231,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             catch (KeyNotFoundException)
             {
-                throw new KeyNotFoundException(string.Format("Employment-performance-reviews not found for guid: '{0}'.",  employmentPerformanceReviewsId));
+                throw new KeyNotFoundException(string.Format("Employment-performance-reviews not found for guid: '{0}'.", employmentPerformanceReviewsId));
             }
         }
         #endregion
@@ -232,6 +256,71 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             return _employmentPerformanceReviewRatings;
         }
 
+        /// <summary>
+        /// BuildEmploymentPerformanceReviewsDtoAsync
+        /// </summary>
+        /// <param name="sources">Collection of EmploymentPerformanceReview domain entities</param>
+        /// <param name="bypassCache">bypassCache flag.  Defaulted to false</param>
+        /// <returns>Collection of EmploymentPerformanceReviews DTO objects </returns>
+        private async Task<IEnumerable<Dtos.EmploymentPerformanceReviews>> BuildEmploymentPerformanceReviewsDtoAsync(IEnumerable<Domain.HumanResources.Entities.EmploymentPerformanceReview> sources,
+            bool bypassCache = false)
+        {
+
+            if ((sources == null) || (!sources.Any()))
+            {
+                return null;
+            }
+
+            var employmentPerformanceReviews = new List<Dtos.EmploymentPerformanceReviews>();
+            
+            Dictionary<string, string> personGuidCollection = null;
+            try
+            {
+                var personIds = sources
+                     .Where(x => (!string.IsNullOrEmpty(x.PersonId)))
+                     .Select(x => x.PersonId).Distinct().ToList();
+                var reviewerIds = sources
+                     .Where(x => (!string.IsNullOrEmpty(x.ReviewedById)))
+                     .Select(x => x.ReviewedById).Distinct().ToList();
+                personIds.AddRange(reviewerIds);
+                personGuidCollection = await this._personRepository.GetPersonGuidsCollectionAsync(personIds);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message);
+            }
+
+            Dictionary<string, string> perposGuidCollection = null;
+            try
+            {
+                var perposIds = sources
+                     .Where(x => (!string.IsNullOrEmpty(x.PerposId)))
+                     .Select(x => x.PerposId).Distinct().ToList();
+                perposGuidCollection = await _employmentPerformanceReviewRepository.GetGuidsCollectionAsync(perposIds, "PERPOS");
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message);
+            }
+
+            foreach (var source in sources)
+            {
+                try
+                {
+                    employmentPerformanceReviews.Add(await ConvertEmploymentPerformanceReviewsEntityToDto(source, personGuidCollection, perposGuidCollection, bypassCache));
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, id: source.PersonId, guid: source.Guid);
+                }
+            }
+
+            if (IntegrationApiException != null)
+                throw IntegrationApiException;
+
+            return employmentPerformanceReviews;
+        }
+
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Converts a EmploymentPerformanceReviews domain entity to its corresponding EmploymentPerformanceReviews DTO
@@ -247,7 +336,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             employmentPerformanceReviews.Person = new GuidObject2(personGuid);
             var jobGuid = await _employmentPerformanceReviewRepository.GetGuidFromIdAsync(source.PerposId, "PERPOS");
             employmentPerformanceReviews.Job = new GuidObject2(jobGuid);
-            employmentPerformanceReviews.CompletedOn = (DateTime) source.CompletedDate;
+            employmentPerformanceReviews.CompletedOn = (DateTime)source.CompletedDate;
             var typeEntities = await GetAllEmploymentPerformanceReviewTypesAsync(bypassCache);
             if (typeEntities.Any())
             {
@@ -274,7 +363,153 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             if (!string.IsNullOrWhiteSpace(source.Comment))
                 employmentPerformanceReviews.Comment = source.Comment;
-                                                                                                                                    
+
+            return employmentPerformanceReviews;
+        }
+
+        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
+        /// <summary>
+        /// Converts an EmploymentPerformanceReviews domain entity to its corresponding EmploymentPerformanceReviews DTO
+        /// Uses incoming person and perpos GUID collections
+        /// </summary>
+        /// <param name="source">EmploymentPerformanceReviews domain entity</param>
+        /// <returns>EmploymentPerformanceReviews DTO</returns>
+        private async Task<Ellucian.Colleague.Dtos.EmploymentPerformanceReviews> ConvertEmploymentPerformanceReviewsEntityToDto(EmploymentPerformanceReview source,
+            Dictionary<string, string> personGuidCollection, Dictionary<string, string> perposGuidCollection, bool bypassCache)
+        {
+            var employmentPerformanceReviews = new Ellucian.Colleague.Dtos.EmploymentPerformanceReviews();
+            
+            // get guid
+            employmentPerformanceReviews.Id = source.Guid;
+            
+            // get person
+            if (!string.IsNullOrEmpty(source.PersonId))
+            {
+                if (personGuidCollection != null)
+                {
+                    var personGuid = string.Empty;
+                    personGuidCollection.TryGetValue(source.PersonId, out personGuid);
+                    if (string.IsNullOrEmpty(personGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("GUID not found for person id: '", source.PersonId, "'"),
+                           "GUID.Not.Found", source.Guid, source.PerposId);
+                    }
+                    else
+                    {
+                        employmentPerformanceReviews.Person = new Dtos.GuidObject2(personGuid);
+                    }                    
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError(string.Concat("GUID not found for person id '", source.PersonId, "'"),
+                        "", source.Guid, source.PerposId);
+                }
+            }
+            else
+            {
+                IntegrationApiExceptionAddError(string.Concat("GUID not found for person id: '", source.PersonId, "'"),
+                           "GUID.Not.Found", source.Guid, source.PerposId);
+            }
+            
+            // get job
+            if (!string.IsNullOrEmpty(source.PerposId))
+            {
+                if (perposGuidCollection != null)
+                {
+                    var perposGuid = string.Empty;
+                    perposGuidCollection.TryGetValue(source.PerposId, out perposGuid);
+                    if (string.IsNullOrEmpty(perposGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("GUID not found for perpos id: '", source.PerposId, "'"),
+                           "GUID.Not.Found", source.Guid, source.PerposId);
+                    }
+                    else
+                    {
+                        employmentPerformanceReviews.Job = new Dtos.GuidObject2(perposGuid);
+                    }
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError(string.Concat("GUID not found for perpos id '", source.PerposId, "'"),
+                        "", source.Guid, source.PerposId);
+                }
+            }
+
+            // get completedOn
+            employmentPerformanceReviews.CompletedOn = (DateTime)source.CompletedDate;
+
+            // get type
+            if (!string.IsNullOrEmpty(source.RatingCycleCode))
+            {
+                var typeEntities = await GetAllEmploymentPerformanceReviewTypesAsync(bypassCache);
+                if (typeEntities != null)
+                {
+                    var typeEntity = typeEntities.FirstOrDefault(ep => ep.Code == source.RatingCycleCode);
+                    if (typeEntity != null)
+                    {
+                        employmentPerformanceReviews.Type = new GuidObject2(typeEntity.Guid);
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Format("GUID not found for employment performance review type '{0}'", source.RatingCycleCode), "GUID.Not.Found", source.Guid, source.PerposId);
+                    }
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError(string.Format("GUID not found for employment performance review type '{0}'", source.RatingCycleCode), "GUID.Not.Found", source.Guid, source.PerposId);
+                }
+            }
+
+            // get reviewedBy
+            if (!string.IsNullOrEmpty(source.ReviewedById))
+            {
+                if (personGuidCollection != null)
+                {
+                    var personGuid = string.Empty;
+                    personGuidCollection.TryGetValue(source.ReviewedById, out personGuid);
+                    if (string.IsNullOrEmpty(personGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("GUID not found for reviewed by person id: '", source.ReviewedById, "'"),
+                           "GUID.Not.Found", source.Guid, source.PerposId);
+                    }
+                    else
+                    {
+                        employmentPerformanceReviews.ReviewedBy = new Dtos.GuidObject2(personGuid);
+                    }
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError(string.Concat("GUID not found for person id '", source.ReviewedById, "'"),
+                        "", source.Guid, source.PerposId);                    
+                } 
+            }
+
+            // get rating
+            var ratingEntities = await GetAllEmploymentPerformanceReviewRatingsAsync(bypassCache);
+            if (!string.IsNullOrEmpty(source.RatingCode))
+            {
+                if (ratingEntities != null)
+                {
+                    var ratingEntity = ratingEntities.FirstOrDefault(ep => ep.Code == source.RatingCode);
+                    if (ratingEntity != null)
+                    {
+                        var rating = new Ellucian.Colleague.Dtos.EmploymentPerformanceReviewsRatingDtoProperty() { Detail = new GuidObject2(ratingEntity.Guid) };
+                        employmentPerformanceReviews.Rating = rating;
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Format("GUID not found for employment performance review rating '{0}'", source.RatingCode), "GUID.Not.Found", source.Guid, source.PerposId);
+                    }
+                }
+                else
+                {
+                    IntegrationApiExceptionAddError(string.Format("GUID not found for employment performance review rating '{0}'", source.RatingCode), "GUID.Not.Found", source.Guid, source.PerposId);
+                }
+            }
+            // get comment
+            if (!string.IsNullOrWhiteSpace(source.Comment))
+                employmentPerformanceReviews.Comment = source.Comment;
+
             return employmentPerformanceReviews;
         }
 
@@ -315,7 +550,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw new ArgumentNullException("Job ID is required for Employment Performance Reviews.");
             }
-            var job = await _employmentPerformanceReviewRepository.GetIdFromGuidAsync(employmentPerformanceReviews.Job.Id);
+            var job = await _employmentPerformanceReviewRepository.GetIdFromGuidAsync(employmentPerformanceReviews.Job.Id, "PERPOS");
             if ((job == null) || (string.IsNullOrEmpty(job)))
             {
                 throw new ArgumentException("Job not found for Id:" + employmentPerformanceReviews.Job.Id);
@@ -345,7 +580,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             if ((employmentPerformanceReviews.ReviewedBy != null) && (!string.IsNullOrEmpty(employmentPerformanceReviews.ReviewedBy.Id)))
             {
-                response.ReviewedById = await _employmentPerformanceReviewRepository.GetIdFromGuidAsync(employmentPerformanceReviews.ReviewedBy.Id);
+                response.ReviewedById = await _employmentPerformanceReviewRepository.GetIdFromGuidAsync(employmentPerformanceReviews.ReviewedBy.Id, "PERSON");
             }
 
             if (!string.IsNullOrEmpty(employmentPerformanceReviews.Comment))
@@ -355,46 +590,5 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             return response;
         }
-
-        /// <summary>
-        /// Provides an integration user permission to view/get holds (a.k.a. restrictions) from Colleague.
-        /// </summary>
-        private void CheckUserEmploymentPerformanceReviewsViewPermissions()
-        {
-            // access is ok if the current user has the view employment-performance-reviews permission
-            if (!HasPermission(HumanResourcesPermissionCodes.ViewEmploymentPerformanceReview) && !HasPermission(HumanResourcesPermissionCodes.CreateUpdateEmploymentPerformanceReview))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view employment-performance-reviews.");
-                throw new PermissionsException("User is not authorized to view employment-performance-reviews.");
-            }
-        }
-
-        /// <summary>
-        /// Provides an integration user permission to view/get holds (a.k.a. restrictions) from Colleague.
-        /// </summary>
-        private void CheckUserEmploymentPerformanceReviewsCreateUpdatePermissions()
-        {
-            // access is ok if the current user has the create/update employment-performance-reviews permission
-            if (!HasPermission(HumanResourcesPermissionCodes.CreateUpdateEmploymentPerformanceReview))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to create/update employment-performance-reviews.");
-                throw new PermissionsException("User is not authorized to create/update employment-performance-reviews.");
-            }
-        }
-
-        /// <summary>
-        /// Provides an integration user permission to delete a hold (a.k.a. a record from STUDENT.RESTRICTIONS) in Colleague.
-        /// </summary>
-        private void CheckUserEmploymentPerformanceReviewsDeletePermissions()
-        {
-            // access is ok if the current user has the delete employment-performance-reviews permission
-            if (!HasPermission(HumanResourcesPermissionCodes.DeleteEmploymentPerformanceReview))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to delete employment-performance-reviews.");
-                throw new PermissionsException("User is not authorized to delete employment-performance-reviews.");
-            }
-        }
-
     }
-
 }

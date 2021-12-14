@@ -5,6 +5,9 @@ using System.ComponentModel;
 using System.Linq;
 using System.Net.Http;
 using System.Web;
+using System.Threading.Tasks;
+using Ellucian.Web.Security;
+using System.Net;
 using System.Web.Http;
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -14,9 +17,7 @@ using Ellucian.Colleague.Dtos.FinancialAid;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.License;
-using Ellucian.Web.Security;
 using slf4net;
-using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Api.Controllers.FinancialAid
 {
@@ -187,6 +188,43 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
                 logger.Error(ex, message);
                 throw CreateHttpResponseException(message + Environment.NewLine + ex.Message);
             }
+        }
+
+        /// <summary>
+        /// Gets a parent's profile for PLUS MPNs
+        /// </summary>
+        /// <accessComments>
+        /// Students can only access the profile of parents specifically assigned to their account on PREL
+        /// Proxy users can only access the profiles of parents associated to students for whom they are proxies
+        /// FA admin users with the VIEW.FINANCIAL.AID.INFORMATION permission code are able to access parent profiles
+        /// </accessComments>
+        /// <param name="parentId">The Colleague PERSON id of the parent for whom to get a PROFILE dto for</param>
+        /// <param name="studentId">The Colleague PERSON id of the student for whom the parent relates to</param>
+        /// <returns>A PROFILE dto for the parent ID</returns>  
+        [HttpGet]
+        public async Task<Dtos.Base.Profile> GetFaProfileAsync(string parentId, string studentId)
+        {
+            try
+            {
+                bool useCache = true;
+                if (Request != null && Request.Headers != null && Request.Headers.CacheControl != null)
+                {
+                    if (Request.Headers.CacheControl.NoCache)
+                    {
+                        useCache = false;
+                    }
+                }
+                return await studentChecklistService.GetMpnProfileAsync(parentId, studentId, useCache);
+            }
+            catch (ArgumentNullException anex)
+            {
+                throw CreateHttpResponseException(anex.Message, HttpStatusCode.BadRequest);
+            }
+            catch (PermissionsException pex)
+            {
+                throw CreateHttpResponseException(pex.Message, HttpStatusCode.Forbidden);
+            }
+
         }
     }
 }

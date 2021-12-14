@@ -154,6 +154,15 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 throw new PermissionsException(message);            
             }
 
+            var outsideAward = await outsideAwardsRepository.GetOutsideAwardsByAwardIdAsync(outsideAwardId);
+
+            if (outsideAward.StudentId != studentId)
+            {
+                var message = string.Format("{0} does not have permission to delete outside award resource for {1}", CurrentUser.PersonId, studentId);
+                logger.Error(message);
+                throw new PermissionsException(message);
+            }
+
             await outsideAwardsRepository.DeleteOutsideAwardAsync(outsideAwardId);
         }
 
@@ -204,9 +213,27 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 throw new PermissionsException(message);
             }
 
+            var awardsBelongingToStudent = new List<Colleague.Domain.FinancialAid.Entities.OutsideAward>();
+            var awardsForStudent = await outsideAwardsRepository.GetOutsideAwardsAsync(outsideAward.StudentId, outsideAward.AwardYearCode);
+            foreach (var award in awardsForStudent)
+            {
+                if (award.Id == outsideAward.Id)
+                {
+                    awardsBelongingToStudent.Add(award);
+                }
+            }
+
+            if (!awardsBelongingToStudent.Any())
+            {
+                var message = string.Format("{0} does not have permission to access to update the outside award for this resource.", CurrentUser.PersonId);
+                logger.Error(message);
+                throw new PermissionsException(message);
+            }
+
             var outsideAwardDtoToEntityAdapter = _adapterRegistry.GetAdapter<OutsideAward, Colleague.Domain.FinancialAid.Entities.OutsideAward>();
 
             var updatedOutsideAward = await outsideAwardsRepository.UpdateOutsideAwardAsync(outsideAwardDtoToEntityAdapter.MapToType(outsideAward));
+
             if (updatedOutsideAward == null)
             {
                 string message = string.Format("Could not update an outside award record for student {0} award year {1}", outsideAward.StudentId, outsideAward.AwardYearCode);

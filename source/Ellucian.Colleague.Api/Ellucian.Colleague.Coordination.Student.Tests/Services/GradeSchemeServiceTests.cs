@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -235,7 +235,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public async Task GradeSchemeService_GetNonEthosGradeSchemeByIdAsync_Repo_returns_null()
         {
             _studentReferenceRepositoryMock.Setup(repo => repo.GetGradeSchemesAsync())
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
 
             var scheme = await _gradeSchemeService.GetNonEthosGradeSchemeByIdAsync("UG");
         }
@@ -332,7 +332,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public async Task GradeSchemeService_GetGradeSubschemeByIdAsync_Repo_returns_null()
         {
             _studentReferenceRepositoryMock.Setup(repo => repo.GetGradeSubschemesAsync())
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
 
             var scheme = await _gradeSchemeService.GetGradeSubschemeByIdAsync("UG");
         }

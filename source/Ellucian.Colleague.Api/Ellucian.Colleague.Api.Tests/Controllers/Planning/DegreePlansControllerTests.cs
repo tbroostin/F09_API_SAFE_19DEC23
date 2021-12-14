@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Web.Http;
@@ -118,6 +118,30 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Planning
 
                 // Act
                 var response = await degreePlanController.GetSamplePlanPreview6Async(id, programCode, term);
+
+                // Assert
+                Assert.IsInstanceOfType(response, typeof(DegreePlanPreview6));
+            }
+
+            [TestMethod]
+            public async Task DegreePlanController_GetSamplePlanPreview7Async()
+            {
+                // Arrange
+                int id = 12345;
+                string programCode = "ENGL+BA";
+                string term = "2015FA";
+                DegreePlanPreview6 planPreview = new DegreePlanPreview6()
+                {
+                    Preview = new DegreePlan4(),
+                    MergedDegreePlan = new DegreePlan4(),
+                    AcademicHistory = new Dtos.Student.AcademicHistory4()
+                };
+
+                // Mock the degree plan service that updates a plan.
+                degreePlanServiceMock.Setup(svc => svc.PreviewSampleDegreePlan7Async(id, programCode, term)).Returns(Task.FromResult(planPreview));
+
+                // Act
+                var response = await degreePlanController.GetSamplePlanPreview7Async(id, programCode, term);
 
                 // Assert
                 Assert.IsInstanceOfType(response, typeof(DegreePlanPreview6));

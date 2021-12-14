@@ -1,9 +1,6 @@
-﻿/*Copyright 2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2018-2021 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Domain.HumanResources.Entities
 {
@@ -25,6 +22,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// List of all excluded leave plans.
         /// </summary>
         public List<string> ExcludedLeavePlanIds;
+
+        /// <summary>
+        /// Number of days to lookback for leave
+        /// </summary>
+        public int? LeaveRequestLookbackDays { get; set; }
 
     }
 }

@@ -18,6 +18,11 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Web.Http.Models;
+using System.Web.Http.Routing;
+using System.Web.Http.Controllers;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Colleague.Domain.Student;
+using System.Collections;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -191,7 +196,84 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.AreEqual(expected.Priority, actual.Priority, "Priority, Index=" + i.ToString());
             }
         }
-        
+
+        [TestMethod]
+        public async Task StudentSectionWaitlistsController_GetStudentSectionWaitlists_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "StudentSectionWaitlists" },
+                { "action", "GetStudentSectionWaitlistsAsync" }
+            };
+            HttpRoute route = new HttpRoute("student-section-waitlists", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentSectionWaitlistsController.Request.SetRouteData(data);
+            studentSectionWaitlistsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentSectionWaitlist });
+
+            var controllerContext = studentSectionWaitlistsController.ControllerContext;
+            var actionDescriptor = studentSectionWaitlistsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            studentSectionWaitlistsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                   .Returns(true);
+            studentSectionWaitlistsServiceMock.Setup(x => x.GetStudentSectionWaitlistsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(repodata);
+            var resp = await studentSectionWaitlistsController.GetStudentSectionWaitlistsAsync(page);
+
+            Object filterObject;
+            studentSectionWaitlistsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentSectionWaitlist));
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentSectionWaitlistsController_GetStudentSectionWaitlists_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "StudentSectionWaitlists" },
+                { "action", "GetStudentSectionWaitlistsAsync" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentSectionWaitlistsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = studentSectionWaitlistsController.ControllerContext;
+            var actionDescriptor = studentSectionWaitlistsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                studentSectionWaitlistsServiceMock.Setup(s => s.GetStudentSectionWaitlistsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(repodata);
+                studentSectionWaitlistsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User is not authorized to view student-section-waitlists."));
+                var resp = await studentSectionWaitlistsController.GetStudentSectionWaitlistsAsync(page);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task StudentSectionWaitlistsController_GetStudentSectionWaitlists_PermissionsException()

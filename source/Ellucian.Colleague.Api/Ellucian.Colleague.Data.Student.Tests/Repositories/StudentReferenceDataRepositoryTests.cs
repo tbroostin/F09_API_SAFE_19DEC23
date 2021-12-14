@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
@@ -75,6 +75,19 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task StudentReferenceDataRepository_GetAcademicDepartmentsAsync_False()
             {
+                var records = new Collection<Depts>();
+                foreach (var item in allAcademicDepartments)
+                {
+                    Depts record = new Depts();
+                    record.RecordGuid = item.Guid;
+                    record.DeptsDesc = item.Description;
+                    record.Recordkey = item.Code;
+                    records.Add(record);
+                }
+                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<Depts>("DEPTS", It.IsAny<string>(), It.IsAny<bool>()))
+                    .ReturnsAsync(records);
+
+
                 var results = await referenceDataRepo.GetAcademicDepartmentsAsync(false);
                 Assert.AreEqual(allAcademicDepartments.Count(), results.Count());
 
@@ -6150,9 +6163,9 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(Exception))]
             public async Task StudentReferenceDataRepo_GetsGetMealPlanRates_Exception()
             {
-                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
-                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(null);
-                dataAccessorMock.Setup(da => da.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(null);
+                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
+                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(() => null);
+                dataAccessorMock.Setup(da => da.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(() => null);
 
                 await referenceDataRepo.GetMealPlanRatesAsync(true);
             }
@@ -7510,9 +7523,9 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(Exception))]
             public async Task StudentReferenceDataRepo_GetsGetRoomRates_Exception()
             {
-                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
-                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(null);
-                dataAccessorMock.Setup(da => da.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(null);
+                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
+                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(() => null);
+                dataAccessorMock.Setup(da => da.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(() => null);
 
                 await referenceDataRepo.GetRoomRatesAsync(true);
             }

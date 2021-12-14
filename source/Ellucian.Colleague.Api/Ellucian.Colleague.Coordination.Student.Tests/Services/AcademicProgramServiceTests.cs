@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -297,7 +297,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task AcademicProgramService_AcademicPrograms4_Null_Academic_Programs()
             {
-                _studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicProgramsAsync(false)).ReturnsAsync(null);
+                _studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicProgramsAsync(false)).ReturnsAsync(() => null);
                 var results = await _academicProgramService.GetAcademicPrograms4Async("", "", null, false);
                 Assert.AreEqual(0, results.Count());
             }
@@ -305,7 +305,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task AcademicProgramService_AcademicPrograms4_Null_Academic_Catalogs()
             {
-                _catalogRepositoryMock.Setup(i => i.GetAsync(It.IsAny<bool>())).ReturnsAsync(null);
+                _catalogRepositoryMock.Setup(i => i.GetAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
                 var results = await _academicProgramService.GetAcademicPrograms4Async("74588696-D1EC-2267-A0B7-DE602533E3A6", "", null, false);
                 Assert.AreEqual(0, results.Count());
             }
@@ -320,7 +320,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task AcademicProgramService_AcademicPrograms4_Null_Academic_Levels()
             {
-                _studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+                _studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
                 var results = await _academicProgramService.GetAcademicPrograms4Async("", "",new AcademicProgram4() { AcademicLevel = new GuidObject2("BAD_GUID") }, false);
                 Assert.AreEqual(0, results.Count());
             }

@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using System;
@@ -12,6 +12,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
     public interface IColleagueFinanceWebConfigurationsRepository
     {
         Task<ColleagueFinanceWebConfiguration> GetColleagueFinanceWebConfigurations();
-        
+
+        Task<bool> GetShowJustificationNotesFlagAsync();
     }
 }

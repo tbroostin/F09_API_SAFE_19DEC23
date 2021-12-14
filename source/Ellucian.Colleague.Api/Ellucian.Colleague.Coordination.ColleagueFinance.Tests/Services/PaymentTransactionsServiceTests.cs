@@ -349,8 +349,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 [TestMethod]
                 public async Task PaymentTransactionsService_GetPaymentTransactionsAsync_DocumentId_As_Null()
                 {
-                    //accountsPayableInvoicesRepositoryMock.Setup(x => x.GetAccountsPayableInvoicesIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
-                    paymentTransactionsRepositoryMock.Setup(x => x.GetIdFromGuidAsync(It.IsAny<string>(), "VOUCHERS")).ReturnsAsync(null);
+                    //accountsPayableInvoicesRepositoryMock.Setup(x => x.GetAccountsPayableInvoicesIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
+                    paymentTransactionsRepositoryMock.Setup(x => x.GetIdFromGuidAsync(It.IsAny<string>(), "VOUCHERS")).ReturnsAsync(() => null);
                     var result = await paymentTransactionsService.GetPaymentTransactionsAsync(0, 100, "0ca1a878-3555-4a3f-a17b-20d054d5e101", Dtos.EnumProperties.InvoiceTypes.Invoice, It.IsAny<Dtos.PaymentTransactions>(), false);
 
                     Assert.IsNotNull(result);
@@ -370,7 +370,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 [ExpectedException(typeof(IntegrationApiException))]
                 public async Task PaymentTransactionsService_GetPaymentTransactionsAsync_Person_As_Null()
                 {
-                    personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+                    personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                     await paymentTransactionsService.GetPaymentTransactionsAsync(0, 100, string.Empty, Dtos.EnumProperties.InvoiceTypes.Invoice, It.IsAny<Dtos.PaymentTransactions>(), false);
                     
                 }
@@ -445,15 +445,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 #endregion
 
-                #region GETBYID
-
-                [TestMethod]
-                [ExpectedException(typeof(IntegrationApiException))]
-                public async Task PaymentTransactionsService_GetPaymentTransactionsByGuidAsync_Permission()
-                {
-                    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                    await paymentTransactionsService.GetPaymentTransactionsByGuidAsync(guid);
-                }
+                #region GETBYID             
 
                 [TestMethod]
                 [ExpectedException(typeof(ArgumentNullException))]

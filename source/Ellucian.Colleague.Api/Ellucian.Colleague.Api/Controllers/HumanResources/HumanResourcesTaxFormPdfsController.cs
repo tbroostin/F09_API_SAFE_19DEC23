@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -34,16 +34,18 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         private readonly ILogger logger;
         private readonly IHumanResourcesTaxFormPdfService taxFormPdfService;
         private readonly ITaxFormConsentService taxFormConsentService;
+        private readonly IConfigurationService configurationService;
 
         /// <summary>
         /// Initialize the Tax Form pdf controller.
         /// </summary>
-        public HumanResourcesTaxFormPdfsController(IAdapterRegistry adapterRegistry, ILogger logger, IHumanResourcesTaxFormPdfService taxFormPdfService, ITaxFormConsentService taxFormConsentService)
+        public HumanResourcesTaxFormPdfsController(IAdapterRegistry adapterRegistry, ILogger logger, IHumanResourcesTaxFormPdfService taxFormPdfService, ITaxFormConsentService taxFormConsentService, IConfigurationService configurationService)
         {
             this.adapterRegistry = adapterRegistry;
             this.logger = logger;
             this.taxFormPdfService = taxFormPdfService;
             this.taxFormConsentService = taxFormConsentService;
+            this.configurationService = configurationService;
         }
 
         /// <summary>
@@ -86,6 +88,16 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 // Determine which PDF template to use.
                 switch (pdfData.TaxYear)
                 {
+                    case "2021":
+                        if (guamFlag)
+                        {
+                            pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2021-W2-Guam.rdlc");
+                        }
+                        else
+                        {
+                            pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2021-W2-W2ST.rdlc");
+                        }
+                        break;
                     case "2020":
                         if (guamFlag)
                         {
@@ -271,6 +283,9 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
                 switch (pdfData.TaxYear)
                 {
+                    case "2021":
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2021-1095C.rdlc");
+                        break;
                     case "2020":
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2020-1095C.rdlc");
                         break;
@@ -317,7 +332,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             catch (Exception e)
             {
-                logger.Error(e.Message);
+                logger.Error(e, e.Message);
                 throw CreateHttpResponseException("Error retrieving 1095-C PDF data.", HttpStatusCode.BadRequest);
             }
         }
@@ -342,25 +357,44 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             if (string.IsNullOrEmpty(recordId))
                 throw CreateHttpResponseException("Record ID must be specified.", HttpStatusCode.BadRequest);
 
-            var consents = await taxFormConsentService.Get2Async(personId, TaxFormTypes.FormT4);
-            consents = consents.OrderByDescending(c => c.TimeStamp);
-            var mostRecentConsent = consents.FirstOrDefault();
 
-            // ************* T4s and T2202As are special cases based on CRA regulations! *************
-            // Check if the person has explicitly withheld consent to receiving their T4 online - if they opted out, throw exception
-            var canViewAsAdmin = await taxFormConsentService.CanViewTaxDataWithOrWithoutConsent2Async(TaxFormTypes.FormT4);
-            if ((mostRecentConsent != null && !mostRecentConsent.HasConsented) && !canViewAsAdmin)
+            var config = await configurationService.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT4);
+
+            // We only need to verify consents if clients use them.
+            if (config == null || !config.HideConsent)
             {
-                throw CreateHttpResponseException("Consent is required to view this information.", HttpStatusCode.Unauthorized);
+                logger.Debug("Using consents for T4 tax forms");
+                var consents = await taxFormConsentService.Get2Async(personId, TaxFormTypes.FormT4);
+                consents = consents.OrderByDescending(c => c.TimeStamp);
+                var mostRecentConsent = consents.FirstOrDefault();
+
+                // ************* T4s and T2202As are special cases based on CRA regulations! *************
+                // Check if the person has explicitly withheld consent to receiving their T4 online - if they opted out, throw exception
+                var canViewAsAdmin = await taxFormConsentService.CanViewTaxDataWithOrWithoutConsent2Async(TaxFormTypes.FormT4);
+                if ((mostRecentConsent != null && !mostRecentConsent.HasConsented) && !canViewAsAdmin)
+                {
+                    logger.Debug("Consent is required to view T4 information.");
+                    throw CreateHttpResponseException("Consent is required to view this information.", HttpStatusCode.Unauthorized);
+                }
             }
 
             string pdfTemplatePath = string.Empty;
             try
             {
                 var pdfData = await taxFormPdfService.GetT4TaxFormDataAsync(personId, recordId);
-
+                if (pdfData != null && pdfData.TaxYear != null)
+                {
+                    logger.Debug("Retrieving T4 PDF for tax year '" + pdfData.TaxYear + "'");
+                }
+                else
+                {
+                    logger.Debug("No PDF data and/or tax year found.");
+                }
                 switch (pdfData.TaxYear)
                 {
+                    case "2021":
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2021-T4.rdlc");
+                        break;
                     case "2020":
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/HumanResources/2020-T4.rdlc");
                         break;
@@ -399,7 +433,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                         logger.Error(message);
                         throw new ApplicationException(message);
                 }
-
+                logger.Debug("Template found. Using '" + (pdfTemplatePath ?? string.Empty) + "'");
                 var pdfBytes = taxFormPdfService.PopulateT4PdfReport(pdfData, pdfTemplatePath);
 
                 // Create and return the HTTP response object
@@ -422,7 +456,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             catch (Exception e)
             {
-                logger.Error(e.Message);
+                logger.Error(e, e.Message);
                 throw CreateHttpResponseException("Error retrieving T4 PDF data.", HttpStatusCode.BadRequest);
             }
         }

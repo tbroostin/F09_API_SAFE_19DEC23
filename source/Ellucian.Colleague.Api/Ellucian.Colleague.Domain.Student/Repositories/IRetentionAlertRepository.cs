@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -18,6 +18,16 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <param name="CaseIds">Case Ids</param>
         /// <returns>Retention Alert Work Case list</returns>
         Task<List<Base.Entities.RetentionAlertWorkCase>> GetRetentionAlertCasesAsync(string advisorId, IEnumerable<string> StudentIds, IEnumerable<string> CaseIds);
+
+        /// <summary>
+        /// Retrieves retention alert work cases
+        /// </summary>
+        /// <param name="advisorId">Advisor ID</param>
+        /// <param name="StudentIds">Student Ids</param>
+        /// <param name="CaseIds">Case Ids</param>
+        /// <param name="IsIncludeClosedCases">Is Include Closed Cases</param>
+        /// <returns>Retention Alert Work Case 2 list</returns>
+        Task<List<Base.Entities.RetentionAlertWorkCase2>> GetRetentionAlertCases2Async(string advisorId, IEnumerable<string> StudentIds, IEnumerable<string> CaseIds, IEnumerable<string> roleIds, bool IsIncludeClosedCases);
 
         /// <summary>
         /// Retrieves retention alert contributions

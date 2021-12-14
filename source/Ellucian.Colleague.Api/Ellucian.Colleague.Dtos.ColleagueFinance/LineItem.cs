@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -124,6 +124,11 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
 		/// </summary>
         [JsonConverter(typeof(StringEnumConverter))]
         public LineItemStatus? LineItemStatus { get; set; }
+
+        /// <summary>
+        /// Indicates whether the line item has an overbudget general ledger number.
+        /// </summary>
+        public bool OverBudget { get; set; }
 
     }
 }

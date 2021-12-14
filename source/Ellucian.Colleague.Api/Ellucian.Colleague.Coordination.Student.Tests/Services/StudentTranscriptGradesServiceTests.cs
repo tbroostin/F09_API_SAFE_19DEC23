@@ -1,4 +1,4 @@
-//Copyright 2018-2019 Ellucian Company L.P. and its affiliates
+//Copyright 2018-2020 Ellucian Company L.P. and its affiliates
 
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -293,7 +293,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [TestMethod]
         public async Task StudentTranscriptGradesService_GetStudentTranscriptGrades_CreditCategories_NotFound()
         {
-            _studentReferenceRepositoryMock.Setup(repo => repo.GetCreditCategoriesGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            _studentReferenceRepositoryMock.Setup(repo => repo.GetCreditCategoriesGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             var results = await _studentTranscriptGradesService.GetStudentTranscriptGradesAsync(It.IsAny<int>(), It.IsAny<int>(), new Dtos.StudentTranscriptGrades(), It.IsAny<bool>());
             Assert.IsNotNull(results);
             var actuals = results.Item1.ToList();
@@ -309,7 +309,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [ExpectedException(typeof(IntegrationApiException))]
         public async Task StudentTranscriptGradesService_GetStudentTranscriptGrades_Grade_Null()
         {
-            _gradeRepositoryMock.Setup(repo => repo.GetHedmAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            _gradeRepositoryMock.Setup(repo => repo.GetHedmAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
             await _studentTranscriptGradesService.GetStudentTranscriptGradesAsync(It.IsAny<int>(), It.IsAny<int>(), new Dtos.StudentTranscriptGrades(), It.IsAny<bool>());
         }
@@ -330,7 +330,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public async Task StudentTranscriptGradesService_GetStudentTranscriptGrades_GetPersonGuidsCollection_Null()
         {
             _personRepositoryMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
             await _studentTranscriptGradesService.GetStudentTranscriptGradesAsync(It.IsAny<int>(), It.IsAny<int>(), new Dtos.StudentTranscriptGrades(), It.IsAny<bool>());          
         }
 
@@ -351,7 +351,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public async Task StudentTranscriptGradesService_GetStudentTranscriptGrades_GetStudentCourseSecGuidsCollection_Null()
         {
             _studentTranscriptGradesRepositoryMock.Setup(repo => repo.GetGuidsCollectionAsync(It.IsAny<List<string>>(), "STUDENT.COURSE.SEC"))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
             await _studentTranscriptGradesService.GetStudentTranscriptGradesAsync(It.IsAny<int>(), It.IsAny<int>(), new Dtos.StudentTranscriptGrades(), It.IsAny<bool>());
         }
 
@@ -403,23 +403,23 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             await _studentTranscriptGradesService.GetStudentTranscriptGradesByGuidAsync(null);
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task StudentTranscriptGradesService_GetStudentTranscriptGradesByIdAsync_PermissionException()
-        {
-            viewStudentTranscriptGrades.RemovePermission(perm);
-            viewStudentTranscriptGrades.RemovePermission(updatePerm);
-            var results = await _studentTranscriptGradesService.GetStudentTranscriptGradesByGuidAsync("1");
-        }
+        //[TestMethod]
+        //[ExpectedException(typeof(PermissionsException))]
+        //public async Task StudentTranscriptGradesService_GetStudentTranscriptGradesByIdAsync_PermissionException()
+        //{
+        //    viewStudentTranscriptGrades.RemovePermission(perm);
+        //    viewStudentTranscriptGrades.RemovePermission(updatePerm);
+        //    var results = await _studentTranscriptGradesService.GetStudentTranscriptGradesByGuidAsync("1");
+        //}
 
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task StudentTranscriptGradesService_GetStudentTranscriptGradesAsync_PermissionException()
-        {
-            viewStudentTranscriptGrades.RemovePermission(perm);
-            viewStudentTranscriptGrades.RemovePermission(updatePerm);
-            var results = await _studentTranscriptGradesService.GetStudentTranscriptGradesAsync(It.IsAny<int>(), It.IsAny<int>(), new Dtos.StudentTranscriptGrades(), It.IsAny<bool>());
-        }
+        //[TestMethod]
+        //[ExpectedException(typeof(PermissionsException))]
+        //public async Task StudentTranscriptGradesService_GetStudentTranscriptGradesAsync_PermissionException()
+        //{
+        //    viewStudentTranscriptGrades.RemovePermission(perm);
+        //    viewStudentTranscriptGrades.RemovePermission(updatePerm);
+        //    var results = await _studentTranscriptGradesService.GetStudentTranscriptGradesAsync(It.IsAny<int>(), It.IsAny<int>(), new Dtos.StudentTranscriptGrades(), It.IsAny<bool>());
+        //}
 
         [TestMethod]
         public async Task StudentTranscriptGradesService_GetStudentTranscriptGradesAsyncByGuid_UpdatePermissionOnView()
@@ -539,13 +539,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             var actual = await _studentTranscriptGradesService.UpdateStudentTranscriptGradesAdjustmentsAsync(_studentTranscriptGradesAdjustmentsCollection[3]);
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task StudentTranscriptGradesService_UpdateStudentTranscriptGradesAdjustmentsAsync_PermissionException()
-        {
-            viewStudentTranscriptGrades.RemovePermission(updatePerm);
-            var results = await _studentTranscriptGradesService.UpdateStudentTranscriptGradesAdjustmentsAsync(_studentTranscriptGradesAdjustmentsCollection[0], false);
-        }
+        //[TestMethod]
+        //[ExpectedException(typeof(PermissionsException))]
+        //public async Task StudentTranscriptGradesService_UpdateStudentTranscriptGradesAdjustmentsAsync_PermissionException()
+        //{
+        //    viewStudentTranscriptGrades.RemovePermission(updatePerm);
+        //    var results = await _studentTranscriptGradesService.UpdateStudentTranscriptGradesAdjustmentsAsync(_studentTranscriptGradesAdjustmentsCollection[0], false);
+        //}
 
         #endregion
     }

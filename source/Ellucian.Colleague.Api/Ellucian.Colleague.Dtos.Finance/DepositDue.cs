@@ -35,6 +35,11 @@ namespace Ellucian.Colleague.Dtos.Finance
         public DateTime DueDate { get; set; }
 
         /// <summary>
+        /// DueDate offset to timezone defined on CTZS
+        /// </summary>
+        public DateTimeOffset? DueDateOffsetCTZS { get; set; }
+
+        /// <summary>
         /// (Optional) Term for which the deposit is due
         /// </summary>
         public string TermId { get; set; }

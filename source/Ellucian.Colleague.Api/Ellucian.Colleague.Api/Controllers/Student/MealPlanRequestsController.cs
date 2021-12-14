@@ -1,4 +1,4 @@
-﻿//Copyright 2017-18 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -22,6 +22,7 @@ using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -51,21 +52,25 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Return all mealPlanRequests
         /// </summary>
         /// <returns>List of MealPlanRequests <see cref="Dtos.MealPlanRequests"/> objects representing matching mealPlanRequests</returns>
-        [HttpGet]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, PermissionsFilter(new string[] { StudentPermissionCodes.ViewMealPlanRequest, StudentPermissionCodes.CreateMealPlanRequest })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetMealPlanRequestsAsync(Paging page)
-        {
-            var bypassCache = false;
-            if (Request.Headers.CacheControl != null)
-            {
-                if (Request.Headers.CacheControl.NoCache)
-                {
-                    bypassCache = true;
-                }
-            }
+        {      
             try
             {
+                var bypassCache = false;
+                if (Request.Headers.CacheControl != null)
+                {
+                    if (Request.Headers.CacheControl.NoCache)
+                    {
+                        bypassCache = true;
+                    }
+                }
+
+                _mealPlanRequestsService.ValidatePermissions(GetPermissionsMetaData());
+
                 if (page == null)
                 {
                     page = new Paging(200, 0);
@@ -87,7 +92,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -116,26 +121,31 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired mealPlanRequests</param>
         /// <returns>A mealPlanRequests object <see cref="Dtos.MealPlanRequests"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
-        public async Task<Dtos.MealPlanRequests> GetMealPlanRequestsByGuidAsync(string guid)
-        {
-            var bypassCache = false;
-            if (Request.Headers.CacheControl != null)
-            {
-                if (Request.Headers.CacheControl.NoCache)
-                {
-                    bypassCache = true;
-                }
-            }
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewMealPlanRequest, StudentPermissionCodes.CreateMealPlanRequest })]
 
-            if (string.IsNullOrEmpty(guid))
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("Null id argument",
-                    IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
-            }
+        public async Task<Dtos.MealPlanRequests> GetMealPlanRequestsByGuidAsync(string guid)
+        {            
             try
             {
-                var mealPlans = await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(guid);
+                _mealPlanRequestsService.ValidatePermissions(GetPermissionsMetaData());
+
+                var bypassCache = false;
+                if (Request.Headers.CacheControl != null)
+                {
+                    if (Request.Headers.CacheControl.NoCache)
+                    {
+                        bypassCache = true;
+                    }
+                }
+
+                if (string.IsNullOrEmpty(guid))
+                {
+                    throw CreateHttpResponseException(new IntegrationApiException("Null id argument",
+                        IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
+                }
+
+                var mealPlans = await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(guid, bypassCache);
 
                 if (mealPlans != null)
                 {
@@ -156,7 +166,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -185,9 +195,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="mealPlanRequests">DTO of the new mealPlanRequests</param>
         /// <returns>A mealPlanRequests object <see cref="Dtos.MealPlanRequests"/> in EEDM format</returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateMealPlanRequest)]
         public async Task<Dtos.MealPlanRequests> PostMealPlanRequestsAsync([FromBody] Dtos.MealPlanRequests mealPlanRequests)
         {
+            _mealPlanRequestsService.ValidatePermissions(GetPermissionsMetaData());
+
             if (mealPlanRequests == null)
             {
                 throw CreateHttpResponseException(new IntegrationApiException("Null meal plan request argument",
@@ -252,9 +264,11 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID of the mealPlanRequests to update</param>
         /// <param name="mealPlanRequests">DTO of the updated mealPlanRequests</param>
         /// <returns>A mealPlanRequests object <see cref="Dtos.MealPlanRequests"/> in EEDM format</returns>
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateMealPlanRequest)]
         public async Task<Dtos.MealPlanRequests> PutMealPlanRequestsAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.MealPlanRequests mealPlanRequests)
         {
+            _mealPlanRequestsService.ValidatePermissions(GetPermissionsMetaData());
+
             if (mealPlanRequests == null)
             {
                 throw CreateHttpResponseException(new IntegrationApiException("Null meal plan request argument",
@@ -331,6 +345,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Delete (DELETE) a mealPlanRequests
         /// </summary>
         /// <param name="guid">GUID to desired mealPlanRequests</param>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpDelete]
         public async Task DeleteMealPlanRequestsAsync(string guid)
         {

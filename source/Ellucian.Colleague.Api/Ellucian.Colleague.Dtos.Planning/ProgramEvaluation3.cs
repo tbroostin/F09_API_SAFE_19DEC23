@@ -79,7 +79,7 @@ namespace Ellucian.Colleague.Dtos.Planning
         public List<PlannedCredit> OtherPlannedCredits { get; set; }
 
         /// <summary>
-        /// List of academic credits that were included in the evaluation but not applied to any requirement.
+        /// List of academic credits Ids that were included in the evaluation but not applied to any requirement.
         /// </summary>
         public List<string> OtherAcademicCredits { get; set; }
 
@@ -87,5 +87,6 @@ namespace Ellucian.Colleague.Dtos.Planning
         /// <see cref="Requirement">Additional Requirements</see>that were evaluated for the student program. 
         /// </summary>
         public List<Requirement> AdditionalRequirements { get; set; }
+
     }
 }

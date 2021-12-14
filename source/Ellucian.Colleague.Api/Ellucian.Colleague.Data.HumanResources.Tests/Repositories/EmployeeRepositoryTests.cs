@@ -72,6 +72,15 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 
             TestDataSetup();
 
+            var _guidLookupResults = new Dictionary<string, GuidLookupResult>
+            {
+                {
+                    "REQUISITIONS",
+                    new GuidLookupResult() {Entity = "HRPER", PrimaryKey = "key", SecondaryKey = ""}
+                }
+            };
+            dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(_guidLookupResults);
+
             dataReaderMock.Setup(repo => repo.SelectAsync("EMPLOYES", It.IsAny<string>())).ReturnsAsync(employeeIdList.ToArray());
             dataReaderMock.Setup(repo => repo.SelectAsync("EMPLOYES", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(employeeIdList.ToArray());
 
@@ -79,6 +88,12 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             dataReaderMock.Setup(repo => repo.SelectAsync("HRPER", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(hrperIdList.ToArray());
 
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<Hrper>(It.IsAny<GuidLookup>(), It.IsAny<bool>()))
+                .ReturnsAsync(new Hrper() { RecordGuid = "guid", Recordkey = "key" });
+
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Hrper>(It.IsAny<string>(), It.IsAny<bool>()))
+                .ReturnsAsync(new Hrper() { RecordGuid = "guid", Recordkey = "key" });
+
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Hrper>(It.IsAny<string>(), It.IsAny<string>(), true))
                 .ReturnsAsync(new Hrper() { RecordGuid = "guid", Recordkey = "key" });
 
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Employes>(It.IsAny<string[]>(), It.IsAny<bool>()))
@@ -800,7 +815,16 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 
                 response = new UpdateEmployeeResponse() { EmployeeGuid = guid, EmployeeId = "1" };
 
-                employee = new Employee(guid, "1")
+                var _guidLookupResults = new Dictionary<string, GuidLookupResult>
+                {
+                    {
+                        guid,
+                        new GuidLookupResult() {Entity = "HRPER", PrimaryKey = "1", SecondaryKey = ""}
+                    }
+                };
+                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(_guidLookupResults);
+
+            employee = new Employee(guid, "1")
                 {
                     StatusCode = "1",
                     Location = "1",
@@ -816,10 +840,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 
             private void InitializeTestMock()
             {
-                dataReaderMock.Setup(r => r.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dicResult);
+                //dataReaderMock.Setup(r => r.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dicResult);
                 dataReaderMock.Setup(r => r.ReadRecordAsync<ApplValcodes>("HR.VALCODES", "HR.STATUSES", true)).ReturnsAsync(hrStatuses);
                 dataReaderMock.Setup(r => r.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(guidList);
                 dataReaderMock.Setup(r => r.ReadRecordAsync<Hrper>(It.IsAny<GuidLookup>(), true)).ReturnsAsync(hrper);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<Hrper>(It.IsAny<string>(), true)).ReturnsAsync(hrper);
                 dataReaderMock.Setup(r => r.SelectAsync("PERSTAT", It.IsAny<string>())).ReturnsAsync(keys);
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<Perstat>(It.IsAny<string[]>(), true)).ReturnsAsync(perStats);
                 dataReaderMock.Setup(r => r.SelectAsync("PERPOS", It.IsAny<string>())).ReturnsAsync(keys);
@@ -944,6 +969,14 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 
             TestDataSetup();
 
+            var _guidLookupResults = new Dictionary<string, GuidLookupResult>
+            {
+                {
+                    "HRPER",
+                    new GuidLookupResult() {Entity = "HRPER", PrimaryKey = "key", SecondaryKey = ""}
+                }
+            };
+            dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(_guidLookupResults);
             dataReaderMock.Setup(repo => repo.SelectAsync("EMPLOYES", It.IsAny<string>())).ReturnsAsync(employeeIdList.ToArray());
             dataReaderMock.Setup(repo => repo.SelectAsync("EMPLOYES", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(employeeIdList.ToArray());
 
@@ -952,6 +985,12 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<Hrper>(It.IsAny<GuidLookup>(), It.IsAny<bool>()))
                 .ReturnsAsync(new Hrper() { RecordGuid = "guid", Recordkey = "key" });
+
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Hrper>(It.IsAny<string>(), It.IsAny<bool>()))
+            .ReturnsAsync(new Hrper() { RecordGuid = "guid", Recordkey = "key" });
+
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Hrper>(It.IsAny<string>(), true))
+            .ReturnsAsync(new Hrper() { RecordGuid = "guid", Recordkey = "key" });
 
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<Employes>(It.IsAny<string>(), It.IsAny<bool>()))
                 .ReturnsAsync(new Employes() { RecordGuid = "guid", Recordkey = "key" });

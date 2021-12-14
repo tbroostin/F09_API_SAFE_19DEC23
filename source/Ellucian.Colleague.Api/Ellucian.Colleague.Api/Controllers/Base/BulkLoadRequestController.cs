@@ -74,11 +74,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
 
             Guid guidOutput;
-            if (!Guid.TryParse(bulkLoadRequestDto.RequestorTrackingId, out guidOutput))
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("RequestorTrackingId",
-                   IntegrationApiUtility.GetDefaultApiError("Must provide a valid GUID for RequestorTrackingId.")));
-            }
+          
             if (!Guid.TryParse(bulkLoadRequestDto.ApplicationId, out guidOutput))
             {
                 throw CreateHttpResponseException(new IntegrationApiException("ApplicationId",

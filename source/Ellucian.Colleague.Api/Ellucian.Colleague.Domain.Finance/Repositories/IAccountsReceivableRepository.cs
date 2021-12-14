@@ -42,13 +42,13 @@ namespace Ellucian.Colleague.Domain.Finance.Repositories
         /// External systems that feed into Accounts Receivable
         /// </summary>
         IEnumerable<ExternalSystem> ExternalSystems { get; }
-            
+
         /// <summary>
         /// Get an account holder
         /// </summary>
         /// <param name="personId">Person ID of the account holder</param>
         /// <returns>The account holder</returns>
-        AccountHolder GetAccountHolder(string personId);
+        Task<AccountHolder> GetAccountHolderAsync(string personId, bool bypassCache = false);
 
         /// <summary>
         /// Retrieves the information for a dingle accountholder if an id is provided,

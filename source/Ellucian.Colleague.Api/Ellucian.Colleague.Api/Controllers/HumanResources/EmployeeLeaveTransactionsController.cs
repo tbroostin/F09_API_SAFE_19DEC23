@@ -1,4 +1,5 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
 using System.Web.Http;
@@ -19,6 +20,7 @@ using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
 using System.Linq;
+using Ellucian.Colleague.Domain.HumanResources;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
@@ -48,8 +50,9 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Return all employeeLeaveTransactions
         /// </summary>
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
-                /// <returns>List of EmployeeLeaveTransactions <see cref="Dtos.EmployeeLeaveTransactions"/> objects representing matching employeeLeaveTransactions</returns>
-        [HttpGet, EedmResponseFilter]       
+        /// <returns>List of EmployeeLeaveTransactions <see cref="Dtos.EmployeeLeaveTransactions"/> objects representing matching employeeLeaveTransactions</returns>
+        [HttpGet, EedmResponseFilter, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [PermissionsFilter(HumanResourcesPermissionCodes.ViewEmployeeLeaveTransactions)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetEmployeeLeaveTransactionsAsync(Paging page)
@@ -64,6 +67,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                _employeeLeaveTransactionsService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(200, 0);
@@ -85,7 +89,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -114,7 +118,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="guid">GUID to desired employeeLeaveTransactions</param>
         /// <returns>A employeeLeaveTransactions object <see cref="Dtos.EmployeeLeaveTransactions"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [PermissionsFilter(HumanResourcesPermissionCodes.ViewEmployeeLeaveTransactions)]
         public async Task<Dtos.EmployeeLeaveTransactions> GetEmployeeLeaveTransactionsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -132,6 +137,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                _employeeLeaveTransactionsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                     await _employeeLeaveTransactionsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await _employeeLeaveTransactionsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -146,7 +152,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -175,7 +181,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="employeeLeaveTransactions">DTO of the new employeeLeaveTransactions</param>
         /// <returns>A employeeLeaveTransactions object <see cref="Dtos.EmployeeLeaveTransactions"/> in EEDM format</returns>
-        [HttpPost]
+        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.EmployeeLeaveTransactions> PostEmployeeLeaveTransactionsAsync([FromBody] Dtos.EmployeeLeaveTransactions employeeLeaveTransactions)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
@@ -189,7 +195,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="guid">GUID of the employeeLeaveTransactions to update</param>
         /// <param name="employeeLeaveTransactions">DTO of the updated employeeLeaveTransactions</param>
         /// <returns>A employeeLeaveTransactions object <see cref="Dtos.EmployeeLeaveTransactions"/> in EEDM format</returns>
-        [HttpPut]
+        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.EmployeeLeaveTransactions> PutEmployeeLeaveTransactionsAsync([FromUri] string guid, [FromBody] Dtos.EmployeeLeaveTransactions employeeLeaveTransactions)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
@@ -201,13 +207,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Delete (DELETE) a employeeLeaveTransactions
         /// </summary>
         /// <param name="guid">GUID to desired employeeLeaveTransactions</param>
-        [HttpDelete]
+        [HttpDelete, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task DeleteEmployeeLeaveTransactionsAsync(string guid)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
-
         }
-
     }
 }

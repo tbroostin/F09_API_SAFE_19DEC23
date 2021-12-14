@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Exceptions;
@@ -215,7 +215,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (ExistingResourceException egx)
             {
-                logger.Error(string.Format("Graduation Application already exists for student Id {0} in program Code {1}", graduationApplicationDto.StudentId, graduationApplicationDto.ProgramCode)); logger.Info(egx.ToString());
+                logger.Error(egx, string.Format("Graduation Application already exists for student Id {0} in program Code {1}", graduationApplicationDto.StudentId, graduationApplicationDto.ProgramCode)); 
                 throw;
             }
             catch (Exception ex)
@@ -491,7 +491,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 var message = string.Format("Exception occurred while trying to determine graduation application eligibility using  student Id {0} and program Ids {1}  Exception message: ", studentId, string.Join(",", programCodes), ex.Message);
-                logger.Info(ex, message);
+                logger.Error(ex, message);
                 throw;
             }
 

@@ -85,9 +85,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Finance
                 HttpContext.Current = new HttpContext(new HttpRequest("", "http://doesntMatter.com", ""), response);
 
                 arServiceMock.Setup(pc => pc.GetAccountHolder("0001234")).Returns(accountHolder);
-                arServiceMock.Setup(pc => pc.GetAccountHolder2("0001234")).Returns(privacyWrapper);
+                arServiceMock.Setup(pc => pc.GetAccountHolder2Async("0001234", false)).ReturnsAsync(privacyWrapper);
                 arServiceMock.Setup(pc => pc.GetAccountHolder("0001235")).Throws(new PermissionsException());
-                arServiceMock.Setup(pc => pc.GetAccountHolder2("0001235")).Throws(new PermissionsException());
+                arServiceMock.Setup(pc => pc.GetAccountHolder2Async("0001235", false)).Throws(new PermissionsException());
 
                 ReceivablesController = new ReceivablesController(arServiceMock.Object, ppServiceMock.Object, loggerMock.Object);
             }

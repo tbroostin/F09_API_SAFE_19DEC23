@@ -10,7 +10,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
     /// <summary>
     /// Provides access to configuration data.
     /// </summary>
-    public interface IConfigurationRepository
+    public interface IConfigurationRepository : IEthosExtended
     {
         /// <summary>
         /// Get the external mapping.
@@ -93,7 +93,7 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="reportEthosApiErrors">Flag to determine if we should throw an exception on Extended Errors.</param>
         /// <param name="bypassCache">Flag to indicate if we should bypass the cache and read directly from disk.</param>
         /// <returns>List with all of the extended data if aavailable. Returns an empty list if none available or none configured</returns>
-        Task<IEnumerable<EthosExtensibleData>> GetExtendedEthosDataByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, IEnumerable<string> resournceIds, bool reportEthosApiErrors = false, bool bypassCache = false);
+        Task<IEnumerable<EthosExtensibleData>> GetExtendedEthosDataByResource(string resourceName, string resourceVersionNumber, string extendedSchemaResourceId, IEnumerable<string> resournceIds, bool reportEthosApiErrors = false, bool bypassCache = false, bool useRecordKey = false);
 
         ///// <summary>
         ///// Gets all of the Ethos Extensiblity settings stored on EDM.EXT.VERSIONS
@@ -135,6 +135,19 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <returns>List of Domain.Base.Entities.EthosExtensibleData</returns>
         Task<IEnumerable<Domain.Base.Entities.EthosExtensibleData>> GetEthosExtensibilityConfigurationEntities(bool customOnly = true, bool bypassCache = false);
 
+        /// <summary>
+        /// Encode a primary key for use in Extensibility
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns>Encoded string to use as guid on a non-guid based API.</returns>
+        string EncodePrimaryKey(string id);
+
+        /// <summary>
+        /// Un-Encode a primary key for use in Extensibility
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns>Un-Encoded string taken from a non-guid based API guid.</returns>
+        string UnEncodePrimaryKey(string id);
 
         /// <summary>
         /// Checks if the user making the API call is the EMA user based on the user settings on the EMA configuration

@@ -156,7 +156,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Student Financial Aid Award DTO</returns>
         public async Task<Dtos.StudentFinancialAidAward> GetByIdAsync(string id, bool restricted)
         {
-            CheckViewStudentFinancialAidAwardsPermission();
+            
             // Get the student financial aid awards domain entity from the repository
             var studentFinancialAidAwardDomainEntity = await _studentFinancialAidAwardRepository.GetByIdAsync(id);
 
@@ -198,15 +198,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Student Financial Aid Award DTO</returns>
         public async Task<Dtos.StudentFinancialAidAward2> GetById2Async(string id, bool restricted, bool bypassCache = false)
         {
-            if (restricted == false)
-            {
-                CheckViewStudentFinancialAidAwardsPermission2();
-            }
-            if (restricted == true)
-            {
-                CheckViewRestrictedStudentFinancialAidAwardsPermission2();
-            }
-
+           
             if (string.IsNullOrEmpty(id))
             {
                 IntegrationApiExceptionAddError("Requested Id is missing.", "Missing.Request.ID", id);
@@ -268,7 +260,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return studentFinancialAidAwardDto;
         }
 
-
         /// <summary>
         /// Returns all student charges for the data model version 7
         /// </summary>
@@ -279,8 +270,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Collection of StudentFinancialAidAwards</returns>
         public async Task<Tuple<IEnumerable<Dtos.StudentFinancialAidAward>, int>> GetAsync(int offset, int limit, bool bypassCache, bool restricted)
         {
-            CheckViewStudentFinancialAidAwardsPermission();
-
+          
             var studentFinancialAidAwardDtos = new List<Dtos.StudentFinancialAidAward>();
             var aidYearsEntities = await GetFinancialAidYearsAsync(bypassCache);
             var aidYears = aidYearsEntities.Where(ay => ay.status != "D").Select(ay => ay.Code).Distinct().ToList();
@@ -323,15 +313,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         public async Task<Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>> Get2Async(int offset, int limit, Dtos.StudentFinancialAidAward2 criteria, string personFilter = "", bool bypassCache = false, 
             bool restricted = false)
         {
-            if (restricted == false)
-            {
-                CheckViewStudentFinancialAidAwardsPermission2();
-            }
-            if (restricted == true)
-            {
-                CheckViewRestrictedStudentFinancialAidAwardsPermission2();
-            }
-
+             //CheckViewStudentFinancialAidAwardsPermission2();
+            
             Domain.Student.Entities.StudentFinancialAidAward criteriaEntity = null;
             var aidYearsEntities = await GetFinancialAidYearsAsync(bypassCache);
             List<string> aidYears = null;
@@ -461,6 +444,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAwardDtos, totalRecords);
         }
 
+       
         private async Task<Dtos.StudentFinancialAidAward> BuildStudentFinancialAidAwardDtoAsync(Domain.Student.Entities.StudentFinancialAidAward studentFinancialAidAwardEntity, bool bypassCache = true)
         {
             var studentFinancialAidAwardDto = new Dtos.StudentFinancialAidAward();

@@ -1,4 +1,4 @@
-﻿// Copyright 2016 - 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -24,6 +24,7 @@ using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -57,26 +58,29 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Returns a list of all active restrictions recorded for any person in the database
         /// </summary>
         /// <returns></returns>
-        [HttpGet]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, PermissionsFilter(new string[] { PersonHoldsPermissionCodes.ViewPersonHold, PersonHoldsPermissionCodes.CreateUpdatePersonHold } )] 
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetPersonsActiveHoldsAsync(Paging page)
         {
-            var bypassCache = false;
-            if (Request.Headers.CacheControl != null)
-            {
-                if (Request.Headers.CacheControl.NoCache)
-                {
-                    bypassCache = true;
-                }
-            }
-
             try
             {
+                _personHoldsService.ValidatePermissions(GetPermissionsMetaData());
+
+                var bypassCache = false;
+                if (Request.Headers.CacheControl != null)
+                {
+                    if (Request.Headers.CacheControl.NoCache)
+                    {
+                        bypassCache = true;
+                    }
+                }
                 if (page == null)
                 {
                     page = new Paging(200, 0);
                 }
+
 
                 var pageOfItems = await _personHoldsService.GetPersonHoldsAsync(page.Offset, page.Limit, bypassCache);
 
@@ -92,6 +96,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -103,20 +117,22 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves all active person holds for hold id
         /// </summary>
         /// <returns>PersonHold object for a person.</returns>
-        [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { PersonHoldsPermissionCodes.ViewPersonHold, PersonHoldsPermissionCodes.CreateUpdatePersonHold })]
         public async Task<Dtos.PersonHold> GetPersonsActiveHoldAsync([FromUri] string id)
         {
-            var bypassCache = false;
-            if (Request.Headers.CacheControl != null)
-            {
-                if (Request.Headers.CacheControl.NoCache)
-                {
-                    bypassCache = true;
-                }
-            }
-
             try
             {
+                _personHoldsService.ValidatePermissions(GetPermissionsMetaData()); 
+                var bypassCache = false;
+                if (Request.Headers.CacheControl != null)
+                {
+                    if (Request.Headers.CacheControl.NoCache)
+                    {
+                        bypassCache = true;
+                    }
+                }
+            
                 var personHold = await _personHoldsService.GetPersonHoldAsync(id);
 
                 if (personHold != null)
@@ -127,13 +143,22 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                               new List<string>() { personHold.Id }));
                 }
 
-
                 return personHold;
             }
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (KeyNotFoundException e)
             {
@@ -157,21 +182,23 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves all active person holds for person id
         /// </summary>
         /// <returns>PersonHold object for a person.</returns>
-        [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { PersonHoldsPermissionCodes.ViewPersonHold, PersonHoldsPermissionCodes.CreateUpdatePersonHold })]
         [ValidateQueryStringFilter(new string[] { "person" }, false, true)]
         public async Task<IEnumerable<Dtos.PersonHold>> GetPersonsActiveHoldsByPersonIdAsync([FromUri] string person)
         {
-            var bypassCache = false;
-            if (Request.Headers.CacheControl != null)
-            {
-                if (Request.Headers.CacheControl.NoCache)
-                {
-                    bypassCache = true;
-                }
-            }
-
             try
             {
+                _personHoldsService.ValidatePermissions(GetPermissionsMetaData());
+
+                var bypassCache = false;
+                if (Request.Headers.CacheControl != null)
+                {
+                    if (Request.Headers.CacheControl.NoCache)
+                    {
+                        bypassCache = true;
+                    }
+                }
                 if (person == null)
                 {
                     return new List<Dtos.PersonHold>();
@@ -189,6 +216,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (KeyNotFoundException e)
             {
@@ -216,11 +253,13 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="id"></param>
         /// <param name="personHold"></param>
         /// <returns></returns>
-        [HttpPut, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(PersonHoldsPermissionCodes.CreateUpdatePersonHold)]
         public async Task<Dtos.PersonHold> PutPersonHoldAsync([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.PersonHold personHold)
         {
             try
             {
+                _personHoldsService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(id))
                 {
                     throw new ArgumentNullException("Person hold id cannot be null or empty");
@@ -274,6 +313,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (InvalidOperationException e)
             {
                 _logger.Error(e.ToString());
@@ -298,16 +347,18 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="personHold">personHold</param>
         /// <returns></returns>
-        [HttpPost, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(PersonHoldsPermissionCodes.CreateUpdatePersonHold)]
         public async Task<Dtos.PersonHold> PostPersonHoldAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.PersonHold personHold)
         {
-                          if (personHold == null)
-                {
-                    throw CreateHttpResponseException(new IntegrationApiException("Null PersonHolds argument",
-                   IntegrationApiUtility.GetDefaultApiError("The request body is required.")));
-                }
+             if (personHold == null)
+             {
+                throw CreateHttpResponseException(new IntegrationApiException("Null PersonHolds argument",
+                IntegrationApiUtility.GetDefaultApiError("The request body is required.")));
+             }
             try
             {
+                _personHoldsService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(personHold.Id))
                 {
                     throw new ArgumentNullException("Null personHold id", "Id is a required property.");
@@ -334,6 +385,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (ArgumentNullException e)
             {
                 _logger.Error(e.ToString());
@@ -356,18 +417,20 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
         }
         #endregion
-        
+
         #region DELETE method
         /// <summary>
         /// Deletes person hold based on id
         /// </summary>
         /// <param name="id">id</param>
         /// <returns></returns>
-        [HttpDelete]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpDelete, PermissionsFilter(PersonHoldsPermissionCodes.DeletePersonHold)]
         public async Task DeletePersonHoldAsync(string id)
         {
             try
             {
+                _personHoldsService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(id))
                 {
                     throw new ArgumentNullException("Person hold id cannot be null or empty");
@@ -383,6 +446,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (RepositoryException e)
             {

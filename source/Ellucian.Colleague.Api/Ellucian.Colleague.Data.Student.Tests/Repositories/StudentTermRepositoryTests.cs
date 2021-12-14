@@ -238,7 +238,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 GuidLookup[] lookup = new GuidLookup[] { new GuidLookup(guid) };
                 var lookUpResults = new Dictionary<string, GuidLookupResult>();
                 lookUpResults.Add("STUDENT.TERMS", new GuidLookupResult() { Entity = "STUDENT.TERMS", PrimaryKey = knownStudentTermsId1, SecondaryKey = "Somekey" });
-                dataReaderMock.Setup(i => i.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+                dataReaderMock.Setup(i => i.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
 
                 dataReaderMock.Setup(i => i.ReadRecordAsync<StudentTerms>("STUDENT.TERMS", It.IsAny<string>(), true)).ReturnsAsync(studentTerms.First());
 

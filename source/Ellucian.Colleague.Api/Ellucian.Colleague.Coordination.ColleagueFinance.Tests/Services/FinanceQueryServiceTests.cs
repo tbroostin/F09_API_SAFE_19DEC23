@@ -345,7 +345,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         {
             //Arrange
             Mock<IFinanceQueryRepository> financeQueryRepository = new Mock<IFinanceQueryRepository>();
-            financeQueryRepository.Setup(x => x.GetGLAccountsListAsync(It.IsAny<GeneralLedgerUser>(), It.IsAny<GeneralLedgerAccountStructure>(), It.IsAny<GeneralLedgerClassConfiguration>(), It.IsAny<FinanceQueryCriteria>(), It.IsAny<string>())).ReturnsAsync(null);
+            financeQueryRepository.Setup(x => x.GetGLAccountsListAsync(It.IsAny<GeneralLedgerUser>(), It.IsAny<GeneralLedgerAccountStructure>(), It.IsAny<GeneralLedgerClassConfiguration>(), It.IsAny<FinanceQueryCriteria>(), It.IsAny<string>())).ReturnsAsync(() => null);
 
             //Act
             BuildService(financeQueryRepository.Object, testGlUserRepository, testGlConfigurationRepository, testGlAccountRepository);

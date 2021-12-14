@@ -385,7 +385,7 @@ namespace Ellucian.Colleague.Api.Utility
                 var newLogLevelString = newLogLevelSetting.SettingValue;
                 var oldLogLevel = currentSettings.LogLevel.ToString();
 
-                System.Diagnostics.SourceLevels newLogLevel;
+                Serilog.Events.LogEventLevel newLogLevel;
                 if (Enum.TryParse(newLogLevelString, true, out newLogLevel))
                 {
                     var newSettings = new Settings(currentSettings.ColleagueSettings, newLogLevel) { ProfileName = currentSettings.ProfileName };

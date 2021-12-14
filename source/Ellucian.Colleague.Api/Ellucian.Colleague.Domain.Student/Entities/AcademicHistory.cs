@@ -226,7 +226,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
                     var creditsToProcess = groupedCredits[creditsLst.Key].ToList();
                     if (equatedCredits != null && equatedCredits.Any())
                     {
-                        creditsToProcess.AddRange(equatedCredits.Where(e => e != null && e.ReplacedStatus != ReplacedStatus.Replaced));
+                        creditsToProcess.AddRange(equatedCredits.Where(e => e != null && e.ReplacedStatus != ReplacedStatus.Replaced && e.CanBeReplaced));
                     }
                    var orderedCreditsToProcess=creditsToProcess.OrderBy(c => c.StartDate).ToList();
 

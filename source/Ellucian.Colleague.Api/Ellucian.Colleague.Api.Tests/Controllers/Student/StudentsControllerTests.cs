@@ -1,10 +1,11 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Colleague.Dtos;
@@ -14,12 +15,14 @@ using Ellucian.Colleague.Dtos.Student.Transcripts;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -28,6 +31,8 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+using System.Web.Http.Controllers;
+using System.Web.Http.Routing;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -501,7 +506,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 {
                     statusCode = e.Response.StatusCode;
                 }
-                Assert.AreEqual(HttpStatusCode.Unauthorized, statusCode);
+                Assert.AreEqual(HttpStatusCode.Forbidden, statusCode);
             }
 
             [TestMethod]
@@ -630,7 +635,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 {
                     statusCode = e.Response.StatusCode;
                 }
-                Assert.AreEqual(HttpStatusCode.Unauthorized, statusCode);
+                Assert.AreEqual(HttpStatusCode.Forbidden, statusCode);
             }
 
             [TestMethod]
@@ -700,6 +705,180 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 }
                 Assert.AreEqual(HttpStatusCode.BadRequest, statusCode);
             }
+
+            //GET v7
+            //Successful
+            //GetStudentsAsync
+            [TestMethod]
+            public async Task StudentsController_GetStudentsAsync_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Students" },
+                    { "action", "GetStudentsAsync" }
+                };
+                HttpRoute route = new HttpRoute("students", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentsController.Request.SetRouteData(data);
+                studentsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentInformation);
+
+                var controllerContext = studentsController.ControllerContext;
+                var actionDescriptor = studentsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var studentDtoList = new List<Students>() { studentsDto };
+                var studentTuple = new Tuple<IEnumerable<Students>, int>(studentDtoList, 1);
+
+                studentServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                studentServiceMock.Setup(s => s.GetStudentsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), personFilter, typeFilter, cohortsFilter, residencyFilter)).ReturnsAsync(studentTuple);
+                var student = await studentsController.GetStudentsAsync(new Paging(1, 0));
+
+                Object filterObject;
+                studentsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentInformation));
+
+
+            }
+
+
+            //GET v7
+            //Exception
+            //GetStudentsAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentsController_GetStudentsAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Students" },
+                    { "action", "GetStudentsAsync" }
+                };
+                HttpRoute route = new HttpRoute("students", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = studentsController.ControllerContext;
+                var actionDescriptor = studentsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    studentServiceMock.Setup(s => s.GetStudentsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), personFilter, typeFilter, cohortsFilter, residencyFilter)).Throws(new PermissionsException());
+                    studentServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view students."));
+                    await studentsController.GetStudentsAsync(null, personFilter, typeFilter, cohortsFilter, residencyFilter);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+            //GET by id v7
+            //Successful
+            //GetStudentsByGuidAsync
+            [TestMethod]
+            public async Task StudentsController_GetStudentsByGuidAsync_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Students" },
+                    { "action", "GetStudentsByGuidAsync" }
+                };
+                HttpRoute route = new HttpRoute("students", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentsController.Request.SetRouteData(data);
+                studentsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentInformation);
+
+                var controllerContext = studentsController.ControllerContext;
+                var actionDescriptor = studentsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var studentDtoList = new List<Students>() { studentsDto };
+                var studentTuple = new Tuple<IEnumerable<Students>, int>(studentDtoList, 1);
+
+                studentServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                studentServiceMock.Setup(s => s.GetStudentsByGuidAsync(studentGuid, It.IsAny<bool>())).ReturnsAsync(studentsDto);
+                var student = await studentsController.GetStudentsByGuidAsync(studentGuid);
+
+                Object filterObject;
+                studentsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentInformation));
+
+
+            }
+
+
+            //GET by id v7
+            //Exception
+            //GetStudentsByGuidAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentsController_GetStudentsByGuidAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Students" },
+                    { "action", "GetStudentsByGuidAsync" }
+                };
+                HttpRoute route = new HttpRoute("students", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = studentsController.ControllerContext;
+                var actionDescriptor = studentsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    studentServiceMock.Setup(s => s.GetStudentsByGuidAsync(studentGuid, It.IsAny<bool>())).Throws(new PermissionsException());
+                    await studentsController.GetStudentsByGuidAsync(studentGuid);
+                    studentServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view students."));
+                    await studentsController.GetStudentsByGuidAsync(studentGuid);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
 
 
             [TestCleanup]
@@ -872,12 +1051,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 studentsController.Request.Headers.CacheControl =
                      new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
 
-                studentsController.Request.Properties.Add(
-                     string.Format("FilterObject{0}", "criteria"),
-                     new Dtos.Students2 { Person = new GuidObject2("guid1") });
-                studentsController.Request.Properties.Add(
-                      string.Format("FilterObject{0}", "personFilter"),
-                      new Dtos.Filters.PersonFilterFilter2 { personFilter = new GuidObject2(personFilter)});
+                studentsController.Request.Properties.Add(string.Format("FilterObject{0}", "criteria"),new Dtos.Students2 { Person = new GuidObject2("guid1") });
+                studentsController.Request.Properties.Add(string.Format("FilterObject{0}", "personFilter"),new Dtos.Filters.PersonFilterFilter2 { personFilter = new GuidObject2(personFilter)});
 
                 var student = await studentsController.GetStudents2Async(new Paging(1, 0), 
                     criteriaFilter, personCriteriaFilter);
@@ -957,7 +1132,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 {
                     statusCode = e.Response.StatusCode;
                 }
-                Assert.AreEqual(HttpStatusCode.Unauthorized, statusCode);
+                Assert.AreEqual(HttpStatusCode.Forbidden, statusCode);
             }
 
             [TestMethod]
@@ -1086,7 +1261,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 {
                     statusCode = e.Response.StatusCode;
                 }
-                Assert.AreEqual(HttpStatusCode.Unauthorized, statusCode);
+                Assert.AreEqual(HttpStatusCode.Forbidden, statusCode);
             }
 
             [TestMethod]
@@ -1155,6 +1330,181 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     statusCode = e.Response.StatusCode;
                 }
                 Assert.AreEqual(HttpStatusCode.BadRequest, statusCode);
+            }
+
+
+
+            //GET v16.0.0
+            //Successful
+            //GetStudents2Async
+            [TestMethod]
+            public async Task StudentsController_GetStudents2Async_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Students" },
+                    { "action", "GetStudents2Async" }
+                };
+                HttpRoute route = new HttpRoute("students", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentsController.Request.SetRouteData(data);
+                studentsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentInformation);
+
+                var controllerContext = studentsController.ControllerContext;
+                var actionDescriptor = studentsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var studentDtoList = new List<Students2>() { studentsDto };
+                var studentTuple = new Tuple<IEnumerable<Students2>, int>(studentDtoList, 1);
+                studentsController.Request.Properties.Add(string.Format("FilterObject{0}", "criteria"), new Dtos.Students2 { Person = new GuidObject2("guid1") });
+                studentsController.Request.Properties.Add(string.Format("FilterObject{0}", "personFilter"), new Dtos.Filters.PersonFilterFilter2 { personFilter = new GuidObject2(personFilter) });
+    
+                studentServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                studentServiceMock.Setup(s => s.GetStudents2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Students2>(), personFilter, It.IsAny<bool>())).ReturnsAsync(studentTuple);
+                var student = await studentsController.GetStudents2Async(new Paging(1, 0),criteriaFilter, personCriteriaFilter);
+
+                Object filterObject;
+                studentsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentInformation));
+
+
+            }
+
+            //GET v16.0.0
+            //Exception
+            //GetStudents2Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentsController_GetStudents2Async_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Students" },
+                    { "action", "GetStudents2Async" }
+                };
+                HttpRoute route = new HttpRoute("students", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = studentsController.ControllerContext;
+                var actionDescriptor = studentsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    studentServiceMock.Setup(s => s.GetStudents2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Students2>(), It.IsAny<string>(), It.IsAny<bool>())).Throws(new PermissionsException());
+                    studentServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view students."));
+                    await studentsController.GetStudents2Async(null, criteriaFilter, personCriteriaFilter);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+            //GET by id v16.0.0
+            //Successful
+            //GetStudentsByGuid2Async
+            [TestMethod]
+            public async Task StudentsController_GetStudentsByGuid2Async_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Students" },
+                    { "action", "GetStudentsByGuid2Async" }
+                };
+                HttpRoute route = new HttpRoute("students", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentsController.Request.SetRouteData(data);
+                studentsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentInformation);
+
+                var controllerContext = studentsController.ControllerContext;
+                var actionDescriptor = studentsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var studentDtoList = new List<Students2>() { studentsDto };
+                var studentTuple = new Tuple<IEnumerable<Students2>, int>(studentDtoList, 1);
+
+                studentServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                studentServiceMock.Setup(s => s.GetStudentsByGuid2Async(studentGuid, It.IsAny<bool>())).ReturnsAsync(studentsDto);
+                var student = await studentsController.GetStudentsByGuid2Async(studentGuid);
+
+                Object filterObject;
+                studentsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentInformation));
+
+
+            }
+
+
+            //GET by id v16.0.0
+            //Exception
+            //GetStudentsByGuid2Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentsController_GetStudentsByGuid2Async_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Students" },
+                    { "action", "GetStudentsByGuid2Async" }
+                };
+                HttpRoute route = new HttpRoute("students", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = studentsController.ControllerContext;
+                var actionDescriptor = studentsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    studentServiceMock.Setup(s => s.GetStudentsByGuid2Async(studentGuid, It.IsAny<bool>())).Throws(new PermissionsException());
+                    studentServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view students."));
+                    await studentsController.GetStudentsByGuid2Async(studentGuid);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
             }
 
 
@@ -2339,5 +2689,136 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         }
 
         #endregion Planning Student
+
+        #region DropRegistrationAsync
+
+        [TestClass]
+        public class StudentsController_DropRegistrationAsync_Tests
+        {
+            #region Test Context
+
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+
+            #endregion Test Context
+
+            private IStudentProgramRepository studentProgramRepo;
+            private IStudentService studentService;
+            private IAdapterRegistry adapterRegistry;
+            private StudentsController studentsController;
+
+            Mock<IStudentProgramRepository> studentProgramRepoMock = new Mock<IStudentProgramRepository>();
+            Mock<IStudentService> studentServiceMock = new Mock<IStudentService>();
+            Mock<IAdapterRegistry> adapterRegistryMock = new Mock<IAdapterRegistry>();
+
+            private ApiSettings apiSettings;
+            private ILogger logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                studentProgramRepo = studentProgramRepoMock.Object;
+                studentService = studentServiceMock.Object;
+                adapterRegistry = adapterRegistryMock.Object;
+                logger = new Mock<ILogger>().Object;
+
+                // mock students controller
+                studentsController = new StudentsController(adapterRegistry, null, studentService, studentProgramRepo,
+                    null, null, null, logger, apiSettings);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                studentsController = null;
+                adapterRegistry = null;
+                studentProgramRepo = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentsController_DropRegistrationAsync_null_StudentId()
+            {
+                var dropReg = await studentsController.DropRegistrationAsync(null, new SectionDropRegistration()
+                {
+                    SectionId = "12345",
+                    DropReasonCode = "BECAUSE"
+                });
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentsController_DropRegistrationAsync_null_SectionDropRegistration()
+            {
+                var dropReg = await studentsController.DropRegistrationAsync("0001234", null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentsController_DropRegistrationAsync_null_SectionDropRegistration_SectionId()
+            {
+                var dropReg = await studentsController.DropRegistrationAsync("0001234", new SectionDropRegistration());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentsController_DropRegistrationAsync_permissions_exception()
+            {
+                studentServiceMock.Setup(ss => ss.DropRegistrationAsync(It.IsAny<string>(), It.IsAny<SectionDropRegistration>())).ThrowsAsync(new PermissionsException());
+                var dropReg = await studentsController.DropRegistrationAsync("0001234", new SectionDropRegistration()
+                {
+                    SectionId = "12345",
+                    DropReasonCode = "BECAUSE"
+                });
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentsController_DropRegistrationAsync_general_exception()
+            {
+                studentServiceMock.Setup(ss => ss.DropRegistrationAsync(It.IsAny<string>(), It.IsAny<SectionDropRegistration>())).ThrowsAsync(new ApplicationException());
+                var dropReg = await studentsController.DropRegistrationAsync("0001234", new SectionDropRegistration()
+                {
+                    SectionId = "12345",
+                    DropReasonCode = "BECAUSE"
+                });
+            }
+
+            [TestMethod]
+            public async Task StudentsController_DropRegistrationAsync_valid()
+            {
+                studentServiceMock.Setup(ss => ss.DropRegistrationAsync(It.IsAny<string>(), It.IsAny<SectionDropRegistration>())).ReturnsAsync(new RegistrationResponse()
+                {
+                    RegisteredSectionIds = new List<string>(),
+                    Messages = new List<RegistrationMessage>() { new RegistrationMessage() { SectionId = "12345", Message = "Dropped" } }
+                });
+                var dropReg = await studentsController.DropRegistrationAsync("0001234", new SectionDropRegistration()
+                {
+                    SectionId = "12345",
+                    DropReasonCode = "BECAUSE"
+                });
+                Assert.AreEqual(1, dropReg.Messages.Count);
+            }
+        }
+
+        #endregion
     }
 }

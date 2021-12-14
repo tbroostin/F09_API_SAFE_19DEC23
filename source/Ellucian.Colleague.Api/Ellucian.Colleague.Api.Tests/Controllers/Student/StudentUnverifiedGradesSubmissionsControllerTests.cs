@@ -4,7 +4,9 @@ using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -12,12 +14,15 @@ using Moq;
 using Newtonsoft.Json.Linq;
 using slf4net;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -187,6 +192,90 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             await _studentUnverifiedGradesController.PutStudentUnverifiedGradesSubmissionsAsync(StudentUnverifiedGradesGuid, _studentUnverifiedGradesSubmissions);
         }
 
+        //PUT v1.0.0
+        //Successful
+        //PutStudentUnverifiedGradesSubmissionsAsync
+        [TestMethod]
+        public async Task StudentUnverifiedGradesController_PutStudentUnverifiedGradesSubmissionsAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentUnverifiedGrades" },
+                    { "action", "PutStudentUnverifiedGradesSubmissionsAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-unverified-grades", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _studentUnverifiedGradesController.Request.SetRouteData(data);
+            _studentUnverifiedGradesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions);
+
+            var controllerContext = _studentUnverifiedGradesController.ControllerContext;
+            var actionDescriptor = _studentUnverifiedGradesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _studentUnverifiedGradesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _studentUnverifiedGradesServiceMock.Setup(x => x.UpdateStudentUnverifiedGradesSubmissionsAsync(It.IsAny<Dtos.StudentUnverifiedGradesSubmissions>())).ReturnsAsync(_studentUnverifiedGrades);
+            var studentUnverifiedGrades = await _studentUnverifiedGradesController.PutStudentUnverifiedGradesSubmissionsAsync(StudentUnverifiedGradesGuid, _studentUnverifiedGradesSubmissions);
+
+            Object filterObject;
+            _studentUnverifiedGradesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions));
+
+
+        }
+
+        //PUT v1.0.0
+        //Exception
+        //PutStudentUnverifiedGradesSubmissionsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentUnverifiedGradesController_PutStudentUnverifiedGradesSubmissionsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentUnverifiedGrades" },
+                    { "action", "PutStudentUnverifiedGradesSubmissionsAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-unverified-grades", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _studentUnverifiedGradesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _studentUnverifiedGradesController.ControllerContext;
+            var actionDescriptor = _studentUnverifiedGradesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _studentUnverifiedGradesServiceMock.Setup(x => x.UpdateStudentUnverifiedGradesSubmissionsAsync(It.IsAny<Dtos.StudentUnverifiedGradesSubmissions>())).Throws<PermissionsException>();
+                _studentUnverifiedGradesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to update student-unverified-grades."));
+                await _studentUnverifiedGradesController.PutStudentUnverifiedGradesSubmissionsAsync(StudentUnverifiedGradesGuid, _studentUnverifiedGradesSubmissions);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion
 
         #region POST
@@ -276,6 +365,91 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
               .Throws<Exception>();
             await _studentUnverifiedGradesController.PostStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
         }
+
+        //POST v1.0.0
+        //Successful
+        //PostStudentUnverifiedGradesSubmissionsAsync
+        [TestMethod]
+        public async Task StudentUnverifiedGradesController_PostStudentUnverifiedGradesSubmissionsAsync_Permissions()
+        {
+            _studentUnverifiedGradesSubmissions.Id = Guid.Empty.ToString();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentUnverifiedGrades" },
+                    { "action", "PostStudentUnverifiedGradesSubmissionsAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-unverified-grades", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _studentUnverifiedGradesController.Request.SetRouteData(data);
+            _studentUnverifiedGradesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions);
+
+            var controllerContext = _studentUnverifiedGradesController.ControllerContext;
+            var actionDescriptor = _studentUnverifiedGradesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _studentUnverifiedGradesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _studentUnverifiedGradesServiceMock.Setup(x => x.CreateStudentUnverifiedGradesSubmissionsAsync(It.IsAny<Dtos.StudentUnverifiedGradesSubmissions>())).ReturnsAsync(_studentUnverifiedGrades);
+            var studentUnverifiedGrades = await _studentUnverifiedGradesController.PostStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+
+            Object filterObject;
+            _studentUnverifiedGradesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions));
+
+
+        }
+
+        //POST v1.0.0
+        //Exception
+        //PostStudentUnverifiedGradesSubmissionsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentUnverifiedGradesController_PostStudentUnverifiedGradesSubmissionsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentUnverifiedGrades" },
+                    { "action", "PostStudentUnverifiedGradesSubmissionsAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-unverified-grades", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _studentUnverifiedGradesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _studentUnverifiedGradesController.ControllerContext;
+            var actionDescriptor = _studentUnverifiedGradesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _studentUnverifiedGradesServiceMock.Setup(x => x.CreateStudentUnverifiedGradesSubmissionsAsync(It.IsAny<Dtos.StudentUnverifiedGradesSubmissions>())).Throws<PermissionsException>();
+                _studentUnverifiedGradesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to create student-unverified-grades."));
+                await _studentUnverifiedGradesController.PostStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
 
         #endregion
 

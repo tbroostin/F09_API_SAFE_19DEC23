@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Student.Repositories;
 using System;
 using System.Collections.Generic;
@@ -39,9 +39,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 throw new ArgumentNullException(sectionId);
             }
             var criteria = "WITH STPE.SECTION EQ '" + sectionId + "'";
-            var petitionData =await  DataReader.BulkReadRecordAsync<StudentPetitions>(criteria);
+            var petitionData = await DataReader.BulkReadRecordAsync<StudentPetitions>(criteria);
 
-            string[] commentIds = new string[]{};
+            string[] commentIds = new string[] { };
             if (petitionData != null && petitionData.Count() > 0)
             {
                 commentIds = petitionData
@@ -54,7 +54,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return sectionPermissionEntity;
         }
 
-       
+
 
         private SectionPermission BuildSectionPermission(string sectionId, Collection<StudentPetitions> petitionData, Collection<StuPetitionCmnts> commentData)
         {
@@ -230,6 +230,87 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 throw new Exception();
             }
 
+        }
+
+        /// <summary>
+        /// Update a student petition
+        /// </summary>
+        /// <param name="studentPetition">The student petition to update</param>
+        /// <returns>Updated student petition</returns>
+        public async Task<StudentPetition> UpdateStudentPetitionAsync(StudentPetition studentPetition)
+        {
+            if (studentPetition == null)
+            {
+                throw new ArgumentNullException("studentPetition", "studentPetition is required.");
+            }
+
+            CreateStudentPetitionRequest updateRequest = new CreateStudentPetitionRequest();
+            if (studentPetition.Comment != null)
+            {
+                // We may have line break characters in the data. Split them out and add each line separately
+                // to preserve any line-to-line formatting the user entered. Note that these characters could be
+                // \n or \r\n (two variations of a new line character) or \r (a carriage return). We will change
+                // any of the new line or carriage returns to the same thing, and then split the string on that.
+                char newLineCharacter = '\n';
+                string alternateNewLineCharacter = "\r\n";
+                string carriageReturnCharacter = "\r";
+                string commentText = studentPetition.Comment.Replace(alternateNewLineCharacter, newLineCharacter.ToString());
+                commentText = commentText.Replace(carriageReturnCharacter, newLineCharacter.ToString());
+                var commentLines = commentText.Split(newLineCharacter);
+                foreach (var line in commentLines)
+                {
+                    updateRequest.Comment.Add(line);
+                }
+            }
+            updateRequest.ReasonCode = studentPetition.ReasonCode;
+            updateRequest.SectionId = studentPetition.SectionId;
+            updateRequest.StudentId = studentPetition.StudentId;
+            updateRequest.IsFacultyConsent = studentPetition.Type == StudentPetitionType.FacultyConsent ? true : false;
+            updateRequest.StatusCode = studentPetition.StatusCode;
+
+            CreateStudentPetitionResponse updateResponse = null;
+            try
+            {
+                updateResponse = await transactionInvoker.ExecuteAsync<CreateStudentPetitionRequest, CreateStudentPetitionResponse>(updateRequest);
+
+                if (updateResponse == null || updateResponse.ErrorOccurred)
+                {
+                    logger.Error(updateResponse.ErrorMessage);
+                    throw new Exception(string.Format("Error occurred while retrieving updated student petition. Message: '{0}'", updateResponse.ErrorMessage));
+                }
+
+                // Update was successful
+                StudentPetition updatedStudentPetition = null;
+                try
+                {
+                    // Update appears successful and we have a returned ID - Get the new student petition of type added from Colleague. Verify the section and the Student
+                    updatedStudentPetition = await GetAsync(updateResponse.StudentPetitionsId, studentPetition.SectionId, studentPetition.Type);
+                    if (updatedStudentPetition.StudentId != studentPetition.StudentId || updatedStudentPetition.SectionId != studentPetition.SectionId)
+                    {
+                        string message = "StudentPetition for student " + studentPetition.StudentId + " section " + studentPetition.SectionId + " appeared successful but updated studentPetition could not be retrieved";
+                        logger.Error(message);
+                        throw new Exception(message);
+                    }
+                }
+                catch (KeyNotFoundException knfex)
+                {
+                    string message = string.Format("Could not retrieve the updated student petition specified by id {0}. Message: '{1}'", updateResponse.StudentPetitionsId, knfex.Message);
+                    logger.Error(knfex, message);
+                    throw new KeyNotFoundException(message);
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex, "Error occurred while retrieving updated student petition using id " + updateResponse.StudentPetitionsId);
+                    throw ex;
+                }
+                return updatedStudentPetition;
+            }
+            catch (Exception ex)
+            {
+                string message = string.Format("Error occurred during CreateStudentPetition transaction execution. Message: '{0}'", ex.Message);
+                logger.Error(ex, message);
+                throw new ApplicationException(message);
+            }
         }
 
         /// <summary>

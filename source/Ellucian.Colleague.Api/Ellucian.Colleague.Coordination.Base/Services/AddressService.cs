@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -86,8 +86,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>Addresses DTO Object</returns>
         public async Task<Dtos.Addresses> GetAddressesByGuidAsync(string guid)
         {
-            await CheckUserPersonViewAddressAsync();
-
             if (string.IsNullOrEmpty(guid))
             {
                 throw new ArgumentNullException("guid", "guid is required to get an address.");
@@ -121,7 +119,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>Addresses DTO Object</returns>
         public async Task<Dtos.Addresses> GetAddressesByGuid2Async(string guid)
         {
-            await CheckUserPersonViewAddress2Async();
 
             if (string.IsNullOrEmpty(guid))
             {
@@ -170,8 +167,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<Dtos.Addresses>, int>> GetAddressesAsync(int offset, int limit, bool bypassCache = false)
         {
-            await CheckUserPersonViewAddressAsync();
-
             var addresses = await _addressRepository.GetAddressesAsync(offset, limit);
             var addressEntities = addresses.Item1;
             var totalRecords = addresses.Item2;
@@ -211,9 +206,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="personFilter">Person Saved List selection or list name from person-filters</param>
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<Dtos.Addresses>, int>> GetAddresses2Async(int offset, int limit, string personFilter, bool bypassCache = false)
-        {
-            await CheckUserPersonViewAddress2Async();
-
+        {           
             string[] filterPersonIds = new List<string>().ToArray();
             if (!string.IsNullOrEmpty(personFilter))
             {
@@ -290,8 +283,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>Addresses DTO Object</returns>
         public async Task<Dtos.Addresses> PutAddressesAsync(string id, Dtos.Addresses addressDto)
         {
-            await CheckUserPersonUpdateAddressAsync();
-
             if (string.IsNullOrEmpty(id))
             {
                 throw new ArgumentNullException("id", "id is required to update an address.");
@@ -335,8 +326,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>Addresses DTO Object</returns>
         public async Task<Dtos.Addresses> PutAddresses2Async(string id, Dtos.Addresses addressDto)
         {
-            await CheckUserPersonUpdateAddress2Async();
-
             if (string.IsNullOrEmpty(id))
             {
                 throw new ArgumentNullException("id", "id is required to update an address.");
@@ -362,7 +351,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 {
                     addressKey = await _addressRepository.GetAddressFromGuidAsync(addressDto.Id);
                 }
-                updatedAddressEntity = await _addressRepository.UpdateAsync(addressKey, addressEntity);
+                updatedAddressEntity = await _addressRepository.Update2Async(addressKey, addressEntity);
             }
             catch (KeyNotFoundException ex)
             {
@@ -391,44 +380,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 throw ex;
             }
-
-        }
-
-        /// <summary>
-        /// Update an address by guid
-        /// </summary>
-        /// <param name="id">guid for the address</param>
-        /// <returns>Addresses DTO Object</returns>
-        public async Task<Dtos.Addresses> PostAddressesAsync(Dtos.Addresses addressDto)
-        {
-            if (addressDto == null)
-            {
-                throw new ArgumentNullException("address", "Address DTO is required to update an address.");
-            }
-            var addressEntity = await BuildAddressEntityAsync(addressDto);
-
-            string addressKey = "";
-            if (!string.IsNullOrEmpty(addressDto.Id))
-                addressKey = await _addressRepository.GetAddressFromGuidAsync(addressDto.Id);
-
-            addressEntity = await _addressRepository.UpdateAsync(addressKey, addressEntity);
-
-            if (addressEntity == null)
-            {
-                throw new KeyNotFoundException("id not valid.");
-            }
-            try
-            {
-                var zipCodeGuidCollection = await _addressRepository.GetZipCodeGuidsCollectionAsync
-                 (new List<string>() { addressEntity.PostalCode });
-
-                addressDto = await BuildAddressDtoAsync(addressEntity, zipCodeGuidCollection, true);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception(ex.Message);
-            }
-            return addressDto;
         }
 
         /// <summary>
@@ -702,10 +653,14 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             var addressDto = new Dtos.Addresses()
             {
                 Id = address.Guid,
-                AddressLines = address.AddressLines,
+                
                 Latitude = address.Latitude,
                 Longitude = address.Longitude
             };
+            if (address.AddressLines == null || address.AddressLines.Count() == 0)
+               addressDto.AddressLines = new List<string>() { " " };
+            else
+               addressDto.AddressLines = address.AddressLines;
 
             if ((!string.IsNullOrEmpty(address.PostalCode)) && (zipCodeGuidCollection != null) && (zipCodeGuidCollection.Any()))
             {
@@ -740,13 +695,13 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 var errorMessage = string.Format("Unable to locate ISO country code for '{0}'.",
                      string.IsNullOrEmpty(address.CountryCode), await _addressRepository.GetHostCountryAsync(), address.CountryCode);
-                IntegrationApiExceptionAddError(errorMessage, guid: address.Guid, id: address.AddressId);
+                IntegrationApiExceptionAddError(errorMessage, code: "Bad.Data", guid: address.Guid, id: address.AddressId);
             }
             //need to check to make sure ISO code is there.
             else if (string.IsNullOrEmpty(country.IsoAlpha3Code))
             {
                 IntegrationApiExceptionAddError(string.Format("Unable to locate ISO country code for '{0}'.", country.Code),
-                    guid: address.Guid, id: address.AddressId);
+                    code: "Bad.Data", guid: address.Guid, id: address.AddressId);
             }
             else
             {
@@ -792,8 +747,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         }
                         catch (Exception)
                         {
-                            IntegrationApiExceptionAddError(string.Format("ISOCode '{0}' not found for country '{0}'.", country.IsoAlpha3Code, address.CountryCode),
-                                guid: address.Guid, id: address.AddressId);
+                            IntegrationApiExceptionAddError(string.Format("ISOCode '{0}' not found for country '{1}'.", country.IsoAlpha3Code, address.CountryCode),
+                                code: "Bad.Data", guid: address.Guid, id: address.AddressId);
                         }
                         addressCountry.PostalTitle = country.Description.ToUpper();
                         break;
@@ -885,11 +840,16 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 if (states != null && states.Any())
                 {
                     var state = states.FirstOrDefault(x => x.Code == address.State);
-                    if (states != null)
+                    if (state != null)
                     {
                         region = new Dtos.AddressRegion();
                         region.Code = string.Concat(country.IsoCode, "-", state.Code);
                         region.Title = state.Description;
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Format("The Code '{0}' is missing from the 'STATES' entity.", address.State),
+                            code: "Bad.Data", guid: address.Guid, id: address.AddressId);
                     }
                 }
             }
@@ -963,12 +923,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             if (addressDto.AddressLines == null)
             {
-                throw new ArgumentNullException("addressDto.AddressLines", "AddressLines is required for an address.");
+                throw new ArgumentNullException("addressDto.AddressLines", "Address object is required.");
             }
             var addressEntity = new Address();
             var addressCountry = new Dtos.AddressCountry();
 
             addressEntity.Guid = addressDto.Id;
+            if ((addressDto.AddressLines == null) || (string.IsNullOrWhiteSpace(string.Join("",addressDto.AddressLines))))
+            {
+                throw new ArgumentNullException("addressDto.AddressLines", "AddressLines is required for an address.");
+            }
+
             addressEntity.AddressLines = addressDto.AddressLines;
             addressEntity.Latitude = addressDto.Latitude;
             addressEntity.Longitude = addressDto.Longitude;
@@ -1076,10 +1041,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 IntegrationApiExceptionAddError("Address body is required for an address.", "address");
             }
-            if (addressDto.AddressLines == null)
+            if (string.IsNullOrEmpty(addressDto.Id))
             {
-                IntegrationApiExceptionAddError("AddressLines are required for an address.", "addressDto.AddressLines",
-                    addressDto.Id);
+                IntegrationApiExceptionAddError("GUID is required for an address.", "addressDto.ID");
             }
             var addressCountry = new Dtos.AddressCountry();
 
@@ -1269,37 +1233,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view any address.");
                 throw new PermissionsException("User is not authorized to view any address.");
-            }
-        }
-
-        /// <summary>
-        /// Provides an integration user permission to view an address using this API.
-        /// </summary>
-        private async Task CheckUserPersonUpdateAddressAsync()
-        {
-            var userPermissionList = (await GetUserPermissionCodesAsync()).ToList();
-
-            // access is ok if the current user has the update any address
-            if (!userPermissionList.Contains(BasePermissionCodes.UpdateAddress))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to update any address.");
-                throw new PermissionsException("User is not authorized to update any address.");
-            }
-        }
-
-        /// <summary>
-        /// Provides an integration user permission to view an address using this API.
-        /// </summary>
-        private async Task CheckUserPersonUpdateAddress2Async()
-        {
-            var userPermissionList = (await GetUserPermissionCodesAsync()).ToList();
-
-            // access is ok if the current user has the update any address
-            if (!userPermissionList.Contains(BasePermissionCodes.UpdateAddress))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view addresses.");
-                IntegrationApiExceptionAddError("User '" + CurrentUser.UserId + "' is not authorized to update any addresses.", "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
-                throw IntegrationApiException;
             }
         }
 

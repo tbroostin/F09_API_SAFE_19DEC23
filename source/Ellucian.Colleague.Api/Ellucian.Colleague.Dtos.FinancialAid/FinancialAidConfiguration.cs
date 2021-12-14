@@ -185,6 +185,8 @@ namespace Ellucian.Colleague.Dtos.FinancialAid
         /// Action Statuses to Ignore from evaluating for completeness(accepted/rejected)
         /// </summary>
         public List<string> IgnoreAwardStatusesFromEval { get; set; }
-                
+
+
+
     }
 }

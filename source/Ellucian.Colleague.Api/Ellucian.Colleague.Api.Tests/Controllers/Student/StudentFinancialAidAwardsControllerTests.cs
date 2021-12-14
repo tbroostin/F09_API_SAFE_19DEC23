@@ -4,14 +4,17 @@ using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -20,7 +23,9 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -390,6 +395,178 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             {
                 await studentFinancialAidAwardsController.DeleteAsync(It.IsAny<string>());
             }
+
+            //GET by id v7
+            //Successful
+            //GetByIdAsync
+            [TestMethod]
+            public async Task StudentFinancialAidAwardsController_GetByIdAsync_Permissions()
+            {
+                var id = "bbd216fb-0fc5-4f44-ae45-42d3cdd1e89a";
+                var studentFinancialAidAward = studentFinancialAidAwardDtos.FirstOrDefault(i => i.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAwards" },
+                    { "action", "GetByIdAsync" }
+                };
+                HttpRoute route = new HttpRoute("student-financial-aid-awards", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentFinancialAidAwardsController.Request.SetRouteData(data);
+                studentFinancialAidAwardsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentFinancialAidAwards);
+
+                var controllerContext = studentFinancialAidAwardsController.ControllerContext;
+                var actionDescriptor = studentFinancialAidAwardsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                studentFinancialAidAwardServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.GetByIdAsync(id, false)).ReturnsAsync(studentFinancialAidAward);
+                var actual = await studentFinancialAidAwardsController.GetByIdAsync(id);
+
+                Object filterObject;
+                studentFinancialAidAwardsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentFinancialAidAwards));
+
+
+            }
+
+            //GET by id v7
+            //Exception
+            //GetByIdAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentFinancialAidAwardsController_GetByIdAsync_Invalid_Permissions()
+            {
+                var paging = new Paging(100, 0);
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAwards" },
+                    { "action", "GetByIdAsync" }
+                };
+                HttpRoute route = new HttpRoute("student-financial-aid-awards", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentFinancialAidAwardsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = studentFinancialAidAwardsController.ControllerContext;
+                var actionDescriptor = studentFinancialAidAwardsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    studentFinancialAidAwardServiceMock.Setup(ci => ci.GetByIdAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                    studentFinancialAidAwardServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view student-financial-aid-awards."));
+                    var actual = await studentFinancialAidAwardsController.GetByIdAsync("ds");
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+            //GET v7
+            //Successful
+            //GetAsync
+            [TestMethod]
+            public async Task StudentFinancialAidAwardsController_GetAsync_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAwards" },
+                    { "action", "GetAsync" }
+                };
+                HttpRoute route = new HttpRoute("student-financial-aid-awards", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentFinancialAidAwardsController.Request.SetRouteData(data);
+                studentFinancialAidAwardsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentFinancialAidAwards);
+
+                var controllerContext = studentFinancialAidAwardsController.ControllerContext;
+                var actionDescriptor = studentFinancialAidAwardsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward>, int>(studentFinancialAidAwardDtos, 4);
+
+                studentFinancialAidAwardServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.GetAsync(offset, limit, false, false)).ReturnsAsync(tuple);
+                var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetAsync(new Paging(limit, offset));
+
+                Object filterObject;
+                studentFinancialAidAwardsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentFinancialAidAwards));
+
+
+            }
+
+            //GET v7
+            //Exception
+            //GetAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentFinancialAidAwardsController_GetAsync_Invalid_Permissions()
+            {
+                var paging = new Paging(100, 0);
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAwards" },
+                    { "action", "GetAsync" }
+                };
+                HttpRoute route = new HttpRoute("student-financial-aid-awards", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentFinancialAidAwardsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = studentFinancialAidAwardsController.ControllerContext;
+                var actionDescriptor = studentFinancialAidAwardsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    studentFinancialAidAwardServiceMock.Setup(ci => ci.GetAsync(offset, limit, false, false)).ThrowsAsync(new PermissionsException());
+                    studentFinancialAidAwardServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view student-financial-aid-awards."));
+                    var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetAsync(new Paging(limit, offset));
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
 
             //Restricted
 
@@ -966,10 +1143,439 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 await studentFinancialAidAwardsController.DeleteAsync(It.IsAny<string>());
             }
 
+
+            //GET by id v11.1.0 v 11
+            //Successful
+            //GetById2Async
+            [TestMethod]
+            public async Task StudentFinancialAidAwardsController_GetById2Async_Permissions()
+            {
+                var id = "bbd216fb-0fc5-4f44-ae45-42d3cdd1e89a";
+                var studentFinancialAidAward = studentFinancialAidAward2Dtos.FirstOrDefault(i => i.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAwards" },
+                    { "action", "GetById2Async" }
+                };
+                HttpRoute route = new HttpRoute("student-financial-aid-awards", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentFinancialAidAwardsController.Request.SetRouteData(data);
+                studentFinancialAidAwardsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentFinancialAidAwards);
+
+                var controllerContext = studentFinancialAidAwardsController.ControllerContext;
+                var actionDescriptor = studentFinancialAidAwardsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                studentFinancialAidAwardServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.GetById2Async(id, false, false)).ReturnsAsync(studentFinancialAidAward);
+                var actual = await studentFinancialAidAwardsController.GetById2Async(id);
+
+                Object filterObject;
+                studentFinancialAidAwardsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentFinancialAidAwards));
+
+
+            }
+
+            //GET by id v11.1.0 v 11
+            //Exception
+            //GetById2Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentFinancialAidAwardsController_GetById2Async_Invalid_Permissions()
+            {
+                var paging = new Paging(100, 0);
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAwards" },
+                    { "action", "GetById2Async" }
+                };
+                HttpRoute route = new HttpRoute("student-financial-aid-awards", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentFinancialAidAwardsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = studentFinancialAidAwardsController.ControllerContext;
+                var actionDescriptor = studentFinancialAidAwardsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    studentFinancialAidAwardServiceMock.Setup(ci => ci.GetById2Async(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                    studentFinancialAidAwardServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view student-financial-aid-awards."));
+                    var actual = await studentFinancialAidAwardsController.GetById2Async("ds");
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+            //GET v11.1.0
+            //Successful
+            //Get3Async
+            [TestMethod]
+            public async Task StudentFinancialAidAwardsController_Get3Async_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAwards" },
+                    { "action", "Get3Async" }
+                };
+                HttpRoute route = new HttpRoute("student-financial-aid-awards", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentFinancialAidAwardsController.Request.SetRouteData(data);
+                studentFinancialAidAwardsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentFinancialAidAwards);
+
+                var controllerContext = studentFinancialAidAwardsController.ControllerContext;
+                var actionDescriptor = studentFinancialAidAwardsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
+
+                studentFinancialAidAwardServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny<Dtos.StudentFinancialAidAward2>(), It.IsAny<string>(), false, false)).ReturnsAsync(tuple);
+                var studentFinancialAidAwards = await studentFinancialAidAwardsController.Get3Async(new Paging(limit, offset), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>());
+
+                Object filterObject;
+                studentFinancialAidAwardsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentFinancialAidAwards));
+
+
+            }
+
+            //GET v11.1.0
+            //Exception
+            //Get3Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentFinancialAidAwardsController_Get3Async_Invalid_Permissions()
+            {
+                var paging = new Paging(100, 0);
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAwards" },
+                    { "action", "Get3Async" }
+                };
+                HttpRoute route = new HttpRoute("student-financial-aid-awards", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentFinancialAidAwardsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = studentFinancialAidAwardsController.ControllerContext;
+                var actionDescriptor = studentFinancialAidAwardsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny<Dtos.StudentFinancialAidAward2>(), It.IsAny<string>(), false, false)).ThrowsAsync(new PermissionsException());
+                    studentFinancialAidAwardServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view student-financial-aid-awards."));
+                    var studentFinancialAidAwards = await studentFinancialAidAwardsController.Get3Async(new Paging(limit, offset), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>());
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+            //GET v11
+            //Successful
+            //Get2Async
+            [TestMethod]
+            public async Task StudentFinancialAidAwardsController_Get2Async_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAwards" },
+                    { "action", "Get2Async" }
+                };
+                HttpRoute route = new HttpRoute("student-financial-aid-awards", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentFinancialAidAwardsController.Request.SetRouteData(data);
+                studentFinancialAidAwardsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentFinancialAidAwards);
+
+                var controllerContext = studentFinancialAidAwardsController.ControllerContext;
+                var actionDescriptor = studentFinancialAidAwardsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
+
+                studentFinancialAidAwardServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny<Dtos.StudentFinancialAidAward2>(), It.IsAny<string>(), false, false)).ReturnsAsync(tuple);
+                var studentFinancialAidAwards = await studentFinancialAidAwardsController.Get2Async(new Paging(limit, offset), It.IsAny<QueryStringFilter>());
+
+                Object filterObject;
+                studentFinancialAidAwardsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentFinancialAidAwards));
+
+
+            }
+
+            //GET v11
+            //Exception
+            //Get2Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentFinancialAidAwardsController_Get2Async_Invalid_Permissions()
+            {
+                var paging = new Paging(100, 0);
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAwards" },
+                    { "action", "Get2Async" }
+                };
+                HttpRoute route = new HttpRoute("student-financial-aid-awards", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentFinancialAidAwardsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = studentFinancialAidAwardsController.ControllerContext;
+                var actionDescriptor = studentFinancialAidAwardsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny<Dtos.StudentFinancialAidAward2>(), It.IsAny<string>(), false, false)).ThrowsAsync(new PermissionsException());
+                    studentFinancialAidAwardServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view student-financial-aid-awards."));
+                    var studentFinancialAidAwards = await studentFinancialAidAwardsController.Get2Async(new Paging(limit, offset), It.IsAny<QueryStringFilter>());
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+            //GET v11
+            //Successful
+            //GetRestrictedByIdAsync
+            [TestMethod]
+            public async Task StudentFinancialAidAwardsController_GetRestrictedByIdAsync_Permissions()
+            {
+                var id = "bbd216fb-0fc5-4f44-ae45-42d3cdd1e89a";
+                var studentFinancialAidAward = studentFinancialAidAwardDtos.FirstOrDefault(i => i.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAwards" },
+                    { "action", "GetRestrictedByIdAsync" }
+                };
+                HttpRoute route = new HttpRoute("student-financial-aid-awards", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentFinancialAidAwardsController.Request.SetRouteData(data);
+                studentFinancialAidAwardsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentFinancialAidAwards);
+
+                var controllerContext = studentFinancialAidAwardsController.ControllerContext;
+                var actionDescriptor = studentFinancialAidAwardsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                
+                studentFinancialAidAwardServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.GetByIdAsync(id, true)).ReturnsAsync(studentFinancialAidAward);
+                var actual = await studentFinancialAidAwardsController.GetRestrictedByIdAsync(id);
+
+                Object filterObject;
+                studentFinancialAidAwardsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentFinancialAidAwards));
+
+
+            }
+
+            //GET v11
+            //Exception
+            //GetRestrictedByIdAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentFinancialAidAwardsController_GetRestrictedByIdAsync_Invalid_Permissions()
+            {
+                var paging = new Paging(100, 0);
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAwards" },
+                    { "action", "GetRestrictedByIdAsync" }
+                };
+                HttpRoute route = new HttpRoute("student-financial-aid-awards", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentFinancialAidAwardsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = studentFinancialAidAwardsController.ControllerContext;
+                var actionDescriptor = studentFinancialAidAwardsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    studentFinancialAidAwardServiceMock.Setup(ci => ci.GetByIdAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+studentFinancialAidAwardServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view student-financial-aid-awards."));
+                    var actual = await studentFinancialAidAwardsController.GetRestrictedByIdAsync("ds");
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+            //GET v7
+            //Successful
+            //GetRestrictedAsync
+            [TestMethod]
+            public async Task StudentFinancialAidAwardsController_GetRestrictedAsync_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAwards" },
+                    { "action", "GetRestrictedAsync" }
+                };
+                HttpRoute route = new HttpRoute("student-financial-aid-awards", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentFinancialAidAwardsController.Request.SetRouteData(data);
+                studentFinancialAidAwardsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentFinancialAidAwards);
+
+                var controllerContext = studentFinancialAidAwardsController.ControllerContext;
+                var actionDescriptor = studentFinancialAidAwardsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward>, int>(studentFinancialAidAwardDtos, 4);
+
+                studentFinancialAidAwardServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.GetAsync(offset, limit, false, true)).ReturnsAsync(tuple);
+                var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetRestrictedAsync(new Paging(limit, offset));
+
+                Object filterObject;
+                studentFinancialAidAwardsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentFinancialAidAwards));
+
+
+            }
+
+            //GET v7
+            //Exception
+            //GetRestrictedAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentFinancialAidAwardsController_GetRestrictedAsync_Invalid_Permissions()
+            {
+                var paging = new Paging(100, 0);
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAwards" },
+                    { "action", "GetRestrictedAsync" }
+                };
+                HttpRoute route = new HttpRoute("student-financial-aid-awards", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentFinancialAidAwardsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = studentFinancialAidAwardsController.ControllerContext;
+                var actionDescriptor = studentFinancialAidAwardsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                    var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward>, int>(studentFinancialAidAwardDtos, 4);
+
+                    studentFinancialAidAwardServiceMock.Setup(ci => ci.GetAsync(offset, limit, false, true)).ThrowsAsync(new PermissionsException());
+                    studentFinancialAidAwardServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                                            .Throws(new PermissionsException("User 'npuser' does not have permission to view student-financial-aid-awards."));
+                    var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetRestrictedAsync(new Paging(limit, offset));
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
             //Restricted
 
             [TestMethod]
-            public async Task StudentFinancialAidAwardsController_GetRestrictedAll2_NoCache_True()
+            public async Task StudentFinancialAidAwardsController_GetRestricted2Async_NoCache_True()
             {
                 studentFinancialAidAwardsController.Request.Headers.CacheControl = new CacheControlHeaderValue
                 {
@@ -1003,7 +1609,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             [TestMethod]
-            public async Task StudentFinancialAidAwardsController_GetRestrictedAll2_NoCache_False()
+            public async Task StudentFinancialAidAwardsController_GetRestricted2Async_NoCache_False()
             {
                 studentFinancialAidAwardsController.Request.Headers.CacheControl = new CacheControlHeaderValue
                 {
@@ -1037,7 +1643,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             [TestMethod]
-            public async Task StudentFinancialAidAwardsController_GetRestrictedAll2_NullPage()
+            public async Task StudentFinancialAidAwardsController_GetRestricted2Async_NullPage()
             {
                 studentFinancialAidAwardsController.Request.Headers.CacheControl = new CacheControlHeaderValue
                 {
@@ -1131,7 +1737,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             }
 
             [TestMethod]
-            public async Task StudentFinancialAidAwardsController_GetRestrictedById2()
+            public async Task StudentFinancialAidAwardsController_GetRestricted2Async()
             {
                 var id = "bbd216fb-0fc5-4f44-ae45-42d3cdd1e89a";
                 var studentFinancialAidAward = studentFinancialAidAward2Dtos.FirstOrDefault(i => i.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
@@ -1206,7 +1812,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentFinancialAidAwardsController_GetRestrictedById2_PermissionsException()
+            public async Task StudentFinancialAidAwardsController_GetByIdRestricted2Async_PermissionsException()
             {
                 studentFinancialAidAwardServiceMock.Setup(ci => ci.GetById2Async(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
 
@@ -1215,7 +1821,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentFinancialAidAwardsController_GetRestrictedById2_RepositoryException()
+            public async Task StudentFinancialAidAwardsController_GetByIdRestricted2Async_RepositoryException()
             {
                 studentFinancialAidAwardServiceMock.Setup(ci => ci.GetById2Async(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>())).ThrowsAsync(new RepositoryException());
 
@@ -1233,7 +1839,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentFinancialAidAwardsController_GetRestrictedById2_Exception()
+            public async Task StudentFinancialAidAwardsController_GetByIdRestricted2Async_Exception()
             {
                 studentFinancialAidAwardServiceMock.Setup(ci => ci.GetById2Async(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
 
@@ -1242,12 +1848,269 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
-            public async Task StudentFinancialAidAwardsController_GetRestrictedById2_KeyNotFoundException()
+            public async Task StudentFinancialAidAwardsController_GetByIdRestricted2Async_KeyNotFoundException()
             {
                 studentFinancialAidAwardServiceMock.Setup(ci => ci.GetById2Async(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>())).ThrowsAsync(new KeyNotFoundException());
 
                 var actual = await studentFinancialAidAwardsController.GetRestrictedById2Async("ds");
             }
+
+            //GET by id v11.1.0 v 11
+            //Successful
+            //GetRestrictedById2Async
+            [TestMethod]
+            public async Task StudentFinancialAidAwardsController_GetRestrictedById2Async_Permissions()
+            {
+                var id = "bbd216fb-0fc5-4f44-ae45-42d3cdd1e89a";
+                var studentFinancialAidAward = studentFinancialAidAward2Dtos.FirstOrDefault(i => i.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAwards" },
+                    { "action", "GetRestrictedById2Async" }
+                };
+                HttpRoute route = new HttpRoute("student-financial-aid-awards", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentFinancialAidAwardsController.Request.SetRouteData(data);
+                studentFinancialAidAwardsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewRestrictedStudentFinancialAidAwards);
+
+                var controllerContext = studentFinancialAidAwardsController.ControllerContext;
+                var actionDescriptor = studentFinancialAidAwardsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                studentFinancialAidAwardServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.GetById2Async(id, true, false)).ReturnsAsync(studentFinancialAidAward);
+                var actual = await studentFinancialAidAwardsController.GetRestrictedById2Async(id);
+
+                Object filterObject;
+                studentFinancialAidAwardsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewRestrictedStudentFinancialAidAwards));
+
+
+            }
+
+            //GET by id v11.1.0 v 11
+            //Exception
+            //GetRestrictedById2Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentFinancialAidAwardsController_GetRestrictedById2Async_Invalid_Permissions()
+            {
+                var paging = new Paging(100, 0);
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAwards" },
+                    { "action", "GetRestrictedById2Async" }
+                };
+                HttpRoute route = new HttpRoute("student-financial-aid-awards", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentFinancialAidAwardsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = studentFinancialAidAwardsController.ControllerContext;
+                var actionDescriptor = studentFinancialAidAwardsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    studentFinancialAidAwardServiceMock.Setup(ci => ci.GetById2Async(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                    studentFinancialAidAwardServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view student-financial-aid-awards."));
+                    var actual = await studentFinancialAidAwardsController.GetRestrictedById2Async("ds");
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+            //GET v11.1.0 
+            //Successful
+            //GetRestricted3Async
+            [TestMethod]
+            public async Task StudentFinancialAidAwardsController_GetRestricted3Async_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAwards" },
+                    { "action", "GetRestricted3Async" }
+                };
+                HttpRoute route = new HttpRoute("student-financial-aid-awards", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentFinancialAidAwardsController.Request.SetRouteData(data);
+                studentFinancialAidAwardsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewRestrictedStudentFinancialAidAwards);
+
+                var controllerContext = studentFinancialAidAwardsController.ControllerContext;
+                var actionDescriptor = studentFinancialAidAwardsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
+
+                studentFinancialAidAwardServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny<Dtos.StudentFinancialAidAward2>(), It.IsAny<string>(), false, true)).ReturnsAsync(tuple);
+                var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetRestricted3Async(new Paging(limit, offset), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>());
+
+                Object filterObject;
+                studentFinancialAidAwardsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewRestrictedStudentFinancialAidAwards));
+
+
+            }
+
+            //GET v11.1.0
+            //Exception
+            //GetRestricted3Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentFinancialAidAwardsController_GetRestricted3Async_Invalid_Permissions()
+            {
+                var paging = new Paging(100, 0);
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAwards" },
+                    { "action", "GetRestricted3Async" }
+                };
+                HttpRoute route = new HttpRoute("student-financial-aid-awards", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentFinancialAidAwardsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = studentFinancialAidAwardsController.ControllerContext;
+                var actionDescriptor = studentFinancialAidAwardsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny<Dtos.StudentFinancialAidAward2>(), It.IsAny<string>(), false, true)).ThrowsAsync(new PermissionsException());
+                    studentFinancialAidAwardServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view student-financial-aid-awards."));
+                    var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetRestricted3Async(new Paging(limit, offset), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>());
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+            //GET v11
+            //Successful
+            //GetRestricted2Async
+            [TestMethod]
+            public async Task StudentFinancialAidAwardsController_GetRestricted2Async_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAwards" },
+                    { "action", "GetRestricted2Async" }
+                };
+                HttpRoute route = new HttpRoute("student-financial-aid-awards", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentFinancialAidAwardsController.Request.SetRouteData(data);
+                studentFinancialAidAwardsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewRestrictedStudentFinancialAidAwards);
+
+                var controllerContext = studentFinancialAidAwardsController.ControllerContext;
+                var actionDescriptor = studentFinancialAidAwardsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.StudentFinancialAidAward2>, int>(studentFinancialAidAward2Dtos, 4);
+
+                studentFinancialAidAwardServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny<Dtos.StudentFinancialAidAward2>(), It.IsAny<string>(), false, true)).ReturnsAsync(tuple);
+                var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetRestricted2Async(new Paging(limit, offset), It.IsAny<QueryStringFilter>());
+
+                Object filterObject;
+                studentFinancialAidAwardsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewRestrictedStudentFinancialAidAwards));
+
+
+            }
+
+            //GET v11
+            //Exception
+            //GetRestricted2Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task StudentFinancialAidAwardsController_GetRestricted2Async_Invalid_Permissions()
+            {
+                var paging = new Paging(100, 0);
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentFinancialAidAwards" },
+                    { "action", "GetRestricted2Async" }
+                };
+                HttpRoute route = new HttpRoute("student-financial-aid-awards", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                studentFinancialAidAwardsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = studentFinancialAidAwardsController.ControllerContext;
+                var actionDescriptor = studentFinancialAidAwardsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    studentFinancialAidAwardServiceMock.Setup(ci => ci.Get2Async(offset, limit, It.IsAny<Dtos.StudentFinancialAidAward2>(), It.IsAny<string>(), false, true)).ThrowsAsync(new PermissionsException());
+                    studentFinancialAidAwardServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view student-financial-aid-awards."));
+                    var studentFinancialAidAwards = await studentFinancialAidAwardsController.GetRestricted2Async(new Paging(limit, offset), It.IsAny<QueryStringFilter>());
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
         }
     }
 }

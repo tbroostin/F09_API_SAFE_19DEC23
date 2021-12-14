@@ -135,7 +135,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Licenses", "Licenses", "{26
 	ProjectSection(SolutionItems) = preProject
 		Dependencies\Licenses\Antlr3.Runtime.License.txt = Dependencies\Licenses\Antlr3.Runtime.License.txt
 		Dependencies\Licenses\AutoMapperLicense.txt = Dependencies\Licenses\AutoMapperLicense.txt
-		Dependencies\Licenses\DDay.iCal.License.txt = Dependencies\Licenses\DDay.iCal.License.txt
 		Dependencies\Licenses\JsonDiffPatch.License.txt = Dependencies\Licenses\JsonDiffPatch.License.txt
 		Dependencies\Licenses\KellermanSoftware.Compare-NET-Objects.License.txt = Dependencies\Licenses\KellermanSoftware.Compare-NET-Objects.License.txt
 		Dependencies\Licenses\LICENSE.txt = Dependencies\Licenses\LICENSE.txt
@@ -1114,8 +1113,8 @@ Global
 		{5CF89E9C-80AC-48EA-A8D7-B3604F2A8F91} = {6322337C-E7C6-410C-82BD-2575151C2A43}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		EnterpriseLibraryConfigurationToolBinariesPathV6 = packages\EnterpriseLibrary.Common.6.0.1304.0\lib\NET45;packages\EnterpriseLibrary.Logging.6.0.1304.0\lib\NET45
 		EnterpriseLibraryConfigurationToolBinariesPath = packages\Unity.2.1.505.2\lib\NET35;packages\Unity.Interception.2.1.505.2\lib\NET35;packages\EnterpriseLibrary.Common.5.0.505.0\lib\NET35;packages\EnterpriseLibrary.Logging.5.0.505.1\lib\NET35;packages\Unity.2.1.505.0\lib\NET35;packages\Unity.Interception.2.1.505.0\lib\NET35;packages\EnterpriseLibrary.Caching.5.0.505.0\lib\NET35;packages\EnterpriseLibrary.Security.Cryptography.5.0.505.0\lib\NET35;packages\EnterpriseLibrary.Caching.Cryptography.5.0.505.0\lib\NET35;packages\EnterpriseLibrary.Logging.5.0.505.0\lib\NET35;packages\EntLibContrib.Logging.5.0.505.0\lib\NET35
+		EnterpriseLibraryConfigurationToolBinariesPathV6 = packages\EnterpriseLibrary.Common.6.0.1304.0\lib\NET45;packages\EnterpriseLibrary.Logging.6.0.1304.0\lib\NET45
 		SolutionGuid = {3B44D7D7-F594-414F-9809-405F53521127}
 	EndGlobalSection
 EndGlobal

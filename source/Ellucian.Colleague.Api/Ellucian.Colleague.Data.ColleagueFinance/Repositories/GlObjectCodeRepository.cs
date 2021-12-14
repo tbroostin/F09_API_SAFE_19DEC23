@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -63,7 +63,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             if (string.IsNullOrEmpty(fiscalYear))
             {
-                LogDataError("fiscalYear", "", fiscalYear);
+                logger.Error("==> fiscalYear is null or empty <==");
                 return glObjectCodes;
             }
 
@@ -71,21 +71,22 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var genLdgrDataContract = await DataReader.ReadRecordAsync<GenLdgr>(fiscalYear);
 
             #region Error checking
+
             if (generalLedgerUser == null)
             {
-                LogDataError("generalLedgerUser", "", generalLedgerUser);
+                logger.Error("==> generalLedgerUser is null <==");
                 return glObjectCodes;
             }
 
             if (glAccountStructure == null)
             {
-                LogDataError("glAccountStructure", "", glAccountStructure);
+                logger.Error("==> glAccountStructure is null <==");
                 return glObjectCodes;
             }
 
             if (glClassConfiguration == null)
             {
-                LogDataError("glClassConfiguration", "", glClassConfiguration);
+                logger.Error("==> glClassConfiguration is null <==");
                 return glObjectCodes;
             }
 
@@ -93,19 +94,19 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             // If the user does not have any GL accounts assigned, return an empty list of GL object codes.
             if ((generalLedgerUser.AllAccounts == null || !generalLedgerUser.AllAccounts.Any()))
             {
-                LogDataError("AllAccounts", "", generalLedgerUser.AllAccounts);
+                logger.Error("==> generalLedgerUser.AllAccounts is null or empty <==");
                 return glObjectCodes;
             }
 
             if (genLdgrDataContract == null)
             {
-                logger.Warn("Missing GEN.LDGR record for ID: " + fiscalYear);
+                logger.Error("==> Missing GEN.LDGR record for ID: " + fiscalYear + " <==");
                 return glObjectCodes;
             }
 
             if (string.IsNullOrEmpty(genLdgrDataContract.GenLdgrStatus))
             {
-                logger.Warn("GEN.LDGR status is null.");
+                logger.Error("==> GEN.LDGR status is null or empty <==");
                 return glObjectCodes;
             }
             #endregion
@@ -465,7 +466,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
                 catch (Exception ex)
                 {
-                    logger.Warn(string.Format("Error converting fiscal year {0} from string to int.", fiscalYear));
+                    logger.Error(string.Format("Error converting fiscal year {0} from string to int.", fiscalYear));
                 }
 
                 // If the previous fiscal year is open then read the GLS records for the non-pooled accounts for the current FY .
@@ -587,6 +588,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     AddNonPooledAccountToGlObjectCodeList(nonPooledAccount, glClassConfiguration);
                 }
                 #endregion
+                
                 #endregion
             }
             else
@@ -1386,12 +1388,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             catch (ApplicationException aex)
             {
-                logger.Warn("Invalid/unsupported GL class.");
+                logger.Error("Invalid/unsupported GL class.");
                 glClass = GlClass.Asset;
             }
             catch (Exception ex)
             {
-                logger.Warn("Error occurred determining GL class for GL account number.");
+                logger.Error("Error occurred determining GL class for GL account number.");
                 glClass = GlClass.Asset;
             }
 

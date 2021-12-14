@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 
@@ -18,5 +18,10 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Case Ids to retrieve cases
         /// </summary>
         public IEnumerable<string> CaseIds { get; set; }
+
+        /// <summary>
+        /// Is Include closed cases
+        /// </summary>
+        public bool IsIncludeClosedCases { get; set; }
     }
 }

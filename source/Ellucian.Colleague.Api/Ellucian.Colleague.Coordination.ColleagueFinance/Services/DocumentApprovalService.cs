@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -9,6 +9,7 @@ using Ellucian.Colleague.Dtos.ColleagueFinance;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Security;
+using Newtonsoft.Json;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -63,14 +64,25 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             try
             {
                 currentUserStaffLoginId = await staffRepository.GetStaffLoginIdForPersonAsync(CurrentUser.PersonId);
+
+                if (string.IsNullOrWhiteSpace(currentUserStaffLoginId))
+                {
+                    logger.Debug("==> currentUserStaffLoginId is null or empty or blank <==");
+                }
+                else
+                {
+                    logger.Debug("Successfully found staff login ID for person ID: " + CurrentUser.PersonId);
+                }
             }
             catch (Exception e)
             {
-                logger.Error(e, "Could not locate Staff Login ID for person ID: " + CurrentUser.PersonId);
+                logger.Error("==> Could not locate Staff Login ID for person ID: " + CurrentUser.PersonId + " <==");
                 throw new PermissionsException("Could not find Staff information for the user.");
             }
 
             var documentApprovalEntity = await documentApprovalRepository.GetAsync(currentUserStaffLoginId);
+
+            logger.Debug("==> In DocumentApprovalService after GetAsync. <==");
 
             // Initialize the document approval dto.
             var documentApprovalDto = new DocumentApproval();
@@ -78,9 +90,20 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             // Update the dto with the information from the domain entity.
             if (documentApprovalEntity != null)
             {
+                logger.Debug("==> about to get adapter for DocumentApproval <==");
+
                 // Convert the domain entity into a DTO.
                 var adapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.DocumentApproval, DocumentApproval>();
                 documentApprovalDto = adapter.MapToType(documentApprovalEntity);
+
+                if (documentApprovalDto == null)
+                {
+                    logger.Debug("==> documentApprovalDto is null <==");
+                }
+            }
+            else
+            {
+                logger.Debug("==> documentApprovalEntity is null <==");
             }
 
             return documentApprovalDto;
@@ -119,7 +142,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             catch (Exception e)
             {
-                logger.Error(e, "Could not locate Staff Login ID for person ID: " + CurrentUser.PersonId);
+                logger.Error(e, "==> Could not locate Staff Login ID for person ID: " + CurrentUser.PersonId + "<==");
                 throw new PermissionsException("Could not find Staff information for the user.");
             }
 
@@ -139,7 +162,78 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             return response;
         }
 
+        /// <summary>
+        /// Retrieve documents approved by the user.
+        /// </summary>
+        /// <param name="filterCriteria">Approved documents filter criteria.</param>
+        /// <returns>List of document approved DTOs.</returns>
+        public async Task<IEnumerable<ApprovedDocument>> QueryApprovedDocumentsAsync(ApprovedDocumentFilterCriteria filterCriteria)
+        {
+            // Check the permission code to view the document approval.
+            CheckViewDocumentApprovalPermission();
+
+            // Get the approver/login id for the current user.
+            var currentUserStaffLoginId = string.Empty;
+            var filterCriteriaEntity = new Domain.ColleagueFinance.Entities.ApprovedDocumentFilterCriteria();
+            try
+            {
+                // Create the adapter to convert domain entities to DTO.
+                var filterCriteriaAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria, Ellucian.Colleague.Domain.ColleagueFinance.Entities.ApprovedDocumentFilterCriteria>();
+                filterCriteriaEntity = filterCriteriaAdapter.MapToType(filterCriteria);
+
+                currentUserStaffLoginId = await staffRepository.GetStaffLoginIdForPersonAsync(CurrentUser.PersonId);
+
+                if (string.IsNullOrWhiteSpace(currentUserStaffLoginId))
+                {
+                    logger.Debug("==> currentUserStaffLoginId is null, empty or blank <==");
+                }
+                else
+                {
+                    logger.Debug("==> Successfully found staff login ID for person ID: " + CurrentUser.PersonId + " <==");
+                }
+            }
+            catch (Exception e)
+            {
+                logger.Error("==> Could not locate Staff Login ID for person ID: " + CurrentUser.PersonId + " <==");
+                throw new PermissionsException("Could not find Staff information for the user.");
+            }
+
+            var approvedDocumentEntities = await documentApprovalRepository.QueryApprovedDocumentsAsync(currentUserStaffLoginId, filterCriteriaEntity);
+
+            logger.Debug("==> In DocumentApprovalService after GetApprovedDocumentsAsync <==");
+
+            // Initialize the approved documents dtos.
+            var approvedDocumentDtos = new List<ApprovedDocument>();
+
+            if (approvedDocumentEntities != null)
+            {
+                // Convert the domain entity into a DTO.
+                var adapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.ApprovedDocument, ApprovedDocument>();
+
+                // Map each entity to the DTO.
+                foreach (var appprovedDocumentEntity in approvedDocumentEntities)
+                {
+                    if (appprovedDocumentEntity != null)
+                    {
+                        logger.Debug("==> appprovedDocumentEntity before using adapter <==");
+
+                        var approvedDocumentDto = adapter.MapToType(appprovedDocumentEntity);
+                        approvedDocumentDtos.Add(approvedDocumentDto);
+
+                        logger.Debug("==> approvedDocumentDto after using adapter <==");
+                    }
+                }
+            }
+            else
+            {
+                logger.Debug("==> approvedDocumentEntities is null <==");
+            }
+
+            return approvedDocumentDtos;
+        }
+
         #region Private methods
+
         /// <summary>
         /// Permission code that allows a READ/UPDATE operation on a document approval.
         /// </summary>
@@ -150,7 +244,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (!hasPermission)
             {
-                var message = string.Format("{0} does not have permission to view document approvals.", CurrentUser.PersonId);
+                var message = string.Format("==> {0} does not have permission to view document approvals <==", CurrentUser.PersonId);
                 logger.Error(message);
                 throw new PermissionsException(message);
             }
@@ -174,6 +268,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             return documentApprovalRequestEntity;
         }
+
         #endregion
     }
 }

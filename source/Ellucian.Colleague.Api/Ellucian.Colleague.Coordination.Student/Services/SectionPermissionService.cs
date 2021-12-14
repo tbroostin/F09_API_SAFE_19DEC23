@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Student.Adapters;
 using Ellucian.Colleague.Domain.Repositories;
@@ -184,6 +184,113 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var studentPetitionAdded = await _sectionPermissionRepository.AddStudentPetitionAsync(petitionToAdd);
             var studentPetitionEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.StudentPetition, Dtos.Student.StudentPetition>();
             var studentPetitionDto = studentPetitionEntityToDtoAdapter.MapToType(studentPetitionAdded);
+            return studentPetitionDto;
+        }
+
+        /// <summary>
+        /// Validates student petition and updates it in the database, returning the student petition id updated
+        /// </summary>
+        /// <param name="studentPetition">Student petition object to update</param>
+        /// <returns><see cref="Ellucian.Colleague.Dtos.Student.StudentPetition">StudentPetition</see> object that was updated</returns>
+        public async Task<Dtos.Student.StudentPetition> UpdateStudentPetitionAsync(Dtos.Student.StudentPetition studentPetitionToUpdate)
+        {
+            // Throw exception if incoming Student Petition is null
+            if (studentPetitionToUpdate == null)
+            {
+                throw new ArgumentNullException("studentPetition", "StudentPetition object must be provided.");
+            }
+
+            // Throw exception if user does not have correct permissions for the item being updated
+            // NOTE: It was decided to only check a person's permissions and not also verify that this is a section the person is teaching.
+            if (studentPetitionToUpdate.Type == Dtos.Student.StudentPetitionType.StudentPetition && !(await GetUserPermissionCodesAsync()).Contains(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateStudentPetition))
+            {
+                var message = "User does not have permissions required to update a Student Petition.";
+                logger.Error(message);
+                throw new PermissionsException(message);
+            }
+
+            if (studentPetitionToUpdate.Type == Dtos.Student.StudentPetitionType.FacultyConsent && !(await GetUserPermissionCodesAsync()).Contains(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateFacultyConsent))
+            {
+                var message = "User does not have permissions required to update a Faculty Consent.";
+                logger.Error(message);
+                throw new PermissionsException(message);
+            }
+
+            if (string.IsNullOrEmpty(studentPetitionToUpdate.SectionId))
+            {
+                logger.Error("Unable to update student petition or faculty consent because no section ID was provided.");
+                throw new ArgumentException("Section ID is required when updating a student petition or faculty consent.");
+            }
+
+            if (string.IsNullOrEmpty(studentPetitionToUpdate.StudentId))
+            {
+                logger.Error("Unable to update student petition or faculty consent because no StudentId ID was provided.");
+                throw new ArgumentException("Student ID is required when updating a student petition or faculty consent.");
+            }
+
+            // Validate incoming Petition status code - This is required for an update
+            if (!string.IsNullOrEmpty(studentPetitionToUpdate.StatusCode))
+            {
+                try
+                {
+                    if (!((await _referenceDataRepository.GetPetitionStatusesAsync()).Select(wr => wr.Code).Contains(studentPetitionToUpdate.StatusCode)))
+                    {
+                        throw new Exception("Petition Status Code is not valid.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex, "error occurred during validation of Petition Status Code (" + studentPetitionToUpdate.StatusCode + ") specified in Petition. Message: " + ex.Message);
+                    throw ex;
+                }
+            }
+            else
+            {
+                logger.Error("error occurred during validation of Petition Status Code (" + studentPetitionToUpdate.StatusCode + ") specified in Petition.");
+                throw new ArgumentException("A status code is required when updating a student petition or faculty consent.");
+            }
+
+            // Validate incoming Petition reason code and make sure there is either a reason or a comment
+            if (!string.IsNullOrEmpty(studentPetitionToUpdate.ReasonCode))
+            {
+                try
+                {
+                    if (!((await _referenceDataRepository.GetStudentPetitionReasonsAsync()).Select(wr => wr.Code).Contains(studentPetitionToUpdate.ReasonCode)))
+                    {
+                        throw new Exception("Petition Reason is not valid.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex, "error occurred during validation of Petition Reason Code (" + studentPetitionToUpdate.ReasonCode + ") specified in Petition. Message: " + ex.Message);
+                    throw ex;
+                }
+            }
+            else
+            {
+                //If there is no reason code then there should be a comment or the request to update is not valid
+                if (string.IsNullOrEmpty(studentPetitionToUpdate.Comment))
+                {
+                    throw new Exception("Student Petition must have either a Reason or a comment to be valid.");
+                }
+            }
+
+            // The incoming entity has been validated and the permission has been checked.
+            // Convert the DTO to an entity, call the repository method, and convert it into the DTO.
+            Domain.Student.Entities.StudentPetition petitionToUpdate = null;
+            try
+            {
+                var studentPetitionDtoToEntityAdapter = _adapterRegistry.GetAdapter<Dtos.Student.StudentPetition, Domain.Student.Entities.StudentPetition>();
+                petitionToUpdate = studentPetitionDtoToEntityAdapter.MapToType(studentPetitionToUpdate);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Error converting incoming StudentPetitionToAdd Dto to StudentPetition Entity: " + ex.Message);
+                throw new ArgumentException("Student Petition to update is invalide", ex);
+            }
+            var studentPetitionUpated = await _sectionPermissionRepository.UpdateStudentPetitionAsync(petitionToUpdate);
+            var studentPetitionEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.StudentPetition, Dtos.Student.StudentPetition>();
+            var studentPetitionDto = studentPetitionEntityToDtoAdapter.MapToType(studentPetitionUpated);
             return studentPetitionDto;
         }
 

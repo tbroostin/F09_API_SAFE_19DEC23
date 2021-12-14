@@ -54,33 +54,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 PospayEarntypeGrouping = "NOTADMIN"
             }
         };
-        //public List<EarntypeGroupings> earnTypeGroupingsRecords = new List<EarntypeGroupings>()
-        //{
-        //    new EarntypeGroupings()
-        //    {
-        //        Recordkey = "ADMIN",
-        //        EtpgEarntype = new List<string>()
-        //        {
-        //            "HRLY"
-        //        },
-        //        EtpgEarntypeDesc = new List<string>()
-        //        {
-        //            "This is hourly"
-        //        }
-        //    },
-        //    new EarntypeGroupings()
-        //    {
-        //        Recordkey = "NOTADMING",
-        //        EtpgEarntype = new List<string>()
-        //        {
-        //            "NTHRLY"
-        //        },
-        //        EtpgEarntypeDesc = new List<string>()
-        //        {
-        //            "NOT HOURLY "
-        //        }
-        //    }
-        //};
+        
         public List<PersonPositionWageRecord> personPositionWageRecords = new List<PersonPositionWageRecord>() 
         {
             new PersonPositionWageRecord() {
@@ -113,6 +87,26 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 startDate = new DateTime(2016, 1, 1),
                 endDate = null,
                 regularWorkEarningsType = "REG",  
+                paySuspendedFlag = "N",
+                payItems = new List<PayItemRecord>()
+                {
+                    new PayItemRecord() {fundSourceId = "COMP"},
+                    new PayItemRecord() {fundSourceId = "PROJ", projectId = "11"}
+                },
+                wageType = "W"
+            },
+
+            new PersonPositionWageRecord() {
+                id = "6a",
+                personId = "0003914",
+                positionId = "MUSICPROF12345",
+                personPositionId = "45432",
+                payClassId = "MC",
+                payCycleId = "MW",
+                PpwgPospayId = "555",
+                startDate = new DateTime(2016, 1, 1),
+                endDate = null,
+                regularWorkEarningsType = "REG",
                 paySuspendedFlag = "N",
                 payItems = new List<PayItemRecord>()
                 {
@@ -188,73 +182,56 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             }
         }
 
-        //public List<EarningsTypeGroup> BuildEarnTypeGrouping(EarntypeGroupings earnTypeGroupingsRecords)
-        //{
-        //    if (earnTypeGroupingsRecords == null)
-        //    {
-        //        throw new ArgumentNullException("earntypegroupingsrecord");
-        //    }
-        //    var listOfEntities = new List<EarningsTypeGroup>();
-        //    for (var i = 0; i < earnTypeGroupingsRecords.EtpgEarntypeDesc.Count; i++)
-        //    {
-        //        listOfEntities.Add(new EarningsTypeGroup(earnTypeGroupingsRecords.Recordkey, earnTypeGroupingsRecords.EtpgEarntype.ElementAt(i), earnTypeGroupingsRecords.EtpgEarntypeDesc.ElementAt(i)));
-        //    }
-        //    return listOfEntities;
-            
-        //}
-
-        public async Task<IEnumerable<PersonPositionWage>> GetPersonPositionWagesAsync(IEnumerable<string> personIds, DateTime? startDate = null)
+        
+        public async Task<IEnumerable<PersonPositionWage>> GetPersonPositionWagesAsync(IEnumerable<string> personIds, DateTime? lookupStartDate = null, 
+            IEnumerable<string> payCycleIds = null)
         {
             var earnTypeGroupingEntities = new List<EarningsTypeGroup>();
-            //foreach (var earnTypeGroupingRecord in earnTypeGroupingsRecords)
-            //{
-            //    if (earnTypeGroupingRecord != null)
-            //    {
-            //        try
-            //        {
-            //            earnTypeGroupingEntities.AddRange(BuildEarnTypeGrouping(earnTypeGroupingRecord));
-            //        }
-            //        catch (Exception e)
-            //        {
-            //            return null;
-            //        }
-            //    }
-            //}
+            
             var personPositionWages = personPositionWageRecords
                     .Where(r => personIds.Contains(r.personId))
                     .Select(r =>
                     {
-                        try
+                        if ((lookupStartDate.HasValue && (r.endDate == null || r.endDate >= lookupStartDate.Value)) || !lookupStartDate.HasValue)
                         {
-                            return BuildPersonPositionWage(r, positionPayRecords);
+                            try
+                            {
+                                return BuildPersonPositionWage(r, positionPayRecords, payCycleIds);
+                            }
+                            catch (Exception)
+                            {
+                                return null;
+                            }
                         }
-                        catch (Exception)
-                        {
-                            return null;
-                        }
+                        return null;
                     })
                     .Where(e => e != null);
 
             return await Task.FromResult(personPositionWages);
         }
 
-        public PersonPositionWage BuildPersonPositionWage(PersonPositionWageRecord record, List<Pospay> posPayRecords)
+        public PersonPositionWage BuildPersonPositionWage(PersonPositionWageRecord record, List<Pospay> posPayRecords, IEnumerable<string> payCycleIds)
         {
             if (record == null)
             {
                 throw new ArgumentNullException("record");
             }
-            var earningsTypeGroupId = posPayRecords.Where(rec => record.PpwgPospayId == rec.Recordkey).Select(rec => rec.PospayEarntypeGrouping).First().ToString();
-            //var earningsTypeGroupEntries = earnTypeGroupingsEntities.Where(entry => entry.EarningsTypeGroupId == earningsTypeGroupId).ToList();
-            bool isRegularWage = !string.IsNullOrEmpty(record.wageType) && record.wageType.Equals("W", StringComparison.InvariantCultureIgnoreCase);
-            return new PersonPositionWage(record.id, record.personId, record.positionId, record.personPositionId, record.PpwgPospayId, record.payClassId, record.payCycleId,
-                record.regularWorkEarningsType, record.startDate.Value, earningsTypeGroupId)
+            if ((payCycleIds != null && payCycleIds.Any() && payCycleIds.Contains(record.payCycleId)) || payCycleIds == null || !payCycleIds.Any())
             {
-                EndDate = record.endDate,
-                IsPaySuspended = !string.IsNullOrEmpty(record.paySuspendedFlag) && record.paySuspendedFlag.Equals("Y", StringComparison.InvariantCultureIgnoreCase),
-                FundingSources = record.payItems
-                    .Select(item => new PositionFundingSource(item.fundSourceId, record.payItems.IndexOf(item)) { ProjectId = item.projectId }).ToList()
-            };
-        }        
+                var earningsTypeGroupId = posPayRecords.Where(rec => record.PpwgPospayId == rec.Recordkey).Select(rec => rec.PospayEarntypeGrouping).First().ToString();
+                //var earningsTypeGroupEntries = earnTypeGroupingsEntities.Where(entry => entry.EarningsTypeGroupId == earningsTypeGroupId).ToList();
+                bool isRegularWage = !string.IsNullOrEmpty(record.wageType) && record.wageType.Equals("W", StringComparison.InvariantCultureIgnoreCase);
+                return new PersonPositionWage(record.id, record.personId, record.positionId, record.personPositionId, record.PpwgPospayId, record.payClassId, record.payCycleId,
+                    record.regularWorkEarningsType, record.startDate.Value, earningsTypeGroupId)
+                {
+                    EndDate = record.endDate,
+                    IsPaySuspended = !string.IsNullOrEmpty(record.paySuspendedFlag) && record.paySuspendedFlag.Equals("Y", StringComparison.InvariantCultureIgnoreCase),
+                    FundingSources = record.payItems
+                        .Select(item => new PositionFundingSource(item.fundSourceId, record.payItems.IndexOf(item)) { ProjectId = item.projectId }).ToList()
+                };
+            }
+            else { return null; }
+        }
+       
     }
 }

@@ -17,9 +17,39 @@ namespace Ellucian.Web.Http.EthosExtend
         public string ResourceName { get; set; }
 
         /// <summary>
+        /// Type of the Resource
+        /// </summary>
+        public string ApiType { get; set; }
+
+        /// <summary>
+        /// Process ID when type is Subroutine or Transaction
+        /// </summary>
+        public string ProcessId { get; set; }
+
+        /// <summary>
+        /// Name of the Resource parent (Making this an alternate representation)
+        /// </summary>
+        public string ParentResourceName { get; set; }
+
+        /// <summary>
         /// Primary Entity Name
         /// </summary>
         public string PrimaryEntity { get; set; }
+
+        /// <summary>
+        /// Primary Key Name
+        /// </summary>
+        public string PrimaryKeyName { get; set; }
+
+        /// <summary>
+        /// Secondary Key Name
+        /// </summary>
+        public string SecondaryKeyName { get; set; }
+
+        /// <summary>
+        /// Secondary Key Position
+        /// </summary>
+        public int? SecondaryKeyPosition { get; set; }
 
         /// <summary>
         /// Primary Validation Table Application

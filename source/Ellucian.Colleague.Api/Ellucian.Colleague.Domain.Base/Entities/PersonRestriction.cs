@@ -61,7 +61,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         {
             if (string.IsNullOrEmpty(guid))
             {
-                throw new ArgumentNullException("guid", string.Format("GUID is required, ID: '{0}'.", id));
+                throw new ArgumentNullException("guid", string.Format("STUDENT.RESTRICTIONS GUID is required, ID: '{0}'.", id));
             }
             if (string.IsNullOrEmpty(id))
             {

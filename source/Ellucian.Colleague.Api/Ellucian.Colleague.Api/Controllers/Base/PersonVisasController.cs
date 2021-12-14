@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -23,6 +23,7 @@ using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
 using Ellucian.Web.Security;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -61,7 +62,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="page"></param>
         /// <param name="person"></param>
         /// <returns></returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPersonVisa, BasePermissionCodes.UpdateAnyPersonVisa })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [FilteringFilter(IgnoreFiltering = false)]
         [ValidateQueryStringFilter(new string[] { "person" }, false, true)]
@@ -69,6 +70,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         {
             try
             {
+                _personVisasService.ValidatePermissions(GetPermissionsMetaData());
                 bool bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {
@@ -111,6 +113,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (Exception e)
             {
                 _logger.Error(e.ToString());
@@ -124,7 +136,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="page"></param>
         /// <param name="criteria"></param>
         /// <returns></returns>
-        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPersonVisa, BasePermissionCodes.UpdateAnyPersonVisa })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [FilteringFilter(IgnoreFiltering = true)]
         [ValidateQueryStringFilter()]
@@ -135,6 +147,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _personVisasService.ValidatePermissions(GetPermissionsMetaData());
                 bool bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {
@@ -186,6 +199,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (Exception e)
             {
                 _logger.Error(e.ToString());
@@ -199,10 +222,12 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="id">Id of person visa to retrieve</param>
         /// <returns>A <see cref="Ellucian.Colleague.Dtos.PersonVisa">person visa</see></returns>
         [EedmResponseFilter]
+        [HttpGet, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPersonVisa, BasePermissionCodes.UpdateAnyPersonVisa })]
         public async Task<Ellucian.Colleague.Dtos.PersonVisa> GetPersonVisaByIdAsync([FromUri] string id)
         {            
             try
             {
+                _personVisasService.ValidatePermissions(GetPermissionsMetaData());
                 bool bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {
@@ -268,10 +293,12 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="id">Id of person visa to retrieve</param>
         /// <returns>A <see cref="Ellucian.Colleague.Dtos.PersonVisa">person visa</see></returns>
         [EedmResponseFilter, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPersonVisa, BasePermissionCodes.UpdateAnyPersonVisa })]
         public async Task<Ellucian.Colleague.Dtos.PersonVisa> GetPersonVisaById2Async([FromUri] string id)
         {
             try
             {
+                _personVisasService.ValidatePermissions(GetPermissionsMetaData());
                 bool bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {
@@ -343,11 +370,12 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="personVisa"><see cref="Dtos.PersonVisa">personVisa</see> to create</param>
         /// <returns>Newly created <see cref="Dtos.PersonVisa">PersonVisa</see></returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(BasePermissionCodes.UpdateAnyPersonVisa)]
         public async Task<Dtos.PersonVisa> PostPersonVisaAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.PersonVisa personVisa)
         {
             try
             {
+                _personVisasService.ValidatePermissions(GetPermissionsMetaData());
                 if (personVisa == null)
                 {
                     throw new ArgumentNullException("Must provide a person-visas.");
@@ -397,6 +425,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(ex.ToString());
                 throw CreateHttpResponseException(ex.Message);
             }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -409,12 +447,12 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="personVisa"><see cref="Dtos.PersonVisa">personVisa</see> to create</param>
         /// <returns>Newly created <see cref="Dtos.PersonVisa">PersonVisa</see></returns>
-        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter, PermissionsFilter(BasePermissionCodes.UpdateAnyPersonVisa)]
         public async Task<Dtos.PersonVisa> PostPersonVisa2Async([ModelBinder(typeof(EedmModelBinder))] Dtos.PersonVisa personVisa)
         {
             try
             {
-              
+                _personVisasService.ValidatePermissions(GetPermissionsMetaData());
                 //call import extend method that needs the extracted extension data and the config
                 await _personVisasService.ImportExtendedEthosData(await ExtractExtendedData(await _personVisasService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
@@ -452,6 +490,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -467,11 +510,12 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="id">id of the personVisa to update</param>
         /// <param name="personVisa"><see cref="Dtos.PersonVisa">personVisa</see> to create</param>
         /// <returns>Updated <see cref="Dtos.PersonVisa">Dtos.PersonVisa</see></returns>
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(BasePermissionCodes.UpdateAnyPersonVisa)]
         public async Task<Dtos.PersonVisa> PutPersonVisaAsync([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.PersonVisa personVisa)
         {
             try
             {
+                _personVisasService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(id))
                 {
                     throw new ArgumentNullException("Must provide an id for person-visas.");
@@ -529,6 +573,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(ex.ToString());
                 throw CreateHttpResponseException(ex.Message);
             }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -542,12 +596,12 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="id">id of the personVisa to update</param>
         /// <param name="personVisa"><see cref="Dtos.PersonVisa">personVisa</see> to create</param>
         /// <returns>Updated <see cref="Dtos.PersonVisa">Dtos.PersonVisa</see></returns>
-        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter, PermissionsFilter(BasePermissionCodes.UpdateAnyPersonVisa)]
         public async Task<Dtos.PersonVisa> PutPersonVisa2Async([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.PersonVisa personVisa)
         {
             try
             {
-               
+                _personVisasService.ValidatePermissions(GetPermissionsMetaData());
                 //get Data Privacy List
                 var dpList = await _personVisasService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
@@ -587,6 +641,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (Exception ex)
             {

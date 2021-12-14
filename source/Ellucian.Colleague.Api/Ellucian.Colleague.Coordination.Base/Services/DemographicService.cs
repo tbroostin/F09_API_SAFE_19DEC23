@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -199,14 +199,24 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.PersonFilter>> GetPersonFiltersAsync(bool bypassCache = false)
         {
             var personFilterCollection = new List<Ellucian.Colleague.Dtos.PersonFilter>();
-
-            var personFilterEntities = await _referenceDataRepository.GetPersonFiltersAsync(bypassCache);
-            if (personFilterEntities != null && personFilterEntities.Count() > 0)
+            try
             {
-                foreach (var personFilter in personFilterEntities)
+                var personFilterEntities = await _referenceDataRepository.GetPersonFiltersAsync(bypassCache);
+                if (personFilterEntities != null && personFilterEntities.Count() > 0)
                 {
-                    personFilterCollection.Add(ConvertPersonFilterEntityToDto(personFilter));
+                    foreach (var personFilter in personFilterEntities)
+                    {
+                        personFilterCollection.Add(ConvertPersonFilterEntityToDto(personFilter));
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Bad.Data");
+            }
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
             }
             return personFilterCollection;
         }
@@ -223,13 +233,17 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 //return ConvertPersonFilterEntityToDto((await _referenceDataRepository.GetPersonFiltersAsync(true)).Where(r => r.Guid == guid).First());
                 return ConvertPersonFilterEntityToDto(await _referenceDataRepository.GetPersonFilterByGuidAsync(guid));
             }
-            catch (KeyNotFoundException ex)
+            catch (KeyNotFoundException)
             {
-                throw new KeyNotFoundException("Person filter not found for GUID " + guid, ex);
+                //throw new KeyNotFoundException("Person filter not found for GUID " + guid, ex);
+                IntegrationApiExceptionAddError("Person filter not found for GUID " + guid, "GUID.Not.Found");
+                throw IntegrationApiException;
             }
-            catch (InvalidOperationException ex)
+            catch (InvalidOperationException)
             {
-                throw new KeyNotFoundException("Person filter not found for GUID " + guid, ex);
+                //throw new KeyNotFoundException("Person filter not found for GUID " + guid, ex);
+                IntegrationApiExceptionAddError("Person filter not found for GUID " + guid, "GUID.Not.Found");
+                throw IntegrationApiException;
             }
         }
 
@@ -461,15 +475,19 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// Get a source context from its ID
         /// </summary>
         /// <returns>SourceContext DTO object</returns>
-        public async Task<Ellucian.Colleague.Dtos.SourceContext> GetSourceContextsByIdAsync(string id)
+        public async Task<Ellucian.Colleague.Dtos.SourceContext> GetSourceContextsByIdAsync(string guid)
         {
             try
             {
-                return ConvertSourceContextEntityToSourceContextDto((await _referenceDataRepository.GetSourceContextsAsync(true)).Where(cc => cc.Guid == id).First());
+                return ConvertSourceContextEntityToSourceContextDto((await _referenceDataRepository.GetSourceContextsAsync(true)).Where(cc => cc.Guid == guid).First());
+            }
+            catch (KeyNotFoundException ex)
+            {
+                throw new KeyNotFoundException("source-contexts not found for GUID " + guid, ex);
             }
             catch (InvalidOperationException ex)
             {
-                throw new KeyNotFoundException("Source context not found for ID " + id, ex);
+                throw new KeyNotFoundException("source-contexts not found for GUID " + guid, ex);
             }
         }
 

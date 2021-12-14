@@ -151,5 +151,20 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// List of email addresses - confirmation email notifications would be sent to these email addresses on create / update .
         /// </summary>
         public List<string> ConfirmationEmailAddresses { get; set; }
+
+        /// <summary>
+        /// Vendor address.
+        /// </summary>
+        public string VendorAddress { get; set; }
+
+        /// <summary>
+        /// Address type code
+        /// </summary>
+        public string VendorAddressTypeCode { get; set; }
+
+        /// <summary>
+        /// Address type description
+        /// </summary>
+        public string VendorAddressTypeDesc { get; set; }
     }
 }

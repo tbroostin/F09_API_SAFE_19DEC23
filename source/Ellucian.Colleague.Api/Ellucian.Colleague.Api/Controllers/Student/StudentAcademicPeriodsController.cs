@@ -1,4 +1,4 @@
-﻿//Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -20,6 +20,7 @@ using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
 using System.Linq;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -53,7 +54,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="personFilter">Selection from SaveListParms definition or person-filters</param>
         /// <returns>List of StudentAcademicPeriods <see cref="Dtos.StudentAcademicPeriods"/> objects representing matching studentAcademicPeriods</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewStudentAcademicPeriods)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
         [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter2))]
@@ -70,6 +71,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _studentAcademicPeriodsService.ValidatePermissions(GetPermissionsMetaData());
                 string personFilterValue = string.Empty;
                 var personFilterObj = GetFilterObject<Dtos.Filters.PersonFilterFilter2>(_logger, "personFilter");
                 if ((personFilterObj != null) && (personFilterObj.personFilter != null))
@@ -135,7 +137,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID to desired studentAcademicPeriods</param>
         /// <returns>A studentAcademicPeriods object <see cref="Dtos.StudentAcademicPeriods"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewStudentAcademicPeriods)]
         public async Task<Dtos.StudentAcademicPeriods> GetStudentAcademicPeriodsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -153,6 +155,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _studentAcademicPeriodsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                    await _studentAcademicPeriodsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                    await _studentAcademicPeriodsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),

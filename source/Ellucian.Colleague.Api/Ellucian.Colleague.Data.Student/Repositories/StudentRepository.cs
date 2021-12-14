@@ -1,10 +1,12 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
-using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Entities.Transcripts;
 using Ellucian.Colleague.Domain.Student.Repositories;
@@ -17,6 +19,7 @@ using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Web.Security;
 using Ellucian.Web.Utility;
+using Microsoft.Practices.EnterpriseLibrary.Common.Utility;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -25,11 +28,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.Entities;
-using Ellucian.Colleague.Domain.Exceptions;
-using Ellucian.Colleague.Domain.Base.Services;
-using Microsoft.Practices.EnterpriseLibrary.Common.Utility;
-using Ellucian.Colleague.Domain.Base.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -505,10 +503,29 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         public async Task<GradeRestriction> GetGradeRestrictionsAsync(string id)
         {
+            if (id == null)
+            {
+                throw new ArgumentNullException("id", "id cannot be null while retrieving grade restrictions for the student");
+            }
             GetGradeViewRestrictionsRequest gradeViewRequest = new GetGradeViewRestrictionsRequest();
             gradeViewRequest.PersonId = id;
-            GetGradeViewRestrictionsResponse gradeViewResponse = await transactionInvoker.ExecuteAsync<GetGradeViewRestrictionsRequest, GetGradeViewRestrictionsResponse>(gradeViewRequest);
+            GetGradeViewRestrictionsResponse gradeViewResponse = null;
+            try
+            {
+                gradeViewResponse = await transactionInvoker.ExecuteAsync<GetGradeViewRestrictionsRequest, GetGradeViewRestrictionsResponse>(gradeViewRequest);
 
+            }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = string.Format("Colleague transaction error occurred while retrieving grade restrictions for the student {0}", id);
+                logger.Error(ce, message);
+                throw;
+            }
+            if (gradeViewResponse == null)
+            {
+                string message = string.Format("Response returned from Colleague transaction while registering a student {0} for sections is null", id);
+                throw new Exception(message);
+            }
             if (gradeViewResponse.IsRestricted == "N")
             {
                 return new GradeRestriction(false);
@@ -534,13 +551,29 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         public async Task<RegistrationEligibility> CheckRegistrationEligibilityAsync(string id)
         {
-
+            if (id == null)
+            {
+                throw new ArgumentNullException("id", "id is null while checking student registration eligibility");
+            }
             var messages = new List<RegistrationMessage>();
             var eligibilityRequest = new CheckRegistrationEligibilityRequest();
             eligibilityRequest.StudentId = id;
-
-            var eligibilityReponse = await transactionInvoker.ExecuteAsync<CheckRegistrationEligibilityRequest, CheckRegistrationEligibilityResponse>(eligibilityRequest);
-
+            CheckRegistrationEligibilityResponse eligibilityReponse = null;
+            try
+            {
+                eligibilityReponse = await transactionInvoker.ExecuteAsync<CheckRegistrationEligibilityRequest, CheckRegistrationEligibilityResponse>(eligibilityRequest);
+            }
+            catch (ColleagueSessionExpiredException ce)
+            {
+                string message = string.Format("Colleague transaction error occurred while retrieving a student {0} registration eligibility", id);
+                logger.Error(ce, message);
+                throw;
+            }
+            if (eligibilityReponse == null)
+            {
+                string message = string.Format("Response returned from Colleague transaction while registering a student {0} for sections is null", id);
+                throw new Exception(message);
+            }
             // Return messages regardless of eligibility.
             if (eligibilityReponse.Messages.Count() > 0)
             {
@@ -612,7 +645,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             var inString = string.Format("Registration Term Code: '{0}', Student Id: '{1}'", term.TermCode, id);
                             var formattedterm = ObjectFormatter.FormatAsXml(inString);
                             var errorMessage = string.Format("{0}" + Environment.NewLine + "{1}", inError, formattedterm);
-                            logger.Info(errorMessage);
+                            logger.Error(errorMessage);
                         }
                     }
                 }
@@ -630,6 +663,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>RegistrationEligibility Entity containing data about eligibility.</returns>
         public async Task<RegistrationEligibility> CheckRegistrationEligibilityEthosAsync(string id, List<string> termCodes)
         {
+            var exception = new RepositoryException();
+
             var messages = new List<RegistrationMessage>();
             var eligibilityRequest = new CheckRegEligibilityEthosRequest();
             eligibilityRequest.StudentId = id;
@@ -641,18 +676,50 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             eligibilityRequest.EthosTerms = termsList;
 
-            var eligibilityReponse = await transactionInvoker.ExecuteAsync<CheckRegEligibilityEthosRequest, CheckRegEligibilityEthosResponse>(eligibilityRequest);
-
-            // Return messages regardless of eligibility.
-            if (eligibilityReponse.Messages.Count() > 0)
+            CheckRegEligibilityEthosResponse eligibilityReponse = null;
+            try
             {
-                foreach (var message in eligibilityReponse.Messages)
+                eligibilityReponse = await transactionInvoker.ExecuteAsync<CheckRegEligibilityEthosRequest, CheckRegEligibilityEthosResponse>(eligibilityRequest);
+                if (eligibilityReponse == null)
                 {
-                    messages.Add(new RegistrationMessage() { Message = message });
+                    exception.AddError(new RepositoryError("Bad.Data", "An error occurred obtaining eligibility."));
+                }
+                else
+                {
+                    // Return messages regardless of eligibility.
+                    if (eligibilityReponse.Messages.Count() > 0)
+                    {
+                        foreach (var message in eligibilityReponse.Messages)
+                        {
+                            messages.Add(new RegistrationMessage() { Message = message });
+                        }
+                    }
                 }
             }
+            catch (Exception ex)
+            {
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message));
+            }
 
-            var registrationEligibility = new RegistrationEligibility(messages, eligibilityReponse.Eligible, eligibilityReponse.HasOverride);
+            // if any errors in constructor, throw error.
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+
+
+            RegistrationEligibility registrationEligibility = null;
+            try
+            {
+                registrationEligibility = new RegistrationEligibility(messages, eligibilityReponse.Eligible, eligibilityReponse.HasOverride);
+            }
+            catch (Exception ex)
+            {
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message));
+                throw exception;
+            }
+
+
 
             // Add in the additional eligibility information for each term as appropriate.
             if (eligibilityReponse.EthosTerms != null && eligibilityReponse.EthosTerms.Count > 0)
@@ -661,73 +728,91 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 foreach (var term in eligibilityReponse.EthosTerms)
                 {
 
-                    RegistrationEligibilityTermStatus status = RegistrationEligibilityTermStatus.Open;
-                    DateTimeOffset? anticipatedRegistrationDate = term.TermAddCheckDate.ToPointInTimeDateTimeOffset(term.TermAddCheckDate, colleagueTimeZone);
-
-                    // Setting the term Registration Eligibility Status:
-                    // 1) If that term has a Term Priority Override set status to override and move on.
-                    // 2) If the student is not eligible overall then he isn't eligibile in any term.
-                    // 3) If the student is eligible overall 
-                    //     a) see if he has Term add allowed and if so registration is open for him.
-                    //     b) see if he has a future term add check date. If so he is "future".  This would come from the reg period OR reg rules
-                    //     c) otherwise he is just not eligible because it is either past or some other issue.
-
-                    if (term.TermPriorityOverride)
+                    try
                     {
-                        status = RegistrationEligibilityTermStatus.HasOverride;
-                    }
-                    else if (eligibilityReponse.Eligible)
-                    {
-                        if (term.TermAddAllowed)
+                        var status = RegistrationEligibilityTermStatus.Open;
+                        DateTimeOffset? anticipatedRegistrationDate = term.TermAddCheckDate.ToPointInTimeDateTimeOffset(term.TermAddCheckDate, colleagueTimeZone);
+
+                        // Setting the term Registration Eligibility Status:
+                        // 1) If that term has a Term Priority Override set status to override and move on.
+                        // 2) If the student is not eligible overall then he isn't eligibile in any term.
+                        // 3) If the student is eligible overall 
+                        //     a) see if he has Term add allowed and if so registration is open for him.
+                        //     b) see if he has a future term add check date. If so he is "future".  This would come from the reg period OR reg rules
+                        //     c) otherwise he is just not eligible because it is either past or some other issue.
+
+                        if (term.TermPriorityOverride)
                         {
-                            status = RegistrationEligibilityTermStatus.Open;
+                            status = RegistrationEligibilityTermStatus.HasOverride;
                         }
-                        else if (anticipatedRegistrationDate != null && anticipatedRegistrationDate > DateTimeOffset.Now)
+                        else if (eligibilityReponse.Eligible)
                         {
-                            status = RegistrationEligibilityTermStatus.Future;
+                            if (term.TermAddAllowed)
+                            {
+                                status = RegistrationEligibilityTermStatus.Open;
+                            }
+                            else if (anticipatedRegistrationDate != null && anticipatedRegistrationDate > DateTimeOffset.Now)
+                            {
+                                status = RegistrationEligibilityTermStatus.Future;
+                            }
+                            else
+                            {
+                                status = RegistrationEligibilityTermStatus.NotEligible;
+                            }
                         }
                         else
                         {
                             status = RegistrationEligibilityTermStatus.NotEligible;
                         }
-                    }
-                    else
-                    {
-                        status = RegistrationEligibilityTermStatus.NotEligible;
-                    }
 
-                    try
-                    {
-                        RegistrationEligibilityTerm regTerm = new RegistrationEligibilityTerm(term.TermCode, term.TermCheckPriority, term.TermPriorityOverride);
-                        regTerm.AnticipatedTimeForAdds = anticipatedRegistrationDate;
-                        regTerm.Status = status;
-                        regTerm.Message = term.TermAddMessages;
-                        regTerm.SkipWaitlistAllowed = term.TermSkipWaitlistAllowed;
-                        regTerm.FailedRegistrationTermRules = term.TermRegRulesFailed;
-                        registrationEligibility.AddRegistrationEligibilityTerm(regTerm);
-                    }
-                    catch (Exception)
-                    {
-                        if (logger.IsInfoEnabled)
+                        try
                         {
-                            var inError = "Registration Eligibility Term corrupt";
-                            var inString = string.Format("Registration Term Code: '{0}', Student Id: '{1}'", term.TermCode, id);
-                            var formattedterm = ObjectFormatter.FormatAsXml(inString);
-                            var errorMessage = string.Format("{0}" + Environment.NewLine + "{1}", inError, formattedterm);
-                            logger.Info(errorMessage);
+                            var regTerm = new RegistrationEligibilityTerm(term.TermCode, term.TermCheckPriority, term.TermPriorityOverride);
+                            regTerm.AnticipatedTimeForAdds = anticipatedRegistrationDate;
+                            regTerm.Status = status;
+                            regTerm.Message = term.TermAddMessages;
+                            regTerm.SkipWaitlistAllowed = term.TermSkipWaitlistAllowed;
+                            regTerm.FailedRegistrationTermRules = term.TermRegRulesFailed;
+                            registrationEligibility.AddRegistrationEligibilityTerm(regTerm);
                         }
+                        catch (Exception ex)
+                        {
+                            if (logger.IsInfoEnabled)
+                            {
+                                var inError = "Registration Eligibility Term corrupt";
+                                var inString = string.Format("Registration Term Code: '{0}', Student Id: '{1}'", term.TermCode, id);
+                                var formattedterm = ObjectFormatter.FormatAsXml(inString);
+                                var errorMessage = string.Format("{0}" + Environment.NewLine + "{1}", inError, formattedterm);
+                                logger.Error(errorMessage);
+                            }
+
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        exception.AddError(new RepositoryError("Bad.Data", ex.Message));
                     }
                 }
             }
+          
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+
 
             return registrationEligibility;
         }
 
         public async Task<RegistrationResponse> RegisterAsync(RegistrationRequest request)
         {
+            if(request==null)
+            {
+                throw new ArgumentNullException("request", "request cannot be null for registration");
+            }
             RegisterForSectionsRequest updateRequest = new RegisterForSectionsRequest();
             updateRequest.Sections = new List<Sections>();
-
+            
             updateRequest.StudentId = request.StudentId;
             // For every section submitted, add a Sections object to the updateRequest
             foreach (var section in request.Sections)
@@ -735,10 +820,23 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                 updateRequest.Sections.Add(new Sections() {SectionIds = section.SectionId, SectionAction = section.Action.ToString(), SectionCredits = section.Credits, SectionDropReasonCode = section.DropReasonCode});
             }
-
-            // Submit the registration
-            RegisterForSectionsResponse updateResponse = await transactionInvoker.ExecuteAsync<RegisterForSectionsRequest, RegisterForSectionsResponse>(updateRequest);
-
+            RegisterForSectionsResponse updateResponse = null;
+            try
+            {
+                // Submit the registration
+                updateResponse = await transactionInvoker.ExecuteAsync<RegisterForSectionsRequest, RegisterForSectionsResponse>(updateRequest);
+            }
+            catch (ColleagueSessionExpiredException ce) 
+            {
+                string message = string.Format("Colleague transaction error occurred while registering a student {0} for sections", request.StudentId);
+                logger.Error(ce, message);
+                throw;
+            }
+            if(updateResponse==null)
+            {
+                string message= string.Format("Response returned from Colleague transaction while registering a student {0} for sections is null", request.StudentId);
+                throw new Exception(message);
+            }
             // If there is any error message - throw an exception 
             if (!string.IsNullOrEmpty(updateResponse.ErrorMessage))
             {
@@ -1411,7 +1509,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     }
                                     catch (Exception)
                                     {
-                                        logger.Info("Unable to add formatted name to person " + personContract.Recordkey + " with type " + pFormat.PersonFormattedNameTypesAssocMember + " and name " + pFormat.PersonFormattedNamesAssocMember);
+                                        logger.Error("Unable to add formatted name to person " + personContract.Recordkey + " with type " + pFormat.PersonFormattedNameTypesAssocMember);
                                     }
                                 }
                             }
@@ -1486,7 +1584,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                                 var message = "Unable to add advisor '" + studentAdvisement.StadFaculty
                                                     + "' for student '" + studentAdvisement.StadStudent + "' for type '"
                                                     + studentAdvisement.StadType + "'";
-                                                logger.Warn(e, message);
+                                                logger.Error(e, message);
                                             }
                                             try
                                             {
@@ -1497,7 +1595,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                                 var message = "Unable to add advisement for advisor'" + studentAdvisement.StadFaculty
                                                     + "' for student '" + studentAdvisement.StadStudent + "' for type '"
                                                     + studentAdvisement.StadType + "'";
-                                                logger.Warn(e, message);
+                                                logger.Error(e, message);
                                             }
                                         }
                                     }
@@ -1561,7 +1659,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 }
                                 catch (Exception e)
                                 {
-                                    LogDataError("Students", students.Recordkey, sl, e);
+                                    //LogDataError("Students", students.Recordkey, sl, e);
+                                    logger.Error("Unable to retrieve information for student " + students.Recordkey + ". " + e.Message);
                                 }
                             }
                         }
@@ -1595,7 +1694,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
                         catch (Exception e)
                         {
-                            logger.Warn(e, string.Format("Unable to determine the educational goal for '{0}' ", students.Recordkey));
+                            logger.Error(e, string.Format("Unable to determine the educational goal for '{0}' ", students.Recordkey));
                         }
 
 
@@ -1621,7 +1720,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     }
                                     catch (Exception e)
                                     {
-                                        logger.Warn(e, string.Format("Unable to add Email Address to student entity for Student: '{0}'", students.Recordkey));
+                                        logger.Error(e, string.Format("Unable to add Email Address to student entity for Student: '{0}'", students.Recordkey));
                                     }
                                 }
                             }
@@ -1810,7 +1909,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             }
                             catch (Exception e)
                             {
-                                logger.Warn(e, string.Format("Unable to determine the Residency Status for '{0}'", students.Recordkey));
+                                logger.Error(e, string.Format("Unable to determine the Residency Status for '{0}'", students.Recordkey));
                             }
 
                             // Add (all) student residencies
@@ -1827,7 +1926,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     }
                                     catch (Exception e)
                                     {
-                                        LogDataError("Students", students.Recordkey, sr, e);
+                                        logger.Error("Unable to retrieve information for student " + students.Recordkey + ". " + e.Message);
+                                        //LogDataError("Students", students.Recordkey, sr, e);
                                     }
                                 }
                             }
@@ -1875,7 +1975,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                                 }
                                             }
 
-                                            StudentAcademicLevel levelDomain = new StudentAcademicLevel(acadLevel, studentAcadLevel.StaAdmitStatus, studentAcadLevel.StaClass, studentAcadLevel.StaStartTerm, studentAcadLevel.StaStudentAcadCred, isActive);
+                                            StudentAcademicLevel levelDomain = new StudentAcademicLevel(acadLevel, studentAcadLevel.StaAdmitStatus, studentAcadLevel.StaClass, studentAcadLevel.StaStartTerm, studentAcadLevel.StaStudentAcadCred, isActive, studentAcadLevel.StaStartDate, studentAcadLevel.StaEndDate);
                                             studentEntity.StudentAcademicLevels.Add(levelDomain);
                                         }
                                         // If we haven't already identified this student as a transfer student via
@@ -1951,7 +2051,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 // log any ids that were not found.
                 var errorMessage = string.Format("The following student Ids were requested but not found: '{0}'", string.Join(",", studentIdsNotFound.ToArray()));
-                logger.Info(errorMessage);
+                logger.Error(errorMessage);
             }
             return studentResults;
         }
@@ -2652,7 +2752,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (personContract == null)
             {
                 var errorMessage = string.Format("No Person Data available for student '{0}'", personContract.Recordkey);
-                logger.Warn(errorMessage);
+                logger.Error(errorMessage);
             }
             List<string> parentIds = personContract.Parents;
 
@@ -2813,7 +2913,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 response = await transactionInvoker.ExecuteAsync<CreatePlainTextTranscriptRequest, CreatePlainTextTranscriptResponse>(request);
                 if (string.IsNullOrEmpty(response.TranscriptText))
                 {
-                    logger.Info(string.Format("Unable to generate transcript text for student: '{0}' and transcript grouping: '{1}'", studentId, transcriptGrouping));
+                    logger.Error(string.Format("Unable to generate transcript text for student: '{0}' and transcript grouping: '{1}'", studentId, transcriptGrouping));
                     transcript = "Unable to generate transcript at this time.";
                 }
                 else
@@ -3347,7 +3447,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             }
                             catch (Exception e)
                             {
-                                logger.Warn(e, string.Format("Unable to determine active Student Cohorts for studentAcadLevel '{0}'", studentAcadLevel.Recordkey));
+                                logger.Error(e, string.Format("Unable to determine active Student Cohorts for studentAcadLevel '{0}'", studentAcadLevel.Recordkey));
                             }
                         }
                     }
@@ -3759,7 +3859,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     }
                                     catch (Exception e)
                                     {
-                                        logger.Warn(e, string.Format("Unable to determine the Student Cohorts for '{0}'", students.Recordkey));
+                                        logger.Error(e, string.Format("Unable to determine the Student Cohorts for '{0}'", students.Recordkey));
                                     }
                                     studentEntity.StudentAcademicLevels.Add(levelDomain);
                                 }
@@ -3936,7 +4036,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     }
                                     catch (Exception e)
                                     {
-                                        logger.Warn(e, string.Format("Unable to determine the Student Cohorts for '{0}'", students.Recordkey));
+                                        logger.Error(e, string.Format("Unable to determine the Student Cohorts for '{0}'", students.Recordkey));
                                     }
                                     studentEntity.StudentAcademicLevels.Add(levelDomain);
                                 }
@@ -4013,7 +4113,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             logger.Info("  STEP5.2 FilterByEntity(base)... completed in " + watch.ElapsedMilliseconds.ToString());
             if (studentIds != null)
             {
-                logger.Info("  STEP5.2 Filtered PERSONS to " + studentIds.Count() + " STUDENTS.");
+                logger.Debug("  STEP5.2 Filtered PERSONS to " + studentIds.Count() + " STUDENTS.");
             }
 
             //// If there are assigned advisees (only set if the user can only view assigned advisees), limit the list
@@ -4078,7 +4178,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             logger.Info("  STEP5.2 FilterByEntity(base)... completed in " + watch.ElapsedMilliseconds.ToString());
             if (studentIds != null)
             {
-                logger.Info("  STEP5.2 Filtered PERSONS to " + studentIds.Count() + " STUDENTS.");
+                logger.Debug("  STEP5.2 Filtered PERSONS to " + studentIds.Count() + " STUDENTS.");
             }
 
             watch.Restart();
@@ -4127,7 +4227,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             studentIdsReviewRequested = await DataReader.SelectAsync("DEGREE_PLAN", searchString, adviseeIds.ToArray());
 
             watch.Stop();
-            logger.Info("    STEPX.3.1 SELECT DEGREE_PLAN WITH " + searchString + "... completed in " + watch.ElapsedMilliseconds.ToString());
+            logger.Debug("    STEPX.3.1 SELECT DEGREE_PLAN WITH " + searchString + "... completed in " + watch.ElapsedMilliseconds.ToString());
 
             string[] studentIdsReviewRequestedSorted = new string[] { };
             if (studentIdsReviewRequested != null && studentIdsReviewRequested.Count() > 0)
@@ -4236,7 +4336,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             {
                                 message += " " + tempId;
                             }
-                            logger.Info(message);
+                            logger.Debug(message);
                         }
                     }
                     else
@@ -4404,6 +4504,89 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             return studentEntities;
         }
+        /// <summary>
+        /// Get Student Academic Levels
+        /// </summary>
+        /// <param name="studentId">StudentId</param>
+        /// <returns>List of Student Academic Level</returns>
+
+        public async Task<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.StudentAcademicLevel>> GetStudentAcademicLevelsAsync(string studentId)
+        {
+            if(string.IsNullOrWhiteSpace(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Student Id must be provided to get student's academic levels");
+            }
+            List<Ellucian.Colleague.Domain.Student.Entities.StudentAcademicLevel> studentAcademicLevels = new List<Ellucian.Colleague.Domain.Student.Entities.StudentAcademicLevel>();
+            try
+            {
+                Collection<StudentAcadLevels> studentAcadLevelsData = new Collection<StudentAcadLevels>();
+
+                // get students data
+                Ellucian.Colleague.Data.Student.DataContracts.Students student = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.Students>(studentId);
+                if (student != null)
+                {
+                    // get student acad levels keys
+                    var acadLevelIds = new List<string>();
+                    if (student.StuAcadLevels != null && student.StuAcadLevels.Any())
+                    {
+                        foreach (var acadLevelId in student.StuAcadLevels)
+                        {
+                            if (acadLevelId != null)
+                            {
+                                acadLevelIds.Add(student.Recordkey + "*" + acadLevelId);
+                            }
+                        }
+                        studentAcadLevelsData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StudentAcadLevels>(acadLevelIds.Distinct().ToArray());
+                        // Gather this student's academic level data.
+                        if (studentAcadLevelsData != null && studentAcadLevelsData.Any())
+                        {
+                            foreach (var acadLevel in student.StuAcadLevels)
+                            {
+                                try
+                                {
+                                    string studentAcadLevelKey = studentId + "*" + acadLevel;
+                                    StudentAcadLevels studentAcadLevel = studentAcadLevelsData.Where(sa => sa.Recordkey == studentAcadLevelKey).FirstOrDefault();
+                                    if (studentAcadLevel != null)
+                                    {
+                                        StudentAcademicLevel levelDomain = new StudentAcademicLevel(acadLevel, studentAcadLevel.StaAdmitStatus, studentAcadLevel.StaClass, studentAcadLevel.StaStartTerm, studentAcadLevel.StaStudentAcadCred, false, studentAcadLevel.StaStartDate, studentAcadLevel.StaEndDate);
+                                        studentAcademicLevels.Add(levelDomain);
+                                    }
+                                    else
+                                    {
+                                        logger.Error("Cannot find student's academic level for the key- " + studentAcadLevelKey);
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    logger.Error(ex, string.Format("Couldn't process student's {0} academic level {1}", studentId, acadLevel));
+                                }
+                            }
+                        }
+                        else
+                        {
+                            logger.Error(string.Format("Cannot find any academic levels for the student {0} in STUDENT.ACAD.LEVELS file", studentId));
+                        }
+                    }
+                    else
+                    {
+                        logger.Error(string.Format("Cannot find any academic levels pointers for the student {0} in STUDENTS file", studentId));
+
+                    }
+                }
+                    
+                else
+                {
+                    logger.Error(string.Format("Couldn't find student details from STUDENTS file for the id {0}", studentId));
+                }
+            }
+            catch(Exception ex)
+            {
+                logger.Error(ex, "Exception occured while retrieving academic levels for the student- " + studentId);
+                throw;
+            }
+            return studentAcademicLevels;
+        }
+
 
         /// <summary>
         /// Reads the required data from Colleague and returns a Students Entity model.
@@ -4501,7 +4684,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
                         catch (Exception)
                         {
-                            logger.Info("Unable to add formatted name to person " + personData.Recordkey + " with type " + pFormat.PersonFormattedNameTypesAssocMember + " and name " + pFormat.PersonFormattedNamesAssocMember);
+                            logger.Error("Unable to add formatted name to person " + personData.Recordkey + " with type " + pFormat.PersonFormattedNameTypesAssocMember);
                         }
                     }
                 }
@@ -4517,7 +4700,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                     catch (Exception)
                     {
-                        logger.Info("Unable to find name address hierarchy with ID " + planningDefaults.StwebDisplayNameHierarchy + ". Not calculating hierarchy name.");
+                        logger.Error("Unable to find name address hierarchy with ID " + planningDefaults.StwebDisplayNameHierarchy + ". Not calculating hierarchy name.");
 
                     }
                     if (hierarchy != null)
@@ -4569,7 +4752,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 catch (Exception e)
                 {
-                    logger.Warn(e, string.Format("Unable to determine the educational goal for '{0}' ", studentData.Recordkey));
+                    logger.Error(e, string.Format("Unable to determine the educational goal for '{0}' ", studentData.Recordkey));
                 }
 
 
@@ -4586,7 +4769,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
                         catch (Exception ex)
                         {
-                            logger.Warn(ex, string.Format("Unable to process an Email Address for Student: '{0}'", studentData.Recordkey));
+                            logger.Error(ex, string.Format("Unable to process an Email Address for Student: '{0}'", studentData.Recordkey));
                         }
                     }
                 }

@@ -42,9 +42,8 @@
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net40\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -61,15 +60,56 @@
     <Compile Include="AcademicCredit2.cs" />
     <Compile Include="AcademicCreditsWithInvalidKeys.cs" />
     <Compile Include="AcademicCredit3.cs" />
+    <Compile Include="AcademicRecordConfiguration.cs" />
+    <Compile Include="AddOfficeHours.cs" />
+    <Compile Include="AnonymousGradingQueryCriteria .cs" />
+    <Compile Include="AnonymousGradingType.cs" />
+    <Compile Include="AnonymousGrading\AnonymousGradeError.cs" />
+    <Compile Include="AnonymousGrading\PreliminaryAnonymousGradeUpdateResult.cs" />
+    <Compile Include="AnonymousGrading\PreliminaryAnonymousGradeUpdateStatus.cs" />
+    <Compile Include="AnonymousGrading\SectionPreliminaryAnonymousGrading.cs" />
+    <Compile Include="Award3.cs" />
     <Compile Include="CaseCategory.cs" />
     <Compile Include="CaseClosureReason.cs" />
     <Compile Include="CasePriority.cs" />
     <Compile Include="CatalogFilterOption3.cs" />
     <Compile Include="CatalogFilterType3.cs" />
+    <Compile Include="CatalogSearchResultHeaderOption2.cs" />
+    <Compile Include="CatalogSearchResultHeaderOption.cs" />
+    <Compile Include="CatalogSearchResultHeaderType2.cs" />
+    <Compile Include="CatalogSearchResultHeaderType.cs" />
     <Compile Include="CatlogSortDirection.cs" />
+    <Compile Include="CatlogSortType2.cs" />
     <Compile Include="CatlogSortType.cs" />
+    <Compile Include="CensusDatePositionSubmission.cs" />
+    <Compile Include="CompletedAdvisement.cs" />
     <Compile Include="ContributionsQueryCriteria.cs" />
+    <Compile Include="CourseCatalogConfiguration4.cs" />
     <Compile Include="CourseCatalogConfiguration3.cs" />
+    <Compile Include="DegreePlans\CoursePlaceholder.cs" />
+    <Compile Include="DeleteOfficeHours.cs" />
+    <Compile Include="ExpandRequirementSetting.cs" />
+    <Compile Include="GraduationConfiguration2.cs" />
+    <Compile Include="LastDateAttendedNeverAttendedFieldDisplayType.cs" />
+    <Compile Include="LoanType2.cs" />
+    <Compile Include="MyProgressConfiguration.cs" />
+    <Compile Include="Portal\PortalBookInformation.cs" />
+    <Compile Include="Portal\PortalCourse.cs" />
+    <Compile Include="Portal\PortalDeletedCoursesResult.cs" />
+    <Compile Include="Portal\PortalDeletedSectionsResult.cs" />
+    <Compile Include="Portal\PortalEvent.cs" />
+    <Compile Include="Portal\PortalEventsAndReminders.cs" />
+    <Compile Include="Portal\PortalEventsAndRemindersQueryCriteria.cs" />
+    <Compile Include="Portal\PortalReminder.cs" />
+    <Compile Include="Portal\PortalSection.cs" />
+    <Compile Include="Portal\PortalSectionMeeting.cs" />
+    <Compile Include="Portal\PortalStudentPreferredCourseSectionUpdateResult.cs" />
+    <Compile Include="Portal\PortalStudentPreferredCourseSectionUpdateStatus.cs" />
+    <Compile Include="Portal\PortalUpdatedCoursesResult.cs" />
+    <Compile Include="Portal\PortalUpdatedSectionsResult.cs" />
+    <Compile Include="AnonymousGrading\PreliminaryAnonymousGrade.cs" />
+    <Compile Include="Requirements\AcademicRequirementGroup.cs" />
+    <Compile Include="Requirements\AcademicCredit.cs" />
     <Compile Include="RetentionAlertClosedCase.cs" />
     <Compile Include="RetentionAlertClosedCasesByReason.cs" />
     <Compile Include="RetentionAlertCaseCategoryOrgRoles.cs" />
@@ -103,6 +143,18 @@
     <Compile Include="InstantEnrollment\InstantEnrollmentZeroCostRegistrationResult.cs" />
     <Compile Include="InstantEnrollment\PaymentMethod.cs" />
     <Compile Include="InstantEnrollment\PersonMatchCriteriaInstantEnrollment.cs" />
+    <Compile Include="RetentionAlertWorkCase2.cs" />
+    <Compile Include="SectionAvailabilityStatusType.cs" />
+    <Compile Include="SectionCensusToCertify.cs" />
+    <Compile Include="SectionCensusCertification.cs" />
+    <Compile Include="SectionCensusConfiguration.cs" />
+    <Compile Include="SectionDropRegistration.cs" />
+    <Compile Include="SectionCourseType.cs" />
+    <Compile Include="SectionGradingStatus.cs" />
+    <Compile Include="SectionGradeSectionResponse.cs" />
+    <Compile Include="SectionGrades4.cs" />
+    <Compile Include="SectionInstructionalMethod.cs" />
+    <Compile Include="SectionFaculty.cs" />
     <Compile Include="SectionPage.cs" />
     <Compile Include="CatalogFilterOption2.cs" />
     <Compile Include="CatalogFilterType2.cs" />
@@ -117,6 +169,8 @@
     <Compile Include="RetentionAlertWorkCaseReassign.cs" />
     <Compile Include="RetentionAlertWorkCaseSendMail.cs" />
     <Compile Include="RetentionAlertSendEmailPreference.cs" />
+    <Compile Include="SectionPage2.cs" />
+    <Compile Include="SectionSearchCriteria2.cs" />
     <Compile Include="SectionSearchCriteria.cs" />
     <Compile Include="CaseType.cs" />
     <Compile Include="FacultyOfficeHours.cs" />
@@ -141,6 +195,7 @@
     <Compile Include="RetentionAlertWorkCase.cs" />
     <Compile Include="SectionMidtermGradingComplete.cs" />
     <Compile Include="SectionMidtermGradingCompleteForPost.cs" />
+    <Compile Include="SectionSeats.cs" />
     <Compile Include="SelfServiceCourseCatalogSearchResultView.cs" />
     <Compile Include="SelfServiceCourseCatalogSearchView.cs" />
     <Compile Include="ShoppingSheetAwardGroup2.cs" />
@@ -207,6 +262,8 @@
     <Compile Include="SectionWaitlistStudent.cs" />
     <Compile Include="ShoppingSheetAwardGroup.cs" />
     <Compile Include="StudentActivePrograms.cs" />
+    <Compile Include="StudentAnonymousGrading.cs" />
+    <Compile Include="StudentOverloadPetition.cs" />
     <Compile Include="StudentProfileConfiguration.cs" />
     <Compile Include="StudentProfilePersonConfiguration.cs" />
     <Compile Include="StudentSectionsAttendances.cs" />
@@ -263,6 +320,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="StudentRequestConfiguration.cs" />
+    <Compile Include="SectionWaitlistQueryCriteria.cs" />
     <Compile Include="SubTestResult2.cs" />
     <Compile Include="TestResult2.cs" />
     <Compile Include="StudentWaitlistStatus.cs" />
@@ -272,6 +330,7 @@
     <Compile Include="TransferWork\Equivalency.cs" />
     <Compile Include="TransferWork\ExternalCourseWork.cs" />
     <Compile Include="TransferWork\EquivalentCourseCredit.cs" />
+    <Compile Include="UpdateOfficeHours.cs" />
     <Compile Include="YearlyCycle.cs" />
     <Compile Include="SessionCycle.cs" />
     <Compile Include="CapSize.cs" />
@@ -362,7 +421,9 @@
     <Compile Include="SectionGrades.cs" />
     <Compile Include="SectionMeeting2.cs" />
     <Compile Include="Section3.cs" />
+    <Compile Include="Section4.cs" />
     <Compile Include="AttendanceTrackingType.cs" />
+    <Compile Include="AttendanceTrackingType2.cs" />
     <Compile Include="CustomField.cs" />
     <Compile Include="ConnectionStatus.cs" />
     <Compile Include="PreferredSectionMessage.cs" />

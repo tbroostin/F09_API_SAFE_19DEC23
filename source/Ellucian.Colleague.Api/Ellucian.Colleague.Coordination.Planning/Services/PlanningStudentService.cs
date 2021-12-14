@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -50,7 +50,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             List<Dtos.Student.PlanningStudent> planningStudents = new List<Dtos.Student.PlanningStudent>();
             string requestor = CurrentUser.PersonId;
             bool hasPrivacyRestriction = false;
-            if (!HasPermission(StudentPermissionCodes.ViewStudentInformation) && !(await UserIsAdvisorAsync(requestor)))
+            if (!HasPermission(StudentPermissionCodes.ViewPersonInformation) && !(await UserIsAdvisorAsync(requestor)))
             {
                 throw new PermissionsException("User does not have permissions to query students");
             }

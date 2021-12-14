@@ -10,9 +10,10 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
     [Serializable]
     public enum LeaveTransactionType
     {
-        
+
         Earned,
         Used,
-        Adjusted
+        Adjusted,
+        LeaveReporting
     }
 }

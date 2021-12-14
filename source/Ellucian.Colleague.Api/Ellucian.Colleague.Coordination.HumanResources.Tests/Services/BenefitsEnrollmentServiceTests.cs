@@ -269,7 +269,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         public async Task AddEmployeeBenefitsEnrollmentPoolAsync_Throws_ApplicationException_When_Repository_Returns_Null()
         {
             benefitsEnrollmentRepositoryMock.Setup(i => i.AddEmployeeBenefitsEnrollmentPoolAsync(It.IsAny<string>(), It.IsAny<EmployeeBenefitsEnrollmentPoolItem>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
             await service.AddEmployeeBenefitsEnrollmentPoolAsync(personId, new Dto.EmployeeBenefitsEnrollmentPoolItem());
         }
 
@@ -328,7 +328,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         [ExpectedException(typeof(ApplicationException))]
         public async Task UpdateEmployeeBenefitsEnrollmentPoolAsync_Throws_ApplicationException()
         {
-            benefitsEnrollmentRepositoryMock.Setup(i => i.UpdateEmployeeBenefitsEnrollmentPoolAsync(personId, It.IsAny<EmployeeBenefitsEnrollmentPoolItem>())).ReturnsAsync(null);
+            benefitsEnrollmentRepositoryMock.Setup(i => i.UpdateEmployeeBenefitsEnrollmentPoolAsync(personId, It.IsAny<EmployeeBenefitsEnrollmentPoolItem>())).ReturnsAsync(() => null);
             await service.UpdateEmployeeBenefitsEnrollmentPoolAsync(personId, employeeBenefitsEnrollmentPoolItemDto);
         }
 

@@ -1,18 +1,21 @@
-﻿//Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Controllers.ColleagueFinance;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
@@ -20,7 +23,9 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 {
@@ -309,6 +314,93 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             await _vendorContactController.GetVendorContactsAsync(paging, criteriaFilter);
         }
 
+        //GET v1.0.0
+        //Successful
+        //GetVendorContactsAsync
+        [TestMethod]
+        public async Task VendorContactsController_GetVendorContactsAsync_Permissions()
+        {
+            var expected = _vendorContactsCollection.FirstOrDefault(x => x.Id.Equals(VendorsContactGuid, StringComparison.OrdinalIgnoreCase));
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "VendorContacts" },
+                    { "action", "GetVendorContactsAsync" }
+                };
+            HttpRoute route = new HttpRoute("vendor-contacts", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorContactController.Request.SetRouteData(data);
+            _vendorContactController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.ViewVendorContacts);
+
+            var controllerContext = _vendorContactController.ControllerContext;
+            var actionDescriptor = _vendorContactController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var tuple = new Tuple<IEnumerable<Dtos.VendorContacts>, int>(_vendorContactsCollection, 1);
+
+            _vendorContactServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _vendorContactServiceMock.Setup(x => x.GetVendorContactsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorContacts>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            var vendors = await _vendorContactController.GetVendorContactsAsync(new Paging(10, 0), criteriaFilter);
+
+            Object filterObject;
+            _vendorContactController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewVendorContacts));
+
+
+        }
+
+        //GET v1.0.0
+        //Exception
+        //GetVendorContactsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorContactsController_GetVendorContactsAsync_Invalid_Permissions()
+        {
+            var paging = new Paging(100, 0);
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "VendorContacts" },
+                    { "action", "GetVendorContactsAsync" }
+                };
+            HttpRoute route = new HttpRoute("vendor-contacts", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorContactController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _vendorContactController.ControllerContext;
+            var actionDescriptor = _vendorContactController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _vendorContactServiceMock.Setup(x => x.GetVendorContactsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VendorContacts>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                _vendorContactServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view vendor-contacts."));
+                await _vendorContactController.GetVendorContactsAsync(paging, criteriaFilter);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion GetVendorContacts
 
         #region GetVendorContactsByGuid
@@ -390,6 +482,91 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 .Throws<Exception>();
             await _vendorContactController.GetVendorContactsByGuidAsync(VendorsContactGuid);
         }
+
+        //GET by id v1.0.0
+        //Successful
+        //GetVendorContactsByGuidAsync
+        [TestMethod]
+        public async Task VendorContactsController_GetVendorContactsByGuidAsync_Permissions()
+        {
+            var expected = _vendorContactsCollection.FirstOrDefault(x => x.Id.Equals(VendorsContactGuid, StringComparison.OrdinalIgnoreCase));
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "VendorContacts" },
+                    { "action", "GetVendorContactsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("vendor-contacts", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorContactController.Request.SetRouteData(data);
+            _vendorContactController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.ViewVendorContacts);
+
+            var controllerContext = _vendorContactController.ControllerContext;
+            var actionDescriptor = _vendorContactController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _vendorContactServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _vendorContactServiceMock.Setup(x => x.GetVendorContactsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(expected);
+            var actual = await _vendorContactController.GetVendorContactsByGuidAsync(VendorsContactGuid);
+
+            Object filterObject;
+            _vendorContactController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewVendorContacts));
+
+
+        }
+
+        //GET by id v1.0.0
+        //Exception
+        //GetVendorContactsByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task VendorContactsController_GetVendorContactsByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "VendorContacts" },
+                    { "action", "GetVendorContactsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("vendor-contacts", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _vendorContactController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _vendorContactController.ControllerContext;
+            var actionDescriptor = _vendorContactController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _vendorContactServiceMock.Setup(x => x.GetVendorContactsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                _vendorContactServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view vendor-contacts."));
+                await _vendorContactController.GetVendorContactsByGuidAsync(VendorsContactGuid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
 
         #endregion GetVendorContactsByGuid
 

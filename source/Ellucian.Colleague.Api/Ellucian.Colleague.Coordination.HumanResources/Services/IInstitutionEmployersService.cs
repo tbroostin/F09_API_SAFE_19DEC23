@@ -13,6 +13,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
     public interface IInstitutionEmployersService : IBaseService
     {
         Task<IEnumerable<Ellucian.Colleague.Dtos.InstitutionEmployers>> GetInstitutionEmployersAsync(bool bypassCache = false);
-        Task<Ellucian.Colleague.Dtos.InstitutionEmployers> GetInstitutionEmployersByGuidAsync(string guid);
+        Task<Ellucian.Colleague.Dtos.InstitutionEmployers> GetInstitutionEmployersByGuidAsync(string guid, bool bypassCache = true);
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Entities;
@@ -151,7 +151,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 };
                 studentProgramRepositoryMock.Setup(spr => spr.GetStudentProgramsByIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>(), It.IsAny<Term>(), It.IsAny<bool>())).ReturnsAsync(studentPrograms);
 
-                studentRepositoryMock.Setup(sr => sr.GetStudentAccessAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(null);
+                studentRepositoryMock.Setup(sr => sr.GetStudentAccessAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(() => null);
 
                 service = new StudentProgramService(adapterRegistry, studentRepository, studentProgramRepository, termRepository, currentUserFactory, roleRepository, logger, configurationRepository);
 

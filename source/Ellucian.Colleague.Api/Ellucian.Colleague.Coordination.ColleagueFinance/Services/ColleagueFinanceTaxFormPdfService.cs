@@ -276,12 +276,20 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 parameters.Add(utility.BuildReportParameter("Box5Amt", GetAmountFromBoxList(taxFormBoxesList, "5")));
                 parameters.Add(utility.BuildReportParameter("Box6Amt", GetAmountFromBoxList(taxFormBoxesList, "6")));
                 parameters.Add(utility.BuildReportParameter("Box8Amt", GetAmountFromBoxList(taxFormBoxesList, "8")));
-                parameters.Add(utility.BuildReportParameter("Box10Amt", GetAmountFromBoxList(taxFormBoxesList, "10")));
-                parameters.Add(utility.BuildReportParameter("Box11Amt", pdfData.ForeignTaxPaid ?? ""));        
+                parameters.Add(utility.BuildReportParameter("Box10Amt", GetAmountFromBoxList(taxFormBoxesList, "10")));        
                 parameters.Add(utility.BuildReportParameter("Box13Amt", GetAmountFromBoxList(taxFormBoxesList, "13")));
                 parameters.Add(utility.BuildReportParameter("Box14Amt", GetAmountFromBoxList(taxFormBoxesList, "14")));
 
-                if (pdfData.TaxYear == "2020")
+                if (pdfData.TaxYear == "2021")
+                {
+                    parameters.Add(utility.BuildReportParameter("Box11Amt", GetAmountFromBoxList(taxFormBoxesList, "11")));
+                }
+                else
+                {
+                    parameters.Add(utility.BuildReportParameter("Box11Amt", pdfData.ForeignTaxPaid ?? ""));
+                }
+
+                if (pdfData.TaxYear == "2020" || pdfData.TaxYear == "2021")
                 {
                     parameters.Add(utility.BuildReportParameter("Box7", pdfData.IsDirectResale ? "X" : ""));
                     parameters.Add(utility.BuildReportParameter("Box9Amt", GetAmountFromBoxList(taxFormBoxesList, "9")));
@@ -427,7 +435,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
                 parameters.Add(utility.BuildReportParameter("PayersEIN", pdfData.PayersEin));
                 parameters.Add(utility.BuildReportParameter("RecipientsEIN", pdfData.Ein));
-                parameters.Add(utility.BuildReportParameter("FATCAFiling", ""));
+                if (pdfData.TaxYear != "2021") { 
+                    parameters.Add(utility.BuildReportParameter("FATCAFiling", ""));
+                }
                 parameters.Add(utility.BuildReportParameter("AccountNumber", pdfData.AccountNumber));
 
                 var taxFormBoxesList = pdfData.TaxFormBoxesList;
@@ -439,7 +449,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 parameters.Add(utility.BuildReportParameter("Box6b", ""));
                 parameters.Add(utility.BuildReportParameter("Box7Amt", GetAmountFromBoxList(taxFormBoxesList, "7")));
                 parameters.Add(utility.BuildReportParameter("Box7bAmt", ""));
-
+                if (pdfData.TaxYear == "2021")
+                {
+                    parameters.Add(utility.BuildReportParameter("Box2", pdfData.IsDirectResale ? "X" : ""));
+                }
 
                 // Set the report parameters
                 report.SetParameters(parameters);

@@ -104,8 +104,21 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         /// Transaction Date
         /// </summary>
         public DateTimeOffset? TransactionDate { get; set; }
+
+        /// <summary>
+        /// Currency Code
+        /// </summary>
         public string CurrencyCode { get; set; }
+
+        /// <summary>
+        /// Sequence
+        /// </summary>
         public string Sequence { get; set; }
+
+        /// <summary>
+        /// Override Message if available
+        /// </summary>
+        public string OverrideMessage { get; set; }
 
         /// <summary>
         /// Default constructor

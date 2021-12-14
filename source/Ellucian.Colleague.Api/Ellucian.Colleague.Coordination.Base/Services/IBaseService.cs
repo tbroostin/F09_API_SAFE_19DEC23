@@ -1,6 +1,7 @@
 ﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Web.Http.EthosExtend;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -8,6 +9,19 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 {
     public interface IBaseService
     {
+
+        /// <summary>
+        /// Check for permissions and build error message.
+        /// If multiple permissions are assigned, then only one is required for access.
+        /// </summary>
+        /// <param name="permissionsTuple">Tuple consisting of:
+        /// 1. string[]: array of valid permissions
+        /// 2. string: http method (ex: 'GET')
+        /// 3. string: resource name (ex: 'person-holds')</param>
+        /// <returns>bool</returns>
+        bool ValidatePermissions(Tuple<string[], string, string> permissions);
+
+
         /// <summary>
         /// Gets the list of EEDM data privacy settings by user based on user, roles and permissions
         /// </summary>
@@ -30,7 +44,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="ethosResourceRouteInfo">Ethos Resource Route Info </param>
         /// <param name="resournceIds">IEnumerable of the ids for the resources in guid form</param>
         /// <returns>List with all of the extended data if aavailable. Returns an empty list if none available or none configured</returns>
-        Task<IList<EthosExtensibleData>> GetExtendedEthosDataByResource(EthosResourceRouteInfo ethosResourceRouteInfo, IEnumerable<string> resournceIds, bool bypassCache = false);
+        Task<IList<EthosExtensibleData>> GetExtendedEthosDataByResource(EthosResourceRouteInfo ethosResourceRouteInfo, IEnumerable<string> resournceIds, bool bypassCache = false, bool useRecordKey = false);
 
       
         /// <summary>

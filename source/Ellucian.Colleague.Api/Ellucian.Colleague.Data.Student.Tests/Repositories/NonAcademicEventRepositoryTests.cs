@@ -67,7 +67,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         [ExpectedException(typeof(ApplicationException))]
         public async Task NonAcademicEventRepository_GetEventsByIdsAsync_DataReader_Returns_Null()
         {
-            dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<NaaEvents>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(null);
+            dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<NaaEvents>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(() => null);
             eventRepo = new NonAcademicEventRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettingsMock);
 
             IEnumerable<NonAcademicEvent> events = await eventRepo.GetEventsByIdsAsync(ids);

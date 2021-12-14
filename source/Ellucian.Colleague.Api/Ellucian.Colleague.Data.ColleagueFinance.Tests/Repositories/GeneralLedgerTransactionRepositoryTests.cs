@@ -700,7 +700,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [ExpectedException(typeof(RepositoryException))]
             public async Task GeneralLedgerTransactionRepository_Get2Async_GlDetail_KeyNotFoundException()
             {
-                dataReaderMock.Setup(x => x.BulkReadRecordAsync<IntgGlPostingsDetail>(It.IsAny<string[]>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(x => x.BulkReadRecordAsync<IntgGlPostingsDetail>(It.IsAny<string[]>(), true)).ReturnsAsync(() => null);
                 await generalLedgerTransactionRepository.Get2Async("0002024", GlAccessLevel.Full_Access);
             }
             #endregion
@@ -752,7 +752,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task GeneralLedgerTransactionRepository_GetById2Async_GlPosting_Null()
             {
-                dataReaderMock.Setup(x => x.ReadRecordAsync<IntgGlPostings>(It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(x => x.ReadRecordAsync<IntgGlPostings>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 await generalLedgerTransactionRepository.GetById2Async(guid, "0002024", GlAccessLevel.Full_Access);
             }
 
@@ -851,7 +851,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             {
 
                 string[] projs = new string[] { "1", "2" };
-                dataReaderMock.Setup(x => x.BulkReadRecordAsync<DataContracts.Projects>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(x => x.BulkReadRecordAsync<DataContracts.Projects>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 var result = await generalLedgerTransactionRepository.GetProjectReferenceIds(projs);
                 Assert.IsNotNull(result);
                 Assert.AreEqual(result.Count, 0);

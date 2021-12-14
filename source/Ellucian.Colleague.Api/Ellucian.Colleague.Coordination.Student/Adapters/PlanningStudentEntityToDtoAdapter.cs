@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Web.Adapters;
 using slf4net;
 
@@ -19,6 +19,8 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
         {
             // Mapping dependency
             AddMappingDependency<Domain.Base.Entities.PersonHierarchyName, Dtos.Base.PersonHierarchyName>();
+            AddMappingDependency<Domain.Student.Entities.CompletedAdvisement, Dtos.Student.CompletedAdvisement>();
+
         }
     }
 }

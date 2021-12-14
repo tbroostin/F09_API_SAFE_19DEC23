@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,6 +18,7 @@ using Ellucian.Colleague.Domain.HumanResources.Tests;
 using Ellucian.Colleague.Coordination.HumanResources.Adapters;
 using Ellucian.Web.Http.TestUtil;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Colleague.Domain.HumanResources;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 {
@@ -31,6 +32,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         public TestEmployeeLeaveRequestRepository testEmployeeLeaveRequestRepository;
         private EmployeeLeaveRequestService employeeLeaveRequestService;
         private ICurrentUserFactory employeeLeaveRequestUserFactory;
+        private ICurrentUserFactory timeApproverUserFactory;
+        private ICurrentUserFactory proxyTimeApproverUserFactory;
+        public Domain.Entities.Role timeApprovalRole;
+        public Domain.Entities.Permission timeEntryApprovalPermission;
 
         // Adapters
         public ITypeAdapter<Domain.HumanResources.Entities.LeaveRequest, Dtos.HumanResources.LeaveRequest> leaveRequestEntityToDtoAdapter;
@@ -47,6 +52,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             employeeLeaveRequestRepositoryMock = new Mock<IEmployeeLeaveRequestRepository>();
             testEmployeeLeaveRequestRepository = new TestEmployeeLeaveRequestRepository();
             employeeLeaveRequestUserFactory = new EmployeeLeaveRequestUserFactory();
+            timeApproverUserFactory = new TimeApproverUserFactory();
+            proxyTimeApproverUserFactory = new ProxyTimeApproverUserFactory();
 
             leaveRequestEntityToDtoAdapter = new LeaveRequestEntityToDtoAdapter(adapterRegistryMock.Object, loggerMock.Object);
             leaveRequestDtoToEntityAdapter = new LeaveRequestDtoToEntityAdapter(adapterRegistryMock.Object, loggerMock.Object);
@@ -66,6 +73,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
             adapterRegistryMock.Setup(x => x.GetAdapter<Domain.HumanResources.Entities.LeaveRequestStatus, Dtos.HumanResources.LeaveRequestStatus>())
              .Returns(leaveRequestStatusEntityToDtoAdapter);
+
+            supervisorsRepositoryMock.Setup(r => r.GetSuperviseesBySupervisorAsync(It.IsAny<string>(), null)).ReturnsAsync(new string[] { "0011560" });
 
             employeeLeaveRequestService = new EmployeeLeaveRequestService(supervisorsRepositoryMock.Object,
                 personBaseRepositoryMock.Object,
@@ -280,7 +289,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                             Id = null,
                             LeaveRequestId = null,
                             LeaveDate = new DateTime(2019,11,05),
-                            LeaveHours = 8.00m
+                            LeaveHours = 8.00m,
+                            ProcessedInPayPeriod = false
                         }
                     },
                     LeaveRequestComments = new List<Dtos.HumanResources.LeaveRequestComment>()
@@ -435,7 +445,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                     Id = null,
                     LeaveRequestId = expected.Id,
                     LeaveDate = expected.EndDate.Value,
-                    LeaveHours = 8.00m
+                    LeaveHours = 8.00m,
+                    ProcessedInPayPeriod = false
                 });
 
                 var actual = await employeeLeaveRequestService.UpdateLeaveRequestAsync(expected);
@@ -516,7 +527,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task NoExistingTimecardThrowsErrorTest()
             {
-                employeeLeaveRequestRepositoryMock.Setup(m => m.GetLeaveRequestInfoByLeaveRequestIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+                employeeLeaveRequestRepositoryMock.Setup(m => m.GetLeaveRequestInfoByLeaveRequestIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
                 var lrToUpdate = leaveRequestEntityToDtoAdapter.MapToType(await testEmployeeLeaveRequestRepository.GetLeaveRequestInfoByLeaveRequestIdAsync(testEmployeeLeaveRequestRepository.leaveRequestRecords[0].Id));
                 await employeeLeaveRequestService.UpdateLeaveRequestAsync(lrToUpdate);
@@ -570,7 +581,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                ReturnsAsync(leaveRequestEntities);
             }
 
-
             [TestMethod, ExpectedException(typeof(PermissionsException))]
             public async Task GetLeaveRequestsForTimeEntryAsync_Throws_PermissionException()
             {
@@ -589,7 +599,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
               loggerMock.Object
               );
 
-                var expected = (await testEmployeeLeaveRequestRepository.GetLeaveRequestsForTimeEntryAsync(DateTime.Today,DateTime.Today.AddDays(4),new List<string>() { employeeLeaveRequestUserFactory.CurrentUser.PersonId }))
+                var expected = (await testEmployeeLeaveRequestRepository.GetLeaveRequestsForTimeEntryAsync(DateTime.Today, DateTime.Today.AddDays(4), new List<string>() { employeeLeaveRequestUserFactory.CurrentUser.PersonId }))
                   .Select(lr => leaveRequestEntityToDtoAdapter.MapToType(lr));
 
                 string persondId = employeeLeaveRequestUserFactory.CurrentUser.PersonId;
@@ -601,7 +611,64 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
                 CollectionAssert.AreEqual(expected.ToList(), actual.ToList(), leaveRequestDtoComparer);
             }
+
+            [TestMethod]
+            public async Task GetLeaveRequestsForTimeEntryAsync_SupervisorCanAccessSuperviseesData()
+            {
+                // permissions mock
+                timeApprovalRole = new Domain.Entities.Role(76, "TIME MANAGEMENT SUPERVISOR");
+                timeEntryApprovalPermission = new Ellucian.Colleague.Domain.Entities.Permission(HumanResourcesPermissionCodes.ApproveRejectEmployeeTimecard);
+                timeApprovalRole.AddPermission(timeEntryApprovalPermission);
+                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { timeApprovalRole });
+
+                employeeLeaveRequestService = new EmployeeLeaveRequestService(supervisorsRepositoryMock.Object,
+                personBaseRepositoryMock.Object,
+                testEmployeeLeaveRequestRepository,
+                adapterRegistryMock.Object,
+                timeApproverUserFactory,
+                roleRepositoryMock.Object,
+                loggerMock.Object
+                );
+
+                string personId = employeeLeaveRequestUserFactory.CurrentUser.PersonId;
+
+                var expected = (await testEmployeeLeaveRequestRepository.GetLeaveRequestsForTimeEntryAsync(DateTime.Today, DateTime.Today.AddDays(4), new List<string>() { personId }))
+                  .Select(lr => leaveRequestEntityToDtoAdapter.MapToType(lr));
+                               
+                var actual = await employeeLeaveRequestService.GetLeaveRequestsForTimeEntryAsync(DateTime.Today, DateTime.Today.AddDays(4), personId);
+
+                Assert.IsTrue(actual.Any());
+                Assert.AreEqual(actual.FirstOrDefault().EmployeeId, personId);
+
+                CollectionAssert.AreEqual(expected.ToList(), actual.ToList(), leaveRequestDtoComparer);
+            }
+
+            [TestMethod]
+            public async Task GetLeaveRequestsForTimeEntryAsync_ProxySupervisorCanAccessSuperviseesData()
+            {               
+                employeeLeaveRequestService = new EmployeeLeaveRequestService(supervisorsRepositoryMock.Object,
+                personBaseRepositoryMock.Object,
+                testEmployeeLeaveRequestRepository,
+                adapterRegistryMock.Object,
+                proxyTimeApproverUserFactory,
+                roleRepositoryMock.Object,
+                loggerMock.Object
+                );
+
+                string personId = timeApproverUserFactory.CurrentUser.PersonId;
+
+                var expected = (await testEmployeeLeaveRequestRepository.GetLeaveRequestsForTimeEntryAsync(DateTime.Today, DateTime.Today.AddDays(4), new List<string>() { personId }))
+                 .Select(lr => leaveRequestEntityToDtoAdapter.MapToType(lr));               
+
+                var actual = await employeeLeaveRequestService.GetLeaveRequestsForTimeEntryAsync(DateTime.Today, DateTime.Today.AddDays(4), personId);
+
+                Assert.IsTrue(actual.Any());
+                Assert.AreEqual(actual.FirstOrDefault().EmployeeId, employeeLeaveRequestUserFactory.CurrentUser.PersonId);
+
+                CollectionAssert.AreEqual(expected.ToList(), actual.ToList(), leaveRequestDtoComparer);
+            }
         }
+
         #region Helpers
         private FunctionEqualityComparer<Dtos.HumanResources.LeaveRequest> LeaveRequestComparer()
         {
@@ -626,10 +693,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                     lrd1.Id == lrd2.Id &&
                     lrd1.LeaveRequestId == lrd2.LeaveRequestId &&
                     lrd1.LeaveDate == lrd2.LeaveDate &&
-                    lrd1.LeaveHours == lrd2.LeaveHours,
+                    lrd1.LeaveHours == lrd2.LeaveHours &&
+                    lrd1.ProcessedInPayPeriod == lrd2.ProcessedInPayPeriod,
                     (lrd) => lrd.Id.GetHashCode()
                 );
         }
+
         private bool leaveRequestDetailEqual(Dtos.HumanResources.LeaveRequest a, Dtos.HumanResources.LeaveRequest b)
         {
             CollectionAssert.AreEqual(a.LeaveRequestDetails, b.LeaveRequestDetails, LeaveRequestDetailsComparer());
@@ -653,6 +722,53 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                         Roles = new List<string>() { "EMPLOYEE" },
                         SessionFixationId = "abc123"
 
+                    });
+                }
+            }
+        }
+
+        public class TimeApproverUserFactory : ICurrentUserFactory
+        {
+            public ICurrentUser CurrentUser
+            {
+                get
+                {
+                    return new CurrentUser(new Claims()
+                    {
+                        ControlId = "001",
+                        Name = "Time Approver",
+                        PersonId = "0011111",
+                        SecurityToken = "999",
+                        SessionTimeout = 20,
+                        UserName = "jerry",
+                        Roles = new List<string>() { "TIME MANAGEMENT SUPERVISOR" },
+                        SessionFixationId = "qwerty44",
+                    });
+                }
+            }
+        }
+
+        public class ProxyTimeApproverUserFactory : ICurrentUserFactory
+        {
+            public ICurrentUser CurrentUser
+            {
+                get
+                {
+                    return new CurrentUser(new Claims()
+                    {
+                        ControlId = "001",
+                        Name = "Proxy Time Approver",
+                        PersonId = "0011223",
+                        SecurityToken = "999",
+                        SessionTimeout = 20,
+                        UserName = "spacex",
+                        Roles = new List<string>() { "EMPLOYEE" },
+                        SessionFixationId = "qwerty44",
+                        ProxySubjectClaims = new ProxySubjectClaims()
+                        {
+                            PersonId = "0011111",
+                            Permissions = new List<string> { "TMTA" }
+                        }
                     });
                 }
             }

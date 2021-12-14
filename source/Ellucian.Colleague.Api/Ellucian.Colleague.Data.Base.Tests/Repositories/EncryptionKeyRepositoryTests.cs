@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Domain.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -107,7 +107,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
                 dataReaderMock.Setup(accessor =>
                     accessor.ReadRecordAsync<DataContracts.EncrKeys>
-                    (It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                    (It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
 
                 try
                 {

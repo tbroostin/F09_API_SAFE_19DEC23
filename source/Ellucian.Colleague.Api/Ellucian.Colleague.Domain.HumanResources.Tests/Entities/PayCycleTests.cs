@@ -1,11 +1,8 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
 {
@@ -17,6 +14,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         public DayOfWeek startDay;
         public List<string> payClassIds;
         public List<PayPeriod> payPeriods;
+        public bool displayInSelfService;
 
         public PayCycle payCycle;
 
@@ -56,6 +54,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             {
                 payCycle = createPaycycle();
                 Assert.IsNotNull(payCycle.PayPeriods);
+            }
+
+            [TestMethod]
+            public void DisplayInSelfService_InitialzedTest()
+            {
+                payCycle = createPaycycle();
+                Assert.IsFalse(payCycle.DisplayInSelfService);
             }
 
             [TestMethod]
@@ -99,6 +104,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             public void DescriptionRequiredTest()
             {
                 payCycle.Description = "";
+            }
+
+            [TestMethod]
+            public void DisplayInSelfService_GetSetTest()
+            {
+                payCycle.DisplayInSelfService = true;
+                Assert.IsTrue(payCycle.DisplayInSelfService);
             }
         }
 

@@ -1,10 +1,11 @@
-﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
@@ -57,7 +58,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="criteria">mealplan  search criteria in JSON format</param>
         /// <returns>List of HousingAssignments <see cref="Dtos.HousingAssignment2"/> objects representing matching housingAssignments</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet]
+        [HttpGet, PermissionsFilter(new string[] { StudentPermissionCodes.ViewHousingAssignment, StudentPermissionCodes.CreateUpdateHousingAssignment })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         [QueryStringFilterFilter("criteria", typeof(Dtos.HousingAssignment2))]
         [FilteringFilter(IgnoreFiltering = true)]
@@ -77,6 +78,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 return new PagedHttpActionResult<IEnumerable<Dtos.HousingAssignment2>>(new List<Dtos.HousingAssignment2>(), page, 0, this.Request);
             try
             {
+                _housingAssignmentService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -129,7 +131,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID to desired housingAssignment</param>
         /// <returns>A housingAssignment object <see cref="Dtos.HousingAssignment2"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewHousingAssignment, StudentPermissionCodes.CreateUpdateHousingAssignment })]
         public async Task<Dtos.HousingAssignment2> GetHousingAssignmentByGuid2Async(string guid)
         {
             var bypassCache = false;
@@ -148,6 +150,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _housingAssignmentService.ValidatePermissions(GetPermissionsMetaData());
                 var housingAssignment = await _housingAssignmentService.GetHousingAssignmentByGuid2Async(guid);
 
                 if (housingAssignment != null)
@@ -200,7 +203,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="housingAssignment">DTO of the updated housingAssignments</param>
         /// <returns>A housingAssignments object <see cref="Dtos.HousingAssignment"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateUpdateHousingAssignment)]
         public async Task<Dtos.HousingAssignment2> PutHousingAssignment2Async([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.HousingAssignment2 housingAssignment)
         {
             //make sure id was specified on the URL
@@ -237,6 +240,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _housingAssignmentService.ValidatePermissions(GetPermissionsMetaData());
                 //get Data Privacy List
                 var dpList = await _housingAssignmentService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
@@ -298,7 +302,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="housingAssignment">DTO of the new housingAssignments</param>
         /// <returns>A housingAssignments object <see cref="Dtos.HousingAssignment"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateUpdateHousingAssignment)]
         public async Task<Dtos.HousingAssignment2> PostHousingAssignment2Async([ModelBinder(typeof(EedmModelBinder))] Dtos.HousingAssignment2 housingAssignment)
         {
             if (housingAssignment == null)
@@ -323,6 +327,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _housingAssignmentService.ValidatePermissions(GetPermissionsMetaData());
                 //call import extend method that needs the extracted extension data and the config
                 await _housingAssignmentService.ImportExtendedEthosData(await ExtractExtendedData(await _housingAssignmentService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
@@ -437,7 +442,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <param name="criteria">mealplan  search criteria in JSON format</param>
         /// <returns>List of HousingAssignments <see cref="Dtos.HousingAssignment"/> objects representing matching housingAssignments</returns>
-        [HttpGet] 
+        [HttpGet, PermissionsFilter(new string[] { StudentPermissionCodes.ViewHousingAssignment, StudentPermissionCodes.CreateUpdateHousingAssignment })] 
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         [QueryStringFilterFilter("criteria", typeof(Dtos.HousingAssignment))]
         [FilteringFilter(IgnoreFiltering = true)]
@@ -457,6 +462,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 return new PagedHttpActionResult<IEnumerable<Dtos.HousingAssignment>>(new List<Dtos.HousingAssignment>(), page, 0, this.Request);
             try
             {
+                _housingAssignmentService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -508,7 +514,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired housingAssignment</param>
         /// <returns>A housingAssignment object <see cref="Dtos.HousingAssignment"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewHousingAssignment, StudentPermissionCodes.CreateUpdateHousingAssignment })]
         public async Task<Dtos.HousingAssignment> GetHousingAssignmentByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -527,6 +533,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _housingAssignmentService.ValidatePermissions(GetPermissionsMetaData());
                 var housingAssignment = await _housingAssignmentService.GetHousingAssignmentByGuidAsync(guid);
 
                 if (housingAssignment != null)
@@ -578,7 +585,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="housingAssignment">DTO of the new housingAssignments</param>
         /// <returns>A housingAssignments object <see cref="Dtos.HousingAssignment"/> in EEDM format</returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateUpdateHousingAssignment)]
         public async Task<Dtos.HousingAssignment> PostHousingAssignmentAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.HousingAssignment housingAssignment)
         {
             if (housingAssignment == null)
@@ -603,6 +610,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _housingAssignmentService.ValidatePermissions(GetPermissionsMetaData());
                 //call import extend method that needs the extracted extension data and the config
                 await _housingAssignmentService.ImportExtendedEthosData(await ExtractExtendedData(await _housingAssignmentService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
@@ -657,7 +665,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID of the housingAssignments to update</param>
         /// <param name="housingAssignment">DTO of the updated housingAssignments</param>
         /// <returns>A housingAssignments object <see cref="Dtos.HousingAssignment"/> in EEDM format</returns>
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateUpdateHousingAssignment)]
         public async Task<Dtos.HousingAssignment> PutHousingAssignmentAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.HousingAssignment housingAssignment)
         {
             //make sure id was specified on the URL
@@ -694,6 +702,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _housingAssignmentService.ValidatePermissions(GetPermissionsMetaData());
                 //get Data Privacy List
                 var dpList = await _housingAssignmentService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 

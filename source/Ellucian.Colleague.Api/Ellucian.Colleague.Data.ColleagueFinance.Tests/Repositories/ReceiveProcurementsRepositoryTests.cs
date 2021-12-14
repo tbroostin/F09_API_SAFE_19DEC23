@@ -176,7 +176,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         [ExpectedException(typeof(InvalidOperationException))]
         public async Task ReceiveProcurementsRepository_GetReceiveProcurementsByPersonIdAsync_InvalidOperationfor_VendorInfo()
         {
-            transManagerMock.Setup(t => t.ExecuteAsync<GetVendorInformationRequest, GetVendorInformationResponse>(It.IsAny<GetVendorInformationRequest>())).ReturnsAsync(null);
+            transManagerMock.Setup(t => t.ExecuteAsync<GetVendorInformationRequest, GetVendorInformationResponse>(It.IsAny<GetVendorInformationRequest>())).ReturnsAsync(() => null);
             await receiveProcurementsRepository.GetReceiveProcurementsByPersonIdAsync(personId);
         }
 

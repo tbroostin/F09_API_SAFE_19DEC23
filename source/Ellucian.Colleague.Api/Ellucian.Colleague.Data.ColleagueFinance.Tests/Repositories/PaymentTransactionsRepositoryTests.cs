@@ -73,10 +73,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 private void InitializeTestData()
                 {
                     vouchers = new Collection<Vouchers>() {
-                        new Vouchers() { Recordkey = "1", RecordGuid = "1a49eed8-5fe7-4120-b1cf-f23266b9e000", VouMiscName = new List<string>() { "Misc_1","Misc_2" }, VouEcommerceSession="Session_1", VouEcommerceTransNo="Trans_001", VoucherStatusEntityAssociation = new List<VouchersVoucherStatus>(){ new VouchersVoucherStatus() { VouStatusAssocMember = "P", VouStatusDateAssocMember = DateTime.Now  }, new VouchersVoucherStatus() { VouStatusAssocMember = "R", VouStatusDateAssocMember = DateTime.Now }, new VouchersVoucherStatus() { VouStatusAssocMember = "V", VouStatusDateAssocMember = DateTime.Now } }, VouVendor="1",VouTotalAmt=10, VouCurrencyCode = "CAD", VouItemsId = new List<string>(){"item1"}, VouPoNo = "PO1" },
-                        new Vouchers() { Recordkey = "2", RecordGuid = "1a49eed8-5fe7-4120-b1cf-f23266b9e001", VouMiscName = new List<string>() { "Misc_1", "Misc_2" }, VouEcommerceSession = "Session_2",  VouEcommerceTransNo="Trans_002" , VoucherStatusEntityAssociation = new List<VouchersVoucherStatus>(){ new VouchersVoucherStatus() { VouStatusAssocMember = "R", VouStatusDateAssocMember = DateTime.Now  }, new VouchersVoucherStatus() { VouStatusAssocMember = "R", VouStatusDateAssocMember = DateTime.Now }, new VouchersVoucherStatus() { VouStatusAssocMember = "V", VouStatusDateAssocMember = DateTime.Now } }, VouVendor="2", VouArPayment = "1", VouTotalAmt=10, VouCurrencyCode = "EUR" , VouItemsId = new List<string>(){"item2"}, VouBpoId = "BPO1" },
-                        new Vouchers() { Recordkey = "3", RecordGuid = "1a49eed8-5fe7-4120-b1cf-f23266b9e002", VouMiscName = new List<string>() { "Misc_1", "Misc_2" }, VouEcommerceSession="Session_3",  VouEcommerceTransNo="Trans_003", VoucherStatusEntityAssociation = new List<VouchersVoucherStatus>(){ new VouchersVoucherStatus() { VouStatusAssocMember = "V", VouStatusDateAssocMember = DateTime.Now  }, new VouchersVoucherStatus() { VouStatusAssocMember = "R", VouStatusDateAssocMember = DateTime.Now }, new VouchersVoucherStatus() { VouStatusAssocMember = "V", VouStatusDateAssocMember = DateTime.Now } }, VouVendor="3", VouArDepositItems = new List<string>(){"1","2"}, VouTotalAmt=0 , VouItemsId = new List<string>(){"item3"}, VouRcvsId = "RECVOU1"},
-                        new Vouchers() { Recordkey = "4", RecordGuid = "1a49eed8-5fe7-4120-b1cf-f23266b9e003", VouMiscName = new List<string>() { "Misc_1", "Misc_2" }, VouEcommerceSession="Session_4" ,  VouEcommerceTransNo="Trans_004", VoucherStatusEntityAssociation = new List<VouchersVoucherStatus>(){ new VouchersVoucherStatus() { VouStatusAssocMember = "K", VouStatusDateAssocMember = DateTime.Now  }, new VouchersVoucherStatus() { VouStatusAssocMember = "R", VouStatusDateAssocMember = DateTime.Now }, new VouchersVoucherStatus() { VouStatusAssocMember = "V", VouStatusDateAssocMember = DateTime.Now } }, VouVendor="4", VouAltFlag="Y" }  };
+                        new Vouchers() { Recordkey = "1", RecordGuid = "1a49eed8-5fe7-4120-b1cf-f23266b9e000", VouMiscName = new List<string>() { "Misc_1","Misc_2" }, VouEcommerceSession="Session_1", VouEcommerceTransNo="Trans_001", VoucherStatusEntityAssociation = new List<VouchersVoucherStatus>(){ new VouchersVoucherStatus() { VouStatusAssocMember = "P", VouStatusDateAssocMember = DateTime.Now  }, new VouchersVoucherStatus() { VouStatusAssocMember = "R", VouStatusDateAssocMember = DateTime.Now }, new VouchersVoucherStatus() { VouStatusAssocMember = "V", VouStatusDateAssocMember = DateTime.Now } }, VouVendor="1",VouTotalAmt=10, VouCurrencyCode = "CAD", VouItemsId = new List<string>(){"item1"}, VouPoNo = "PO1", VouApType = "AP"},
+                        new Vouchers() { Recordkey = "2", RecordGuid = "1a49eed8-5fe7-4120-b1cf-f23266b9e001", VouMiscName = new List<string>() { "Misc_1", "Misc_2" }, VouEcommerceSession = "Session_2",  VouEcommerceTransNo="Trans_002" , VoucherStatusEntityAssociation = new List<VouchersVoucherStatus>(){ new VouchersVoucherStatus() { VouStatusAssocMember = "R", VouStatusDateAssocMember = DateTime.Now  }, new VouchersVoucherStatus() { VouStatusAssocMember = "R", VouStatusDateAssocMember = DateTime.Now }, new VouchersVoucherStatus() { VouStatusAssocMember = "V", VouStatusDateAssocMember = DateTime.Now } }, VouVendor="2", VouArPayment = "1", VouTotalAmt=10, VouCurrencyCode = "EUR" , VouItemsId = new List<string>(){"item2"}, VouBpoId = "BPO1", VouApType = "AP" },
+                        new Vouchers() { Recordkey = "3", RecordGuid = "1a49eed8-5fe7-4120-b1cf-f23266b9e002", VouMiscName = new List<string>() { "Misc_1", "Misc_2" }, VouEcommerceSession="Session_3",  VouEcommerceTransNo="Trans_003", VoucherStatusEntityAssociation = new List<VouchersVoucherStatus>(){ new VouchersVoucherStatus() { VouStatusAssocMember = "V", VouStatusDateAssocMember = DateTime.Now  }, new VouchersVoucherStatus() { VouStatusAssocMember = "R", VouStatusDateAssocMember = DateTime.Now }, new VouchersVoucherStatus() { VouStatusAssocMember = "V", VouStatusDateAssocMember = DateTime.Now } }, VouVendor="3", VouArDepositItems = new List<string>(){"1","2"}, VouTotalAmt=0 , VouItemsId = new List<string>(){"item3"}, VouRcvsId = "RECVOU1", VouApType = "AP"},
+                        new Vouchers() { Recordkey = "4", RecordGuid = "1a49eed8-5fe7-4120-b1cf-f23266b9e003", VouMiscName = new List<string>() { "Misc_1", "Misc_2" }, VouEcommerceSession="Session_4" ,  VouEcommerceTransNo="Trans_004", VoucherStatusEntityAssociation = new List<VouchersVoucherStatus>(){ new VouchersVoucherStatus() { VouStatusAssocMember = "K", VouStatusDateAssocMember = DateTime.Now  }, new VouchersVoucherStatus() { VouStatusAssocMember = "R", VouStatusDateAssocMember = DateTime.Now }, new VouchersVoucherStatus() { VouStatusAssocMember = "V", VouStatusDateAssocMember = DateTime.Now } }, VouVendor="4", VouAltFlag="Y", VouApType = "AP" } };
 
                     checks = new Collection<Checks>() {
                         new Checks() { Recordkey = "1", RecordGuid = "2a49eed8-5fe7-4120-b1cf-f23266b9e000", ChkDate = DateTime.Now, ChkStatEntityAssociation = new List<ChecksChkStat>(){ new ChecksChkStat() { ChkStatusAssocMember="U", ChkStatusDateAssocMember = DateTime.Now }, new ChecksChkStat() { ChkStatusAssocMember = "U", ChkStatusDateAssocMember = DateTime.Now }, new ChecksChkStat() { ChkStatusAssocMember = "N", ChkStatusDateAssocMember = DateTime.Now }, new ChecksChkStat() { ChkStatusAssocMember = "O", ChkStatusDateAssocMember = DateTime.Now }, new ChecksChkStat() { ChkStatusAssocMember = "R", ChkStatusDateAssocMember = DateTime.Now }, new ChecksChkStat() { ChkStatusAssocMember = "V", ChkStatusDateAssocMember = DateTime.Now }, new ChecksChkStat() { ChkStatusAssocMember = "X", ChkStatusDateAssocMember = DateTime.Now }, new ChecksChkStat() { ChkStatusAssocMember = "P", ChkStatusDateAssocMember = DateTime.Now } }, ChkVendor="1", ChkVouchersIds = new List<string>(){"1","2"} },
@@ -130,6 +130,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     dataReaderMock.Setup(d => d.ReadRecordAsync<Vouchers>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(vouchers.FirstOrDefault());
                     dataReaderMock.Setup(d => d.ReadRecordAsync<Person>("PERSON", It.IsAny<string>(),It.IsAny<bool>())).ReturnsAsync(persons.FirstOrDefault());
                     dataReaderMock.Setup(d => d.ReadRecordAsync<Checks>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(checks.FirstOrDefault());
+
+
+                    dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "AP" });
+
+
                     var recordLookupDict = new Dictionary<string, RecordKeyLookupResult>();
                     foreach (var vou in vouchers)
                     {
@@ -212,7 +217,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 }
 
                 [TestMethod]
-                public async Task GetPaymentTransactionsAsync_With_Filters()
+                public async Task PaymentTransactionsRepository_GetPaymentTransactionsAsync_With_Filters()
                 {
                     GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
                     {
@@ -253,7 +258,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 [ExpectedException(typeof(RepositoryException))]
                 public async Task PaymentTransactionsRepository_GetPaymentTransactionsAsync_Person_Null()
                 {
-                    dataReaderMock.Setup(d => d.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(null);
+                    dataReaderMock.Setup(d => d.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                     await paymentTransactionsRepository.GetPaymentTransactionsAsync(0, 10, "2a49eed8-5fe7-4120-b1cf-f23266b9e000", Domain.ColleagueFinance.Entities.InvoiceOrRefund.Refund, It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>());
                 }
 
@@ -262,7 +267,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 public async Task PaymentTransactionsRepository_GetPaymentTransactionsAsync_Null_Check()
                 {
                     dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.Vouchers>("VOUCHERS", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<Vouchers>());
-                    dataReaderMock.Setup(d => d.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(null);
+                    dataReaderMock.Setup(d => d.BulkReadRecordAsync<Base.DataContracts.Person>("PERSON", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                     await paymentTransactionsRepository.GetPaymentTransactionsAsync(0, 10, "", Domain.ColleagueFinance.Entities.InvoiceOrRefund.Refund, It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>());
                 }
 
@@ -270,8 +275,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 [ExpectedException(typeof(RepositoryException))]
                 public async Task PaymentTransactionsRepository_GetPaymentTransactionsAsync_Guid_Null()
                 {
-                    dataReaderMock.Setup(d => d.SelectAsync("LDM.GUID", It.IsAny<string>())).ReturnsAsync(null);
-                    dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(null);
+                    dataReaderMock.Setup(d => d.SelectAsync("LDM.GUID", It.IsAny<string>())).ReturnsAsync(() => null);
+                    dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(() => null);
                     await paymentTransactionsRepository.GetPaymentTransactionsAsync(0, 10, "", Domain.ColleagueFinance.Entities.InvoiceOrRefund.Refund, It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<List<string>>());
                 }
                 
@@ -290,16 +295,16 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
                 [TestMethod]
                 [ExpectedException(typeof(RepositoryException))]
-                public async Task GetPaymentTransactionsByGuidAsync_Guid_Null()
+                public async Task PaymentTransactionsRepository_GetPaymentTransactionsByGuidAsync_Guid_Null()
                 {
                     await paymentTransactionsRepository.GetPaymentTransactionsByGuidAsync(null);
                 }
 
                 [TestMethod]
                 [ExpectedException(typeof(KeyNotFoundException))]
-                public async Task GetPaymentTransactionsByGuidAsync_Dictionary_Null()
+                public async Task PaymentTransactionsRepository_GetPaymentTransactionsByGuidAsync_Dictionary_Null()
                 {
-                    dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+                    dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
                     await paymentTransactionsRepository.GetPaymentTransactionsByGuidAsync(guid);
                 }
 
@@ -307,7 +312,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
                 [TestMethod]
                 [ExpectedException(typeof(KeyNotFoundException))]
-                public async Task GetPaymentTransactionsByGuidAsync_Dictionary_Value_Null()
+                public async Task PaymentTransactionsRepository_GetPaymentTransactionsByGuidAsync_Dictionary_Value_Null()
                 {
                     dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(new Dictionary<string, GuidLookupResult>() { { "1",null } });
                     await paymentTransactionsRepository.GetPaymentTransactionsByGuidAsync(guid);
@@ -315,7 +320,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
                 [TestMethod]
                 [ExpectedException(typeof(RepositoryException))]
-                public async Task GetPaymentTransactionsByGuidAsync_Dictionary_SecKey_Null()
+                public async Task PaymentTransactionsRepository_GetPaymentTransactionsByGuidAsync_Dictionary_SecKey_Null()
                 {
                     dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(new Dictionary<string, GuidLookupResult>() { { "1", new GuidLookupResult() { Entity="VOUCHERS", PrimaryKey="1", SecondaryKey="" } } });
                     await paymentTransactionsRepository.GetPaymentTransactionsByGuidAsync(guid);
@@ -323,7 +328,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
                 [TestMethod]
                 [ExpectedException(typeof(RepositoryException))]
-                public async Task GetPaymentTransactionsByGuidAsync_Dictionary_Key_Empty()
+                public async Task PaymentTransactionsRepository_GetPaymentTransactionsByGuidAsync_Dictionary_Key_Empty()
                 {
                     dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(new Dictionary<string, GuidLookupResult>() { { "1", new GuidLookupResult() { Entity = "CHECKS", PrimaryKey = "", SecondaryKey = "1" } } });
                     await paymentTransactionsRepository.GetPaymentTransactionsByGuidAsync(guid);
@@ -331,17 +336,17 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
                 [TestMethod]
                 [ExpectedException(typeof(KeyNotFoundException))]
-                public async Task GetPaymentTransactionsByGuidAsync_Check_Null()
+                public async Task PaymentTransactionsRepository_GetPaymentTransactionsByGuidAsync_Check_Null()
                 {
-                    dataReaderMock.Setup(d => d.ReadRecordAsync<Checks>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                    dataReaderMock.Setup(d => d.ReadRecordAsync<Checks>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                     await paymentTransactionsRepository.GetPaymentTransactionsByGuidAsync(guid);
                 }
 
                 [TestMethod]
                 [ExpectedException(typeof(RepositoryException))]
-                public async Task GetPaymentTransactionsByGuidAsync_Person_Null()
+                public async Task PaymentTransactionsRepository_GetPaymentTransactionsByGuidAsync_Person_Null()
                 {
-                    dataReaderMock.Setup(d => d.ReadRecordAsync<Person>("PERSON", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                    dataReaderMock.Setup(d => d.ReadRecordAsync<Person>("PERSON", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                     await paymentTransactionsRepository.GetPaymentTransactionsByGuidAsync(guid);
                 }
 
@@ -356,20 +361,20 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
                 [TestMethod]
                 [ExpectedException(typeof(KeyNotFoundException))]
-                public async Task GetPaymentTransactionsByGuidAsync_Voucher_Null()
+                public async Task PaymentTransactionsRepository_GetPaymentTransactionsByGuidAsync_Voucher_Null()
                 {
                     dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(new Dictionary<string, GuidLookupResult>() { { "1", new GuidLookupResult() { Entity = "VOUCHERS", PrimaryKey = "1", SecondaryKey = "1" } } });
 
-                    dataReaderMock.Setup(d => d.ReadRecordAsync<Vouchers>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                    dataReaderMock.Setup(d => d.ReadRecordAsync<Vouchers>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                     await paymentTransactionsRepository.GetPaymentTransactionsByGuidAsync(guid);
                 }
 
                 [TestMethod]
                 [ExpectedException(typeof(RepositoryException))]
-                public async Task GetPaymentTransactionsByGuidAsync_VPerson_Null()
+                public async Task PaymentTransactionsRepository_GetPaymentTransactionsByGuidAsync_VPerson_Null()
                 {
                     dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(new Dictionary<string, GuidLookupResult>() { { "1", new GuidLookupResult() { Entity = "VOUCHERS", PrimaryKey = "1", SecondaryKey = "1" } } });
-                    dataReaderMock.Setup(d => d.ReadRecordAsync<Person>("PERSON", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                    dataReaderMock.Setup(d => d.ReadRecordAsync<Person>("PERSON", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                     await paymentTransactionsRepository.GetPaymentTransactionsByGuidAsync(guid);
                 }
                 [TestMethod]
@@ -390,10 +395,60 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 }
 
                 [TestMethod]
-                public async Task GetPaymentTransactionsIdFromGuidAsync() {
+                [ExpectedException(typeof(RepositoryException))]
+                public async Task PaymentTransactionsRepository_GetPaymentTransactionsByGuidAsync_Voucher_InvalidAPType()
+                {
+                    vouchers = new Collection<Vouchers>() {
+                        new Vouchers() { Recordkey = "1", RecordGuid = "1a49eed8-5fe7-4120-b1cf-f23266b9e000", VouMiscName = new List<string>() { "Misc_1","Misc_2" }, VouEcommerceSession="Session_1", VouEcommerceTransNo="Trans_001", VoucherStatusEntityAssociation = new List<VouchersVoucherStatus>(){ new VouchersVoucherStatus() { VouStatusAssocMember = "P", VouStatusDateAssocMember = DateTime.Now  }, new VouchersVoucherStatus() { VouStatusAssocMember = "R", VouStatusDateAssocMember = DateTime.Now }, new VouchersVoucherStatus() { VouStatusAssocMember = "V", VouStatusDateAssocMember = DateTime.Now } }, VouVendor="1",VouTotalAmt=10, VouCurrencyCode = "CAD", VouItemsId = new List<string>(){"item1"}, VouPoNo = "PO1", VouApType = "XX"}
+                    };
+                    dataReaderMock.Setup(repo => repo.SelectAsync("AP.TYPES", It.IsAny<string>())).ReturnsAsync(new string[] { "" });
+                    dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(new Dictionary<string, GuidLookupResult>() { { "1", new GuidLookupResult() { Entity = "VOUCHERS", PrimaryKey = "1", SecondaryKey = "1" } } });
+                    var recordLookupDict = new Dictionary<string, RecordKeyLookupResult>();
+
+                    recordLookupDict.Add("VOUCHERS+" + "1" + "+" + "1",
+                        new RecordKeyLookupResult() { Guid = "9999eed8-5fe7-4120-b1cf-f23266b9e000" });
+
+
+                    dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(recordLookupDict);
+                    var result = await paymentTransactionsRepository.GetPaymentTransactionsByGuidAsync("9999eed8-5fe7-4120-b1cf-f23266b9e000");
+
+                    Assert.IsNotNull(result);
+                    Assert.AreEqual(result.Guid, "9999eed8-5fe7-4120-b1cf-f23266b9e000");
+                }
+
+                [TestMethod]
+                public async Task PaymentTransactionsRepository_GetPaymentTransactionsIdFromGuidAsync() {
                     var result = await paymentTransactionsRepository.GetPaymentTransactionsIdFromGuidAsync("2a49eed8-5fe7-4120-b1cf-f23266b9e000");
                     Assert.IsNotNull(result);
                 }
+
+
+
+                [TestMethod]
+                public async Task PaymentTransactionsRepository_GetPersonGuidsCollectionAsync_Valid()
+                {
+                    IEnumerable<string> sublist = new List<string>() { "1", "2" };
+                    Dictionary<string, RecordKeyLookupResult> recordKeyLookupResults = new Dictionary<string, RecordKeyLookupResult>();
+                    recordKeyLookupResults.Add("PURCHASE.ORDERS+1", new RecordKeyLookupResult() { Guid = "854da721-4191-4875-bf58-7d6c00ffea8f" });
+                    recordKeyLookupResults.Add("PURCHASE.ORDERS+2", new RecordKeyLookupResult() { Guid = "71e1a806-24a8-4d93-91a2-02d86056b63c" });
+                    List<KeyValuePair<string, RecordKeyLookupResult>> list = recordKeyLookupResults.ToList();
+
+                    dataReaderMock.Setup(i => i.SelectAsync("PURCHASE.ORDERS", It.IsAny<string>())).ReturnsAsync(new[] { "1", "2", "3", "4" });
+                    dataReaderMock.Setup(i => i.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(recordKeyLookupResults);
+
+                    var results = await paymentTransactionsRepository.GetGuidsCollectionAsync(sublist, "PURCHASE.ORDERS");
+                    Assert.IsNotNull(results);
+                    Assert.AreEqual(2, results.Count());
+                    foreach (var result in results)
+                    {
+                        RecordKeyLookupResult recordKeyLookupResult = null;
+                        recordKeyLookupResults.TryGetValue(string.Concat("PURCHASE.ORDERS+", result.Key), out recordKeyLookupResult);
+
+                        Assert.AreEqual(result.Value, recordKeyLookupResult.Guid);
+                    }
+                }
+
+
 
                 //[TestMethod]
                 //[ExpectedException(typeof(KeyNotFoundException))]

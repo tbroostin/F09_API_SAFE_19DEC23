@@ -59,8 +59,9 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
         /// Gets id from guid input
         /// </summary>
         /// <param name="id"></param>
+        /// <param name="filename"></param>
         /// <returns></returns>
-        Task<string> GetIdFromGuidAsync(string id);
+        Task<string> GetIdFromGuidAsync(string id, string filename);
 
         /// <summary>
         /// Gets id from guid input
@@ -68,5 +69,20 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
         /// <param name="id"></param>
         /// <returns></returns>
         Task<GuidLookupResult> GetInfoFromGuidAsync(string id);
+
+        /// <summary>
+        /// Get a collection of GUIDs for a given filename
+        /// </summary>
+        /// <param name="ids"></param>
+        /// <param name="filename"></param>
+        /// <returns></returns>
+        Task<Dictionary<string, string>> GetGuidsCollectionAsync(IEnumerable<string> ids, string filename);
+
+        /// <summary>
+        /// Get a collection of GUIDs for PERPOS with secondary keys
+        /// </summary>
+        /// <param name="ids"></param
+        /// <returns></returns>
+        Task<Dictionary<string, string>> GetGuidsCollectionAsync(IEnumerable<string> ids);
     }
 }

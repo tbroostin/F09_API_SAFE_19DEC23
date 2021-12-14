@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
+using Newtonsoft.Json;
 
 namespace Ellucian.Colleague.Dtos
 {
@@ -20,7 +21,7 @@ namespace Ellucian.Colleague.Dtos
         /// <summary>
         /// Human-readable description
         /// </summary>
-        [DataMember(Name = "description")]
+        [JsonProperty("description", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public string Description { get; set; }
 
         /// <summary>

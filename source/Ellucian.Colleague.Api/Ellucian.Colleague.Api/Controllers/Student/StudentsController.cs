@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -34,6 +34,8 @@ using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using SectionRegistration = Ellucian.Colleague.Dtos.Student.SectionRegistration;
 using System.Diagnostics;
+using Ellucian.Colleague.Domain.Student;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -94,7 +96,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="criteria">Query criteria for retrieving students.</param>
         /// <returns>StudentBatch3 DTO Objects</returns>
         /// <accessComments>
-        /// Authenticated users with the VIEW.STUDENT.INFORMATION permission can query students.
+        /// Authenticated users with the VIEW.PERSON.INFORMATION permission can query students.
         /// 
         /// Student privacy is enforced by this response. If any student has an assigned privacy code that the requestor is not authorized to access, 
         /// the response object is returned with an X-Content-Restricted header with a value of "partial" to indicate only partial information is returned for some subset of students. 
@@ -385,6 +387,59 @@ namespace Ellucian.Colleague.Api.Controllers
             }
         }
 
+
+        /// <summary>
+        /// Retrieves the academic history for the student. 
+        /// This retrieves all the raw academic credits which includes:
+        /// Academic credits that were imported without student being registered to the section.
+        /// Academic credits that were transfer, dropped, withdrawn or non-course credits based upon filter and includeDrop parameters.
+        /// This groups the information on a term by term basis (separating out the non-term classes).
+        /// </summary>
+        /// <param name="studentId">Id of the student</param>
+        /// <param name="bestFit">(Optional) If true, non-term credit is fitted into terms based on dates</param>
+        /// <param name="filter">(Optional) used to filter to active credit only.</param>
+        /// <param name="term">(Optional) used to return only a specific term of data.</param>
+        /// <param name="includeDrops">(Optional) used to include dropped academic credits</param>
+        /// <returns>The <see cref="AcademicHistory4">Academic History</see> for the student.</returns>
+        /// <accessComments>
+        /// Student academic history can be retrieved by:
+        /// 1. A Student is accessing its own data,
+        /// 2. A proxy is accessing data for allowed student,
+        /// 3. An Advisor with any of the following permissions is accessing any student
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 4. An Advisor with any of the following permissions is accessing one of his or her assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// 5. A user with permission of VIEW.STUDENT.INFORMATION is accessing the student's data.
+        /// </accessComments>
+        public async Task<AcademicHistory4> GetAcademicHistory5Async(string studentId, bool bestFit = false, bool filter = true, string term = null, bool includeDrops = false)
+        {
+            if(string.IsNullOrEmpty(studentId))
+            {
+                throw new ArgumentNullException("studentId", "studentId must be provided in order to retrieve student's academic history");
+            }
+            try
+            {
+                return await _academicHistoryService.GetAcademicHistory5Async(studentId, bestFit, filter, term, includeDrops);
+            }
+            catch (PermissionsException pex)
+            {
+                string message = "Either User is not self or does not have appropriate permissions to retrieve student's academic history";
+                _logger.Error(pex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception ex)
+            {
+                string message = "An exception occurred while retrieving student's academic history";
+                _logger.Error(ex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.BadRequest);
+            }
+        }
         /// <summary>
         /// Retrieves the Student Restrictions for the provided student. Obsolete as of 1.11 - use GetStudentRestrictionsAsync2
         /// </summary>
@@ -562,9 +617,20 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="id">The user's ID</param>
         /// <returns>A list of <see cref="RegistrationMessage"/>Registration Messages.</returns>
-        /// <accessComments>        /// A person may retrieve their own registration eligibility.        /// A proxy may retrieve data for allowed student.        /// An authenticated user (advisor) with any of the following permission codes may retrieve registration eligibility for one of their assigned advisees        /// VIEW.ASSIGNED.ADVISEES        /// REVIEW.ASSIGNED.ADVISEES        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// <accessComments>
+        /// A person may retrieve their own registration eligibility.
+        /// A proxy may retrieve data for allowed student.
+        /// An authenticated user (advisor) with any of the following permission codes may retrieve registration eligibility for one of their assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
         /// An authenticated user (advisor) with any of the following permission codes may retrieve registration eligibility for any student
-        /// VIEW.ANY.ADVISEE        /// REVIEW.ANY.ADVISEE        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        /// </accessComments>
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// </accessComments>
         [Obsolete("Obsolete as of API version 1.3, use version 2 of this API")]
         public async Task<IEnumerable<RegistrationMessage>> GetRegistrationEligibilityAsync(string id)
         {
@@ -590,10 +656,21 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="studentId">Id of the student</param>
         /// <returns><see cref="RegistrationEligibility">Registration Eligibility </see> information containing messages, which, if present, indicate the student
         /// is ineligible, in addition to a boolean HasOverride, set to true if the current user has the ability to override ineligibility.</returns>
-        /// <accessComments>        /// A person may retrieve their own registration eligibility.        ///         /// An authenticated user (advisor) with any of the following permission codes may retrieve registration eligibility for one of their assigned advisees        /// VIEW.ASSIGNED.ADVISEES        /// REVIEW.ASSIGNED.ADVISEES        /// UPDATE.ASSIGNED.ADVISEES        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// <accessComments>
+        /// A person may retrieve their own registration eligibility.
+        /// 
+        /// An authenticated user (advisor) with any of the following permission codes may retrieve registration eligibility for one of their assigned advisees
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
         /// 
         /// An authenticated user (advisor) with any of the following permission codes may retrieve registration eligibility for any student
-        /// VIEW.ANY.ADVISEE        /// REVIEW.ANY.ADVISEE        /// UPDATE.ANY.ADVISEE        /// ALL.ACCESS.ANY.ADVISEE        /// </accessComments>
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// </accessComments>
         public async Task<Dtos.Student.RegistrationEligibility> GetRegistrationEligibility2Async(string studentId)
         {
             if (string.IsNullOrEmpty(studentId))
@@ -604,6 +681,12 @@ namespace Ellucian.Colleague.Api.Controllers
             try
             {
                 return await _studentService.CheckRegistrationEligibility2Async(studentId);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Timeout have occurred while retrieving registration eligibility for the student {0}", studentId);
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {
@@ -987,6 +1070,10 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 throw CreateHttpResponseException(permissionException.Message, HttpStatusCode.Forbidden);
             }
+            catch (ColleagueSessionExpiredException csse)
+            {
+                throw CreateHttpResponseException(csse.Message, HttpStatusCode.Unauthorized);
+            }
             catch (Exception)
             {
                 throw CreateHttpResponseException("Unable to update emergency information", HttpStatusCode.BadRequest);
@@ -999,7 +1086,11 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="studentId">Id of student</param>
         /// <param name="sectionRegistrations">Registration requests to process</param>
         /// <returns>A registration response which includes any messages from registration</returns>
-        /// <accessComments>        /// A person may perform registration actions (register, drop, waitlist, etc) for themselves.          /// An advisor with ALL.ACCESS.ANY.ADVISEE may perform registration actions for any student.        /// An advisor with ALL.ACCESS.ASSIGNED.ADVISEES may perform registration actions for one of their assigned advisees.        /// </accessComments>
+        /// <accessComments>
+        /// A person may perform registration actions (register, drop, waitlist, etc) for themselves.  
+        /// An advisor with ALL.ACCESS.ANY.ADVISEE may perform registration actions for any student.
+        /// An advisor with ALL.ACCESS.ASSIGNED.ADVISEES may perform registration actions for one of their assigned advisees.
+        /// </accessComments>
         [HttpPut]
         public async Task<RegistrationResponse> RegisterAsync(string studentId, [FromBody] IEnumerable<SectionRegistration> sectionRegistrations)
         {
@@ -1018,9 +1109,64 @@ namespace Ellucian.Colleague.Api.Controllers
                 RegistrationResponse response = await _studentService.RegisterAsync(studentId, sectionRegistrations);
                 return response;
             }
+
+            catch(ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Timeout have occurred while registering for the student {0}", studentId);
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
+            }
             catch (PermissionsException peex)
             {
                 _logger.Info(peex.ToString());
+                throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e, e.Message);
+                throw CreateHttpResponseException("An error occurred during request processing: " + e.Message, HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Process drop course section requests by faculty for a student. 
+        /// </summary>
+        /// <param name="studentId">Id of student</param>
+        /// <param name="sectionDropRegistration">Section Drop Registration request to process</param>
+        /// <returns>A registration response which includes any messages from drop registration</returns>
+        /// <accessComments>
+        /// Faculty with DROP.SECTION may perform drop section action for students.
+        /// </accessComments>
+        [HttpPut]
+        public async Task<RegistrationResponse> DropRegistrationAsync(string studentId, [FromBody] SectionDropRegistration sectionDropRegistration)
+        {
+
+            if (string.IsNullOrWhiteSpace(studentId))
+            {
+                _logger.Error("Invalid studentId");
+                throw CreateHttpResponseException("Invalid studentId", HttpStatusCode.BadRequest);
+            }
+
+            if (sectionDropRegistration == null)
+            {
+                _logger.Error("Invalid sectionDropRegistrations");
+                throw CreateHttpResponseException("Invalid sectionDropRegistrations. Must provide at least one.", HttpStatusCode.BadRequest);
+            }
+
+            if (string.IsNullOrWhiteSpace(sectionDropRegistration.SectionId))
+            {
+                _logger.Error("Invalid sectionId");
+                throw CreateHttpResponseException("Invalid sectionId. Must provide at least one.", HttpStatusCode.BadRequest);
+            }
+
+            try
+            {
+                RegistrationResponse response = await _studentService.DropRegistrationAsync(studentId, sectionDropRegistration);
+                return response;
+            }
+            catch (PermissionsException peex)
+            {
+                _logger.Error(peex.ToString());
                 throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
             }
             catch (Exception e)
@@ -1049,7 +1195,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// REVIEW.ASSIGNED.ADVISEES
         /// UPDATE.ASSIGNED.ADVISEES
         /// ALL.ACCESS.ASSIGNED.ADVISEES
-        /// 5. A user with permission of VIEW.STUDENT.INFORMATION is accessing the student's data.
+        /// 5. A user with permission of VIEW.PERSON.INFORMATION is accessing the student's data.
         /// 
         ///  Privacy is enforced by this response. If any student has an assigned privacy code that the advisor or faculty is not authorized to access, the Student response object is returned with a
         /// X-Content-Restricted header with a value of "partial" to indicate only partial information is returned. In this situation, 
@@ -1090,7 +1236,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="pageIndex">Page number</param>
         /// <returns>Information about the queried student(s)</returns>
         /// <accessComments>
-        /// Authenticated users with the VIEW.STUDENT.INFORMATION permission can query students.
+        /// Authenticated users with the VIEW.PERSON.INFORMATION permission can query students.
         /// 
         /// Student privacy is enforced by this response. If any student has an assigned privacy code that the requestor is not authorized to access, 
         /// the response object is returned with an X-Content-Restricted header with a value of "partial" to indicate only partial information is returned for some subset of students. 
@@ -1207,7 +1353,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <accessComments>
         /// Authenticated users with VIEW.STUDENT.INFORMATION can query students.
         /// </accessComments>
-        [HttpGet, FilteringFilter(IgnoreFiltering = true)]
+        [HttpGet, FilteringFilter(IgnoreFiltering = true), PermissionsFilter(StudentPermissionCodes.ViewStudentInformation)]
         [ValidateQueryStringFilter(new string[] { "person", "type", "cohorts", "residency" }, false, true)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         public async Task<IHttpActionResult> GetStudentsAsync(Paging page, [FromUri] string person = "", [FromUri] string type = "", [FromUri] string cohorts = "", [FromUri] string residency = "")
@@ -1235,6 +1381,7 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
+                _studentService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -1256,7 +1403,7 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -1291,7 +1438,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Authenticated users with VIEW.STUDENT.INFORMATION permission can query students.
         /// </accessComments>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, FilteringFilter(IgnoreFiltering = true)]
+        [HttpGet, FilteringFilter(IgnoreFiltering = true), PermissionsFilter(StudentPermissionCodes.ViewStudentInformation)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.Students2))]
         [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter2))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
@@ -1330,6 +1477,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                _studentService.ValidatePermissions(GetPermissionsMetaData());
                 var pageOfItems = await _studentService.GetStudents2Async(page.Offset, page.Limit, criteriaFilter, personFilterValue, bypassCache);
 
                 AddEthosContextProperties(await _studentService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -1341,7 +1489,7 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -1369,7 +1517,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Retrieves a Student by Guid.
         /// </summary>
         /// <returns>An <see cref="Dtos.Students">Students</see>object.</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewStudentInformation)]
         public async Task<Students> GetStudentsByGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -1389,6 +1537,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                _studentService.ValidatePermissions(GetPermissionsMetaData());
                 var student = await _studentService.GetStudentsByGuidAsync(guid);
 
                 if (student != null)
@@ -1406,7 +1555,7 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -1439,7 +1588,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Retrieves a Student by Guid.
         /// </summary>
         /// <returns>An <see cref="Dtos.Students">Students</see>object.</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewStudentInformation)]
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Students2> GetStudentsByGuid2Async(string guid)
         {
@@ -1460,6 +1609,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                _studentService.ValidatePermissions(GetPermissionsMetaData());
                 var student = await _studentService.GetStudentsByGuid2Async(guid);
 
                 if (student != null)
@@ -1477,7 +1627,7 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -1561,7 +1711,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// REVIEW.ASSIGNED.ADVISEES
         /// UPDATE.ASSIGNED.ADVISEES
         /// ALL.ACCESS.ASSIGNED.ADVISEES
-        /// 5. A user with permission of VIEW.STUDENT.INFORMATION is accessing the student's data.
+        /// 5. A user with permission of VIEW.PERSON.INFORMATION is accessing the student's data.
         /// 
         ///  Privacy is enforced by this response. If any student has an assigned privacy code that the advisor or faculty is not authorized to access, the PlanningStudent response object is returned with a
         /// X-Content-Restricted header with a value of "partial" to indicate only partial information is returned. In this situation, 
@@ -1592,7 +1742,50 @@ namespace Ellucian.Colleague.Api.Controllers
                 throw CreateHttpResponseException(exception.Message, HttpStatusCode.BadRequest);
             }
         }
-
-
+        /// <summary>
+        /// This retrieves student's academic levels.
+        /// </summary>
+        /// <param name="studentId">Student Id</param>
+        /// <returns>List of Student's Academic Levels</returns>
+        ///<accessComments>
+        /// Student Academic Levels can be retrieved only if:
+        /// 1. A Student is accessing its own data.
+        /// 2. An Advisor with any of the following codes is accessing the student's data if the student is not assigned advisee.
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 3. An Advisor with any of the following codes is accessing the student's data if the student is assigned advisee.
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// 4. A user with permission of VIEW.STUDENT.INFORMATION is accessing the student's data. 
+        ///</accessComments>
+        public async Task<IEnumerable<StudentAcademicLevel>> GetStudentAcademicLevelsAsync(string studentId)
+        {
+            if(string.IsNullOrWhiteSpace(studentId))
+            {
+                throw new ArgumentNullException("studentId","Student Id passed to retrieve student's academic level cannot be null or empty");
+            }
+          
+            try
+            {
+                IEnumerable<StudentAcademicLevel> studentAcademicLevels = await _studentService.GetStudentAcademicLevelsAsync(studentId);
+                return studentAcademicLevels;
+            }
+            catch (PermissionsException pex)
+            {
+                string message = "A user needs to be self or an advisor in order to view student's academic levels";
+                _logger.Error(pex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception e)
+            {
+                string message = "An exception occured while retrieving student's academic levels for student with id- " + studentId;
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+            }
+        }
     }
 }

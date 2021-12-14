@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
@@ -25,6 +25,7 @@ using Ellucian.Web.Http;
 using CredentialType = Ellucian.Colleague.Dtos.EnumProperties.CredentialType;
 using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
+using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -67,9 +68,11 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="credentialType">Person Credential Type (colleagueId or ssn)</param>
         /// <param name="credentialValue">Person Credential equal to</param>
         /// <returns>List of Organization <see cref="Dtos.Organization2"/> objects representing matching Organization</returns>
-        [HttpGet, FilteringFilter(IgnoreFiltering = true)]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, PermissionsFilter(new string[] { BasePermissionCodes.ViewOrganization, BasePermissionCodes.CreateOrganization, BasePermissionCodes.UpdateOrganization }), FilteringFilter(IgnoreFiltering = true)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         [ValidateQueryStringFilter(new string[] { "role", "credentialType", "credentialValue" }, false, true)]
+
         public async Task<IHttpActionResult> GetOrganizations2Async(Paging page, [FromUri] string role = "", 
             [FromUri] string credentialType = "", [FromUri] string credentialValue = "")
         {
@@ -84,10 +87,13 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
-                if (!string.IsNullOrEmpty(credentialType) && 
-                    !credentialType.Equals(Dtos.EnumProperties.CredentialType.ColleaguePersonId.ToString(), StringComparison.OrdinalIgnoreCase))
+                _personService.ValidatePermissions(GetPermissionsMetaData());
+                if (!string.IsNullOrEmpty(credentialType)
+                      && !credentialType.Equals(Dtos.EnumProperties.CredentialType.ColleaguePersonId.ToString(), StringComparison.OrdinalIgnoreCase)
+                      && !credentialType.Equals(Dtos.EnumProperties.CredentialType.ElevateID.ToString(), StringComparison.OrdinalIgnoreCase) 
+                   )
                 {
-                    throw new ArgumentException("credentialType", "credentialTypes other than ColleaguePersonId are not supported.");
+                    throw new ArgumentException("credentialType", "credentialTypes other than ColleaguePersonId and ElevateID are not supported.");
                 }
 
                 if (!string.IsNullOrEmpty(credentialType) && string.IsNullOrEmpty(credentialValue))
@@ -132,10 +138,15 @@ namespace Ellucian.Colleague.Api.Controllers
                 }
 
             }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -164,7 +175,8 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="id">GUID to desired Organization</param>
         /// <returns>An Organization object <see cref="Dtos.Organization2"/> in DataModel format</returns>
-        [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { BasePermissionCodes.ViewOrganization, BasePermissionCodes.CreateOrganization, BasePermissionCodes.UpdateOrganization })]
         public async Task<Dtos.Organization2> GetOrganizationByGuid2Async(string id)
         {
             if (string.IsNullOrEmpty(id))
@@ -208,6 +220,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 var organization = await _personService.GetOrganization2Async(id);
 
                 if (organization != null)
@@ -229,7 +242,7 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -258,9 +271,10 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="organization">DTO of the new Organization</param>
         /// <returns>A Organization object <see cref="Dtos.Organization2"/> in Data Model format</returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(new string[] { BasePermissionCodes.CreateOrganization })]
         public async Task<Dtos.Organization2> PostOrganizationAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.Organization2 organization)
         {
+            
             //call validate method for common validation between create/update
             await ValidateOrganizationContent(organization);
 
@@ -287,6 +301,8 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                //check permission
+                _personService.ValidatePermissions(GetPermissionsMetaData());
                 //call import extend method that needs the extracted extension data and the config
                 await _personService.ImportExtendedEthosData(await ExtractExtendedData(await _personService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
@@ -307,7 +323,7 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -337,9 +353,10 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="id">GUID of the Organization to update</param>
         /// <param name="organization">DTO of the updated Organization</param>
         /// <returns>A Organization object <see cref="Dtos.Organization2"/> in Data Model format</returns>
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(new string[] { BasePermissionCodes.UpdateOrganization })]
         public async Task<Dtos.Organization2> PutOrganizationAsync([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.Organization2 organization)
         {
+           
             //make sure id was specified on the URL
             if (string.IsNullOrEmpty(id))
             {
@@ -375,13 +392,6 @@ namespace Ellucian.Colleague.Api.Controllers
                     IntegrationApiUtility.GetDefaultApiError("ID not the same as in request body.")));
             }
 
-            //make sure the organization object has an title as it is required
-            if (string.IsNullOrEmpty(organization.Title))
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("Null title argument",
-                    IntegrationApiUtility.GetDefaultApiError("The title must be specified in the request body.")));
-            }
-
             //make sure the organization object has an role type set for any roles included
             if (organization.Roles != null && organization.Roles.Any())
             {
@@ -397,7 +407,7 @@ namespace Ellucian.Colleague.Api.Controllers
             else if (organization.Roles != null && !organization.Roles.Any())
             {
                 throw CreateHttpResponseException(new IntegrationApiException("Invalid role argument",
-                    IntegrationApiUtility.GetDefaultApiError("The vendor role cannot be removed in Colleague.")));
+                    IntegrationApiUtility.GetDefaultApiError("Organization roles cannot be unset.")));
             }
 
             if (organization.Credentials != null && !organization.Credentials.Any())
@@ -408,6 +418,8 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                //check permission
+                _personService.ValidatePermissions(GetPermissionsMetaData());
 
                 var institution = await _educationalInstitutionsService.GetEducationalInstitutionByGuidAsync(id);
 
@@ -416,6 +428,11 @@ namespace Ellucian.Colleague.Api.Controllers
                     throw new InvalidConstraintException(string.Concat("The id ", id,
                         " already exists and it does not belong to an organization, it belongs to an educational-institution, updates to educational institutions are not allowed from the organization endpoint."));
                 }
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (InvalidConstraintException constraintException)
             {
@@ -462,7 +479,7 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -491,6 +508,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Delete (DELETE) a Organization
         /// </summary>
         /// <param name="id">GUID to desired Organization</param>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpDelete]
         public async Task DeleteOrganizationByGuidAsync(string id)
         {

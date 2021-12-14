@@ -122,7 +122,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             [TestMethod]
             public async Task PayScalesRepository_GetPayScalesAsync_DataReader_Select_Gives_Null()
             {
-                dataReaderMock.Setup(r => r.SelectAsync("SWVER", It.IsAny<string>())).ReturnsAsync(null);
+                dataReaderMock.Setup(r => r.SelectAsync("SWVER", It.IsAny<string>())).ReturnsAsync(() => null);
                 var result = await payScalesRepository.GetPayScalesAsync();
 
                 Assert.IsNotNull(result);
@@ -185,7 +185,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task PayScalesRepository_GetPayScalesByIdAsync_DataReader_PayScaleRecord_Null()
             {
-                dataReaderMock.Setup(r => r.ReadRecordAsync<Swver>("SWVER", It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<Swver>("SWVER", It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 await payScalesRepository.GetPayScalesByIdAsync(guid);
             }
 
@@ -193,7 +193,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task PayScalesRepository_GetPayScalesByIdAsync_DataReader_PayTableRecord_Null()
             {
-                dataReaderMock.Setup(r => r.ReadRecordAsync<Swtables>("SWTABLES", It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<Swtables>("SWTABLES", It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 await payScalesRepository.GetPayScalesByIdAsync(guid);
             }
 

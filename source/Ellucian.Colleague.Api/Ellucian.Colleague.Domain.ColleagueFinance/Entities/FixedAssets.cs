@@ -41,6 +41,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
             }
 
             _guid = guid;
+            _id = id;
             _description = description;
             _capitalizationStatus = capitalizationStatus;
             _acquisitionMethod = acquisitionMethod;

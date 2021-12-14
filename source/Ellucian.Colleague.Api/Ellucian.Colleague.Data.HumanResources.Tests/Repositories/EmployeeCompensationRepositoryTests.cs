@@ -82,7 +82,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         public async Task EmployeeCompensation_TransactionReturnsNullTest()
         {
             transManagerMock.Setup(t => t.ExecuteAsync<CalcTotalCompensationRequest, CalcTotalCompensationResponse>(It.IsAny<CalcTotalCompensationRequest>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
             var actual = await repositoryUnderTest.GetEmployeeCompensationAsync(effectivePersonId, null,false);
         }
 

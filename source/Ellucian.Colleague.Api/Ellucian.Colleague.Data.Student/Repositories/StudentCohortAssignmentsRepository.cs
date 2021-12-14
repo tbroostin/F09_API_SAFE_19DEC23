@@ -1,6 +1,7 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Student.DataContracts;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
@@ -24,6 +25,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     public class StudentCohortAssignmentsRepository : BaseColleagueRepository, IStudentCohortAssignmentsRepository
     {
         private int readSize;
+        const string AllStudentCohortAssignmentsCache = "AllStudentCohortAssignments";
+
+        const int AllStudentCohortAssignmentsCacheTimeout = 20; // Clear from cache every 20 minutes
 
         /// <summary>
         /// ..ctor
@@ -49,8 +53,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             StudentCohortAssignment criteriaObj = null, Dictionary<string, string> filterQualifiers = null)
         {
             string criteria = string.Empty;
+
             int totalCount = 0;
 
+            string[] subList = null;
             string convertedStartOn = string.Empty;
             string convertedEndOn = string.Empty;
 
@@ -58,100 +64,231 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             string[] otherCohortKeys = new string[] { };
             string[] fedCohortKeys = new string[] { };
             string[] combinedCohortKeys = new string[] { };
+            List<string> tempLimitingKeys = new List<string>();
 
-            List<StudentCohortAssignment> entities = new List<StudentCohortAssignment>();
-            List<StudentAcadLevels> studentAcadLevels = null;
+            var entities = new List<StudentCohortAssignment>();
+            var studentAcadLevels = new List<StudentAcadLevels>();
 
-            try
+            string studentCohortAssignmentsCacheKey = string.Empty;
+            if (criteriaObj == null)
             {
-                string startOnOperation = filterQualifiers != null && filterQualifiers.ContainsKey("StartOn") ? filterQualifiers["StartOn"] : "EQ";
-                string endOnOperation = filterQualifiers != null && filterQualifiers.ContainsKey("EndOn") ? filterQualifiers["EndOn"] : "EQ";
-                bool isGetAll = ((criteriaObj == null) || ( string.IsNullOrWhiteSpace(criteriaObj.CohortId) && string.IsNullOrWhiteSpace(criteriaObj.PersonId) && 
-                                 !criteriaObj.StartOn.HasValue && !criteriaObj.EndOn.HasValue)) ? 
-                                 true : false;
+                studentCohortAssignmentsCacheKey = CacheSupport.BuildCacheKey(AllStudentCohortAssignmentsCache, filterQualifiers);
+            }
+            else
+            {
+                studentCohortAssignmentsCacheKey =  CacheSupport.BuildCacheKey(AllStudentCohortAssignmentsCache, filterQualifiers,
+                criteriaObj.PersonId, criteriaObj.CohortId, criteriaObj.CohortType, criteriaObj.EndOn, criteriaObj.StartOn);
+            }
+            var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                studentCohortAssignmentsCacheKey,
+                "",
+                offset,
+                limit,
+                AllStudentCohortAssignmentsCacheTimeout,
 
-                if (criteriaObj != null && !string.IsNullOrWhiteSpace(criteriaObj.PersonId))
+                async () =>
                 {
-                    criteria = string.Format("WITH STU.ACAD.LEVELS NE '' AND STUDENTS.ID EQ '{0}'", criteriaObj.PersonId);
-                    var studentRecords = await DataReader.BulkReadRecordAsync<Students>(criteria);
-                    if(studentRecords == null)
-                    {
-                        return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
-                    }
-                    limitingKeys = studentRecords.SelectMany(s => s.StuAcadLevels).Select(al => string.Concat(criteriaObj.PersonId, "*", al)).ToArray();
+                    string startOnOperation = filterQualifiers != null && filterQualifiers.ContainsKey("StartOn") ? filterQualifiers["StartOn"] : "EQ";
+                    string endOnOperation = filterQualifiers != null && filterQualifiers.ContainsKey("EndOn") ? filterQualifiers["EndOn"] : "EQ";
+                    bool isGetAll = ((criteriaObj == null) || (string.IsNullOrWhiteSpace(criteriaObj.CohortId) && string.IsNullOrWhiteSpace(criteriaObj.PersonId) &&
+                                     !criteriaObj.StartOn.HasValue && !criteriaObj.EndOn.HasValue)) ?
+                                     true : false;
 
-                    //Get all student acad level records to collect all fed & other cohorts.
-                    studentAcadLevels = (await DataReader.BulkReadRecordAsync<StudentAcadLevels>(limitingKeys)).ToList();
-
-                    if(studentAcadLevels == null || !studentAcadLevels.Any())
+                    if (criteriaObj != null && !string.IsNullOrWhiteSpace(criteriaObj.PersonId))
                     {
-                        return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
-                    }
-
-                    //Collect all fed cohort keys
-                    fedCohortKeys = studentAcadLevels.Where(sal => !string.IsNullOrEmpty(sal.StaFedCohortGroup))
-                                             .Select(fed => string.Concat(fed.Recordkey, "|", fed.StaFedCohortGroup)).ToArray();
-                    //Collect other cohorts keys
-                    var acadLevels = studentAcadLevels.Where(sal => sal.StaOtherCohortsEntityAssociation != null && sal.StaOtherCohortsEntityAssociation.Any()).ToList();
-                    List<string> tempCohortKeys = new List<string>();
-                    foreach (var acadLevel in acadLevels)
-                    {
-                        var id = acadLevel.Recordkey;
-                        var otherCohorts = acadLevel.StaOtherCohortsEntityAssociation
-                            .Where(oc => HasValues(oc, oc.StaOtherCohortStartDatesAssocMember))
-                            .Select(al => string.Concat( id, "|", al.StaOtherCohortGroupsAssocMember, "*", DmiString.DateTimeToPickDate(al.StaOtherCohortStartDatesAssocMember.Value)));
-                        tempCohortKeys.AddRange(otherCohorts);                                                    
-                    }
-                    otherCohortKeys = tempCohortKeys.ToArray();
-
-                    combinedCohortKeys = fedCohortKeys.Concat(otherCohortKeys).ToArray();
-                    if (combinedCohortKeys == null || !combinedCohortKeys.Any())
-                    {
-                        return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
-                    }
-                }
-
-                if (criteriaObj != null && !string.IsNullOrWhiteSpace(criteriaObj.CohortId) && !string.IsNullOrWhiteSpace(criteriaObj.CohortType))
-                {
-                    if (criteriaObj.CohortType.Equals("FED", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (limitingKeys == null || !limitingKeys.Any())
+                        criteria = string.Format("WITH STU.ACAD.LEVELS NE '' AND STUDENTS.ID EQ '{0}'", criteriaObj.PersonId);
+                        var studentIds = await DataReader.SelectAsync("STUDENTS", criteria);
+                        var studentRecords = new List<Students>();
+                        for (int i = 0; i < studentIds.Count(); i += readSize)
                         {
-                            criteria = string.Format("WITH STA.FED.COHORT.GROUP EQ '{0}'", criteriaObj.CohortId);
-                            studentAcadLevels = (await DataReader.BulkReadRecordAsync<StudentAcadLevels>(criteria)).ToList();
+                            var subListStudents = studentIds.Skip(i).Take(readSize).ToArray();
+                            studentRecords.AddRange(await DataReader.BulkReadRecordAsync<Students>(subListStudents));
                         }
-                        else
+                        //Collection<Students> studentRecords = await DataReader.BulkReadRecordAsync<Students>(criteria);
+                        if (!studentRecords.Any())
                         {
-                            studentAcadLevels = studentAcadLevels.Where(sal => sal.StaFedCohortGroup.Equals(criteriaObj.CohortId, StringComparison.OrdinalIgnoreCase)).ToList();
+                            //return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
+                            return new CacheSupport.KeyCacheRequirements()
+                            {
+                                NoQualifyingRecords = true
+                            };
+                        }
+                        limitingKeys = studentRecords.SelectMany(s => s.StuAcadLevels).Select(al => string.Concat(criteriaObj.PersonId, "*", al)).ToArray();
+
+                        //Get all student acad level records to collect all fed & other cohorts.
+                        //studentAcadLevels = (await DataReader.BulkReadRecordAsync<StudentAcadLevels>(limitingKeys)).ToList();
+                        for (int i = 0; i < limitingKeys.Count(); i += readSize)
+                        {
+                            var subListStudents = limitingKeys.Skip(i).Take(readSize).ToArray();
+                            studentAcadLevels.AddRange(await DataReader.BulkReadRecordAsync<StudentAcadLevels>(subListStudents));
                         }
 
-                        if (studentAcadLevels == null || !studentAcadLevels.Any())
+                        if (!studentAcadLevels.Any())
                         {
-                            return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
+                            //return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
+                            return new CacheSupport.KeyCacheRequirements()
+                            {
+                                NoQualifyingRecords = true
+                            };
                         }
-
-                        limitingKeys = studentAcadLevels.Select(lk => lk.Recordkey).ToArray();
 
                         //Collect all fed cohort keys
                         fedCohortKeys = studentAcadLevels.Where(sal => !string.IsNullOrEmpty(sal.StaFedCohortGroup))
                                                  .Select(fed => string.Concat(fed.Recordkey, "|", fed.StaFedCohortGroup)).ToArray();
-                        combinedCohortKeys = fedCohortKeys;
-                    }
-                    else if (criteriaObj.CohortType.Equals("INSTITUTION", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (limitingKeys == null || !limitingKeys.Any())
+                        //Collect other cohorts keys
+                        var acadLevels = studentAcadLevels.Where(sal => sal.StaOtherCohortsEntityAssociation != null && sal.StaOtherCohortsEntityAssociation.Any()).ToList();
+                        List<string> tempCohortKeys = new List<string>();
+                        foreach (var acadLevel in acadLevels)
                         {
-                            criteria = string.Format("WITH STA.OTHER.COHORT.GROUPS EQ '{0}' WITH STA.OTHER.COHORT.START.DATES NE ''", criteriaObj.CohortId);
-                            studentAcadLevels = (await DataReader.BulkReadRecordAsync<StudentAcadLevels>(criteria)).ToList();
+                            var id = acadLevel.Recordkey;
+                            var otherCohorts = acadLevel.StaOtherCohortsEntityAssociation
+                                .Where(oc => HasValues(oc, oc.StaOtherCohortStartDatesAssocMember))
+                                .Select(al => string.Concat(id, "|", al.StaOtherCohortGroupsAssocMember, "*", DmiString.DateTimeToPickDate(al.StaOtherCohortStartDatesAssocMember.Value)));
+                            tempCohortKeys.AddRange(otherCohorts);
+                        }
+                        otherCohortKeys = tempCohortKeys.ToArray();
+
+                        combinedCohortKeys = fedCohortKeys.Concat(otherCohortKeys).ToArray();
+                        if (!combinedCohortKeys.Any())
+                        {
+                            //return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
+                            return new CacheSupport.KeyCacheRequirements()
+                            {
+                                NoQualifyingRecords = true
+                            };
+                        }
+                    }
+
+                    if (criteriaObj != null && !string.IsNullOrWhiteSpace(criteriaObj.CohortId) && !string.IsNullOrWhiteSpace(criteriaObj.CohortType))
+                    {
+                        if (criteriaObj.CohortType.Equals("FED", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (limitingKeys == null || !limitingKeys.Any())
+                            {
+                                criteria = string.Format("WITH STA.FED.COHORT.GROUP EQ '{0}'", criteriaObj.CohortId);
+                                //studentAcadLevels = (await DataReader.BulkReadRecordAsync<StudentAcadLevels>(criteria)).ToList();
+                                var studentAcadLevelIds = await DataReader.SelectAsync("STUDENT.ACAD.LEVELS", criteria);
+                                List<Students> studentRecords = new List<Students>();
+                                for (int i = 0; i < studentAcadLevelIds.Count(); i += readSize)
+                                {
+                                    var subListStudents = studentAcadLevelIds.Skip(i).Take(readSize).ToArray();
+                                    studentAcadLevels.AddRange(await DataReader.BulkReadRecordAsync<StudentAcadLevels>(subListStudents));
+                                }
+                            }
+                            else
+                            {
+                                studentAcadLevels = studentAcadLevels.Where(sal => sal.StaFedCohortGroup.Equals(criteriaObj.CohortId, StringComparison.OrdinalIgnoreCase)).ToList();
+                            }
+
+                            if (!studentAcadLevels.Any())
+                            {
+                                // return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
+                                return new CacheSupport.KeyCacheRequirements()
+                                {
+                                    NoQualifyingRecords = true
+                                };
+                            }
+
+                            limitingKeys = studentAcadLevels.Select(lk => lk.Recordkey).ToArray();
+
+                            //Collect all fed cohort keys
+                            fedCohortKeys = studentAcadLevels.Where(sal => !string.IsNullOrEmpty(sal.StaFedCohortGroup))
+                                                     .Select(fed => string.Concat(fed.Recordkey, "|", fed.StaFedCohortGroup)).ToArray();
+                            combinedCohortKeys = fedCohortKeys;
+                        }
+                        else if (criteriaObj.CohortType.Equals("INSTITUTION", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (limitingKeys == null || !limitingKeys.Any())
+                            {
+                                criteria = string.Format("WITH STA.OTHER.COHORT.GROUPS EQ '{0}' WITH STA.OTHER.COHORT.START.DATES NE ''", criteriaObj.CohortId);
+                                //studentAcadLevels = (await DataReader.BulkReadRecordAsync<StudentAcadLevels>(criteria)).ToList();
+                                var studentAcadLevelIds = await DataReader.SelectAsync("STUDENT.ACAD.LEVELS", criteria);
+                                List<Students> studentRecords = new List<Students>();
+                                for (int i = 0; i < studentAcadLevelIds.Count(); i += readSize)
+                                {
+                                    var subListStudents = studentAcadLevelIds.Skip(i).Take(readSize).ToArray();
+                                    studentAcadLevels.AddRange(await DataReader.BulkReadRecordAsync<StudentAcadLevels>(subListStudents));
+                                }
+                            }
+                            else
+                            {
+                                studentAcadLevels = studentAcadLevels.Where(sal => sal.StaOtherCohortGroups.Contains(criteriaObj.CohortId)).ToList();
+                            }
+
+                            if (!studentAcadLevels.Any())
+                            {
+                                //return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
+                                return new CacheSupport.KeyCacheRequirements()
+                                {
+                                    NoQualifyingRecords = true
+                                };
+                            }
+
+                            limitingKeys = studentAcadLevels.Select(lk => lk.Recordkey).ToArray();
+
+                            //Collect other cohorts keys
+                            var acadLevels = studentAcadLevels.Where(sal => sal.StaOtherCohortsEntityAssociation != null && sal.StaOtherCohortsEntityAssociation.Any()).ToList();
+                            List<string> tempCohortKeys = new List<string>();
+                            foreach (var acadLevel in acadLevels)
+                            {
+                                var id = acadLevel.Recordkey;
+                                var otherCohorts = acadLevel.StaOtherCohortsEntityAssociation
+                                    .Where(oc => HasCohortIdMatch(criteriaObj, oc))
+                                    .Select(al => string.Concat(id, "|", al.StaOtherCohortGroupsAssocMember, "*", DmiString.DateTimeToPickDate(al.StaOtherCohortStartDatesAssocMember.Value)));
+                                tempCohortKeys.AddRange(otherCohorts);
+                            }
+                            combinedCohortKeys = tempCohortKeys.ToArray();
                         }
                         else
                         {
-                            studentAcadLevels = studentAcadLevels.Where(sal => sal.StaOtherCohortGroups.Contains(criteriaObj.CohortId)).ToList();
+                            //return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
+                            return new CacheSupport.KeyCacheRequirements()
+                            {
+                                NoQualifyingRecords = true
+                            };
+                        }
+                        if (combinedCohortKeys == null || !combinedCohortKeys.Any())
+                        {
+                            //return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
+                            return new CacheSupport.KeyCacheRequirements()
+                            {
+                                NoQualifyingRecords = true
+                            };
+                        }
+                    }
+
+                    if (criteriaObj != null && criteriaObj.StartOn.HasValue)
+                    {
+                        convertedStartOn = await this.GetUnidataFormattedDateAsync(criteriaObj.StartOn.Value.ToString());
+                        if (limitingKeys == null || !limitingKeys.Any())
+                        {
+                            criteria = string.Format("WITH STA.OTHER.COHORT.START.DATES {0} '{1}' AND STA.OTHER.COHORT.START.DATES NE ''", startOnOperation, convertedStartOn);
+                            //studentAcadLevels = (await DataReader.BulkReadRecordAsync<StudentAcadLevels>(criteria)).ToList();
+                            var studentAcadLevelIds = await DataReader.SelectAsync("STUDENT.ACAD.LEVELS", criteria);
+                            List<Students> studentRecords = new List<Students>();
+                            for (int i = 0; i < studentAcadLevelIds.Count(); i += readSize)
+                            {
+                                var subListStudents = studentAcadLevelIds.Skip(i).Take(readSize).ToArray();
+                                studentAcadLevels.AddRange(await DataReader.BulkReadRecordAsync<StudentAcadLevels>(subListStudents));
+                            }
+                        }
+                        else
+                        {
+                            studentAcadLevels = studentAcadLevels.Where(sal => sal.StaOtherCohortStartDates.Contains(criteriaObj.StartOn.Value)).ToList();
                         }
 
-                        if (studentAcadLevels == null || !studentAcadLevels.Any())
+                        if (!studentAcadLevels.Any())
                         {
-                            return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
+                            //return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
+                            return new CacheSupport.KeyCacheRequirements()
+                            {
+                                NoQualifyingRecords = true
+                            };
                         }
 
                         limitingKeys = studentAcadLevels.Select(lk => lk.Recordkey).ToArray();
@@ -163,221 +300,253 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         {
                             var id = acadLevel.Recordkey;
                             var otherCohorts = acadLevel.StaOtherCohortsEntityAssociation
-                                .Where(oc => HasCohortIdMatch(criteriaObj, oc))
+                                .Where(oc => HasStartOnMatch(criteriaObj, oc, startOnOperation))
                                 .Select(al => string.Concat(id, "|", al.StaOtherCohortGroupsAssocMember, "*", DmiString.DateTimeToPickDate(al.StaOtherCohortStartDatesAssocMember.Value)));
                             tempCohortKeys.AddRange(otherCohorts);
                         }
                         combinedCohortKeys = tempCohortKeys.ToArray();
-                    }
-                    else
-                    {
-                        return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
-                    }
-                    if (combinedCohortKeys == null || !combinedCohortKeys.Any())
-                    {
-                        return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
-                    }
-                }
 
-                if (criteriaObj != null && criteriaObj.StartOn.HasValue)
-                {
-                    convertedStartOn = await this.GetUnidataFormattedDateAsync(criteriaObj.StartOn.Value.ToString());
-                    if (limitingKeys == null || !limitingKeys.Any())
-                    {
-                        criteria = string.Format("WITH STA.OTHER.COHORT.START.DATES {0} '{1}' AND STA.OTHER.COHORT.START.DATES NE ''", startOnOperation, convertedStartOn);
-                        studentAcadLevels = (await DataReader.BulkReadRecordAsync<StudentAcadLevels>(criteria)).ToList();
-                    }
-                    else
-                    {
-                        studentAcadLevels = studentAcadLevels.Where(sal => sal.StaOtherCohortStartDates.Contains(criteriaObj.StartOn.Value)).ToList();
-                    }
-
-                    if (studentAcadLevels == null || !studentAcadLevels.Any())
-                    {
-                        return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
-                    }
-
-                    limitingKeys = studentAcadLevels.Select(lk => lk.Recordkey).ToArray();
-
-                    //Collect other cohorts keys
-                    var acadLevels = studentAcadLevels.Where(sal => sal.StaOtherCohortsEntityAssociation != null && sal.StaOtherCohortsEntityAssociation.Any()).ToList();
-                    List<string> tempCohortKeys = new List<string>();
-                    foreach (var acadLevel in acadLevels)
-                    {
-                        var id = acadLevel.Recordkey;
-                        var otherCohorts = acadLevel.StaOtherCohortsEntityAssociation
-                            .Where(oc => HasStartOnMatch(criteriaObj, oc, startOnOperation))
-                            .Select(al => string.Concat(id, "|", al.StaOtherCohortGroupsAssocMember, "*", DmiString.DateTimeToPickDate(al.StaOtherCohortStartDatesAssocMember.Value)));
-                        tempCohortKeys.AddRange(otherCohorts);
-                    }
-                    combinedCohortKeys = tempCohortKeys.ToArray();
-
-                    if (combinedCohortKeys == null || !combinedCohortKeys.Any())
-                    {
-                        return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
-                    }
-                }
-
-                if (criteriaObj != null && criteriaObj.EndOn.HasValue)
-                {
-                    convertedEndOn = await this.GetUnidataFormattedDateAsync(criteriaObj.EndOn.Value.ToString());
-                    if (limitingKeys == null || !limitingKeys.Any())
-                    {
-                        criteria = string.Format("WITH STA.OTHER.COHORT.END.DATES {0} '{1}' AND STA.OTHER.COHORT.END.DATES NE ''", endOnOperation, convertedEndOn);
-                        studentAcadLevels = (await DataReader.BulkReadRecordAsync<StudentAcadLevels>(criteria)).ToList();
-                    }
-                    else
-                    {
-                        studentAcadLevels = studentAcadLevels.Where(sal => sal.StaOtherCohortEndDates.Contains(criteriaObj.EndOn.Value)).ToList();
-                    }
-
-                    if (studentAcadLevels == null || !studentAcadLevels.Any())
-                    {
-                        return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
-                    }
-
-                    limitingKeys = studentAcadLevels.Select(lk => lk.Recordkey).ToArray();
-
-                    //Collect other cohorts keys
-                    var acadLevels = studentAcadLevels.Where(sal => sal.StaOtherCohortsEntityAssociation != null && sal.StaOtherCohortsEntityAssociation.Any()).ToList();
-                    List<string> tempCohortKeys = new List<string>();
-                    foreach (var acadLevel in acadLevels)
-                    {
-                        var id = acadLevel.Recordkey;
-                        var otherCohorts = acadLevel.StaOtherCohortsEntityAssociation
-                            .Where(oc => HasEndOnMatch(criteriaObj, oc, endOnOperation))
-                            .Select(al => string.Concat(id, "|", al.StaOtherCohortGroupsAssocMember, "*", DmiString.DateTimeToPickDate(al.StaOtherCohortStartDatesAssocMember.Value)));
-                        tempCohortKeys.AddRange(otherCohorts);
-                    }
-                    combinedCohortKeys = tempCohortKeys.ToArray();
-
-                    if (combinedCohortKeys == null || !combinedCohortKeys.Any())
-                    {
-                        return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
-                    }
-                }
-
-                //GET ALL
-                if (isGetAll)
-                {
-                    criteria = "WITH STU.ACAD.LEVELS NE ''";
-                    var studentIds = await DataReader.SelectAsync("STUDENTS", criteria);
-                    List<Students> studentRecords = new List<Students>();
-                    for (int i = 0; i < studentIds.Count(); i += readSize)
-                    {
-                        var subListStudents = studentIds.Skip(i).Take(readSize).ToArray();
-                        studentRecords.AddRange(await DataReader.BulkReadRecordAsync<Students>(subListStudents));
-                    }
-
-                    if (studentRecords == null)
-                    {
-                        return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
-                    }
-
-                    var tempLimitingKeys = new List<string>();
-                    foreach (var studentRecord in studentRecords)
-                    {
-                        studentRecord.StuAcadLevels.Where(al => !string.IsNullOrEmpty(al)).ToList().ForEach(l =>
+                        if (!combinedCohortKeys.Any())
                         {
-                            var combinedKey = string.Concat(studentRecord.Recordkey, "*", l);
-                            tempLimitingKeys.Add(combinedKey);
-                        });
+                            // return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
+                            return new CacheSupport.KeyCacheRequirements()
+                            {
+                                NoQualifyingRecords = true
+                            };
+                        }
                     }
-                    limitingKeys = tempLimitingKeys.ToArray();
-                    //Get all student acad level records to collect all fed & other cohorts.
-                    studentAcadLevels = (await DataReader.BulkReadRecordAsync<StudentAcadLevels>(limitingKeys)).ToList();
 
-                    fedCohortKeys = studentAcadLevels.Where(sal => !string.IsNullOrEmpty(sal.StaFedCohortGroup)).Select(k => string.Concat(k.Recordkey, "|", k.StaFedCohortGroup)).ToArray();
-
-                    //Collect other cohorts keys
-                    var acadLevels = studentAcadLevels.Where(sal => sal.StaOtherCohortsEntityAssociation != null && sal.StaOtherCohortsEntityAssociation.Any()).ToList();
-                    List<string> tempCohortKeys = new List<string>();
-                    foreach (var acadLevel in acadLevels)
+                    if (criteriaObj != null && criteriaObj.EndOn.HasValue)
                     {
-                        var id = acadLevel.Recordkey;
-                        var otherCohorts = acadLevel.StaOtherCohortsEntityAssociation
-                            .Where(oc => HasValues(oc, oc.StaOtherCohortStartDatesAssocMember))
-                            .Select(al => string.Concat(id, "|", al.StaOtherCohortGroupsAssocMember, "*", DmiString.DateTimeToPickDate(al.StaOtherCohortStartDatesAssocMember.Value)));
-                        tempCohortKeys.AddRange(otherCohorts);
-                    }
-                    otherCohortKeys = tempCohortKeys.ToArray();
+                        convertedEndOn = await this.GetUnidataFormattedDateAsync(criteriaObj.EndOn.Value.ToString());
+                        if (limitingKeys == null || !limitingKeys.Any())
+                        {
+                            criteria = string.Format("WITH STA.OTHER.COHORT.END.DATES {0} '{1}' AND STA.OTHER.COHORT.END.DATES NE ''", endOnOperation, convertedEndOn);
+                            // studentAcadLevels = (await DataReader.BulkReadRecordAsync<StudentAcadLevels>(criteria)).ToList();
+                            var studentAcadLevelIds = await DataReader.SelectAsync("STUDENT.ACAD.LEVELS", criteria);
+                            List<Students> studentRecords = new List<Students>();
+                            for (int i = 0; i < studentAcadLevelIds.Count(); i += readSize)
+                            {
+                                var subListStudents = studentAcadLevelIds.Skip(i).Take(readSize).ToArray();
+                                studentAcadLevels.AddRange(await DataReader.BulkReadRecordAsync<StudentAcadLevels>(subListStudents));
+                            }
+                        }
+                        else
+                        {
+                            studentAcadLevels = studentAcadLevels.Where(sal => sal.StaOtherCohortEndDates.Contains(criteriaObj.EndOn.Value)).ToList();
+                        }
 
-                    combinedCohortKeys = fedCohortKeys.Concat(otherCohortKeys).ToArray();
-                    if (combinedCohortKeys == null || !combinedCohortKeys.Any())
+                        if (!studentAcadLevels.Any())
+                        {
+                            //return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
+                            return new CacheSupport.KeyCacheRequirements()
+                            {
+                                NoQualifyingRecords = true
+                            };
+                        }
+
+                        limitingKeys = studentAcadLevels.Select(lk => lk.Recordkey).ToArray();
+
+                        //Collect other cohorts keys
+                        var acadLevels = studentAcadLevels.Where(sal => sal.StaOtherCohortsEntityAssociation != null && sal.StaOtherCohortsEntityAssociation.Any()).ToList();
+                        List<string> tempCohortKeys = new List<string>();
+                        foreach (var acadLevel in acadLevels)
+                        {
+                            var id = acadLevel.Recordkey;
+                            var otherCohorts = acadLevel.StaOtherCohortsEntityAssociation
+                                .Where(oc => HasEndOnMatch(criteriaObj, oc, endOnOperation))
+                                .Select(al => string.Concat(id, "|", al.StaOtherCohortGroupsAssocMember, "*", DmiString.DateTimeToPickDate(al.StaOtherCohortStartDatesAssocMember.Value)));
+                            tempCohortKeys.AddRange(otherCohorts);
+                        }
+                        combinedCohortKeys = tempCohortKeys.ToArray();
+
+                        if (!combinedCohortKeys.Any())
+                        {
+                            //return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
+                            return new CacheSupport.KeyCacheRequirements()
+                            {
+                                NoQualifyingRecords = true
+                            };
+                        }
+                    }
+
+                    //GET ALL (ie no filters are supplied)
+                    if (isGetAll)
+                    {                        
+                        criteria = "WITH STA.FED.COHORT.GROUP NE '' BY.EXP STA.FED.COHORT.GROUP";
+                        var stuAcadLevelIds = await DataReader.SelectAsync("STUDENT.ACAD.LEVELS", criteria);
+                        criteria = "WITH STA.FED.COHORT.GROUP NE '' BY.EXP STA.FED.COHORT.GROUP SAVING STA.FED.COHORT.GROUP";
+                        var fedCohortIds = await DataReader.SelectAsync("STUDENT.ACAD.LEVELS", criteria);
+                        for (int i = 0; i < stuAcadLevelIds.Count(); i++)
+                        {
+                            var stuAcadLevelId = stuAcadLevelIds[i];
+                            var fedCohortId = fedCohortIds[i];
+                            if (!string.IsNullOrEmpty(stuAcadLevelId) && !string.IsNullOrEmpty(fedCohortId))
+                            {
+                                tempLimitingKeys.Add(string.Concat(stuAcadLevelId, "|", fedCohortId));
+                            }
+                        }
+
+                        criteria = "WITH STA.OTHER.COHORTS.IDX NE '' BY.EXP STA.OTHER.COHORTS.IDX";
+                        stuAcadLevelIds = await DataReader.SelectAsync("STUDENT.ACAD.LEVELS", criteria);
+                        criteria = "WITH STA.OTHER.COHORTS.IDX NE '' BY.EXP STA.OTHER.COHORTS.IDX SAVING STA.OTHER.COHORTS.IDX";
+                        var otherCohortIds = await DataReader.SelectAsync("STUDENT.ACAD.LEVELS", criteria);
+                        for (int i = 0; i < stuAcadLevelIds.Count(); i++)
+                        {
+                            var stuAcadLevelId = stuAcadLevelIds[i];
+                            var otherCohortId = otherCohortIds[i];
+                            var cohortIdSplit = otherCohortId.Split('*');
+                            if (cohortIdSplit.Count() > 1)
+                            {
+                                // Only add to list if we have an ID*DATE in index list.
+                                if (!string.IsNullOrEmpty(stuAcadLevelId) && !string.IsNullOrEmpty(otherCohortId))
+                                {
+                                    tempLimitingKeys.Add(string.Concat(stuAcadLevelId, "|", otherCohortId));
+                                }
+                            }
+                        }
+
+                        combinedCohortKeys = tempLimitingKeys.ToArray();
+                        if (combinedCohortKeys == null || !combinedCohortKeys.Any())
+                        {
+                            return new CacheSupport.KeyCacheRequirements()
+                            {
+                                NoQualifyingRecords = true
+                            };
+                        }
+                    }
+
+                    var requirements = new CacheSupport.KeyCacheRequirements()
                     {
-                        return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
-                    }
-                }
+                        limitingKeys = combinedCohortKeys.Distinct().ToList(),
+                    };
 
-                //Get total count from combinedCohortKeys
-                totalCount = combinedCohortKeys.Count();
-                var subList = combinedCohortKeys.Skip(offset).Take(limit).ToArray();
-                var subListIds = subList.Select(i => i.Split('|')[0]).Distinct().ToArray();                
+                    return requirements;
 
+                });
+
+            if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
+            {
+                return new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
+            }
+            try
+            {
+                subList = keyCache.Sublist.ToArray();
+                totalCount = keyCache.TotalCount.Value;
+
+                var subListIds = subList.Select(i => i.Split('|')[0]).Distinct().ToArray();
+                studentAcadLevels = (await DataReader.BulkReadRecordAsync<StudentAcadLevels>(subListIds)).ToList();
+                    
                 Dictionary<string, string> dict = await GetGuidsCollectionAsync(subList);
+                var exception = new RepositoryException();
 
                 foreach (var recordId in subList)
                 {
                     var splitKey = recordId.Split('|');
                     var recKey = recordId.Split('|')[0];
                     var cohKey = recordId.Split('|')[1];
-                    var personId = string.Empty;
-                    var acadLevelId = string.Empty;
-                    var acadLevel = studentAcadLevels.FirstOrDefault(fc => fc.Recordkey.Equals(recKey, StringComparison.OrdinalIgnoreCase) );
+                    var personId = recKey.Split('*')[0];
+                    var acadLevelId = recKey.Split('*')[1];
+                    var acadLevel = studentAcadLevels.FirstOrDefault(fc => fc.Recordkey.Equals(recKey, StringComparison.OrdinalIgnoreCase));
 
-                    if (acadLevel != null)
+                    if (acadLevel == null)
                     {
-                        personId = acadLevel.Recordkey.Split('*')[0];
-                        acadLevelId = recKey.Split('*')[1];
-                        if (!string.IsNullOrEmpty(acadLevel.StaFedCohortGroup) && acadLevel.StaFedCohortGroup.Equals(cohKey, StringComparison.OrdinalIgnoreCase))
+                        exception.AddError(new Domain.Entities.RepositoryError("Bad.Data", string.Format("The STUDENT.ACAD.LEVELS record for student-cohort-assignments key '{0}' is missing.", cohKey))
                         {
-                            var guid = string.Empty;
-                            if (dict.TryGetValue(string.Concat(acadLevel.Recordkey, "|", acadLevel.StaFedCohortGroup), out guid))
+                            SourceId = recKey
+                        });
+                    }
+                    else
+                    {
+                        if (cohKey.Contains("*"))
+                        {
+                            // Because the index only has the first 5 characters of the COHORT but the valcode allows for up to 10 characters,
+                            // if we are filtering on the entire key then it's not going to match the index and then the GUID will not be found.
+                            // We do the Substring for the filtered keys built from data contracts.  The GET all uses SAVING of the index value.
+                            // Then, we only compare that the actual value has the same first 5 characters.  We used to just skip any records
+                            // that we couldn't find a GUID for.  The page would end up with 99 instead of 100 in many cases.
+                            
+                            // We now report on missing GUIDs or missing data records instead of just skipping them
+                            // and have an odd number on a page of results.
+                            var splitCohKey = cohKey.Split('*');
+                            var othCohKey = splitCohKey[0];
+                            var startDate = DmiString.PickDateToDateTime(Convert.ToInt32(splitCohKey[1]));
+                            var otherAcadLevel = acadLevel.StaOtherCohortsEntityAssociation.FirstOrDefault(i => i.StaOtherCohortGroupsAssocMember.Equals(othCohKey) &&
+                                                                                                            i.StaOtherCohortStartDatesAssocMember.Value.Date.Equals(startDate));
+                            if (otherAcadLevel != null)
                             {
-                                StudentCohortAssignment fedEntity = new StudentCohortAssignment(acadLevel.StaFedCohortGroup, guid)
+                                var guid = string.Empty;
+                                if (dict.TryGetValue(string.Concat(acadLevel.Recordkey, "|", cohKey), out guid))
                                 {
-                                    PersonId = personId,
-                                    AcadLevel = acadLevelId,
-                                    CohortId = acadLevel.StaFedCohortGroup
-                                };
-                                entities.Add(fedEntity);
+                                    StudentCohortAssignment otherEntity = new StudentCohortAssignment(othCohKey, guid)
+                                    {
+                                        CohortId = othCohKey,
+                                        PersonId = personId,
+                                        AcadLevel = acadLevelId,
+                                        StartOn = otherAcadLevel.StaOtherCohortStartDatesAssocMember,
+                                        EndOn = otherAcadLevel.StaOtherCohortEndDatesAssocMember
+                                    };
+                                    entities.Add(otherEntity);
+                                }
+                                else
+                                {
+                                    exception.AddError(new Domain.Entities.RepositoryError("Bad.Data", string.Format("GUID for student-cohort-assignments key '{0}' is missing.", cohKey))
+                                    {
+                                        SourceId = recKey
+                                    });
+                                }
+                            }
+                            else
+                            {
+                                exception.AddError(new Domain.Entities.RepositoryError("Bad.Data", string.Format("Unable to find the student-cohort-assignments key '{0}' in STUDENT.ACAD.LEVELS record.", cohKey))
+                                {
+                                    SourceId = recKey
+                                });
+                            }
+                        }
+                        else
+                        {
+                            if (!string.IsNullOrEmpty(acadLevel.StaFedCohortGroup) && acadLevel.StaFedCohortGroup.Equals(cohKey, StringComparison.OrdinalIgnoreCase))
+                            {
+                                var guid = string.Empty;
+                                if (dict.TryGetValue(string.Concat(acadLevel.Recordkey, "|", acadLevel.StaFedCohortGroup), out guid))
+                                {
+                                    StudentCohortAssignment fedEntity = new StudentCohortAssignment(acadLevel.StaFedCohortGroup, guid)
+                                    {
+                                        PersonId = personId,
+                                        AcadLevel = acadLevelId,
+                                        CohortId = acadLevel.StaFedCohortGroup
+                                    };
+                                    entities.Add(fedEntity);
+                                }
+                                else
+                                {
+                                    exception.AddError(new Domain.Entities.RepositoryError("Bad.Data", string.Format("GUID for student-cohort-assignments key '{0}' is missing.", cohKey))
+                                    {
+                                        SourceId = recKey
+                                    });
+                                }
+                            }
+                            else
+                            {
+                                exception.AddError(new Domain.Entities.RepositoryError("Bad.Data", string.Format("Unable to find the student-cohort-assignments key '{0}' in STUDENT.ACAD.LEVELS record. Federal Cohort Group '{1}'", cohKey, acadLevel.StaFedCohortGroup))
+                                {
+                                    SourceId = recKey
+                                });
                             }
                         }
                     }
-
-                    if (cohKey.Contains("*"))
-                    {
-                        var splitCohKey = cohKey.Split('*');
-                        var othCohKey = splitCohKey[0];
-                        var startDate = DmiString.PickDateToDateTime(Convert.ToInt32(splitCohKey[1]));
-                        var otherAcadLevel = acadLevel.StaOtherCohortsEntityAssociation.FirstOrDefault(i => i.StaOtherCohortGroupsAssocMember.Equals(othCohKey) &&
-                                                                                                        i.StaOtherCohortStartDatesAssocMember.Value.Date.Equals(startDate));
-                        if (otherAcadLevel != null)
-                        {
-                            personId = acadLevel.Recordkey.Split('*')[0];
-
-                            var guid = string.Empty;
-                            if (dict.TryGetValue(string.Concat(acadLevel.Recordkey, "|", cohKey), out guid))
-                            {
-                                StudentCohortAssignment otherEntity = new StudentCohortAssignment(othCohKey, guid)
-                                {
-                                    CohortId = othCohKey,
-                                    PersonId = personId,
-                                    AcadLevel = acadLevelId,
-                                    StartOn = otherAcadLevel.StaOtherCohortStartDatesAssocMember,
-                                    EndOn = otherAcadLevel.StaOtherCohortEndDatesAssocMember
-                                };
-                                entities.Add(otherEntity);
-                            }
-                        }
-                    }
-                }                                    
+                }
+                if (exception != null && exception.Errors != null && exception.Errors.Any())
+                {
+                    throw exception;
+                }
             }
             catch (RepositoryException e)
             {
                 throw e;
             }
-            return entities.Any()? new Tuple<IEnumerable<StudentCohortAssignment>, int>(entities, totalCount) :
+            return entities.Any() ? new Tuple<IEnumerable<StudentCohortAssignment>, int>(entities, totalCount) :
                 new Tuple<IEnumerable<StudentCohortAssignment>, int>(new List<StudentCohortAssignment>(), 0);
         }
         private bool HasValues(StudentAcadLevelsStaOtherCohorts oc, DateTime? date)

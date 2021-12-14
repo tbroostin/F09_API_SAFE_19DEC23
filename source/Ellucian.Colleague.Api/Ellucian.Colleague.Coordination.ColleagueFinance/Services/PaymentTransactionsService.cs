@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -49,7 +49,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, configurationRepository: configurationRepository)
         {
-            _paymentTransactionsRepository = paymentTransactionsRepository;         
+            _paymentTransactionsRepository = paymentTransactionsRepository;
             _referenceDataRepository = referenceDataRepository;
             _institutionRepository = institutionRepository;
             _colleagueFinanceReferenceDataRepository = colleagueFinanceReferenceDataRepository;
@@ -91,7 +91,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         public async Task<Tuple<IEnumerable<Dtos.PaymentTransactions>, int>> GetPaymentTransactionsAsync(int offset, int limit,
             string documentGuid, InvoiceTypes documentTypeValue, Dtos.PaymentTransactions criteriaFilter, bool bypassCache = false)
         {
-            this.CheckViewPaymentTransactionsPermission();
+           
             var docNumber = string.Empty;
             var refPoDoc = new List<string>();
             var refBpoDoc = new List<string>();
@@ -230,10 +230,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 throw new ArgumentNullException("guid", "A GUID is required to obtain a Payment Transaction.");
             }
-            this.CheckViewPaymentTransactionsPermission();
-
+           
             try
-            {                
+            {
                 var paymentTransactions = await _paymentTransactionsRepository.GetPaymentTransactionsByGuidAsync(guid);
                 Dictionary<string, string> personGuidCollection = null;
                 var institutions = new List<Institution>();
@@ -246,7 +245,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(new string[] { paymentTransactions.Vendor });
                         institutions = (await _institutionRepository.GetInstitutionsFromListAsync(new string[] { paymentTransactions.Vendor })).ToList();
                     }
-                                        
+
                     var associatedVouchers = paymentTransactions.Vouchers;
 
                     if (associatedVouchers != null && associatedVouchers.Any())
@@ -257,7 +256,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         bpoGuidCollection = await _paymentTransactionsRepository.GetGuidsCollectionAsync(BpoIds.ToArray(), "BPO");
                     }
                 }
-                var response =  await ConvertPaymentTransactionsEntityToDtoAsync(paymentTransactions, institutions, personGuidCollection, poGuidCollection, bpoGuidCollection, bypassCache);
+                var response = await ConvertPaymentTransactionsEntityToDtoAsync(paymentTransactions, institutions, personGuidCollection, poGuidCollection, bpoGuidCollection, bypassCache);
 
                 if (IntegrationApiException != null)
                 {
@@ -280,7 +279,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 throw ex;
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 IntegrationApiExceptionAddError(ex.Message, "Global.Internal.Error", guid);
 
@@ -539,12 +538,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             paymentsFor.Add(paymentsForDtoProperty);
                         }
                     }
-                }            
-                
+                }
+
             }
-        
-               
-            
+
+
+
             if (paymentsFor != null && paymentsFor.Any())
                 paymentTransactions.PaymentsFor = paymentsFor;
 
@@ -783,23 +782,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             return addressDto;
         }
 
-
-        /// <summary>
-        /// Permissions code that allows an external system to do a READ operation. This API will integrate information related to payments that 
-        /// could be deemed personal.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckViewPaymentTransactionsPermission()
-        {
-            var hasPermission = HasPermission(ColleagueFinancePermissionCodes.ViewPaymentTransactionsIntg);
-
-            if (!hasPermission)
-            {
-                IntegrationApiExceptionAddError("User '" + CurrentUser.UserId + "' is not authorized to view payment-transactions.", "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
-                throw IntegrationApiException;
-            }
-        }
-
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Converts a PaymentMethods domain enumeration value to its corresponding PaymentMethod DTO enumeration value
@@ -860,9 +842,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>InvoiceOrRefund domain enumeration value</returns>
         private InvoiceOrRefund ConvertInvoiceTypesDtoEnumToInvoiceOrRefundEnum(InvoiceTypes? source)
         {
-            if ( source == null)
-                return InvoiceOrRefund.NotSet; 
-           
+            if (source == null)
+                return InvoiceOrRefund.NotSet;
+
             switch (source)
             {
                 case InvoiceTypes.Invoice:

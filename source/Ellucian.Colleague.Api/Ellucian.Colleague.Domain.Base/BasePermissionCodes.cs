@@ -276,5 +276,10 @@ namespace Ellucian.Colleague.Domain.Base
         public const string View1099NEC = "VIEW.1099NEC";
 
         #endregion
+
+        /// <summary>
+        /// Permission to allow someone to view other people's photos (such as for faculty or advisors)
+        /// </summary>
+        public const string CanViewPersonPhotos = "CAN.VIEW.PERSON.PHOTOS";
     }
 }

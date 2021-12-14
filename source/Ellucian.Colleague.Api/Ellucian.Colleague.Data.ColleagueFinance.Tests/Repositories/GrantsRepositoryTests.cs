@@ -3,7 +3,9 @@ using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Colleague.Domain.Base.Transactions;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -116,6 +118,36 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     dataReaderMock.Setup(d => d.ReadRecordAsync<ProjectsCf>(It.IsAny<string>(),true)).ReturnsAsync(projectscf.FirstOrDefault());
                     dataReaderMock.Setup(d => d.ReadRecordAsync<DataContracts.Projects>(It.IsAny<string>(), true)).ReturnsAsync(projects.FirstOrDefault());
 
+                    List<string> ids = new List<string>() { "1", "2" }; 
+                    GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                    {
+                        Offset = 0,
+                        Limit = 1,
+                        CacheName = "AllGrants",
+                        Entity = "",
+                        Sublist = ids,
+                        TotalCount = ids.Count,
+                        KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 5905,
+                            KeyCacheMin = 1,
+                            KeyCachePart = "000",
+                            KeyCacheSize = 5905
+                        },
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 7625,
+                            KeyCacheMin = 5906,
+                            KeyCachePart = "001",
+                            KeyCacheSize = 1720
+                        }
+                    }
+                    };
+                    transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
+                    transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                        .ReturnsAsync(resp);
                 }
 
                 #endregion
@@ -125,6 +157,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 [TestMethod]
                 public async Task GrantsRepository_GetGrantsAsync_FiscalYearId()
                 {
+                    lookUpResult = new Dictionary<string, GuidLookupResult>() { { "1", new GuidLookupResult() { Entity = "GEN.LDGR", PrimaryKey = "2016", SecondaryKey = "" } } };
+                    dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(lookUpResult);
                     var result = await grantsRepository.GetGrantsAsync(0, 10, "", "2016", false);
                     Assert.IsNotNull(result);
                     Assert.AreEqual(result.Item2, 2);
@@ -167,31 +201,32 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 [ExpectedException(typeof(ArgumentNullException))]
                 public async Task GrantsRepository_GetGrantsAsync_FiscalYearId_ArgumentNullException()
                 {
-                    dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+                    dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
                     var result = await grantsRepository.GetGrantsAsync(0, 10, "", "2016", false);
                 }
 
                 [TestMethod]
-                [ExpectedException(typeof(ApplicationException))]
-                public async Task GrantsRepository_GetGrantsAsync_ReportingSeg_ApplicationException()
+                public async Task GrantsRepository_GetGrantsAsync_ReportingSeg_ReturnsEmptySet()
                 {
                     corp.CorpName = null;
                     dataReaderMock.Setup(d => d.ReadRecordAsync<Corp>("PERSON", It.IsAny<string>(), true)).ReturnsAsync(corp);
                     var result = await grantsRepository.GetGrantsAsync(0, 10, "repseg", "", false);
+                    Assert.IsTrue(result.Item2 == 0, "No Records Selected for invalid reporting segment.");
+                    Assert.IsInstanceOfType(result.Item1, typeof(IEnumerable<ProjectCF>));
                 }
 
                 [TestMethod]
                 [ExpectedException(typeof(ConfigurationException))]
                 public async Task GrantsRepository_GetGrantsAsync_LdmDefaults_Null()
                 {
-                    dataReaderMock.Setup(d => d.ReadRecordAsync<LdmDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(null);
+                    dataReaderMock.Setup(d => d.ReadRecordAsync<LdmDefaults>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(() => null);
                     var result = await grantsRepository.GetGrantsAsync(0, 10, "", "", false);
                 }
 
                 [TestMethod]
                 public async Task GrantsRepository_GetGrantsAsync_Defaults_Null()
                 {
-                    dataReaderMock.Setup(d => d.ReadRecordAsync<Defaults>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(null);
+                    dataReaderMock.Setup(d => d.ReadRecordAsync<Defaults>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(() => null);
                     var result = await grantsRepository.GetGrantsAsync(0, 10, "rep_seg_001", "", false);
                     Assert.AreEqual(result.Item2, 0);
                 }
@@ -213,18 +248,56 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 [TestMethod]
                 public async Task GrantsRepository_GetGrantsAsync_ProjectIds_Empty()
                 {
-                    dataReaderMock.Setup(d => d.SelectAsync("PROJECTS.CF", It.IsAny<string>())).ReturnsAsync(new List<string>() {  }.ToArray<string>());
+                    List<string> ids = new List<string>();
+                    GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                    {
+                        Offset = 0,
+                        Limit = 1,
+                        CacheName = "AllGrants",
+                        Entity = "",
+                        Sublist = ids,
+                        TotalCount = ids.Count,
+                        KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 5905,
+                            KeyCacheMin = 1,
+                            KeyCachePart = "000",
+                            KeyCacheSize = 5905
+                        },
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 7625,
+                            KeyCacheMin = 5906,
+                            KeyCachePart = "001",
+                            KeyCacheSize = 1720
+                        }
+                    }
+                    };
+                    transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                        .ReturnsAsync(resp);
+
                     var result = await grantsRepository.GetGrantsAsync(0, 10, "", "", false);
                     Assert.AreEqual(result.Item2, 0);
                 }
 
                 [TestMethod]
-                [ExpectedException(typeof(KeyNotFoundException))]
+                [ExpectedException(typeof(RepositoryException))]
                 public async Task GrantsRepository_GetGrantsAsync_ProjectRecordNotFound()
                 {
                     projects[0].Recordkey = "3";
                     dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.Projects>(It.IsAny<string[]>(), true)).ReturnsAsync(projects);
-                    var result = await grantsRepository.GetGrantsAsync(0, 10, "", "", false);
+                    try
+                    {
+                        var result = await grantsRepository.GetGrantsAsync(0, 10, "", "", false);
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        Assert.IsTrue(ex.Errors != null && ex.Errors.Any(), "Errors are present with exception.");
+                        Assert.AreEqual(string.Format("Project record not found for guid: {0}", projects[0].RecordGuid), ex.Errors.FirstOrDefault().Message);
+                        throw ex;
+                    }
                 }
 
 
@@ -270,7 +343,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 [ExpectedException(typeof(KeyNotFoundException))]
                 public async Task GrantsRepository_GetProjectsAsync_ProjectCFDC_Null()
                 {
-                    dataReaderMock.Setup(d => d.ReadRecordAsync<ProjectsCf>(It.IsAny<string>(), true)).ReturnsAsync(null);
+                    dataReaderMock.Setup(d => d.ReadRecordAsync<ProjectsCf>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
                     await grantsRepository.GetProjectsAsync(guid);
                 }
 
@@ -278,7 +351,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 [ExpectedException(typeof(KeyNotFoundException))]
                 public async Task GrantsRepository_GetProjectsAsync_ProjectDC_Null()
                 {
-                    dataReaderMock.Setup(d => d.ReadRecordAsync<DataContracts.Projects>(It.IsAny<string>(), true)).ReturnsAsync(null);
+                    dataReaderMock.Setup(d => d.ReadRecordAsync<DataContracts.Projects>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
                     await grantsRepository.GetProjectsAsync(guid);
                 }
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -51,5 +52,12 @@ namespace Ellucian.Colleague.Dtos.Student {
         /// Only those addresses for this person that are designated "faculty" addresses.
         /// </summary>
         public IEnumerable<Address> Addresses { get; set; }
+
+        /// <summary>
+        /// Information that should be used when displaying a Faculty's name.  
+        /// The hierarchy that is used in calculating this name is defined in the Faculty Display Name Hierarchy on the SPWP form in Colleague.  
+        /// If no hierarchy is provide on SPWP, PersonDisplayName will be null.
+        /// </summary>
+        public PersonHierarchyName PersonDisplayName { get; set; }
     }
 }

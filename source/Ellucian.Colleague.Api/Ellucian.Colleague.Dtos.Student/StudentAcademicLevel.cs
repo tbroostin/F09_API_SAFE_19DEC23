@@ -36,6 +36,15 @@ namespace Ellucian.Colleague.Dtos.Student
         /// dates intersect with that term.  Set to false if no Term on input
         /// </summary>
         public bool IsActive { get; set; }
+
+        /// <summary>
+        /// Student's academic level start date
+        /// </summary>
+        public DateTime? StudentAcademicLevelStartDate { get;  set; }
+        /// <summary>
+        /// Student's academic level end date
+        /// </summary>
+        public DateTime? StudentAcademicLevelEndDate { get;  set; }
         /// <summary>
         /// Default parameter-less constructor
         /// </summary>

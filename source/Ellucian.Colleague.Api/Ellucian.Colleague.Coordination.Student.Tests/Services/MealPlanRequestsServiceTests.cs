@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 
 using System;
@@ -21,6 +21,7 @@ using Ellucian.Colleague.Domain.Student;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -130,6 +131,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 _termRepositoryMock.Setup(repo => repo.GetAcademicPeriods(It.IsAny<IEnumerable<Domain.Student.Entities.Term>>())).Returns(acadPeriods);
+                foreach (var record in acadPeriods)
+                {
+                    _termRepositoryMock.Setup(r => r.GetAcademicPeriodsGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
 
                 List<Domain.Student.Entities.MealPlan> mealPlans = new List<MealPlan>()
                 {
@@ -138,6 +143,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     new Domain.Student.Entities.MealPlan("e2253ac7-9931-4560-b42f-1fccd43c952e", "CU", "Cultural")
                 };
                 _studentReferenceRepositoryMock.Setup(repo => repo.GetMealPlansAsync(It.IsAny<bool>())).ReturnsAsync(mealPlans);
+                foreach (var record in mealPlans)
+                {
+                    _studentReferenceRepositoryMock.Setup(repo => repo.GetMealPlanGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+                }
 
                 _personRepositoryMock.SetupSequence(repo => repo.GetPersonGuidFromIdAsync(It.IsAny<string>()))
                     .Returns(Task.FromResult("2f8d6c4d-86bb-44cd-b506-d955ef797270"))
@@ -154,6 +163,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
                 mealPlanRequestsTuple = new Tuple<IEnumerable<MealPlanReqsIntg>, int>(_mealPlanRequestsCollection, _mealPlanRequestsCollection.Count());
                 _mealPlanReqsIntgRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(mealPlanRequestsTuple);
+
+                var personGuidDictionary = new Dictionary<string, string>() { };
+                personGuidDictionary.Add("11", "1dd56e2d-9b99-4a5b-ab84-55131a31f2e3");
+                personGuidDictionary.Add("12", "a7cbdbbe-131e-4b91-9c99-d9b65c41f1c8");
+                personGuidDictionary.Add("13", "ae91ddf9-0b25-4008-97c5-76ac5fe570a3");
+                personGuidDictionary.Add("14", "149195b8-fe43-4538-aa90-16fbe240a2d5");
+
+                _personRepositoryMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>()))
+                    .ReturnsAsync(personGuidDictionary);
             }
 
             [TestCleanup]
@@ -199,7 +217,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _mealPlanReqsIntgRepositoryMock.Setup(repo => repo.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(expectedResults);
 
                 var actualResult =
-                    await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(mealPlanRequestsGuid);
+                    await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(mealPlanRequestsGuid, false);
                 Assert.IsNotNull(actualResult);
             }
 
@@ -208,15 +226,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task MealPlanRequestsService_GetMealPlanRequestByGuidAsync_ArgumentNullException()
             {
                 var actualResult =
-                   await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(null);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task MealPlanRequestsService_GetMealPlanRequestByGuidAsync_PermissionsException()
-            {
-                var actualResult =
-                   await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(mealPlanRequestsGuid);
+                   await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(null, false);
             }
 
             [TestMethod]
@@ -228,11 +238,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 _mealPlanReqsIntgRepositoryMock.Setup(repo => repo.GetByIdAsync(mealPlanRequestsGuid)).ThrowsAsync(new KeyNotFoundException());
                 var actualResult =
-                   await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(mealPlanRequestsGuid);
+                   await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(mealPlanRequestsGuid, false);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(InvalidOperationException))]
             public async Task MealPlanRequestsService_GetMealPlanRequestByGuidAsync_InvalidOperationException()
             {
                 viewMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanRequest));
@@ -240,11 +250,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 _mealPlanReqsIntgRepositoryMock.Setup(repo => repo.GetByIdAsync(mealPlanRequestsGuid)).ThrowsAsync(new InvalidOperationException());
                 var actualResult =
-                   await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(mealPlanRequestsGuid);
+                   await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(mealPlanRequestsGuid, false);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task MealPlanRequestsService_GetMealPlanRequestsByGuidAsync_AcademicPeriodEntities_Null_Exception()
             {
                 viewMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanRequest));
@@ -254,15 +264,17 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     _mealPlanRequestsCollection.First(c => c.Guid == mealPlanRequestsGuid);
                 _mealPlanReqsIntgRepositoryMock.Setup(repo => repo.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(expectedResults);
 
-                List<Domain.Student.Entities.AcademicPeriod> acadPeriods = null;
-                _termRepositoryMock.Setup(repo => repo.GetAcademicPeriods(It.IsAny<IEnumerable<Domain.Student.Entities.Term>>())).Returns(acadPeriods);
+                //List<Domain.Student.Entities.AcademicPeriod> acadPeriods = null;
+                //_termRepositoryMock.Setup(repo => repo.GetAcademicPeriods(It.IsAny<IEnumerable<Domain.Student.Entities.Term>>())).Returns(acadPeriods);
+
+                _termRepositoryMock.Setup(repo => repo.GetAcademicPeriodsGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
 
                 var actualResult =
-                    await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(mealPlanRequestsGuid);
+                    await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(mealPlanRequestsGuid, false);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task MealPlanRequestsService_GetMealPlanRequestsByGuidAsync_InvalidTerm_Exception()
             {
                 viewMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanRequest));
@@ -272,13 +284,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     _mealPlanRequestsCollection.First(c => c.Guid == mealPlanRequestsGuid);
                 _mealPlanReqsIntgRepositoryMock.Setup(repo => repo.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(expectedResults);
 
+                _termRepositoryMock.Setup(repo => repo.GetAcademicPeriodsGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+
                 expectedResults.Term = "BadTerm";
                 var actualResult =
-                    await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(mealPlanRequestsGuid);
+                    await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(mealPlanRequestsGuid, false);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task MealPlanRequestsService_GetMealPlanRequestsByGuidAsync_MealPlans_Null_Exception()
             {
                 viewMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanRequest));
@@ -288,14 +302,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     _mealPlanRequestsCollection.First(c => c.Guid == mealPlanRequestsGuid);
                 _mealPlanReqsIntgRepositoryMock.Setup(repo => repo.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(expectedResults);
 
-                _studentReferenceRepositoryMock.Setup(repo => repo.GetMealPlansAsync(It.IsAny<bool>())).ReturnsAsync(null);
+                _studentReferenceRepositoryMock.Setup(repo => repo.GetMealPlanGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
 
                 var actualResult =
-                    await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(mealPlanRequestsGuid);
+                    await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(mealPlanRequestsGuid, false);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task MealPlanRequestsService_GetMealPlanRequestsByGuidAsync_InvalidMealPlan_Exception()
             {
                 viewMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanRequest));
@@ -304,12 +318,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var expectedResults = new MealPlanReqsIntg("2cb5e697-8168-4203-b48b-c667556cfb8a", "1", "11", "BadData") { Term = "2016/Spr", Status = "A", EndDate = DateTime.Today.AddDays(45), StartDate = DateTime.Today, StatusDate = DateTime.Today, SubmittedDate = DateTime.Today.AddDays(1) };
                 _mealPlanReqsIntgRepositoryMock.Setup(repo => repo.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(expectedResults);
 
+                _studentReferenceRepositoryMock.Setup(repo => repo.GetMealPlanGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+
                 var actualResult =
-                    await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(mealPlanRequestsGuid);
+                    await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(mealPlanRequestsGuid, false);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task MealPlanRequestsService_GetMealPlanRequestsByGuidAsync_InvalidPersonId_Exception()
             {
                 viewMealPlanRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewMealPlanRequest));
@@ -321,7 +337,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _mealPlanReqsIntgRepositoryMock.Setup(repo => repo.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(expectedResults);
 
                 var actualResult =
-                    await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(mealPlanRequestsGuid);
+                    await _mealPlanRequestsService.GetMealPlanRequestsByGuidAsync(mealPlanRequestsGuid, false);
             }
         }
 

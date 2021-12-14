@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -49,7 +49,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     // If not all of the ids can be found log an error - but keep going.
                     if (regPrioritiesIds.Count() != regPriorities.Count)
                     {
-                        logger.Info("Warning: Unable to retrieve all of the registration priorities for " + studentId);
+                        logger.Debug("Warning: Unable to retrieve all of the registration priorities for " + studentId);
                     }
 
                     priorities = BuildRegistrationPriorities(regPriorities.ToList());
@@ -57,7 +57,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             catch (Exception ex)
             {
-                logger.Info("Error occurred processing selected reg priorities for student " + studentId + ": " + ex.Message);
+                logger.Error("Error occurred processing selected reg priorities for student " + studentId + ": " + ex.Message);
             }
             return priorities;
         }

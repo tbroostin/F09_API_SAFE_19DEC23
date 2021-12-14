@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.Base.Utility;
@@ -454,7 +454,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
 
             byte[] reportBytes;
-            var memoryStream = new MemoryStream();
             var report = new LocalReport();
 
             try
@@ -583,7 +582,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 int counter = 17;
                 int totalBoxCount = 34;
 
-                if(pdfData.TaxYear == "2020")
+                if (pdfData.TaxYear == "2020" || pdfData.TaxYear == "2021")
                 {
                     counter = 18;
                     totalBoxCount = 30;
@@ -659,7 +658,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                         IsEmployeeItself = false
                     };
 
-                    for (int i = counter; i < totalBoxCount + 1 ; i++)
+                    for (int i = counter; i < totalBoxCount + 1; i++)
                     {
                         TaxFormPdfUtility.Populate1095CDependentRow(ref parameters, emptyDependant, i);
                     }
@@ -753,99 +752,100 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 throw new ArgumentNullException("pathToReport", "Path to RDLC report is required.");
             }
 
-            byte[] reportBytes;
-            var memoryStream = new MemoryStream();
-            var report = new LocalReport();
-
-            try
+            using (var report = new LocalReport())
             {
-                report.ReportPath = pathToReport;
-                report.SetBasePermissionsForSandboxAppDomain(new System.Security.PermissionSet(System.Security.Permissions.PermissionState.Unrestricted));
-                report.EnableExternalImages = true;
+                byte[] reportBytes;
 
-                // Specify the report parameters
-                var utility = new ReportUtility();
-                var parameters = new List<ReportParameter>();
-
-                // Box Data
-                parameters.Add(utility.BuildReportParameter("SocialInsuranceNumber", pdfData.SocialInsuranceNumber));
-                parameters.Add(utility.BuildReportParameter("EmploymentIncome", UseBlankIfZeroAmount(pdfData.EmploymentIncome)));
-                parameters.Add(utility.BuildReportParameter("EmployeesCPPContributions", UseBlankIfZeroAmount(pdfData.EmployeesCPPContributions)));
-                parameters.Add(utility.BuildReportParameter("EmployeesQPPContributions", UseBlankIfZeroAmount(pdfData.EmployeesQPPContributions)));
-                parameters.Add(utility.BuildReportParameter("EmployeesEIPremiums", UseBlankIfZeroAmount(pdfData.EmployeesEIPremiums)));
-                parameters.Add(utility.BuildReportParameter("RPPContributions", UseBlankIfZeroAmount(pdfData.RPPContributions)));
-                parameters.Add(utility.BuildReportParameter("IncomeTaxDeducted", UseBlankIfZeroAmount(pdfData.IncomeTaxDeducted)));
-                parameters.Add(utility.BuildReportParameter("EIInsurableEarnings", UseBlankIfZeroAmount(pdfData.EIInsurableEarnings)));
-                parameters.Add(utility.BuildReportParameter("CPPQPPPensionableEarnings", UseBlankIfZeroAmount(pdfData.CPPQPPPensionableEarnings)));
-                parameters.Add(utility.BuildReportParameter("UnionDues", UseBlankIfZeroAmount(pdfData.UnionDues)));
-                parameters.Add(utility.BuildReportParameter("CharitableDonations", UseBlankIfZeroAmount(pdfData.CharitableDonations)));
-                parameters.Add(utility.BuildReportParameter("RPPorDPSPRegistrationNumber", pdfData.RPPorDPSPRegistrationNumber));
-                parameters.Add(utility.BuildReportParameter("Amended", pdfData.Amended));
-                parameters.Add(utility.BuildReportParameter("PensionAdjustment", UseBlankIfZeroAmount(pdfData.PensionAdjustment)));
-                parameters.Add(utility.BuildReportParameter("EmployeesPPIPPremiums", UseBlankIfZeroAmount(pdfData.EmployeesPPIPPremiums)));
-                parameters.Add(utility.BuildReportParameter("PPIPInsurableEarnings", UseBlankIfZeroAmount(pdfData.PPIPInsurableEarnings)));
-
-                // Other boxes
-                for (var i = 0; i < 6; i++)
+                try
                 {
-                    var box = i + 1;
-                    var boxData = pdfData.OtherBoxes.ElementAtOrDefault(i);
-                    if (boxData != null)
+                    report.ReportPath = pathToReport;
+                    report.SetBasePermissionsForSandboxAppDomain(new System.Security.PermissionSet(System.Security.Permissions.PermissionState.Unrestricted));
+                    report.EnableExternalImages = true;
+
+                    // Specify the report parameters
+                    var utility = new ReportUtility();
+                    var parameters = new List<ReportParameter>();
+
+                    // Box Data
+                    parameters.Add(utility.BuildReportParameter("SocialInsuranceNumber", pdfData.SocialInsuranceNumber));
+                    parameters.Add(utility.BuildReportParameter("EmploymentIncome", UseBlankIfZeroAmount(pdfData.EmploymentIncome)));
+                    parameters.Add(utility.BuildReportParameter("EmployeesCPPContributions", UseBlankIfZeroAmount(pdfData.EmployeesCPPContributions)));
+                    parameters.Add(utility.BuildReportParameter("EmployeesQPPContributions", UseBlankIfZeroAmount(pdfData.EmployeesQPPContributions)));
+                    parameters.Add(utility.BuildReportParameter("EmployeesEIPremiums", UseBlankIfZeroAmount(pdfData.EmployeesEIPremiums)));
+                    parameters.Add(utility.BuildReportParameter("RPPContributions", UseBlankIfZeroAmount(pdfData.RPPContributions)));
+                    parameters.Add(utility.BuildReportParameter("IncomeTaxDeducted", UseBlankIfZeroAmount(pdfData.IncomeTaxDeducted)));
+                    parameters.Add(utility.BuildReportParameter("EIInsurableEarnings", UseBlankIfZeroAmount(pdfData.EIInsurableEarnings)));
+                    parameters.Add(utility.BuildReportParameter("CPPQPPPensionableEarnings", UseBlankIfZeroAmount(pdfData.CPPQPPPensionableEarnings)));
+                    parameters.Add(utility.BuildReportParameter("UnionDues", UseBlankIfZeroAmount(pdfData.UnionDues)));
+                    parameters.Add(utility.BuildReportParameter("CharitableDonations", UseBlankIfZeroAmount(pdfData.CharitableDonations)));
+                    parameters.Add(utility.BuildReportParameter("RPPorDPSPRegistrationNumber", pdfData.RPPorDPSPRegistrationNumber));
+                    parameters.Add(utility.BuildReportParameter("Amended", pdfData.Amended));
+                    parameters.Add(utility.BuildReportParameter("PensionAdjustment", UseBlankIfZeroAmount(pdfData.PensionAdjustment)));
+                    parameters.Add(utility.BuildReportParameter("EmployeesPPIPPremiums", UseBlankIfZeroAmount(pdfData.EmployeesPPIPPremiums)));
+                    parameters.Add(utility.BuildReportParameter("PPIPInsurableEarnings", UseBlankIfZeroAmount(pdfData.PPIPInsurableEarnings)));
+
+                    // Other boxes
+                    for (var i = 0; i < 6; i++)
                     {
-                        parameters.Add(utility.BuildReportParameter("OtherBox" + box + "Code", boxData.Code));
-                        parameters.Add(utility.BuildReportParameter("OtherBox" + box + "Amount", boxData.Amount));
-                    }
-                    else
-                    {
-                        parameters.Add(utility.BuildReportParameter("OtherBox" + box + "Code", string.Empty));
-                        parameters.Add(utility.BuildReportParameter("OtherBox" + box + "Amount", string.Empty));
+                        var box = i + 1;
+                        var boxData = pdfData.OtherBoxes.ElementAtOrDefault(i);
+                        if (boxData != null)
+                        {
+                            parameters.Add(utility.BuildReportParameter("OtherBox" + box + "Code", boxData.Code));
+                            parameters.Add(utility.BuildReportParameter("OtherBox" + box + "Amount", boxData.Amount));
+                        }
+                        else
+                        {
+                            parameters.Add(utility.BuildReportParameter("OtherBox" + box + "Code", string.Empty));
+                            parameters.Add(utility.BuildReportParameter("OtherBox" + box + "Amount", string.Empty));
+                        }
+
                     }
 
+                    // Employee Info
+                    parameters.Add(utility.BuildReportParameter("EmployeeFirstName", pdfData.EmployeeFirstName));
+                    parameters.Add(utility.BuildReportParameter("EmployeeMiddleName", pdfData.EmployeeMiddleName));
+                    parameters.Add(utility.BuildReportParameter("EmployeeLastName", pdfData.EmployeeLastName));
+                    parameters.Add(utility.BuildReportParameter("EmployeeAddressLine1", pdfData.EmployeeAddressLine1));
+                    parameters.Add(utility.BuildReportParameter("EmployeeAddressLine2", pdfData.EmployeeAddressLine2));
+                    parameters.Add(utility.BuildReportParameter("EmployeeAddressLine3", pdfData.EmployeeAddressLine3));
+                    parameters.Add(utility.BuildReportParameter("EmployeeAddressLine4", pdfData.EmployeeAddressLine4));
+                    parameters.Add(utility.BuildReportParameter("ProvinceOfEmployment", pdfData.ProvinceOfEmployment));
+                    parameters.Add(utility.BuildReportParameter("ExemptCPPQPP", pdfData.ExemptCPPQPP));
+                    parameters.Add(utility.BuildReportParameter("ExemptEI", pdfData.ExemptEI));
+                    parameters.Add(utility.BuildReportParameter("ExemptPPIP", pdfData.ExemptPPIP));
+                    parameters.Add(utility.BuildReportParameter("EmploymentCode", pdfData.EmploymentCode));
+
+                    // Employer Info
+                    parameters.Add(utility.BuildReportParameter("EmployerAddressLine1", pdfData.EmployerAddressLine1));
+                    parameters.Add(utility.BuildReportParameter("EmployerAddressLine2", pdfData.EmployerAddressLine2));
+                    parameters.Add(utility.BuildReportParameter("EmployerAddressLine3", pdfData.EmployerAddressLine3));
+                    parameters.Add(utility.BuildReportParameter("EmployerAddressLine4", pdfData.EmployerAddressLine4));
+                    parameters.Add(utility.BuildReportParameter("EmployerAddressLine5", pdfData.EmployerAddressLine5));
+
+                    parameters.Add(utility.BuildReportParameter("TaxYear", pdfData.TaxYear));
+
+                    // Set the report parameters
+                    report.SetParameters(parameters);
+
+                    // Render the report as a byte array
+                    reportBytes = report.Render(
+                        ReportType,
+                        DeviceInfo);
+                }
+                catch
+                {
+                    throw;
+                }
+                finally
+                {
+                    report.DataSources.Clear();
+                    report.ReleaseSandboxAppDomain();
+                    report.Dispose();
                 }
 
-                // Employee Info
-                parameters.Add(utility.BuildReportParameter("EmployeeFirstName", pdfData.EmployeeFirstName));
-                parameters.Add(utility.BuildReportParameter("EmployeeMiddleName", pdfData.EmployeeMiddleName));
-                parameters.Add(utility.BuildReportParameter("EmployeeLastName", pdfData.EmployeeLastName));
-                parameters.Add(utility.BuildReportParameter("EmployeeAddressLine1", pdfData.EmployeeAddressLine1));
-                parameters.Add(utility.BuildReportParameter("EmployeeAddressLine2", pdfData.EmployeeAddressLine2));
-                parameters.Add(utility.BuildReportParameter("EmployeeAddressLine3", pdfData.EmployeeAddressLine3));
-                parameters.Add(utility.BuildReportParameter("EmployeeAddressLine4", pdfData.EmployeeAddressLine4));
-                parameters.Add(utility.BuildReportParameter("ProvinceOfEmployment", pdfData.ProvinceOfEmployment));
-                parameters.Add(utility.BuildReportParameter("ExemptCPPQPP", pdfData.ExemptCPPQPP));
-                parameters.Add(utility.BuildReportParameter("ExemptEI", pdfData.ExemptEI));
-                parameters.Add(utility.BuildReportParameter("ExemptPPIP", pdfData.ExemptPPIP));
-                parameters.Add(utility.BuildReportParameter("EmploymentCode", pdfData.EmploymentCode));
-
-                // Employer Info
-                parameters.Add(utility.BuildReportParameter("EmployerAddressLine1", pdfData.EmployerAddressLine1));
-                parameters.Add(utility.BuildReportParameter("EmployerAddressLine2", pdfData.EmployerAddressLine2));
-                parameters.Add(utility.BuildReportParameter("EmployerAddressLine3", pdfData.EmployerAddressLine3));
-                parameters.Add(utility.BuildReportParameter("EmployerAddressLine4", pdfData.EmployerAddressLine4));
-                parameters.Add(utility.BuildReportParameter("EmployerAddressLine5", pdfData.EmployerAddressLine5));
-
-                parameters.Add(utility.BuildReportParameter("TaxYear", pdfData.TaxYear));
-
-                // Set the report parameters
-                report.SetParameters(parameters);
-
-                // Render the report as a byte array
-                reportBytes = report.Render(
-                    ReportType,
-                    DeviceInfo);
+                return reportBytes;
             }
-            catch
-            {
-                throw;
-            }
-            finally
-            {
-                report.DataSources.Clear();
-                report.ReleaseSandboxAppDomain();
-                report.Dispose();
-            }
-
-            return reportBytes;
         }
 
         /// <summary>

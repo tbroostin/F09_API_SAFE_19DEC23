@@ -190,6 +190,11 @@ namespace Ellucian.Colleague.Domain.Finance.Entities
         public decimal CurrentAmountDue { get { return Math.Max(0, _totalAmountDue - _overdueAmount); } }
 
         /// <summary>
+        /// Adheres to flag on STFP
+        /// </summary>
+        public bool DisplayDueDate { get; set; }
+
+        /// <summary>
         /// Constructor for StudentStatement
         /// </summary>
         /// <param name="accountHolder">The accounts receivable accountholder for whom the statement was generated</param>

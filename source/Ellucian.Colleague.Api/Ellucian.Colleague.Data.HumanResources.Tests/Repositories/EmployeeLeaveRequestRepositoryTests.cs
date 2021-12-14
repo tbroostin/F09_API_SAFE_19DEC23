@@ -389,7 +389,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             public async Task NullLeaveRequesDetailKeysTest()
             {
                 dataReaderMock.Setup(d => d.SelectAsync("LEAVE.REQUEST.DETAIL", string.Format("WITH LRD.LEAVE.REQUEST.ID EQ '{0}'", leaveRequestId)))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
 
                 await getActual();
             }
@@ -418,7 +418,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 #endregion
 
                 dataReaderMock.Setup(d => d.SelectAsync("LEAVE.REQUEST.STATUS", string.Format("WITH LRS.LEAVE.REQUEST.ID EQ '{0}'", leaveRequestId)))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
 
                 await getActual();
             }
@@ -552,7 +552,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                     "", LeaveStatusAction.Draft,
                     new List<LeaveRequestDetail>()
                     {
-                        new LeaveRequestDetail(null, null, DateTime.Today, 8.00m)
+                        new LeaveRequestDetail(null, null, DateTime.Today, 8.00m, false)
                     },
                     new List<LeaveRequestComment>() { });
             }
@@ -855,10 +855,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 
                 inputLeaveRequestHelper = new LeaveRequestHelper(new LeaveRequest("2", "697", "0011560", new DateTime(2019, 04, 05),
                     new DateTime(2019, 04, 05), "0010351", "", LeaveStatusAction.Submitted,
-                    new List<LeaveRequestDetail>() { new LeaveRequestDetail("961", "2", new DateTime(2019, 04, 05), 8.00m) },
+                    new List<LeaveRequestDetail>() { new LeaveRequestDetail("961", "2", new DateTime(2019, 04, 05), 8.00m, false) },
                     new List<LeaveRequestComment>() { }));
 
-                var leaveRequestDetailsTOBeUpdated = new LeaveRequestDetail("961", "2", new DateTime(2019, 04, 05), 12.00m);
+                var leaveRequestDetailsTOBeUpdated = new LeaveRequestDetail("961", "2", new DateTime(2019, 04, 05), 12.00m, false);
                 inputLeaveRequestHelper.LeaveRequestDetailsToUpdate.Add(leaveRequestDetailsTOBeUpdated);
             }
 
@@ -1129,7 +1129,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             {
                 foreach (var lrd in createLeaveRequestDetails)
                 {
-                    leaveRequestDetailsToBeCreated.Add(new LeaveRequestDetail(null, null, lrd.LrdLeaveDate.Value, lrd.LrdHours));
+                    leaveRequestDetailsToBeCreated.Add(new LeaveRequestDetail(null, null, lrd.LrdLeaveDate.Value, lrd.LrdHours, false));
                 }
             }
 

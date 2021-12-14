@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -37,6 +37,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
             glAccountDto.Budget = Source.BudgetAmount;
             glAccountDto.Encumbrances = Source.EncumbranceAmount;
             glAccountDto.Actuals = Source.ActualAmount;
+            glAccountDto.JustificationNotes = Source.JustificationNotes;
 
             // Copy the pool type
             switch (Source.PoolType)

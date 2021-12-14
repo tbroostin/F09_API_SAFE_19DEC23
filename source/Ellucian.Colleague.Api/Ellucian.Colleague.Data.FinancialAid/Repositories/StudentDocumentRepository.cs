@@ -154,7 +154,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             {
                 logger.Info(string.Format("{0} is not a valid status code in CORR.STATUSES", statusCode));
                 studentDocument.Status = DocumentStatus.Incomplete;
-                studentDocument.StatusDescription = "Incomplete";
+                studentDocument.StatusDescription = null;
             }
             else
             {

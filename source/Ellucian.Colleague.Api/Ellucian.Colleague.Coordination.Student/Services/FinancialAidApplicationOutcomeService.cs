@@ -68,9 +68,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <returns>Collection of FinancialAidApplications DTO objects</returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplicationOutcome>, int>> GetAsync(int offset, int limit, FinancialAidApplicationOutcome filterDto, bool bypassCache = false)
-        {
-            CheckViewFinancialAidApplicationOutcomesPermission();
-
+        {        
             // Get all financial aid years
             var aidYearEntity = (await _studentReferenceDataRepository.GetFinancialAidYearsAsync(bypassCache));
             List<string> faSuiteYears = aidYearEntity.Select(k => k.Code).ToList();
@@ -163,8 +161,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>FinancialAidApplications DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.FinancialAidApplicationOutcome> GetByIdAsync(string id, bool bypassCache = true)
         {
-            CheckViewFinancialAidApplicationOutcomesPermission();
-
             try
             {
 
@@ -716,21 +712,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return financialAidApplicationOutcomeDto;
         }
 
-        /// <summary>
-        /// Helper method to determine if the user has permission to view Student FinancialAidApplicationOutcomes.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckViewFinancialAidApplicationOutcomesPermission()
-        {
-            bool hasPermission = HasPermission(StudentPermissionCodes.ViewFinancialAidApplicationOutcomes);
-
-            // User is not allowed to read FinancialAidApplicationOutcomes without the appropriate permissions
-            if (!hasPermission)
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view financial-aid-application-outcomes.");
-                IntegrationApiExceptionAddError("User '" + CurrentUser.UserId + "' is not authorized to view financial-aid-application-outcomes.", "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
-                throw IntegrationApiException;
-            }
-        }
+  
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -110,7 +110,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (students == null)
             {
                 var errorMessage = string.Format("Unable to access STUDENTS table, record not found for student {0}", studentId);
-                logger.Info(errorMessage);
+                logger.Error(errorMessage);
                 return new List<StudentProgram>();
             }
 
@@ -141,7 +141,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     if (programData.Count == 1 && programData.FirstOrDefault() == null)
                     {
                         var errorMessage = string.Format("Unable to access STUDENT.PROGRAMS table, record(s) not found for {0}", string.Join(",", stprIds));
-                        logger.Info(errorMessage);
+                        logger.Error(errorMessage);
                     }
                     return programData;
                 });
@@ -206,7 +206,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 if (programsData.Count == 1 && programsData.FirstOrDefault() == null)
                 {
                     var errorMessage = string.Format("Unable to access STUDENT.PROGRAMS table, record(s) not found for {0}", string.Join(",", stprIds));
-                    logger.Info(errorMessage);
+                    logger.Error(errorMessage);
                 }
                 programs = await BuildStudentProgramsAsync(programsData, studentIds.ToList(), includeInactivePrograms, term, includeHistory);
             }
@@ -274,7 +274,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             catch(Exception ex)
             {
                 var errorMessage = string.Format("Unable to add academic program for student: '{0}' and program: '{1}'. Message: '{2}'", studentAcademicProgram.StudentId, studentAcademicProgram.ProgramCode, ex.Message);
-                logger.Info(errorMessage);
+                logger.Error(errorMessage);
                 throw new Exception(errorMessage);
             }
         }
@@ -339,7 +339,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             catch (Exception ex)
             {
                 var errorMessage = string.Format("Unable to update academic program for student: '{0}' and program: '{1}'. Message: '{2}'", studentAcademicProgram.StudentId, studentAcademicProgram.ProgramCode, ex.Message);
-                logger.Info(errorMessage);
+                logger.Error(errorMessage);
                 throw new Exception(errorMessage);
             }
         }
@@ -360,7 +360,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             else
             {
                 var errorMessage = string.Format("Unable to locate STUDENT.PROGRAMS record for student: '{0}' and program: '{1}'", studentid, programid);
-                logger.Info(errorMessage);
+                logger.Error(errorMessage);
                 return null;
             }
         }
@@ -544,7 +544,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         acadProgramData = acadProgramCollection.Where(a => a.Recordkey == progcode).FirstOrDefault();
 
-                        if (studentAcadLevelsCollection != null)
+                        if (studentAcadLevelsCollection != null && acadProgramData != null)
                         {
                             studentAcadLevelsData = studentAcadLevelsCollection.Where(a => a.Recordkey.Contains(studentid + "*"  + acadProgramData.AcpgAcadLevel)).FirstOrDefault();
                         }
@@ -633,7 +633,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             catch (Exception ex)
                             {
                                 var errorMessage = string.Format("Unable to lookup Major Code: '{0}', Student ID: '{1}'", ar.StprAddnlMajorsAssocMember, studentid);
-                                logger.Warn(ex, errorMessage);
+                                logger.Error(ex, errorMessage);
                             }
                         }
                     }
@@ -673,7 +673,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             catch (Exception ex)
                             {
                                 var errorMessage = string.Format("Unable to lookup Minor Code: '{0}', Student ID: '{1}'", ar.StprMinorsAssocMember, studentid);
-                                logger.Warn(ex, errorMessage);
+                                logger.Error(ex, errorMessage);
                             }
                         }
                     }
@@ -694,7 +694,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             catch (Exception ex)
                             {
                                 var errorMessage = string.Format("Unable to lookup CCD Code: '{0}', Student ID: '{1}'", ar.StprCcdsAssocMember, studentid);
-                                logger.Warn(ex, errorMessage);
+                                logger.Error(ex, errorMessage);
                             }
                         }
                     }
@@ -715,7 +715,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             catch (Exception ex)
                             {
                                 var errorMessage = string.Format("Unable to lookup Specialization Code: '{0}', Student ID: '{1}'", ar.StprSpecializationsAssocMember, studentid);
-                                logger.Warn(ex, errorMessage);
+                                logger.Error(ex, errorMessage);
                             }
                         }
                     }
@@ -741,7 +741,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 catch (Exception ex)
                                 {
                                     var errorMessage = string.Format("Unable to add override: '{0}', Student ID: '{1}'", over.Recordkey, studentid);
-                                    logger.Warn(ex, errorMessage);
+                                    logger.Error(ex, errorMessage);
                                 }
                             }
                         }
@@ -762,7 +762,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     catch (Exception ex)
                     {
                         var errorMessage = string.Concat("Unable to add all student statuses. Student ID: ", studentid);
-                        logger.Warn(ex, errorMessage);
+                        logger.Error(ex, errorMessage);
                     }
                     stpr.StudentProgramStatuses = allStudentProgramStatuses;
 
@@ -953,7 +953,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         catch (NotSupportedException ex)
                         {
                             var errorMessage = string.Format("Unable to add Exception: {0} for student id: {1} and program code: {2}", excp.Recordkey, stpr.StudentId, stpr.ProgramCode);
-                            logger.Warn(ex, string.Concat(errorMessage, Environment.NewLine, "Exception record is missing pointer to requirement block"));
+                            logger.Error(ex, string.Concat(errorMessage, Environment.NewLine, "Exception record is missing pointer to requirement block"));
                         }
 
                     }
@@ -1077,7 +1077,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if (response == null)
             {
                 var errorMessage = string.Format("Unable to get DegreeAuditCustomText for student: '{0}', program: '{1}'", studentId, programCode);
-                logger.Warn(errorMessage);
+                logger.Error(errorMessage);
             }
 
             if (response != null)

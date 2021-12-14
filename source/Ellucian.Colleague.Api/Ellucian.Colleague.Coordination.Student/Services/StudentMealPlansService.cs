@@ -1,10 +1,9 @@
-﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos;
@@ -74,8 +73,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>List of <see cref="Dtos.StudentMealPlans2">Dtos.StudentMealPlans</see></returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.StudentMealPlans2>, int>> GetStudentMealPlans2Async(int offset, int limit, StudentMealPlans2 criteriaFilter, bool bypassCache = false)
         {
-            CheckViewMealPlanAssignmentPermission();
-
+          
             string person = string.Empty, term = string.Empty, mealplan = string.Empty, status = string.Empty, startDate = string.Empty, endDate = string.Empty;
 
             if (criteriaFilter != null)
@@ -205,7 +203,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new ArgumentNullException("guid", "A GUID is required to obtain an student-meal-plan.");
             }
-            CheckViewMealPlanAssignmentPermission();
+           
             try
             {
                 var stuMealPlan = new List<Dtos.StudentMealPlans2>();
@@ -240,9 +238,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if( string.IsNullOrEmpty( studentMealPlansDto2.Id ) )
                     throw new ArgumentNullException( "MealPlanAssignments", "Must provide a guid for meal plan assignment update" );
 
-                // verify the user has the permission to update a StudentMealPlans
-                CheckCreateMealPlanAssignmentPermission();
-
+              
                 _studentMealPlanRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
                 try
                 {
@@ -303,10 +299,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (string.IsNullOrEmpty(studentMealPlansDto2.Id) || !string.Equals(studentMealPlansDto2.Id, Guid.Empty.ToString()))
                     throw new ArgumentNullException("MealPlanAssignments", "Must provide a nil guid to create a meal plan assignment. ");
                 Ellucian.Colleague.Domain.Student.Entities.MealPlanAssignment createdStudentMealPlans = null;
-
-
-                // verify the user has the permission to update a StudentMealPlans
-                CheckCreateMealPlanAssignmentPermission();
 
                 _studentMealPlanRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -847,8 +839,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>List of <see cref="Dtos.StudentMealPlans2">Dtos.StudentMealPlans</see></returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.StudentMealPlans>, int>> GetStudentMealPlansAsync(int offset, int limit, StudentMealPlans criteriaFilter, bool bypassCache = false)
         {
-            CheckViewMealPlanAssignmentPermission();
-
+            
             string person = string.Empty, term = string.Empty, mealplan = string.Empty, status = string.Empty, startDate = string.Empty, endDate = string.Empty;
 
             if (criteriaFilter != null)
@@ -966,7 +957,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new ArgumentNullException("guid", "A GUID is required to obtain an student-meal-plan.");
             }
-            CheckViewMealPlanAssignmentPermission();
+            
             try
             {
                 var stuMealPlan = new List<Dtos.StudentMealPlans>();
@@ -999,9 +990,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     throw new ArgumentNullException("MealPlanAssignments", "Must provide a meal plan assignment request body for update");
                 if (string.IsNullOrEmpty(StudentMealPlansDto.Id))
                     throw new ArgumentNullException("MealPlanAssignments", "Must provide a guid for meal plan assignment update");
-
-                // verify the user has the permission to update a StudentMealPlans
-                CheckCreateMealPlanAssignmentPermission();
 
                 _studentMealPlanRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -1047,10 +1035,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     throw new ArgumentNullException("MealPlanAssignments", "Must provide a nil guid to create a meal plan assignment. ");
                 Ellucian.Colleague.Domain.Student.Entities.MealPlanAssignment createdStudentMealPlans = null;
 
-
-                // verify the user has the permission to update a StudentMealPlans
-                CheckCreateMealPlanAssignmentPermission();
-                
                 _studentMealPlanRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
                 // map the DTO to entities
@@ -1685,37 +1669,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return studentMealPlansOverrideRate;
         }
 
-        /// <summary>
-        /// Permissions code that allows an external system to do a READ operation. This API will integrate information related to meal plan assignments that 
-        /// could be deemed personal.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckViewMealPlanAssignmentPermission()
-        {
-            var hasPermission = HasPermission(StudentPermissionCodes.ViewMealPlanAssignment);
-            if (!hasPermission)
-                hasPermission = HasPermission(StudentPermissionCodes.CreateMealPlanAssignment);
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view or create MEAL.PLAN.ASSIGNMENT.");
-            }
-        }
-
-        /// <summary>
-        /// Permissions code that allows an external system to do a UPDATE operation. This API will integrate information related to meal plan assignments that 
-        /// could be deemed personal.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckCreateMealPlanAssignmentPermission()
-        {
-            var hasPermission = HasPermission(StudentPermissionCodes.CreateMealPlanAssignment);
-
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to update MEAL.PLAN.ASSIGNMENT.");
-            }
-        }
-
+       
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Converts a meal assignment status to its corresponding StudentMealPlansStatus DTO enumeration value

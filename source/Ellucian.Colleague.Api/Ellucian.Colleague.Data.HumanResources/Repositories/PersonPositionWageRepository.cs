@@ -30,14 +30,14 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             bulkReadSize = settings != null && settings.BulkReadSize > 0 ? settings.BulkReadSize : 5000;
         }
 
-
         /// <summary>
         /// Get PersonPositionWages for the given personIds
         /// </summary>
         /// <param name="personIds">a list of personids for whom to get PersonPositionWages</param>
         /// <param name="lookupStartDate"> optional look up start date, all records with end date before this date will not be retrieved</param>
         /// <returns></returns>
-        public async Task<IEnumerable<PersonPositionWage>> GetPersonPositionWagesAsync(IEnumerable<string> personIds, DateTime? lookupStartDate = null)
+        public async Task<IEnumerable<PersonPositionWage>> GetPersonPositionWagesAsync(IEnumerable<string> personIds, DateTime? lookupStartDate = null, 
+            IEnumerable<string> payCycleIds = null)
         {
             if (personIds == null)
             {
@@ -54,7 +54,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 criteria += " AND (PPWG.END.DATE GE '" + UniDataFormatter.UnidataFormatDate(lookupStartDate.Value, InternationalParameters.HostShortDateFormat, InternationalParameters.HostDateDelimiter) 
                     + "' OR PPWG.END.DATE EQ '')";
-            }
+            }            
             var perposwgKeys = await DataReader.SelectAsync("PERPOSWG", criteria, personIds.Select(id => string.Format("\"{0}\"", id)).ToArray());
             if (perposwgKeys == null)
             {
@@ -84,22 +84,21 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 }
             }
 
-            ////bulkread all the EARNTYPE_GROUPINGS records (these can be cached)
-            //var earnTypeGroupingRecords = new List<EarntypeGroupings>();
-            //var earnTypeGroupings = await DataReader.BulkReadRecordAsync<EarntypeGroupings>("");
-            //if (earnTypeGroupings == null)
-            //{
-            //    logger.Error("Unexpected null from bulk read of EarntypeGroupings records");
-            //}
-            //else
-            //{
-            //    earnTypeGroupingRecords.AddRange(earnTypeGroupings);
-            //}
+            //filter records by paycycle ids if any were provided
+            List<Perposwg> wageRecords = null;
+            if (payCycleIds != null && payCycleIds.Any())
+            {
+                wageRecords = perposwgRecords.Where(r => payCycleIds.Contains(r.PpwgPaycycleId)).ToList();
+            }
+            else
+            {
+                wageRecords = perposwgRecords;
+            }
 
             //find all the POSPAY ids in the perposwgRecords PPWG_POSPAY_ID
             var posPayRecords = new Dictionary<string, Pospay>();
 
-            var posPayIds = perposwgRecords
+            var posPayIds = wageRecords
                 .Where(rec => rec != null && !string.IsNullOrEmpty(rec.PpwgPospayId))
                 .Select(i => i.PpwgPospayId)
                 .Distinct()
@@ -122,25 +121,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 }
             }
 
-            //build the entities
-            //var earnTypeGroupingEntities = new List<EarningsTypeGroup>();
-            //foreach (var earnTypeGroupingRecord in earnTypeGroupingRecords)
-            //{
-            //    if (earnTypeGroupingRecord != null)
-            //    {
-            //        try
-            //        {
-            //            earnTypeGroupingEntities.AddRange(BuildEarnTypeGroupings(earnTypeGroupingRecord));
-            //        }
-            //        catch (Exception e)
-            //        {
-            //            LogDataError("earntype_grouping", earnTypeGroupingRecord.Recordkey, earnTypeGroupingRecord, e, e.Message);
-            //        }
-            //    }
-            //}
-
             var personPositionWageEntities = new List<PersonPositionWage>();
-            foreach (var perposwgRecord in perposwgRecords)
+            foreach (var perposwgRecord in wageRecords)
             {
                 if (perposwgRecord != null)
                 {
@@ -162,25 +144,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             return personPositionWageEntities;
         }
-        /// <summary>
-        /// Helper to build a EarnTypeGroupings object based on a EARNTYPE.GROUPINGS record
-        /// </summary>
-        /// <param name="earnTypeGroupingsRecord"></param>
-        /// <returns></returns>
-        //private  List<EarningsTypeGroup> BuildEarnTypeGroupings(EarntypeGroupings earnTypeGroupingsRecord)
-        //{
-        //    if (earnTypeGroupingsRecord == null)
-        //    {
-        //        throw new ArgumentNullException("earntypegroupingsrecord");
-        //    }
-        //    var listOfEntities = new List<EarningsTypeGroup>();
-        //    for (var i = 0; i< earnTypeGroupingsRecord.EtpgEarntypeDesc.Count; i++)
-        //    {
-        //        listOfEntities.Add(new EarningsTypeGroup(earnTypeGroupingsRecord.Recordkey, earnTypeGroupingsRecord.EtpgEarntype.ElementAt(i), earnTypeGroupingsRecord.EtpgEarntypeDesc.ElementAt(i)));
-        //    }            
-        //    return listOfEntities;
-        //}
-
+        
         /// <summary>
         /// Helper to build a PersonPositionWage object based on a PERPOSWG record
         /// </summary>
@@ -200,10 +164,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             var earningsTypeGroupId = posPayRecord != null ? posPayRecord.PospayEarntypeGrouping : null;
                 
-                //posPayRecords.Where(record => perposwgRecord.PpwgPospayId == record.Recordkey).Select(rec => rec.PospayEarntypeGrouping).FirstOrDefault();
-            //earningsTypeGroupId = !string.IsNullOrEmpty(earningsTypeGroupId) ? earningsTypeGroupId.ToString() : null;
-           // var earningsTypeGroupEntries = earnTypeGroupingsEntities.Where(entry => entry.EarningsTypeGroupId == earningsTypeGroupId).ToList();
-
+                
             var fundingSources = new List<PositionFundingSource>();
             foreach (var payItemRecord in perposwgRecord.PpwitemsEntityAssociation)
             {

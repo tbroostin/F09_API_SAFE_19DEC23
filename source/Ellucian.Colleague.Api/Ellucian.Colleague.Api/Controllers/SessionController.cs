@@ -530,5 +530,38 @@ namespace Ellucian.Colleague.Api.Controllers
                 throw CreateHttpResponseException("Unable to reset password");
             }
         }
+
+        /// <summary>
+        /// Sync user's Colleague web token's timeout on app server side.
+        /// </summary>
+        /// <returns></returns>
+        [HttpPut]
+        [Authorize]
+        public async Task<HttpResponseMessage> PutSyncAsync()
+        {
+            try
+            {
+                var currentUserPrincipal = Microsoft.IdentityModel.Claims.ClaimsPrincipal.CreateFromPrincipal(User);
+                var currentUserTokenClaim = currentUserPrincipal.Identities.First().Claims.FirstOrDefault(
+                    c => c.ClaimType == Ellucian.Web.Security.ClaimConstants.SecurityTokenControlId);
+
+                if (currentUserTokenClaim == null 
+                    || string.IsNullOrWhiteSpace(currentUserTokenClaim.Value)
+                    || currentUserTokenClaim.Value.Split('*').Length != 2)
+                {
+                    logger.Error("Unable to sync session due to invalid token claim.");
+                    return new HttpResponseMessage(HttpStatusCode.BadRequest);
+                }
+                string secToken = currentUserTokenClaim.Value.Split('*')[0];
+                string controlId = currentUserTokenClaim.Value.Split('*')[1];
+                await sessionRepository.SyncSessionAsync(secToken, controlId);
+                return new HttpResponseMessage(HttpStatusCode.OK);
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "Unexpected error occurred syncing web session.");
+                return new HttpResponseMessage(HttpStatusCode.BadRequest);
+            }
+        }
     }
 }

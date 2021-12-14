@@ -48,11 +48,11 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
             groupResultEntity.Explanations.Add(Ellucian.Colleague.Domain.Student.Entities.Requirements.GroupExplanation.MinGpa);
             groupResultEntity.Explanations.Add(Ellucian.Colleague.Domain.Student.Entities.Requirements.GroupExplanation.MinInstCredits);
 
-            AcademicCredit ac = tacr.GetAsync("1").Result;
+            Domain.Student.Entities.AcademicCredit ac = tacr.GetAsync("1").Result;
             Ellucian.Colleague.Domain.Student.Entities.Requirements.AcadResult ar = new Ellucian.Colleague.Domain.Student.Entities.Requirements.CreditResult(ac) { Result = Ellucian.Colleague.Domain.Student.Entities.Requirements.Result.Applied };
             groupResultEntity.Results.Add(ar);
 
-            AcademicCredit ac1 = tacr.GetAsync("2").Result;
+            Domain.Student.Entities.AcademicCredit ac1 = tacr.GetAsync("2").Result;
             Ellucian.Colleague.Domain.Student.Entities.Requirements.AcadResult ar1 = new Ellucian.Colleague.Domain.Student.Entities.Requirements.CreditResult(ac1) { Result = Ellucian.Colleague.Domain.Student.Entities.Requirements.Result.ReplacedWithGPAValues };
             groupResultEntity.Results.Add(ar1);
 

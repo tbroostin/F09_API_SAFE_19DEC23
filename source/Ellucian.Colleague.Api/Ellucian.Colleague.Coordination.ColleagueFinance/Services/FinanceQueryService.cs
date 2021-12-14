@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Adapters;
@@ -62,6 +62,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             // The query criteria can be empty, but it cannot be null.
             if (criteria == null)
             {
+                logger.Debug("==> Filter criteria (criteria) is null <==");
                 throw new ArgumentNullException("criteria", "Filter criteria must be specified.");
             }
 
@@ -71,24 +72,29 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var fiscalYear = criteria.FiscalYear;
             if (string.IsNullOrEmpty(fiscalYear))
             {
+                logger.Debug("==> Getting the fiscal year configuration <==");
                 var fiscalYearConfiguration = await generalLedgerConfigurationRepository.GetFiscalYearConfigurationAsync();
                 criteria.FiscalYear = fiscalYearConfiguration.FiscalYearForToday.ToString();
+                logger.Debug(string.Format("==> criteria.FiscalYear is {0} <==", criteria.FiscalYear));
             }
 
             // Get the account structure configuration.
             var glAccountStructure = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
             if (glAccountStructure == null)
             {
+                logger.Error("==> glAccountStructure is null <==");
                 throw new ApplicationException("GL account structure is not set up.");
             }
 
             if (glAccountStructure.MajorComponents == null && glAccountStructure.Subcomponents == null)
             {
+                logger.Error("==> glAccountStructure.MajorComponents/Subcomponents is null <==");
                 throw new ConfigurationException("GL account structure - major / sub-components set up is missing.");
             }
 
             if (!ValidateSortCriteria(glAccountStructure, criteria))
             {
+                logger.Error("==> Invalid sort/subtotal component criteria specified <==");
                 throw new InvalidOperationException("Invalid sort/subtotal component criteria specified.");
             }
 
@@ -96,6 +102,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var glClassConfiguration = await generalLedgerConfigurationRepository.GetClassConfigurationAsync();
             if (glClassConfiguration == null)
             {
+                logger.Error("==> glClassConfiguration is null <==");
                 throw new ApplicationException("GL class configuration is not set up.");
             }
 
@@ -103,14 +110,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var generalLedgerUser = await generalLedgerUserRepository.GetGeneralLedgerUserAsync2(CurrentUser.PersonId, glAccountStructure.FullAccessRole, glClassConfiguration);
             if (generalLedgerUser == null)
             {
+                logger.Error("==> generalLedgerUser is null <==");
                 throw new ApplicationException("No GL user definition available.");
             }
 
             // If the user does not have any GL accounts assigned, return an empty list of finance query object.
             if ((generalLedgerUser.AllAccounts == null || !generalLedgerUser.AllAccounts.Any()))
             {
-                var errorMessage = string.Format("user '{0}' does not have any GL accounts assigned.", CurrentUser.PersonId);
-                logger.Error(errorMessage);
+                logger.Error(string.Format("==> user '{0}' does not have any GL accounts assigned <==", CurrentUser.PersonId));
                 return financeQueryDtos;
             }
 
@@ -123,24 +130,29 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (filteredFinanceQueryGlAccountLineItems == null || !filteredFinanceQueryGlAccountLineItems.Any())
             {
+                logger.Debug("==> filteredFinanceQueryGlAccountLineItems is null or empty <==");
                 return financeQueryDtos;
             }
 
             var financeQueryGlAccountLineItems = filteredFinanceQueryGlAccountLineItems.ToList();
 
             #region Sort & Subtotal
+
             var glAccountNumbers = financeQueryGlAccountLineItems.Select(x => x.GlAccountNumber).ToList().Union(financeQueryGlAccountLineItems.SelectMany(x => x.Poolees).Select(x => x.GlAccountNumber).ToList());
             var glAccountDescriptionsDictionary = await generalLedgerAccountRepository.GetGlAccountDescriptionsAsync(glAccountNumbers, glAccountStructure);
             var glSubComponentStructureDictionary = BuildGlComponentStructureDictionary(glAccountStructure);
 
-            //list of unique sort criteria - remove duplicates or if duplicate found get criteria with subtotal checked if any.
+            // List of unique sort criteria - remove duplicates or if duplicate found get criteria with subtotal checked if any.
             var sortCriteria = GetUniqueSortCriteria(queryCriteriaEntity.SortCriteria);
 
             foreach (var item in financeQueryGlAccountLineItems)
             {
-                item.SortKey = sortCriteria.Any() ? BuildSortKeyForGlAccount(item.GlAccountNumber, sortCriteria, glSubComponentStructureDictionary) : string.Empty;
-                AssignGlAccountDescription(item, glAccountDescriptionsDictionary);
-                item.Poolees = item.Poolees != null && item.Poolees.Any() ? item.Poolees.OrderBy(x => x.GlAccountNumber, StringComparer.Ordinal).ToList() : item.Poolees;
+                if (item != null)
+                {
+                    item.SortKey = sortCriteria.Any() ? BuildSortKeyForGlAccount(item.GlAccountNumber, sortCriteria, glSubComponentStructureDictionary) : string.Empty;
+                    AssignGlAccountDescription(item, glAccountDescriptionsDictionary);
+                    item.Poolees = item.Poolees != null && item.Poolees.Any() ? item.Poolees.OrderBy(x => x.GlAccountNumber, StringComparer.Ordinal).ToList() : item.Poolees;
+                }
             }
 
             var lineItemsForSubtotal = sortCriteria.Any() ? financeQueryGlAccountLineItems.OrderBy(x => x.SortKey, StringComparer.Ordinal).ThenBy(x => x.GlAccountNumber, StringComparer.Ordinal).ToList()
@@ -157,7 +169,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             // Note: Fund.Group, Fund belongs to 'FUND' Major Component Type
             // Category, SubCategory belongs to 'OBJECT' Major Component Type
             var financeQueryEntity = BuildFinanceQueryWithSubtotalEntities(lineItemsForSubtotal, sortCriteria, glAccountStructure, glSubComponentStructureDictionary, subtotalComponentValuesDictionary);
+
             #endregion
+
             // filter the subtotal criteria to be displayed
             var onlySubTotalCriteria = sortCriteria.Where(x => x.IsDisplaySubTotal.HasValue && x.IsDisplaySubTotal.Value).OrderBy(x => x.Order);
             if (onlySubTotalCriteria.Any())
@@ -176,7 +190,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 var financeQueryDto = financeQueryAdapter.MapToType(financeQueryEntity, glAccountStructure.MajorComponentStartPositions);
                 financeQueryDtos.Add(financeQueryDto);
             }
-            
+
             return financeQueryDtos;
         }
 
@@ -289,7 +303,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             FinanceQuerySubtotal subtotal = new FinanceQuerySubtotal();
             var subtotalComponents = new List<FinanceQuerySubtotalComponent> { AddSubtotalComponent(breakValue, subtotalGlAccounts) };
             subtotal.FinanceQueryGlAccountLineItems = subtotalGlAccounts;
-            subtotal.FinanceQuerySubtotalComponents = subtotalComponents; 
+            subtotal.FinanceQuerySubtotalComponents = subtotalComponents;
             return subtotal;
         }
 
@@ -324,7 +338,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         {
                             string description = string.Empty;
                             // from the subcomponent description dictionary get the description for the current subtotal component value
-                            if(subcomponentDescriptionDictionary.TryGetValue(subtotalItem.SubtotalComponentValue,out description)){
+                            if (subcomponentDescriptionDictionary.TryGetValue(subtotalItem.SubtotalComponentValue, out description))
+                            {
                                 subtotalItem.SubtotalComponentDescription = description;
                             }
                         }
@@ -420,7 +435,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         public FinanceQuery BuildFinanceQueryWithSubtotalEntities(List<FinanceQueryGlAccountLineItem> filteredFinanceQueryGlAccountLineItems, List<FinanceQueryComponentSortCriteria> subtotalCriteriaList, GeneralLedgerAccountStructure glAccountStructure, Dictionary<string, Tuple<int, int>> glSubComponentStructureDictionary, Dictionary<string, List<string>> subtotalCriteriaComponentValuesDictionary)
         {
             FinanceQuery financeQuery;
-            
+
             var onlySubTotalCriteria = subtotalCriteriaList.Where(x => x.IsDisplaySubTotal.HasValue && x.IsDisplaySubTotal.Value).OrderBy(x => x.Order).ToList();
             //if no subtotal criteria/s, assign list of gl accounts to subtotal entity & return finance query entity.
             if (!onlySubTotalCriteria.Any())
@@ -468,11 +483,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         }
                     }
 
-
                     switch (onlySubTotalCriteria.Count)
                     {
                         case 1:
-                            {                            
+                            {
                                 subtotalGlAccounts.Add(currentGlAccount);
                                 //create a level 1 value list with the iteration
                                 subtotalCriteriaLevel1Values.Add(currentBreak[0].Split('-')[1]);
@@ -581,6 +595,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             return financeQuery;
 
         }
+        
         #endregion
 
     }

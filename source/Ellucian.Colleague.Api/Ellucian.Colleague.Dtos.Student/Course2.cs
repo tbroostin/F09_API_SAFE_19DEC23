@@ -1,4 +1,5 @@
-﻿using System;
+﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -107,5 +108,10 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Immediately verify grades
         /// </summary>
         public bool? VerifyGrades { get; set; }
+
+        /// <summary>
+        /// Indicates whether the drop roster should be displayed for the course
+        /// </summary>
+        public bool ShowDropRoster { get; set; }
     }
 }

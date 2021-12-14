@@ -40,7 +40,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
             var proxySubject = CurrentUser.ProxySubjects.FirstOrDefault();
             if (!CurrentUser.IsPerson(personId) && !HasProxyAccessForPerson(personId))
             {
-                logger.Info(CurrentUser + " attempted to pay on account " + personId);
+                logger.Error(CurrentUser.PersonId + " attempted to pay on account " + personId);
                 throw new PermissionsException();
             }
         }

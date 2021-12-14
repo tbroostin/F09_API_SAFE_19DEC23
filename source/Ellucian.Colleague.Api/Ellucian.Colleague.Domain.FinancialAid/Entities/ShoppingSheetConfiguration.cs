@@ -204,6 +204,120 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         /// </summary>
         public string NextStepsRuleId { get; set; }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        public List<string> EmployeeTuitionBenefits { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public List<string> DisadvantagedStudentScholarship { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string GraduateUndergraduateRuleId { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public Decimal? SubInterestRate { get;set;}
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public Decimal? SubOriginationFee { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public Decimal? UnsubInterestRate { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public Decimal? UnsubOriginationFee { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public Decimal? PrivateInterestRate { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public Decimal? PrivateOriginationFee { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public Decimal? InstitutionInterestRate { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public Decimal? InstitutionOriginationFee { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public Decimal? GradPlusInterestRate { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public Decimal? GradPlusOriginationFee { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public Decimal? HRSAInterestRate { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public Decimal? HRSAOriginationFee { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public Decimal? PlusInterestRate { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public Decimal? PlusOriginationFee { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public List<string> GradPlusLoans { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public List<string> HrsaLoans { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public List<string> SchoolPaidTuitionBenefits { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public List<string> TuitionRemWaiver { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public List<string> Assistantships { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public List<string> IncomeShare { get; set; }
 
         public ShoppingSheetConfiguration()
         {

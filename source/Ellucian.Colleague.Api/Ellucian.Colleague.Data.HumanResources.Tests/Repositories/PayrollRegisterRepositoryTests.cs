@@ -1,4 +1,5 @@
-﻿using Ellucian.Colleague.Data.Base.Tests.Repositories;
+﻿/*Copyright 2017-2021 Ellucian Company L.P. and its affiliates.*/
+using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Data.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
@@ -123,7 +124,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 {
                     PtdTxblBdControllerAssocMember = tb.controller,
                     PtdTxblBdEmplyrAmtsAssocMember = tb.employerAmount
-                }).ToList()
+                }).ToList(),
+                PtdStatus = record.status
             };
         }
 
@@ -515,27 +517,16 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 
                 Assert.AreEqual(expectedAmount, actualBenefits.EmployerAmount);
             }
+
+            [TestMethod]
+            public async Task AdjustmentRecordsGetIncludedTest()
+            {
+                var adjustmentRegisterEntries = (await getActual()).Where(re => re.IsAdjustment);
+                Assert.IsTrue(adjustmentRegisterEntries.Any());
+                                
+            }
         }
 
-        [TestClass]
-        public class GetPayrollRegisterByEmployeeIdsTests : PayrollRegisterRepositoryTests
-        {
-
-            public List<string> inputEmployeeIds;
-
-            public async Task<IEnumerable<PayrollRegisterEntry>> getActual()
-            {
-                return await repositoryUnderTest.GetPayrollRegisterByEmployeeIdsAsync(inputEmployeeIds);
-            }
-
-            [TestInitialize]
-            public void Initialize()
-            {
-                PayrollRegisterRepositoryTestsInitialize();
-                
-            }
-
-            
-        }
+        
     }
 }

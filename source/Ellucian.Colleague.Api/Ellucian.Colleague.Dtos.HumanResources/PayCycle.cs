@@ -1,11 +1,8 @@
-﻿using Newtonsoft.Json;
+﻿/*Copyright 2016-2020 Ellucian Company L.P. and its affiliates.*/
+using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-/*Copyright 2016 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Dtos.HumanResources
 {
@@ -28,7 +25,8 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         [JsonConverter(typeof(StringEnumConverter))]
         public DayOfWeek WorkWeekStartDay { get; set; }
         /// <summary>
-        /// The pay cycle description
+        /// The pay cycle description: default description 
+        /// if Self-Service description is not filled in on PCYL
         /// </summary>
         public string Description { get; set; }
         /// <summary>
@@ -39,5 +37,9 @@ namespace Ellucian.Colleague.Dtos.HumanResources
         /// List of pay period date ranges associated with the pay cycle
         /// </summary>
         public List<PayPeriod> PayPeriods { get; set; }
+        /// <summary>
+        /// Flag indicating whether to display this pay cycle in Self-Service
+        /// </summary>
+        public bool DisplayInSelfService { get; set; }
     }
 }

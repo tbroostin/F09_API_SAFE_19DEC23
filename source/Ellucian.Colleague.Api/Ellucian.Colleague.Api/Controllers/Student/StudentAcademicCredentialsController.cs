@@ -1,10 +1,11 @@
-//Copyright 2019 Ellucian Company L.P. and its affiliates.
+//Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
@@ -56,7 +57,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="academicPrograms">academicPrograms Named Query</param>
         /// <returns>List of StudentAcademicCredentials <see cref="Dtos.StudentAcademicCredentials"/> objects representing matching studentAcademicCredentials</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewStudentAcademicCredentials)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.StudentAcademicCredentials))]
         [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter2))]
@@ -75,6 +76,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _studentAcademicCredentialsService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -140,7 +142,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID to desired studentAcademicCredentials</param>
         /// <returns>A studentAcademicCredentials object <see cref="Dtos.StudentAcademicCredentials"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewStudentAcademicCredentials)]
         public async Task<Dtos.StudentAcademicCredentials> GetStudentAcademicCredentialsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -158,6 +160,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _studentAcademicCredentialsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                    await _studentAcademicCredentialsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                    await _studentAcademicCredentialsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),

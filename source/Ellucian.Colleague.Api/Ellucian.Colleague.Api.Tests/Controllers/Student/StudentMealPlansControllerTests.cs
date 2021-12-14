@@ -1,18 +1,23 @@
-﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -739,6 +744,518 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 .ThrowsAsync(new Exception());
             var result = await studentMealPlansController.PutStudentMealPlans2Async(guid, mp);
         }
+
+        //GET by id v16.0.0
+        //Successful
+        //GetStudentMealPlansByGuid2Async
+        [TestMethod]
+        public async Task StudentMealPlansController_GetStudentMealPlansByGuid2Async_Permissions()
+        {
+            var expected = studentMealPlansDtoCollection2.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentMealPlans" },
+                    { "action", "GetStudentMealPlansByGuid2Async" }
+                };
+            HttpRoute route = new HttpRoute("student-meal-plans", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentMealPlansController.Request.SetRouteData(data);
+            studentMealPlansController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.ViewMealPlanAssignment, StudentPermissionCodes.CreateMealPlanAssignment });
+
+            var controllerContext = studentMealPlansController.ControllerContext;
+            var actionDescriptor = studentMealPlansController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+
+            studentMealPlansServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            studentMealPlansServiceMock.Setup(x => x.GetStudentMealPlansByGuid2Async(expected.Id)).ReturnsAsync(expected);
+            var actual = await studentMealPlansController.GetStudentMealPlansByGuid2Async(expected.Id);
+
+            Object filterObject;
+            studentMealPlansController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewMealPlanAssignment));
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateMealPlanAssignment));
+
+
+        }
+
+        //GET by id v16.0.0
+        //Exception
+        //GetStudentMealPlansByGuid2Async
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentMealPlansController_GetStudentMealPlansByGuid2Async_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentMealPlans" },
+                    { "action", "GetStudentMealPlansByGuid2Async" }
+                };
+            HttpRoute route = new HttpRoute("student-meal-plans", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentMealPlansController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = studentMealPlansController.ControllerContext;
+            var actionDescriptor = studentMealPlansController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                studentMealPlansServiceMock.Setup(x => x.GetStudentMealPlansByGuid2Async(It.IsAny<string>())).Throws<PermissionsException>();
+                studentMealPlansServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view student-meal-plans."));
+                await studentMealPlansController.GetStudentMealPlansByGuid2Async("1");
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET by id v10.1.0 / v10
+        //Successful
+        //GetStudentMealPlansByGuidAsync
+        [TestMethod]
+        public async Task StudentMealPlansController_GetStudentMealPlansByGuidAsync_Permissions()
+        {
+            var expected = studentMealPlansDtoCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentMealPlans" },
+                    { "action", "GetStudentMealPlansByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-meal-plans", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentMealPlansController.Request.SetRouteData(data);
+            studentMealPlansController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.ViewMealPlanAssignment, StudentPermissionCodes.CreateMealPlanAssignment });
+
+            var controllerContext = studentMealPlansController.ControllerContext;
+            var actionDescriptor = studentMealPlansController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            studentMealPlansServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            studentMealPlansServiceMock.Setup(x => x.GetStudentMealPlansByGuidAsync(expected.Id)).ReturnsAsync(expected);
+            var actual = await studentMealPlansController.GetStudentMealPlansByGuidAsync(expected.Id);
+
+            Object filterObject;
+            studentMealPlansController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewMealPlanAssignment));
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateMealPlanAssignment));
+
+
+        }
+
+        //GET by id v10.1.0 / v10
+        //Exception
+        //GetStudentMealPlansByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentMealPlansController_GetStudentMealPlansByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentMealPlans" },
+                    { "action", "GetStudentMealPlansByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-meal-plans", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentMealPlansController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = studentMealPlansController.ControllerContext;
+            var actionDescriptor = studentMealPlansController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                studentMealPlansServiceMock.Setup(x => x.GetStudentMealPlansByGuidAsync(It.IsAny<string>())).Throws<PermissionsException>();
+                studentMealPlansServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view student-meal-plans."));
+                await studentMealPlansController.GetStudentMealPlansByGuidAsync("1");
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET v16.0.0
+        //Successful
+        //GetStudentMealPlans2Async
+        [TestMethod]
+        public async Task StudentMealPlansController_GetStudentMealPlans2Async_Permissions()
+        {
+            var expected = studentMealPlansDtoCollection2.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentMealPlans" },
+                    { "action", "GetStudentMealPlans2Async" }
+                };
+            HttpRoute route = new HttpRoute("student-meal-plans", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentMealPlansController.Request.SetRouteData(data);
+            studentMealPlansController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.ViewMealPlanAssignment, StudentPermissionCodes.CreateMealPlanAssignment });
+
+            var controllerContext = studentMealPlansController.ControllerContext;
+            var actionDescriptor = studentMealPlansController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            studentMealPlansServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            studentMealPlansServiceMock.Setup(x => x.GetStudentMealPlans2Async(page.Offset, page.Limit, It.IsAny<Dtos.StudentMealPlans2>(), It.IsAny<bool>())).ReturnsAsync(studentMealPlansDtoTuple2);
+            var sourceContexts = await studentMealPlansController.GetStudentMealPlans2Async(page, criteriaFilter);
+
+            Object filterObject;
+            studentMealPlansController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewMealPlanAssignment));
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateMealPlanAssignment));
+
+
+        }
+
+        //GET v16.0.0
+        //Exception
+        //GetStudentMealPlans2Async
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentMealPlansController_GetStudentMealPlans2Async_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentMealPlans" },
+                    { "action", "GetStudentMealPlans2Async" }
+                };
+            HttpRoute route = new HttpRoute("student-meal-plans", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentMealPlansController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = studentMealPlansController.ControllerContext;
+            var actionDescriptor = studentMealPlansController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                studentMealPlansServiceMock.Setup(x => x.GetStudentMealPlans2Async(page.Offset, page.Limit, It.IsAny<Dtos.StudentMealPlans2>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                studentMealPlansServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view student-meal-plans."));
+                await studentMealPlansController.GetStudentMealPlans2Async(page, criteriaFilter);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET v10.1.0 / v10
+        //Successful
+        //GetStudentMealPlansAsync
+        [TestMethod]
+        public async Task StudentMealPlansController_GetStudentMealPlansAsync_Permissions()
+        {
+            var expected = studentMealPlansDtoCollection2.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentMealPlans" },
+                    { "action", "GetStudentMealPlansAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-meal-plans", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentMealPlansController.Request.SetRouteData(data);
+            studentMealPlansController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.ViewMealPlanAssignment, StudentPermissionCodes.CreateMealPlanAssignment });
+
+            var controllerContext = studentMealPlansController.ControllerContext;
+            var actionDescriptor = studentMealPlansController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            studentMealPlansServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            studentMealPlansServiceMock.Setup(x => x.GetStudentMealPlansAsync(page.Offset, page.Limit, It.IsAny<Dtos.StudentMealPlans>(), It.IsAny<bool>())).ReturnsAsync(studentMealPlansDtoTuple);
+            var sourceContexts = await studentMealPlansController.GetStudentMealPlansAsync(page, criteriaFilter);
+
+            Object filterObject;
+            studentMealPlansController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewMealPlanAssignment));
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateMealPlanAssignment));
+
+
+        }
+
+        //GET v10.1.0 / v10
+        //Exception
+        //GetStudentMealPlansAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentMealPlansController_GetStudentMealPlansAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentMealPlans" },
+                    { "action", "GetStudentMealPlansAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-meal-plans", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentMealPlansController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = studentMealPlansController.ControllerContext;
+            var actionDescriptor = studentMealPlansController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                studentMealPlansServiceMock.Setup(x => x.GetStudentMealPlansAsync(page.Offset, page.Limit, It.IsAny<Dtos.StudentMealPlans>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                studentMealPlansServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view student-meal-plans."));
+                await studentMealPlansController.GetStudentMealPlansAsync(page, criteriaFilter);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //PUT v16.0.0
+        //Successful
+        //PutStudentMealPlans2Async
+        [TestMethod]
+        public async Task StudentMealPlansController_PutStudentMealPlans2Async_Permissions()
+        {
+            var mp = studentMealPlansDtoCollection2.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentMealPlans" },
+                    { "action", "PutStudentMealPlans2Async" }
+                };
+            HttpRoute route = new HttpRoute("student-meal-plans", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentMealPlansController.Request.SetRouteData(data);
+            studentMealPlansController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.CreateMealPlanAssignment);
+
+            var controllerContext = studentMealPlansController.ControllerContext;
+            var actionDescriptor = studentMealPlansController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            studentMealPlansServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            studentMealPlansServiceMock.Setup(ser => ser.PutStudentMealPlans2Async(It.IsAny<string>(), It.IsAny<Dtos.StudentMealPlans2>())).ReturnsAsync(mp);
+            var result = await studentMealPlansController.PutStudentMealPlans2Async(guid, mp);
+
+            Object filterObject;
+            studentMealPlansController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateMealPlanAssignment));
+
+
+        }
+
+        //PUT v16.0.0
+        //Exception
+        //PutStudentMealPlans2Async
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentMealPlansController_PutStudentMealPlans2Async_Invalid_Permissions()
+        {
+            var mp = studentMealPlansDtoCollection2.FirstOrDefault();
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentMealPlans" },
+                    { "action", "PutStudentMealPlans2Async" }
+                };
+            HttpRoute route = new HttpRoute("student-meal-plans", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentMealPlansController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = studentMealPlansController.ControllerContext;
+            var actionDescriptor = studentMealPlansController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                studentMealPlansServiceMock.Setup(ser => ser.PutStudentMealPlans2Async(It.IsAny<string>(), It.IsAny<Dtos.StudentMealPlans2>())).ThrowsAsync(new PermissionsException());
+                studentMealPlansServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to update student-meal-plans."));
+                var result = await studentMealPlansController.PutStudentMealPlans2Async(guid, mp);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //POST v16.0.0
+        //Successful
+        //PostStudentMealPlans2Async
+        [TestMethod]
+        public async Task StudentMealPlansController_PostStudentMealPlans2Async_Permissions()
+        {
+            var mp = studentMealPlansDtoCollection2.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentMealPlans" },
+                    { "action", "PostStudentMealPlans2Async" }
+                };
+            HttpRoute route = new HttpRoute("student-meal-plans", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentMealPlansController.Request.SetRouteData(data);
+            studentMealPlansController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.CreateMealPlanAssignment);
+
+            var controllerContext = studentMealPlansController.ControllerContext;
+            var actionDescriptor = studentMealPlansController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            studentMealPlansServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            studentMealPlansServiceMock.Setup(ser => ser.PostStudentMealPlans2Async(It.IsAny<Dtos.StudentMealPlans2>())).ReturnsAsync(mp);
+            var result = await studentMealPlansController.PostStudentMealPlans2Async(mp);
+
+            Object filterObject;
+            studentMealPlansController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateMealPlanAssignment));
+
+
+        }
+
+        //PUT v16.0.0
+        //Exception
+        //PostStudentMealPlans2Async
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentMealPlansController_PostStudentMealPlans2Async_Invalid_Permissions()
+        {
+            var mp = studentMealPlansDtoCollection2.FirstOrDefault();
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentMealPlans" },
+                    { "action", "PostStudentMealPlans2Async" }
+                };
+            HttpRoute route = new HttpRoute("student-meal-plans", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentMealPlansController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = studentMealPlansController.ControllerContext;
+            var actionDescriptor = studentMealPlansController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                studentMealPlansServiceMock.Setup(ser => ser.PostStudentMealPlans2Async(It.IsAny<Dtos.StudentMealPlans2>())).ThrowsAsync(new PermissionsException());
+                studentMealPlansServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to create student-meal-plans."));
+                await studentMealPlansController.PostStudentMealPlans2Async(mp);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
         #endregion
     }
 }

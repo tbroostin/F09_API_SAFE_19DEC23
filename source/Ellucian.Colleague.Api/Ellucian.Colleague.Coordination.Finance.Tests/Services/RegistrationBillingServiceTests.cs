@@ -2537,7 +2537,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
                     paymentRequirements = this.payReqs.Where(x => x.TermId == term).ToList();
                 }
 
-                arRepoMock.Setup(repo => repo.GetAccountHolder(It.IsAny<string>())).Returns(new Domain.Finance.Entities.AccountHolder("1234567", "Smith", null));
+                arRepoMock.Setup(repo => repo.GetAccountHolderAsync(It.IsAny<string>(), false)).ReturnsAsync(new Domain.Finance.Entities.AccountHolder("1234567", "Smith", null));
                 service = new RegistrationBillingService(adapterMock.Object, rbRepoMock.Object, arRepoMock.Object, adRepoMock.Object, fcRepoMock.Object,
                     pmtRepoMock.Object, ppRepoMock.Object, apprSvcMock.Object, ruleRepoMock.Object, docRepoMock.Object,
                     userFactoryMock.Object, roleRepoMock.Object, loggerMock.Object);

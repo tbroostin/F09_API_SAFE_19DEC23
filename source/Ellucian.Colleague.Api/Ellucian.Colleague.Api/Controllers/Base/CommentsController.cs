@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -23,6 +23,7 @@ using Ellucian.Web.Http;
 using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
 using System.Net;
+using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -55,7 +56,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="commentSubjectArea">find all of the records in REMARKS where the REMARKS.TYPE matches the code corresponding to the guid in commentSubjectArea.id.</param>
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <returns>List of Comments <see cref="Dtos.Comments"/> objects representing matching comments</returns>
-        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), FilteringFilter(IgnoreFiltering = true)]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), FilteringFilter(IgnoreFiltering = true), PermissionsFilter(new string[] { BasePermissionCodes.ViewComment, BasePermissionCodes.UpdateComment })]
         [ValidateQueryStringFilter(new string[] { "subjectMatter", "commentSubjectArea" }, false, true)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         public async Task<IHttpActionResult> GetCommentsAsync(Paging page, [FromUri] string subjectMatter = "", [FromUri] string commentSubjectArea = "")
@@ -76,6 +77,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                _commentsService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -127,7 +129,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="id">GUID to desired comment</param>
         /// <returns>A comment object <see cref="Dtos.Comments"/> in HEDM format</returns>
-        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter, PermissionsFilter(new string[] { BasePermissionCodes.ViewComment, BasePermissionCodes.UpdateComment })]
         public async Task<Dtos.Comments> GetCommentsByGuidAsync(string id)
         {
             var bypassCache = false;
@@ -146,6 +148,7 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
+                _commentsService.ValidatePermissions(GetPermissionsMetaData());
                 var comment = await _commentsService.GetCommentByIdAsync(id);
 
                 if (comment != null)
@@ -198,7 +201,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="comment">DTO of the new comment</param>
         /// <returns>A comment object <see cref="Dtos.Comments"/> in HEDM format</returns>
-        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter, PermissionsFilter(BasePermissionCodes.UpdateComment)]
         public async Task<Dtos.Comments> PostCommentsAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.Comments comment)
         {
             if (comment == null)
@@ -208,6 +211,7 @@ namespace Ellucian.Colleague.Api.Controllers
             } 
             try
             {
+                _commentsService.ValidatePermissions(GetPermissionsMetaData());
                 //call import extend method that needs the extracted extension data and the config
                 await _commentsService.ImportExtendedEthosData(await ExtractExtendedData(await _commentsService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
@@ -263,7 +267,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="id">GUID of the comment to update</param>
         /// <param name="comment">DTO of the updated comment</param>
         /// <returns>A comment object <see cref="Dtos.Comments"/> in HEDM format</returns>
-        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2),  EedmResponseFilter]
+        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2),  EedmResponseFilter, PermissionsFilter(BasePermissionCodes.UpdateComment)]
         public async Task<Dtos.Comments> PutCommentsAsync([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.Comments comment)
         {
             if (string.IsNullOrEmpty(id))
@@ -293,6 +297,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                _commentsService.ValidatePermissions(GetPermissionsMetaData());
                 //get Data Privacy List
                 var dpList = await _commentsService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
@@ -351,7 +356,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Delete (DELETE) a comment
         /// </summary>
         /// <param name="id">GUID to desired comment</param>
-        [HttpDelete, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpDelete, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), PermissionsFilter(BasePermissionCodes.DeleteComment)]
         public async Task DeleteCommentByGuidAsync(string id)
         {
             if (string.IsNullOrEmpty(id))
@@ -361,6 +366,7 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
+                _commentsService.ValidatePermissions(GetPermissionsMetaData());
                 await _commentsService.DeleteCommentByIdAsync(id);
                 // On delete, just return nothing.
                

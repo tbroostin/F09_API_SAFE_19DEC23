@@ -31,7 +31,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         private readonly string academicCredentialCriteria = "WITH STC.VERIFIED.GRADE NE '' AND STC.STUDENT.EQUIV.EVAL EQ ''";
         private RepositoryException exception;
         const int AllStudentTranscriptGradesCacheTimeout = 20; // Clear from cache every 20 minutes
-        const string AllStudentTranscriptGradesCache = "AllStudentTranscriptGrades";
+        const string AllStudentTranscriptGradesCache = "student-transcript-grades";
 
         public StudentTranscriptGradesRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)

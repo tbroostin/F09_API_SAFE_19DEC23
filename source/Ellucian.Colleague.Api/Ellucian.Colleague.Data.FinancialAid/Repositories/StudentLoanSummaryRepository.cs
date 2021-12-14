@@ -111,6 +111,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 }
             }
             //Get Mpn expiration dates
+            var plusLoanMpnItems = new List<PlusMpnItem>();
             if (!string.IsNullOrEmpty(studentRecordData.FaCodPersonId))
             {
                 var codPersonRecord = await DataReader.ReadRecordAsync<CodPerson>(studentRecordData.FaCodPersonId);
@@ -119,8 +120,42 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                     var studentMpnRecords = await DataReader.BulkReadRecordAsync<CodMpn>(codPersonRecord.CodpCodMpnIds.ToArray());
                     if (studentMpnRecords != null && studentMpnRecords.Count() > 0)
                     {
-                        studentLoanSummary.DirectLoanMpnExpirationDate = GetActiveMpnExpirationDate(studentId, studentMpnRecords, subsidizedMpnTypeCode);
-                        studentLoanSummary.PlusLoanMpnExpirationDate = GetActiveMpnExpirationDate(studentId, studentMpnRecords, plusMpnTypeCode);
+                        var directLoanMpnExpirationDate = GetActiveMpnExpirationDate(studentId, studentMpnRecords, subsidizedMpnTypeCode);
+                        var graduatePlusLoanMpnExpirationDate = GetActiveMpnExpirationDate(studentId, studentMpnRecords, plusMpnTypeCode, "GRAD");
+                        if (directLoanMpnExpirationDate != null && directLoanMpnExpirationDate.Any())
+                        {
+                            studentLoanSummary.DirectLoanMpnExpirationDate = directLoanMpnExpirationDate.FirstOrDefault();
+                        }
+                        if (graduatePlusLoanMpnExpirationDate != null && graduatePlusLoanMpnExpirationDate.Any())
+                        {
+                            studentLoanSummary.GraduatePlusLoanMpnExpirationDate = graduatePlusLoanMpnExpirationDate.FirstOrDefault();
+                        }
+                        var plusLoanDates = GetActiveMpnExpirationDate(studentId, studentMpnRecords, plusMpnTypeCode, "PLUS");
+                        var plusLoanPersonIDs = GetPlusLoanMpnNames(studentId, studentMpnRecords, plusMpnTypeCode, "PLUS");
+                        if (plusLoanDates != null && plusLoanDates.Count > 0 && plusLoanPersonIDs != null && plusLoanPersonIDs.Count > 0)
+                        {
+                            if (plusLoanDates[0] != null && plusLoanPersonIDs[0] != null)
+                            {
+                                var plusLoanMpnItem = new PlusMpnItem();
+                                plusLoanMpnItem.PlusLoanMpnExpirationDate = plusLoanDates[0];
+                                var translatedPerson = await DataReader.ReadRecordAsync<CodPerson>(plusLoanPersonIDs[0]);
+                                plusLoanMpnItem.PlusLoanMpnPersonId = translatedPerson.CodpColleagueId;
+                                plusLoanMpnItems.Add(plusLoanMpnItem);
+                            }
+                            if (plusLoanDates.Count > 1)
+                            {
+                                if (plusLoanDates[1] != null && plusLoanPersonIDs[1] != null)
+                                {
+                                    var plusLoanMpnItem = new PlusMpnItem();
+                                    plusLoanMpnItem.PlusLoanMpnExpirationDate = plusLoanDates[1];
+                                    var translatedPerson = await DataReader.ReadRecordAsync<CodPerson>(plusLoanPersonIDs[1]);
+                                    plusLoanMpnItem.PlusLoanMpnPersonId = translatedPerson.CodpColleagueId;
+                                    plusLoanMpnItems.Add(plusLoanMpnItem);
+                                }
+                            }
+                        }
+                        studentLoanSummary.PlusMpnItems = plusLoanMpnItems;
+                        //studentLoanSummary.PlusLoanMpnExpirationDate = GetActiveMpnExpirationDate(studentId, studentMpnRecords, plusMpnTypeCode, "PLUS");
                     }
                 }
             }
@@ -128,13 +163,21 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             //Get InformedBorrower status
             // call transaction
             var informedBorrowerItems = new List<InformedBorrowerItem>();
+            var plusLoanItems = new List<PlusLoanItem>();
+            var plusAppItems = new List<PlusApplicationItem>();
             foreach (var faYear in studentRecordData.FaSaYears)
             {
+
                 var request = new GetInformedBorrowerRequest();
                 request.StudentId = studentId;
                 request.FaYear = faYear;
                 var informedBorrowerItem = new InformedBorrowerItem();
                 informedBorrowerItem.FaYear = faYear;
+
+                var request2 = new GetPlusApplInfoRequest();
+                request2.StudentId = studentId;
+                request2.FaYear = faYear;
+                var response2 = await transactionInvoker.ExecuteAsync<GetPlusApplInfoRequest, GetPlusApplInfoResponse>(request2);
 
                 var response = await transactionInvoker.ExecuteAsync<GetInformedBorrowerRequest, GetInformedBorrowerResponse>(request);
 
@@ -145,15 +188,169 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                         informedBorrowerItem.IsInformedBorrowerComplete = true;
                         informedBorrowerItems.Add(informedBorrowerItem);
                     }
-                    else
+                    if (string.IsNullOrEmpty(response.AInfBorrResult) || response.AInfBorrResult == "N")
                     {
                         informedBorrowerItem.IsInformedBorrowerComplete = false;
                         informedBorrowerItems.Add(informedBorrowerItem);
                     }
+                    if (!string.IsNullOrEmpty(response.PlusResult1))
+                    {
+                        if (response.PlusResult1 == "Y" && !string.IsNullOrEmpty(response.AP1LastName))
+                        {
+                            var plusLoanItem = new PlusLoanItem();
+                            plusLoanItem.FaYear = faYear;
+                            if (!string.IsNullOrEmpty(response.AP1LastName))
+                            {
+                                plusLoanItem.PlusLoanLastName = response.AP1LastName;
+                            }
+                            if (!string.IsNullOrEmpty(response.AP1FirstName))
+                            {
+                                plusLoanItem.PlusLoanFirstName = response.AP1FirstName;
+                            }
+                            plusLoanItem.IsPlusLoanItemComplete = true;
+                            plusLoanItem.FaYear = faYear;
+                            plusLoanItems.Add(plusLoanItem);
+                        }
+                        if (response.PlusResult1 == "N" && !string.IsNullOrEmpty(response.AP1FirstName))
+                        {
+                            var plusLoanItem = new PlusLoanItem();
+                            plusLoanItem.IsPlusLoanItemComplete = false;
+                            plusLoanItem.FaYear = faYear;
+                            plusLoanItem.PlusLoanFirstName = response.AP1FirstName;
+                            plusLoanItem.PlusLoanLastName = response.AP1LastName;
+                            plusLoanItems.Add(plusLoanItem);
+                        }
+                        if (response.PlusResult1 == "N" && string.IsNullOrEmpty(response.AP1FirstName))
+                        {
+                            var plusLoanItem = new PlusLoanItem();
+                            plusLoanItem.IsPlusLoanItemComplete = false;
+                            plusLoanItem.FaYear = faYear;
+                            plusLoanItems.Add(plusLoanItem);
+                        }
+                    }
+                    if (!string.IsNullOrEmpty(response.APlusRslt2))
+                    {
+                        if (response.APlusRslt2 == "Y" && !string.IsNullOrEmpty(response.AP2FirstName))
+                        {
+                            var plusLoanItem2 = new PlusLoanItem();
+                            if (!string.IsNullOrEmpty(response.AP2LastName))
+                            {
+                                plusLoanItem2.PlusLoanLastName = response.AP2LastName;
+                            }
+                            if (!string.IsNullOrEmpty(response.AP2FirstName))
+                            {
+                                plusLoanItem2.PlusLoanFirstName = response.AP2FirstName;
+                            }
+                            plusLoanItem2.FaYear = faYear;
+                            plusLoanItem2.IsPlusLoanItemComplete = true;
+                            plusLoanItems.Add(plusLoanItem2);
+                        }
+                        if (response.APlusRslt2 == "N" && !string.IsNullOrEmpty(response.AP2FirstName))
+                        {
+                            var plusLoanItem2 = new PlusLoanItem();
+                            plusLoanItem2.IsPlusLoanItemComplete = false;
+                            plusLoanItem2.PlusLoanFirstName = response.AP2FirstName;
+                            plusLoanItem2.PlusLoanLastName = response.AP2LastName;
+                            plusLoanItem2.FaYear = faYear;
+                            plusLoanItems.Add(plusLoanItem2);
+                        }
+                        if (response.APlusRslt2 == "N" && string.IsNullOrEmpty(response.AP2FirstName))
+                        {
+                            var plusLoanItem2 = new PlusLoanItem();
+                            plusLoanItem2.IsPlusLoanItemComplete = false;
+                            plusLoanItem2.FaYear = faYear;
+                            plusLoanItems.Add(plusLoanItem2);
+                        }
+                    }
+                }
+
+                if (response2 != null)
+                {
+                    if (!string.IsNullOrEmpty(response2.PlusResult1))
+                    {
+                        if (response2.PlusResult1 == "Y" && !string.IsNullOrEmpty(response2.AP1FirstName))
+                        {
+                            var plusAppItem = new PlusApplicationItem();
+                            plusAppItem.FaYear = faYear;
+                            if (!string.IsNullOrEmpty(response2.AP1LastName))
+                            {
+                                plusAppItem.PlusApplicationLastName = response.AP1LastName;
+                            }
+                            if (!string.IsNullOrEmpty(response2.AP1FirstName))
+                            {
+                                plusAppItem.PlusApplicationFirstName = response.AP1FirstName;
+                            }
+                            plusAppItem.IsLoanApplicationItemComplete = true;
+                            plusAppItem.FaYear = faYear;
+                            plusAppItem.IsGPLUS = false;
+                            plusAppItems.Add(plusAppItem);
+                        }
+                        if (response2.PlusResult1 == "N")
+                        {
+                            var plusAppItem = new PlusApplicationItem();
+                            plusAppItem.IsLoanApplicationItemComplete = false;
+                            plusAppItem.FaYear = faYear;
+                            plusAppItem.IsGPLUS = false;
+                            plusAppItems.Add(plusAppItem);
+                        }
+                    }
+                    if (!string.IsNullOrEmpty(response2.APlusRslt2))
+                    {
+                        if (response2.APlusRslt2 == "Y" && !string.IsNullOrEmpty(response2.AP1FirstName))
+                        {
+                            var plusAppItem2 = new PlusApplicationItem();
+                            if (!string.IsNullOrEmpty(response2.AP2LastName))
+                            {
+                                plusAppItem2.PlusApplicationLastName = response2.AP2LastName;
+                            }
+                            if (!string.IsNullOrEmpty(response2.AP2FirstName))
+                            {
+                                plusAppItem2.PlusApplicationFirstName = response2.AP2FirstName;
+                            }
+                            plusAppItem2.FaYear = faYear;
+                            plusAppItem2.IsLoanApplicationItemComplete = true;
+                            plusAppItem2.IsGPLUS = false;
+                            plusAppItems.Add(plusAppItem2);
+                        }
+                        if (response2.APlusRslt2 == "N")
+                        {
+                            var plusAppItem2 = new PlusApplicationItem();
+                            plusAppItem2.IsLoanApplicationItemComplete = false;
+                            plusAppItem2.FaYear = faYear;
+                            plusAppItem2.IsGPLUS = false;
+                            plusAppItems.Add(plusAppItem2);
+                        }
+                    }
+                    if (!string.IsNullOrEmpty(response2.GplusRslt))
+                    {
+                        if (response2.GplusRslt == "Y")
+                        {
+                            var plusAppItem3 = new PlusApplicationItem();
+                            plusAppItem3.PlusApplicationFirstName = "";
+                            plusAppItem3.PlusApplicationLastName = "";
+                            plusAppItem3.FaYear = faYear;
+                            plusAppItem3.IsLoanApplicationItemComplete = true;
+                            plusAppItem3.IsGPLUS = true;
+                            plusAppItems.Add(plusAppItem3);
+                        }
+                        if (response2.GplusRslt == "N")
+                        {
+                            var plusAppItem3 = new PlusApplicationItem();
+                            plusAppItem3.PlusApplicationFirstName = "";
+                            plusAppItem3.PlusApplicationLastName = "";
+                            plusAppItem3.FaYear = faYear;
+                            plusAppItem3.IsLoanApplicationItemComplete = false;
+                            plusAppItem3.IsGPLUS = true;
+                            plusAppItems.Add(plusAppItem3);
+                        }
+                    }
                 }
             }
 
+            studentLoanSummary.PlusLoanItems = plusLoanItems;
+            studentLoanSummary.PlusApplicationItems = plusAppItems;
             studentLoanSummary.InformedBorrowerItem = informedBorrowerItems;
+
 
             //Get StudentLoanHistory
             // Do I have any ISIR.NSLDS records already read?
@@ -199,7 +396,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
         /// <param name="mpnTypeCode">Indicates the type of Master Promissory Note for which to get the expiration date. M - Subsidized/Unsubsidized Master Promissory Notes; N - PLUS Master Promissory Notes</param>
         /// <returns>A DateTime object representing the student's active Master Promissory Note expiration date for the given MPN type. If student has
         /// no active Master Promissory Notes, or there was an error retrieving the Master Promissory Note, this method returns null.</returns>        
-        private DateTime? GetActiveMpnExpirationDate(string studentId, Collection<CodMpn> studentMpnRecords, string mpnTypeCode)
+        private List<DateTime?> GetActiveMpnExpirationDate(string studentId, Collection<CodMpn> studentMpnRecords, string mpnTypeCode, string plusFlag = null)
         {
 
             //Select Mpns that match the given mpnTypeCode (the 10th character in the RecordKey indiciates the type - M=SUB/UNSUB, N=PLUS)
@@ -210,85 +407,475 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             // Check for an Active Status first, then Pending, then use the Old Active Status
 
             //Find the MPNs of the correct Loan Type and are Active
-            var typeSpecificActiveMpns = studentMpnRecords.Where(
-                m =>
-                    m.Recordkey.Length >= 10 &&
-                    m.Recordkey.Substring(9, 1) == mpnTypeCode &&
-                    m.CodmMpnStatus == "A" &&
-                    m.CodmMpnExpDate.HasValue
-                );
-            if (typeSpecificActiveMpns != null && typeSpecificActiveMpns.Count() > 0)
+
+            IEnumerable<CodMpn> typeSpecificActiveMpnsFiltered = null;
+            var activeMpnExpirationDates = new List<DateTime?>();
+
+            if (plusFlag != null && plusFlag == "PLUS")
             {
-                typeSpecificActiveMpns = typeSpecificActiveMpns.OrderByDescending(m => m.CodmMpnExpDate);
-                var mpnToUse = typeSpecificActiveMpns.FirstOrDefault();
-                if (mpnToUse != null && mpnToUse.CodmMpnExpDate >= DateTime.Today)
+                var typeSpecificActiveMpns = studentMpnRecords.Where(
+                    m =>
+                        m.Recordkey.Length >= 10 &&
+                        m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                        m.CodmMpnStatus == "A" &&
+                        !string.IsNullOrEmpty(m.CodmNonstuCodPersonId) &&
+                        m.CodmMpnExpDate.HasValue
+                    );
+                typeSpecificActiveMpnsFiltered = typeSpecificActiveMpns;
+            }
+
+            if (plusFlag != null && plusFlag == "GRAD")
+            {
+                var typeSpecificActiveMpns = studentMpnRecords.Where(
+                    m =>
+                        m.Recordkey.Length >= 10 &&
+                        m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                        m.CodmMpnStatus == "A" &&
+                        string.IsNullOrEmpty(m.CodmNonstuCodPersonId) &&
+                        m.CodmMpnExpDate.HasValue
+                    );
+                typeSpecificActiveMpnsFiltered = typeSpecificActiveMpns;
+            }
+
+            if (plusFlag == null)
+            {
+                var typeSpecificActiveMpns = studentMpnRecords.Where(
+                    m =>
+                        m.Recordkey.Length >= 10 &&
+                        m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                        m.CodmMpnStatus == "A" &&
+                        m.CodmMpnExpDate.HasValue
+                    );
+                typeSpecificActiveMpnsFiltered = typeSpecificActiveMpns;
+            }
+
+            if (typeSpecificActiveMpnsFiltered != null && typeSpecificActiveMpnsFiltered.Count() > 0)
+            {
+                typeSpecificActiveMpnsFiltered = typeSpecificActiveMpnsFiltered.OrderByDescending(m => m.CodmMpnExpDate);
+                var mpnToUse = typeSpecificActiveMpnsFiltered;
+                if (mpnToUse != null)
                 {
-                    return mpnToUse.CodmMpnExpDate;
+                    foreach (var mpn in mpnToUse)
+                    {
+                        if (mpn.CodmMpnExpDate >= DateTime.Today)
+                        {
+                            activeMpnExpirationDates.Add(mpn.CodmMpnExpDate);
+                        }
+                    }
+                    return activeMpnExpirationDates;
                 }
             }
 
             //If this is a PLUS or GPLUS and there is an Endorser status use this
 
             //Find the MPNs of the correct Loan Type and are Endorser
-            var typeSpecificEndorserMpns = studentMpnRecords.Where(
-                m =>
-                    m.Recordkey.Length >= 10 &&
-                    m.Recordkey.Substring(9, 1) == mpnTypeCode &&
-                    m.CodmMpnStatus == "E" &&
-                    m.CodmMpnExpDate.HasValue
-                );
+            IEnumerable<CodMpn> typeSpecificEndorserMpnsFiltered = null;
 
-            if (mpnTypeCode == plusMpnTypeCode && typeSpecificEndorserMpns != null && typeSpecificEndorserMpns.Count() > 0)
+            if (plusFlag == "PLUS")
             {
-                typeSpecificEndorserMpns = typeSpecificEndorserMpns.OrderByDescending(m => m.CodmMpnExpDate);
-                var mpnToUse = typeSpecificEndorserMpns.FirstOrDefault();
-                if (mpnToUse != null && mpnToUse.CodmMpnExpDate >= DateTime.Today)
+                var typeSpecificEndorserMpns = studentMpnRecords.Where(
+                    m =>
+                        m.Recordkey.Length >= 10 &&
+                        m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                        m.CodmMpnStatus == "E" &&
+                        !string.IsNullOrEmpty(m.CodmNonstuCodPersonId) &&
+                        m.CodmMpnExpDate.HasValue
+                    );
+                typeSpecificEndorserMpnsFiltered = typeSpecificEndorserMpns;
+            }
+            if (plusFlag == "GRAD")
+            {
+                var typeSpecificEndorserMpns = studentMpnRecords.Where(
+                    m =>
+                        m.Recordkey.Length >= 10 &&
+                        m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                        m.CodmMpnStatus == "E" &&
+                        string.IsNullOrEmpty(m.CodmNonstuCodPersonId) &&
+                        m.CodmMpnExpDate.HasValue
+                    );
+                typeSpecificEndorserMpnsFiltered = typeSpecificEndorserMpns;
+
+            }
+            if (plusFlag == null)
+            {
+                var typeSpecificEndorserMpns = studentMpnRecords.Where(
+                    m =>
+                        m.Recordkey.Length >= 10 &&
+                        m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                        m.CodmMpnStatus == "E" &&
+                        m.CodmMpnExpDate.HasValue
+                    );
+                typeSpecificEndorserMpnsFiltered = typeSpecificEndorserMpns;
+            }
+
+            if (mpnTypeCode == plusMpnTypeCode && typeSpecificEndorserMpnsFiltered != null && typeSpecificEndorserMpnsFiltered.Count() > 0)
+            {
+                typeSpecificEndorserMpnsFiltered = typeSpecificEndorserMpnsFiltered.OrderByDescending(m => m.CodmMpnExpDate);
+                var mpnToUse = typeSpecificEndorserMpnsFiltered;
+                if (mpnToUse != null)
                 {
-                    return mpnToUse.CodmMpnExpDate;
+                    foreach (var mpn in mpnToUse)
+                    {
+                        if (mpn.CodmMpnExpDate >= DateTime.Today)
+                        {
+                            activeMpnExpirationDates.Add(mpn.CodmMpnExpDate);
+                        }
+                    }
+                    return activeMpnExpirationDates;
                 }
             }
- 
+
             //Find the MPNs of the correct Loan Type and are Pending
-            var typeSpecificPendingMpns = studentMpnRecords.Where(
+            IEnumerable<CodMpn> typeSpecificPendingMpnsFiltered = null;
+            if (plusFlag == "PLUS")
+            {
+                var typeSpecificPendingMpns = studentMpnRecords.Where(
+                    m =>
+                        m.Recordkey.Length >= 10 &&
+                        m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                        m.CodmMpnStatus == "P" &&
+                        !string.IsNullOrEmpty(m.CodmNonstuCodPersonId) &&
+                        m.CodmMpnExpDate.HasValue
+                    );
+                typeSpecificPendingMpnsFiltered = typeSpecificPendingMpns;
+            }
+            if (plusFlag == "GRAD")
+            {
+                var typeSpecificPendingMpns = studentMpnRecords.Where(
+                    m =>
+                        m.Recordkey.Length >= 10 &&
+                        m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                        m.CodmMpnStatus == "P" &&
+                        string.IsNullOrEmpty(m.CodmNonstuCodPersonId) &&
+                        m.CodmMpnExpDate.HasValue
+                    );
+                typeSpecificPendingMpnsFiltered = typeSpecificPendingMpns;
+            }
+            if (plusFlag == null)
+            {
+                var typeSpecificPendingMpns = studentMpnRecords.Where(
+                    m =>
+                        m.Recordkey.Length >= 10 &&
+                        m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                        m.CodmMpnStatus == "P" &&
+                        m.CodmMpnExpDate.HasValue
+                    );
+                typeSpecificPendingMpnsFiltered = typeSpecificPendingMpns;
+            }
+            if (typeSpecificPendingMpnsFiltered != null && typeSpecificPendingMpnsFiltered.Count() > 0)
+            {
+                typeSpecificPendingMpnsFiltered = typeSpecificPendingMpnsFiltered.OrderByDescending(m => m.CodmMpnExpDate);
+                var mpnToUse = typeSpecificPendingMpnsFiltered;
+                if (mpnToUse != null)
+                {
+                    foreach (var mpn in mpnToUse)
+                    {
+                        if (mpn.CodmMpnExpDate >= DateTime.Today)
+                        {
+                            activeMpnExpirationDates.Add(mpn.CodmMpnExpDate);
+                        }
+                    }
+                    return activeMpnExpirationDates;
+                }
+            }
+
+            //Find the MPNs of the correct Loan Type and are Old Active Status
+            IEnumerable<CodMpn> typeSpecificOldActiveMpnsFiltered = null;
+            if (plusFlag == "PLUS")
+            {
+                var typeSpecificOldActiveMpns = studentMpnRecords.Where(
                 m =>
                     m.Recordkey.Length >= 10 &&
                     m.Recordkey.Substring(9, 1) == mpnTypeCode &&
-                    m.CodmMpnStatus == "P" &&
+                    m.CodmMpnStatus == "X" &&
+                    !string.IsNullOrEmpty(m.CodmNonstuCodPersonId) &&
                     m.CodmMpnExpDate.HasValue
-
                 );
-            if (typeSpecificPendingMpns != null && typeSpecificPendingMpns.Count() > 0)
-            {
-                typeSpecificPendingMpns = typeSpecificPendingMpns.OrderByDescending(m => m.CodmMpnExpDate);
-                var mpnToUse = typeSpecificPendingMpns.FirstOrDefault();
-                if (mpnToUse != null && mpnToUse.CodmMpnExpDate >= DateTime.Today)
-                {
-                    return mpnToUse.CodmMpnExpDate;
-                }
+                typeSpecificOldActiveMpnsFiltered = typeSpecificOldActiveMpns;
             }
-            
-            //Find the MPNs of the correct Loan Type and are Old Active Status
-            var typeSpecificOldActiveMpns = studentMpnRecords.Where(
+            if (plusFlag == "GRAD")
+            {
+                var typeSpecificOldActiveMpns = studentMpnRecords.Where(
+                m =>
+                    m.Recordkey.Length >= 10 &&
+                    m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                    m.CodmMpnStatus == "X" &&
+                    string.IsNullOrEmpty(m.CodmNonstuCodPersonId) &&
+                    m.CodmMpnExpDate.HasValue
+                );
+                typeSpecificOldActiveMpnsFiltered = typeSpecificOldActiveMpns;
+            }
+            if (plusFlag == null)
+            {
+                var typeSpecificOldActiveMpns = studentMpnRecords.Where(
                 m =>
                     m.Recordkey.Length >= 10 &&
                     m.Recordkey.Substring(9, 1) == mpnTypeCode &&
                     m.CodmMpnStatus == "X" &&
                     m.CodmMpnExpDate.HasValue
-
                 );
-            if (typeSpecificOldActiveMpns != null && typeSpecificOldActiveMpns.Count() > 0)
+                typeSpecificOldActiveMpnsFiltered = typeSpecificOldActiveMpns;
+            }
+            if (typeSpecificOldActiveMpnsFiltered != null && typeSpecificOldActiveMpnsFiltered.Count() > 0)
             {
-                typeSpecificOldActiveMpns = typeSpecificOldActiveMpns.OrderByDescending(m => m.CodmMpnExpDate);
-                var mpnToUse = typeSpecificOldActiveMpns.FirstOrDefault();
-                if (mpnToUse != null && mpnToUse.CodmMpnExpDate >= DateTime.Today)
+                typeSpecificOldActiveMpnsFiltered = typeSpecificOldActiveMpnsFiltered.OrderByDescending(m => m.CodmMpnExpDate);
+                var mpnToUse = typeSpecificOldActiveMpnsFiltered;
+                if (mpnToUse != null)
                 {
-                    return mpnToUse.CodmMpnExpDate;
+                    foreach (var mpn in mpnToUse)
+                    {
+                        if (mpn.CodmMpnExpDate >= DateTime.Today)
+                        {
+                            activeMpnExpirationDates.Add(mpn.CodmMpnExpDate);
+                        }
+                    }
+                    return activeMpnExpirationDates;
                 }
             }
             
             //If none return null
             return null;
             
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="studentId"></param>
+        /// <param name="studentMpnRecords"></param>
+        /// <param name="mpnTypeCode"></param>
+        /// <param name="plusFlag"></param>
+        /// <returns></returns>
+        private List<string> GetPlusLoanMpnNames(string studentId, Collection<CodMpn> studentMpnRecords, string mpnTypeCode, string plusFlag = null)
+        {
+
+            IEnumerable<CodMpn> typeSpecificActiveMpnsFiltered = null;
+            var activeMpnPersonIDs = new List<string>();
+
+            if (plusFlag != null && plusFlag == "PLUS")
+            {
+                var typeSpecificActiveMpns = studentMpnRecords.Where(
+                    m =>
+                        m.Recordkey.Length >= 10 &&
+                        m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                        m.CodmMpnStatus == "A" &&
+                        !string.IsNullOrEmpty(m.CodmNonstuCodPersonId) &&
+                        m.CodmMpnExpDate.HasValue
+                    );
+                typeSpecificActiveMpnsFiltered = typeSpecificActiveMpns;
+            }
+
+            if (plusFlag != null && plusFlag == "GRAD")
+            {
+                var typeSpecificActiveMpns = studentMpnRecords.Where(
+                    m =>
+                        m.Recordkey.Length >= 10 &&
+                        m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                        m.CodmMpnStatus == "A" &&
+                        string.IsNullOrEmpty(m.CodmNonstuCodPersonId) &&
+                        m.CodmMpnExpDate.HasValue
+                    );
+                typeSpecificActiveMpnsFiltered = typeSpecificActiveMpns;
+            }
+
+            if (plusFlag == null)
+            {
+                var typeSpecificActiveMpns = studentMpnRecords.Where(
+                    m =>
+                        m.Recordkey.Length >= 10 &&
+                        m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                        m.CodmMpnStatus == "A" &&
+                        m.CodmMpnExpDate.HasValue
+                    );
+                typeSpecificActiveMpnsFiltered = typeSpecificActiveMpns;
+            }
+
+            if (typeSpecificActiveMpnsFiltered != null && typeSpecificActiveMpnsFiltered.Count() > 0)
+            {
+                typeSpecificActiveMpnsFiltered = typeSpecificActiveMpnsFiltered.OrderByDescending(m => m.CodmMpnExpDate);
+                var mpnToUse = typeSpecificActiveMpnsFiltered;
+                if (mpnToUse != null)
+                {
+                    foreach (var mpn in mpnToUse)
+                    {
+                        if (mpn.CodmMpnExpDate >= DateTime.Today)
+                        {
+                            activeMpnPersonIDs.Add(mpn.CodmNonstuCodPersonId);
+                        }
+                    }
+                    return activeMpnPersonIDs;
+                }
+            }
+
+            //If this is a PLUS or GPLUS and there is an Endorser status use this
+
+            //Find the MPNs of the correct Loan Type and are Endorser
+            IEnumerable<CodMpn> typeSpecificEndorserMpnsFiltered = null;
+
+            if (plusFlag == "PLUS")
+            {
+                var typeSpecificEndorserMpns = studentMpnRecords.Where(
+                    m =>
+                        m.Recordkey.Length >= 10 &&
+                        m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                        m.CodmMpnStatus == "E" &&
+                        !string.IsNullOrEmpty(m.CodmNonstuCodPersonId) &&
+                        m.CodmMpnExpDate.HasValue
+                    );
+                typeSpecificEndorserMpnsFiltered = typeSpecificEndorserMpns;
+            }
+            if (plusFlag == "GRAD")
+            {
+                var typeSpecificEndorserMpns = studentMpnRecords.Where(
+                    m =>
+                        m.Recordkey.Length >= 10 &&
+                        m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                        m.CodmMpnStatus == "E" &&
+                        string.IsNullOrEmpty(m.CodmNonstuCodPersonId) &&
+                        m.CodmMpnExpDate.HasValue
+                    );
+                typeSpecificEndorserMpnsFiltered = typeSpecificEndorserMpns;
+
+            }
+            if (plusFlag == null)
+            {
+                var typeSpecificEndorserMpns = studentMpnRecords.Where(
+                    m =>
+                        m.Recordkey.Length >= 10 &&
+                        m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                        m.CodmMpnStatus == "E" &&
+                        m.CodmMpnExpDate.HasValue
+                    );
+                typeSpecificEndorserMpnsFiltered = typeSpecificEndorserMpns;
+            }
+
+            if (mpnTypeCode == plusMpnTypeCode && typeSpecificEndorserMpnsFiltered != null && typeSpecificEndorserMpnsFiltered.Count() > 0)
+            {
+                typeSpecificEndorserMpnsFiltered = typeSpecificEndorserMpnsFiltered.OrderByDescending(m => m.CodmMpnExpDate);
+                var mpnToUse = typeSpecificEndorserMpnsFiltered;
+                if (mpnToUse != null)
+                {
+                    foreach (var mpn in mpnToUse)
+                    {
+                        if (mpn.CodmMpnExpDate >= DateTime.Today)
+                        {
+                            activeMpnPersonIDs.Add(mpn.CodmNonstuCodPersonId);
+                        }
+                    }
+                    return activeMpnPersonIDs;
+                }
+            }
+
+            //Find the MPNs of the correct Loan Type and are Pending
+            IEnumerable<CodMpn> typeSpecificPendingMpnsFiltered = null;
+            if (plusFlag == "PLUS")
+            {
+                var typeSpecificPendingMpns = studentMpnRecords.Where(
+                    m =>
+                        m.Recordkey.Length >= 10 &&
+                        m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                        m.CodmMpnStatus == "P" &&
+                        !string.IsNullOrEmpty(m.CodmNonstuCodPersonId) &&
+                        m.CodmMpnExpDate.HasValue
+                    );
+                typeSpecificPendingMpnsFiltered = typeSpecificPendingMpns;
+            }
+            if (plusFlag == "GRAD")
+            {
+                var typeSpecificPendingMpns = studentMpnRecords.Where(
+                    m =>
+                        m.Recordkey.Length >= 10 &&
+                        m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                        m.CodmMpnStatus == "P" &&
+                        string.IsNullOrEmpty(m.CodmNonstuCodPersonId) &&
+                        m.CodmMpnExpDate.HasValue
+                    );
+                typeSpecificPendingMpnsFiltered = typeSpecificPendingMpns;
+            }
+            if (plusFlag == null)
+            {
+                var typeSpecificPendingMpns = studentMpnRecords.Where(
+                    m =>
+                        m.Recordkey.Length >= 10 &&
+                        m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                        m.CodmMpnStatus == "P" &&
+                        m.CodmMpnExpDate.HasValue
+                    );
+                typeSpecificPendingMpnsFiltered = typeSpecificPendingMpns;
+            }
+            if (typeSpecificPendingMpnsFiltered != null && typeSpecificPendingMpnsFiltered.Count() > 0)
+            {
+                typeSpecificPendingMpnsFiltered = typeSpecificPendingMpnsFiltered.OrderByDescending(m => m.CodmMpnExpDate);
+                var mpnToUse = typeSpecificPendingMpnsFiltered;
+                if (mpnToUse != null)
+                {
+                    foreach (var mpn in mpnToUse)
+                    {
+                        if (mpn.CodmMpnExpDate >= DateTime.Today)
+                        {
+                            activeMpnPersonIDs.Add(mpn.CodmNonstuCodPersonId);
+                        }
+                    }
+                    return activeMpnPersonIDs;
+                }
+            }
+
+            //Find the MPNs of the correct Loan Type and are Old Active Status
+            IEnumerable<CodMpn> typeSpecificOldActiveMpnsFiltered = null;
+            if (plusFlag == "PLUS")
+            {
+                var typeSpecificOldActiveMpns = studentMpnRecords.Where(
+                m =>
+                    m.Recordkey.Length >= 10 &&
+                    m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                    m.CodmMpnStatus == "X" &&
+                    !string.IsNullOrEmpty(m.CodmNonstuCodPersonId) &&
+                    m.CodmMpnExpDate.HasValue
+                );
+                typeSpecificOldActiveMpnsFiltered = typeSpecificOldActiveMpns;
+            }
+            if (plusFlag == "GRAD")
+            {
+                var typeSpecificOldActiveMpns = studentMpnRecords.Where(
+                m =>
+                    m.Recordkey.Length >= 10 &&
+                    m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                    m.CodmMpnStatus == "X" &&
+                    string.IsNullOrEmpty(m.CodmNonstuCodPersonId) &&
+                    m.CodmMpnExpDate.HasValue
+                );
+                typeSpecificOldActiveMpnsFiltered = typeSpecificOldActiveMpns;
+            }
+            if (plusFlag == null)
+            {
+                var typeSpecificOldActiveMpns = studentMpnRecords.Where(
+                m =>
+                    m.Recordkey.Length >= 10 &&
+                    m.Recordkey.Substring(9, 1) == mpnTypeCode &&
+                    m.CodmMpnStatus == "X" &&
+                    m.CodmMpnExpDate.HasValue
+                );
+                typeSpecificOldActiveMpnsFiltered = typeSpecificOldActiveMpns;
+            }
+            if (typeSpecificOldActiveMpnsFiltered != null && typeSpecificOldActiveMpnsFiltered.Count() > 0)
+            {
+                typeSpecificOldActiveMpnsFiltered = typeSpecificOldActiveMpnsFiltered.OrderByDescending(m => m.CodmMpnExpDate);
+                var mpnToUse = typeSpecificOldActiveMpnsFiltered;
+                if (mpnToUse != null)
+                {
+                    foreach (var mpn in mpnToUse)
+                    {
+                        if (mpn.CodmMpnExpDate >= DateTime.Today)
+                        {
+                            activeMpnPersonIDs.Add(mpn.CodmNonstuCodPersonId);
+                        }
+                    }
+                    return activeMpnPersonIDs;
+                }
+            }
+
+            //If none return null
+            return null;
         }
 
         /// <summary>

@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -17,6 +17,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -52,8 +54,10 @@ namespace Ellucian.Colleague.Api.Controllers
         /// otherwise cached data is returned.
         /// </summary>
         /// <returns>All campus involvement  objects.</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [PagingFilter( IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [HttpGet, PermissionsFilter(new string[] { StudentPermissionCodes.ViewCampusInvolvements})]
         public async Task<IHttpActionResult> GetCampusInvolvementsAsync(Paging page)
         {
             bool bypassCache = false; 
@@ -66,6 +70,8 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
+                _campusOrganizationService.ValidatePermissions(GetPermissionsMetaData());
+
                 if (page == null)
                 {
                     page = new Paging(200, 0);
@@ -80,6 +86,16 @@ namespace Ellucian.Colleague.Api.Controllers
 
                 return new PagedHttpActionResult<IEnumerable<Dtos.CampusInvolvement>>(pageOfItems.Item1, page, pageOfItems.Item2, Request);
             }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -93,6 +109,8 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="id">Id of campus involvement  to retrieve</param>
         /// <returns>A <see cref="Ellucian.Colleague.Dtos.CampusInvolvement">campus involvement.</see></returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, PermissionsFilter(new string[] { StudentPermissionCodes.ViewCampusInvolvements})]
         [EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.CampusInvolvement> GetCampusInvolvementByIdAsync(string id)
         {
@@ -107,6 +125,8 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                _campusOrganizationService.ValidatePermissions(GetPermissionsMetaData());
+
                 AddEthosContextProperties(
                     await _campusOrganizationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await _campusOrganizationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -118,6 +138,16 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 _logger.Error(ex.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(ex));
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (Exception ex)
             {
@@ -132,6 +162,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="campusInvolvement"><see cref="Dtos.CampusInvolvement">CampusInvolvement</see> to create</param>
         /// <returns>Newly created <see cref="Dtos.CampusInvolvement">CampusInvolvement</see></returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPost]
         public async Task<Dtos.CampusInvolvement> PostCampusInvolvementAsync([FromBody] Dtos.CampusInvolvement campusInvolvement)
         {
@@ -146,6 +177,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="id">Id of the CampusInvolvement to update</param>
         /// <param name="campusInvolvement"><see cref="Dtos.CampusInvolvement">CampusInvolvement</see> to create</param>
         /// <returns>Updated <see cref="Dtos.CampusInvolvement">CampusInvolvement</see></returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPut]
         public async Task<Dtos.CampusInvolvement> PutCampusInvolvementAsync([FromUri] string id, [FromBody] Dtos.CampusInvolvement campusInvolvement)
         {
@@ -158,6 +190,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Delete (DELETE) an existing campusInvolvement
         /// </summary>
         /// <param name="id">Id of the campusInvolvement to delete</param>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpDelete]
         public async Task DeleteCampusInvolvementAsync([FromUri] string id)
         {

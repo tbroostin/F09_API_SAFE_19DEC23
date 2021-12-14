@@ -16,8 +16,7 @@ namespace Ellucian.Colleague.Dtos.Student
         /// </summary>
         None,
         /// <summary>
-        /// Status has two values- Waitlisted or Open
-        /// Section is Waitlisted when calculated Waitlisted property of a Section is >=1
+        /// Status has three values- Waitlisted , Open, Closed
         /// </summary>
         Status,
         /// <summary>

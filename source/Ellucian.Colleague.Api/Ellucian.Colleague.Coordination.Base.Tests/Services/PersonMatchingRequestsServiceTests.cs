@@ -1,4 +1,4 @@
-﻿//Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -365,13 +365,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 await _personMatchingRequestsService.GetPersonMatchingRequestsByGuidAsync(null);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task PersonMatcingRequestService_GetPersonMatchRequestsAsync_PermissionsException()
-            {
-                _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
-                await _personMatchingRequestsService.GetPersonMatchingRequestsAsync(0, 100, null, null);
-            }
+       
 
             #region person-matching-requests-initiations-prospects
 
@@ -386,13 +380,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 Assert.IsNotNull(actual);
                 Assert.AreEqual(expected.Id, actual.Id, "Guid");
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task PersonMatchingRequestsService_CreatePersonMatchingRequestsInitiationsProspectsAsync_NoPermissions()
-            {
-                var actual = await _personMatchingRequestsService.CreatePersonMatchingRequestsInitiationsProspectsAsync(personMatchInitiationsDto1);
             }
 
             [TestMethod]

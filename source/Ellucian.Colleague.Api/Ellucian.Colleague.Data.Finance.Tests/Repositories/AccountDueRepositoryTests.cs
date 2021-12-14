@@ -32,7 +32,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             MockInitialize();
 
             // Build the test repository
-            repository = new AccountDueRepository(cacheProvider, transFactory, logger);
+            repository = new AccountDueRepository(cacheProvider, transFactory, logger, apiSettings);
         }
 
         [TestClass]
@@ -45,7 +45,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
                 SetupExecutePaymentsDueByTermAdminCTX();
 
                 // Build the test repository
-                repository = new AccountDueRepository(cacheProvider, transFactory, logger);
+                repository = new AccountDueRepository(cacheProvider, transFactory, logger, apiSettings);
             }
 
             [TestMethod]
@@ -75,7 +75,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
                 SetupExecutePaymentsDueByPeriodAdminCTX();
 
                 // Build the test repository
-                repository = new AccountDueRepository(cacheProvider, transFactory, logger);
+                repository = new AccountDueRepository(cacheProvider, transFactory, logger, apiSettings);
             }
 
             [TestMethod]
@@ -109,7 +109,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
                 SetupExecuteCheckPayerInformationCTX();
 
                 // Build the test repository
-                repository = new AccountDueRepository(cacheProvider, transFactory, logger);
+                repository = new AccountDueRepository(cacheProvider, transFactory, logger, apiSettings);
             }
 
             [TestMethod]
@@ -155,7 +155,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
                 SetupExecuteProcessCheckCTX();
 
                 // Build the test repository
-                repository = new AccountDueRepository(cacheProvider, transFactory, logger);
+                repository = new AccountDueRepository(cacheProvider, transFactory, logger, apiSettings);
             }
 
             [TestMethod]

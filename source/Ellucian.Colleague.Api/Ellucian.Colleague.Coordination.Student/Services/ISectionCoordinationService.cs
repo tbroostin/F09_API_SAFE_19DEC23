@@ -1,5 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using Ellucian.Colleague.Dtos;
@@ -7,6 +6,7 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Coordination.Base;
+using Ellucian.Colleague.Dtos.Student;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -43,6 +43,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>A list of<see cref="Dtos.Student.SectionWaitlistStudent"/></returns>
         Task<IEnumerable<Dtos.Student.SectionWaitlistStudent>> GetSectionWaitlist2Async(string sectionId);
 
+
+
+        /// <summary>
+        /// Get a list of <see cref="Dtos.Student.SectionWaitlistStudent"/> for a given list of course section IDs
+        /// </summary>
+        /// <param name="criteria">list of Course section IDs along with boolean to indicate whether to Include Cross listed sections or not</param>
+        /// <returns>A list of<see cref="Dtos.Student.SectionWaitlistStudent"/></returns>
+        Task<IEnumerable<Dtos.Student.SectionWaitlistStudent>> GetSectionWaitlist3Async(SectionWaitlistQueryCriteria criteria);
+
         /// <summary>
         /// Get a list of <see cref="Dtos.Student.StudentWaitlistStatus"/>
         /// </summary>
@@ -70,20 +79,20 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="section">The DTO of the Section to create</param>
         /// <returns>A CDM-format Section DTO</returns>
-        Task<Section> PostSectionAsync(Section section);
+        Task<Dtos.Section> PostSectionAsync(Dtos.Section section);
 
         /// <summary>
         /// Update a section
         /// </summary>
         /// <param name="section">The DTO of the Section to update</param>
         /// <returns>A CDM-format Section DTO</returns>
-        Task<Section> PutSectionAsync(Section section);
+        Task<Dtos.Section> PutSectionAsync(Dtos.Section section);
 
         /// <summary>
         /// Update a book assignment for a section.
         /// </summary>
         /// <param name="textbook">The textbook whose assignment to a specific section is being updated.</param>
-        /// <returns>An updated <see cref="Section3"/> object.</returns>
+        /// <returns>An updated <see cref="Dtos.Section3"/> object.</returns>
         Task<Dtos.Student.Section3> UpdateSectionBookAsync(Dtos.Student.SectionTextbook textbook);
 
         /// <summary>
@@ -279,42 +288,42 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="guid">The section's GUID</param>
         /// <returns>A HEDM-format Section DTO</returns>
-        Task<Section3> GetSection3ByGuidAsync(string guid);
+        Task<Dtos.Section3> GetSection3ByGuidAsync(string guid);
 
         /// <summary>
         /// Get a section using its GUID
         /// </summary>
         /// <param name="guid">The section's GUID</param>
         /// <returns>A HEDM-format Section DTO</returns>
-        Task<Section4> GetSection4ByGuidAsync(string guid);
+        Task<Dtos.Section4> GetSection4ByGuidAsync(string guid);
 
         /// <summary>
         /// Create a section
         /// </summary>
         /// <param name="section">The DTO of the Section to create</param>
         /// <returns>A HEDM-format Section DTO</returns>
-        Task<Section4> PostSection4Async(Section4 section);
+        Task<Dtos.Section4> PostSection4Async(Dtos.Section4 section);
 
         /// <summary>
         /// Update a section
         /// </summary>
         /// <param name="section">The DTO of the Section to update</param>
         /// <returns>A HEDM-format Section DTO</returns>
-        Task<Section4> PutSection4Async(Section4 section);
+        Task<Dtos.Section4> PutSection4Async(Dtos.Section4 section);
 
         /// <summary>
         /// Create a section
         /// </summary>
         /// <param name="section">The DTO of the Section to create</param>
         /// <returns>A HEDM-format Section DTO</returns>
-        Task<Section3> PostSection3Async(Section3 section);
+        Task<Dtos.Section3> PostSection3Async(Dtos.Section3 section);
 
         /// <summary>
         /// Update a section
         /// </summary>
         /// <param name="section">The DTO of the Section to update</param>
         /// <returns>A HEDM-format Section DTO</returns>
-        Task<Section3> PutSection3Async(Section3 section);
+        Task<Dtos.Section3> PutSection3Async(Dtos.Section3 section);
 
         /// <summary>
         /// Get an instructional event
@@ -357,6 +366,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         Task<IEnumerable<Dtos.Student.SectionGradeResponse>> ImportGrades3Async(Dtos.Student.SectionGrades3 sectionGrades);
 
         Task<IEnumerable<Dtos.Student.SectionGradeResponse>> ImportGrades4Async(Dtos.Student.SectionGrades3 sectionGrades);
+
+        Task<Dtos.Student.SectionGradeSectionResponse> ImportGrades5Async(Dtos.Student.SectionGrades4 sectionGrades);
 
         Task<IEnumerable<Dtos.Student.SectionGradeResponse>> ImportIlpGrades1Async(Dtos.Student.SectionGrades3 sectionGrades);
 
@@ -414,6 +425,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         Task<Section5> GetSection5ByGuidAsync(string guid);
 
         /// <summary>
+        /// Get a section filtering out default census dates from term or term/location
+        /// </summary>
+        /// <param name="guid">The guid of the Section to get</param>
+        ///  <param name="bypassCache"></param>
+        /// <returns>A HEDM-format Section DTO</returns
+        Task<Section5> GetSection5ByGuidFilterCensusDatesAsync(string guid);
+
+        /// <summary>
         /// Create a section
         /// </summary>
         /// <param name="section">The DTO of the Section to create</param>
@@ -464,6 +483,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         Task<Section6> GetSection6ByGuidAsync(string guid, bool bypassCache = true);
 
         /// <summary>
+        /// Get a section filtering out default census dates from term or term/location
+        /// </summary>
+        /// <param name="guid">The guid of the Section to get</param>
+        ///  <param name="bypassCache"></param>
+        /// <returns>A HEDM-format Section DTO</returns
+        Task<Section6> GetSection6ByGuidFilterCensusDatesAsync(string guid, bool bypassCache = true);
+
+        /// <summary>
         /// Create a section
         /// </summary>
         /// <param name="section">The DTO of the Section to create</param>
@@ -499,8 +526,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="sectionId"></param>
         /// <param name="useCache"></param>
         /// <returns></returns>
+        [Obsolete("Obsolete as of Api version 1.31, use version 4 of this API")]
         Task<PrivacyWrapper<Dtos.Student.Section3>> GetSection3Async(string sectionId, bool useCache);
 
+        /// <summary>
+        /// Retrieve Section wrapped in privacy wrapper
+        /// </summary>
+        /// <param name="sectionId"></param>
+        /// <param name="useCache"></param>
+        /// <returns></returns>
+        Task<PrivacyWrapper<Dtos.Student.Section4>> GetSection4Async(string sectionId, bool useCache);
 
         /// <summary>
         /// 
@@ -509,6 +544,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="useCache"></param>
         /// <returns></returns>
         Task<PrivacyWrapper<List<Dtos.Student.Section>>> GetSectionsAsync(IEnumerable<string> sectionIds, bool useCache);
+
         /// <summary>
         /// 
         /// </summary>
@@ -524,6 +560,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="useCache"></param>
         /// <returns></returns>
         Task<PrivacyWrapper<List<Dtos.Student.Section3>>> GetSections3Async(IEnumerable<string> sectionIds, bool useCache = true, bool bestFit = false);
+
+        /// <summary>
+        /// Retrieves a list of course sections for the given IDs
+        /// </summary>
+        /// <param name="sectionIds">List of course section IDs</param>
+        /// <param name="useCache">Flag indicating whether or not to retrieve cached section data</param>
+        /// <returns>List of course sections</returns>
+        Task<PrivacyWrapper<List<Dtos.Student.Section4>>> GetSections4Async(IEnumerable<string> sectionIds, bool useCache = true, bool bestFit = false);
+
         /// <summary>
         /// Retrieve sections events iCal from calendar schedules
         /// </summary>
@@ -536,5 +581,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         Task<Dtos.Student.SectionMidtermGradingComplete> GetSectionMidtermGradingCompleteAsync(string sectionId);
 
         Task<Dtos.Student.SectionMidtermGradingComplete> PostSectionMidtermGradingCompleteAsync(string sectionId, Dtos.Student.SectionMidtermGradingCompleteForPost sectionGradingComplete);
+
+        /// <summary>
+        /// Retrieves the grading status for a course section
+        /// </summary>
+        /// <param name="sectionId">Unique identifier for the course section</param>
+        /// <returns>Grading status for the specified course section</returns>
+        Task<SectionGradingStatus> GetSectionGradingStatusAsync(string sectionId);
+
+        Task<SectionCensusCertification> CreateSectionCensusCertificationAsync(string sectionId, SectionCensusToCertify sectionCensusToCertify, SectionRegistrationDate sectionRegistrationDate);
+
+        Task<IEnumerable<SectionSeats>> GetSectionsSeatsAsync(IEnumerable<string> sectionIds);
     }
 }

@@ -310,7 +310,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         public async Task RemarkRepo_DeleteRemarkAsync_ArgumentEmpty()
         {
             deleteRemarkRequest.RmkId = Guid.Empty.ToString();
-            iColleagueTransactionInvokerMock.Setup(i => i.ExecuteAsync<DeleteRemarksRequest, DeleteRemarksResponse>(It.IsAny<DeleteRemarksRequest>())).ReturnsAsync(null);
+            iColleagueTransactionInvokerMock.Setup(i => i.ExecuteAsync<DeleteRemarksRequest, DeleteRemarksResponse>(It.IsAny<DeleteRemarksRequest>())).ReturnsAsync((DeleteRemarksResponse)null);
             await remarksRepository.DeleteRemarkAsync("");
         }
 

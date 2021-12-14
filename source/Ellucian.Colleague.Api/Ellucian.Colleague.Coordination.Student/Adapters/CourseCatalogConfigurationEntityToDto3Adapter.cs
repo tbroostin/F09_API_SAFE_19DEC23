@@ -11,6 +11,7 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
         {
             // Mapping dependency
             AddMappingDependency<Domain.Student.Entities.CatalogFilterOption, Dtos.Student.CatalogFilterOption3>();
+            AddMappingDependency<Domain.Student.Entities.CatalogSearchResultHeaderOption, Dtos.Student.CatalogSearchResultHeaderOption>();
             AddMappingDependency<Domain.Student.Entities.SelfServiceCourseCatalogSearchView, Dtos.Student.SelfServiceCourseCatalogSearchView>();
             AddMappingDependency<Domain.Student.Entities.SelfServiceCourseCatalogSearchResultView, Dtos.Student.SelfServiceCourseCatalogSearchResultView>();
         }

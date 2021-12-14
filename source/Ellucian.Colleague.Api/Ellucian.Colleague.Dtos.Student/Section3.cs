@@ -1,6 +1,5 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
 
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 
@@ -228,23 +227,20 @@ namespace Ellucian.Colleague.Dtos.Student
         public bool ShowSpecialIcon { get; set; }
 
         /// <summary>
-        /// This indicates status of the section- if it is open or waitlisted. It is Open when there are no waitlist otherwise it is Waitlisted.
+        /// This indicates status of the section 
+        /// It is Open when there are seats available.
+        /// It is Waitlisted when there are students in waitlist. 
+        /// It is Closed when there are no seats available.
         /// </summary>
-        [JsonIgnore]
-        public bool IsStatusWaitlisted
-        {
-            get
+        public SectionAvailabilityStatusType AvailabilityStatus { get; set; }
+        /// <summary>
+        /// Course Types for the section
+        /// </summary>
+        public List<string> CourseTypeCodes { get; set; }
+        /// <summary>
+        /// Instructional Methods for the section
+        /// </summary>
+        public List<string> InstructionalMethods { get; set; }
 
-            {
-                if (this.Waitlisted > 0)
-                {
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-        }
     }
 }

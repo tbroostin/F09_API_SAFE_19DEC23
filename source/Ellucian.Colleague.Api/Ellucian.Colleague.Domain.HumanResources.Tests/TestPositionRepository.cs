@@ -139,5 +139,21 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
         {
             throw new NotImplementedException();
         }
+
+        public Task<Position> GetPositionByIdAsync(string id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public  async Task<IEnumerable<Position>> GetPositionsAsync(bool logExceptionOnly = true)
+        {
+            //throw new NotImplementedException();
+            return await Task.FromResult(GetPositions());
+        }
+
+        public Task<IEnumerable<Position>> GetPositionsErrorCollectionAsync()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

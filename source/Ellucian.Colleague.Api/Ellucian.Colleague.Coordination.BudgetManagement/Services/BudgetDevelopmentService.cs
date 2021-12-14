@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Coordination.BudgetManagement.Adapters;
 using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
@@ -56,6 +56,7 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
             // The query criteria can be empty, but it cannot be null.
             if (criteria == null)
             {
+                logger.Debug("==> Filter component criteria (criteria) is null. <==");
                 throw new ArgumentNullException("criteria", "Filter component criteria must be specified.");
             }
 
@@ -63,6 +64,7 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
             var glAccountStructure = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
             if (glAccountStructure == null)
             {
+                logger.Debug("==> GL account structure (glAccountStructure) is null. <==");
                 throw new ApplicationException("GL account structure is not set up.");
             }
 
@@ -70,6 +72,7 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
             var glClassConfiguration = await generalLedgerConfigurationRepository.GetClassConfigurationAsync();
             if (glClassConfiguration == null)
             {
+                logger.Debug("==> GL class configuration (glClassConfiguration) is null. <==");
                 throw new ApplicationException("Error retrieving GL class configuration.");
             }
 
@@ -78,6 +81,8 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
 
             // Get the working budget defined on BDVP in Colleague.
             var buDevConfigurationEntity = await budgetConfigurationRepository.GetBudgetDevelopmentConfigurationAsync();
+
+            logger.Debug(string.Format("==> Working Budget ID (After GetBudgetDevelopmentConfigurationAsync) {0}. <==", buDevConfigurationEntity.BudgetId));
 
             // If there is a working budget defined and a person ID defined for the current user, then get the working
             // budget information for the current user, and if there information for the user convert it into a DTO.
@@ -170,6 +175,14 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
                                 }
                             }
                         }
+                        else
+                        {
+                            logger.Debug("==> subtotalNamesFromCriteria is null or empty. <==");
+                        }
+                    }
+                    else
+                    {
+                        logger.Debug("==> criteria.SortSubtotalComponentQueryCriteria is null or empty. <==");
                     }
 
                     // define an adapter and convert the working budget domain entity to the working budget DTO.
@@ -177,6 +190,14 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
 
                     workingBudgetDto = adapter.MapToType(workingBudgetEntity);
                 }
+                else
+                {
+                    logger.Debug("==> workingBudgetEntity (After GetBudgetDevelopmentWorkingBudget2Async) is null. <==");
+                }
+            }
+            else
+            {
+                logger.Debug("==> Either buDevConfigurationEntity.BudgetId or CurrentUser.PersonId is null or empty. <==");
             }
 
             return workingBudgetDto;
@@ -333,9 +354,12 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
 
 
 
-        // -------------------------------------------
-        //           DEPRECATED / OBSOLETE
-        // -------------------------------------------
+
+        //////////////////////////////////////////////////////
+        //                                                  //
+        //               DEPRECATED / OBSOLETE              //
+        //                                                  //
+        //////////////////////////////////////////////////////
 
 
         #region DEPRECATED / OBSOLETE

@@ -71,23 +71,15 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         private async Task<IEnumerable<AcademicDepartment>> BuildAllAcademicDepartments()
         {
             var academicDepartmentEntities = new List<AcademicDepartment>();
-            string criteria = "WITH LDM.GUID.ENTITY EQ 'DEPTS' AND LDM.GUID.SECONDARY.KEY EQ '' ";
-            var ldmGuidAcademicDepartment = await DataReader.SelectAsync("LDM.GUID", criteria);
-            var guidLookUp = new List<GuidLookup>();
-
-            foreach (var guid in ldmGuidAcademicDepartment)
-            {
-                guidLookUp.Add(new GuidLookup(guid));
-            }
-
-            var academicDepartmentDict = await DataReader.SelectAsync(guidLookUp.ToArray());
-            var academicDepartmentRecords = await DataReader.BulkReadRecordAsync<Depts>("DEPTS", guidLookUp.ToArray());
-
+            
+            var academicDepartmentRecords = await DataReader.BulkReadRecordAsync<Depts>("DEPTS", "");
+            
+ 
             foreach (var academicDepartmentRecord in academicDepartmentRecords)
             {
-                var ldmGuid = academicDepartmentDict.FirstOrDefault(id => academicDepartmentRecord.Recordkey.Equals(id.Value.PrimaryKey, StringComparison.OrdinalIgnoreCase));
-
-                var ad = new AcademicDepartment(ldmGuid.Key, academicDepartmentRecord.Recordkey, academicDepartmentRecord.DeptsDesc, "A".Equals(academicDepartmentRecord.DeptsActiveFlag))
+               
+                var ad = new AcademicDepartment(academicDepartmentRecord.RecordGuid, 
+                    academicDepartmentRecord.Recordkey, academicDepartmentRecord.DeptsDesc, "A".Equals(academicDepartmentRecord.DeptsActiveFlag))
                 {
                     AcademicLevelCode = academicDepartmentRecord.DeptsAcadLevel, 
                     GradeSchemeCode = academicDepartmentRecord.DeptsGradeScheme
@@ -734,8 +726,30 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns></returns>
         public async Task<IEnumerable<AdmissionApplicationStatusType>> GetAdmissionApplicationStatusTypesAsync(bool bypassCache)
         {
-              return await GetGuidCodeItemAsync<ApplicationStatuses, AdmissionApplicationStatusType>("AllStudentApplicationStatuses", "APPLICATION.STATUSES",
-               (ar, g) => new AdmissionApplicationStatusType(g, ar.Recordkey, !string.IsNullOrEmpty(ar.AppsDesc) ? ar.AppsDesc : ar.Recordkey) { SpecialProcessingCode = ar.AppsSpecialProcessingCode }, bypassCache: bypassCache);
+            if (bypassCache)
+            {
+                return await BuildAllAdmissionApplicationStatusTypes();
+            }
+            else
+            {
+                return await GetOrAddToCacheAsync<IEnumerable<AdmissionApplicationStatusType>>("AllAdmissionApplicationStatusTypes", async () => await this.BuildAllAdmissionApplicationStatusTypes(), Level1CacheTimeoutValue);
+            }
+        }
+
+        private async Task<IEnumerable<AdmissionApplicationStatusType>> BuildAllAdmissionApplicationStatusTypes()
+        { 
+            var admissionApplicationStatusEntities = new List<AdmissionApplicationStatusType>();
+            var admissionApplicationStatusIds = await DataReader.SelectAsync("APPLICATION.STATUSES", null);
+
+            var admissionApplicationStatusRecords = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.ApplicationStatuses>(admissionApplicationStatusIds);
+
+            foreach (var admissionApplicationStatusRecord in admissionApplicationStatusRecords)
+            {
+                var admissionApplicationStatusGuidInfo = await GetGuidFromRecordInfoAsync("APPLICATION.STATUSES", admissionApplicationStatusRecord.Recordkey, null, null);
+                admissionApplicationStatusEntities.Add(new AdmissionApplicationStatusType(admissionApplicationStatusGuidInfo, admissionApplicationStatusRecord.Recordkey, !string.IsNullOrEmpty(admissionApplicationStatusRecord.AppsDesc) ? admissionApplicationStatusRecord.AppsDesc : admissionApplicationStatusRecord.Recordkey)
+                { AdmissionApplicationStatusTypesCategory = GetAdmissionApplicationType(admissionApplicationStatusRecord.AppsSpecialProcessingCode), SpecialProcessingCode = admissionApplicationStatusRecord.AppsSpecialProcessingCode });
+            }
+            return admissionApplicationStatusEntities;
         }
 
         /// <summary>
@@ -2562,6 +2576,50 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         }
 
         /// <summary>
+        /// Get guid for student Academic Credit Statuses
+        /// </summary>
+        /// <param name="code">student Academic Credit Statuses</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetStudentAcademicCreditStatusesGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetStudentAcademicCreditStatusesAsync(false);
+            SectionRegistrationStatusItem codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetStudentAcademicCreditStatusesAsync(true);
+                if (allCodesNoCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ST.VALCODE - STUDENT.ACAD.CRED.STATUSES', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ST.VALCODE - STUDENT.ACAD.CRED.STATUSES', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ST.VALCODE - STUDENT.ACAD.CRED.STATUSES', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
+
+
+        /// <summary>
         /// Return a list of section-registration-statuses that should be included in the headcount enumeration
         /// </summary>
         /// <param name="ignoreCache"></param>
@@ -3022,7 +3080,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             return await GetGuidValcodeAsync<TestSource>("ST", "APPL.TEST.SOURCES",
                 (es, g) => new TestSource(g, es.ValInternalCodeAssocMember, (string.IsNullOrEmpty(es.ValExternalRepresentationAssocMember)
-                    ? es.ValInternalCodeAssocMember : es.ValExternalRepresentationAssocMember)), bypassCache: ignoreCache);
+                    ? es.ValInternalCodeAssocMember : es.ValExternalRepresentationAssocMember))
+                {  actionCode1 = es.ValActionCode1AssocMember } , bypassCache: ignoreCache);
         }
 
         /// <summary>

@@ -1,8 +1,7 @@
-//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos;
@@ -17,6 +16,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos.ColleagueFinance;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 {
@@ -61,28 +61,55 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         public async Task<Tuple<IEnumerable<Dtos.FixedAssets>, int>> GetFixedAssetsAsync(int offset, int limit, bool bypassCache = false)
         {
             List<Dtos.FixedAssets> fixedAssets = new List<Dtos.FixedAssets>();
+
+            Tuple<IEnumerable<Domain.ColleagueFinance.Entities.FixedAssets>, int> fixedAssetsEntities = null;
+
             try
             {
-                if (!await CheckViewFixedAssetsPermission())
-                {
-                    throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view fixed assets.");
-                }
-                
-                var fixedAssetsEntities = await _fixedAssetsRepository.GetFixedAssetsAsync(offset, limit, bypassCache);
-                if (fixedAssetsEntities != null && fixedAssetsEntities.Item1.Any())
-                {
-                    foreach (var fixedAssetntity in fixedAssetsEntities.Item1)
-                    {
-                        fixedAssets.Add(await ConvertFixedAssetsEntityToDtoAsync(fixedAssetntity, bypassCache));
-                    }
-                }
-                return fixedAssets != null && fixedAssets.Any() ? new Tuple<IEnumerable<Dtos.FixedAssets>, int>(fixedAssets, fixedAssetsEntities.Item2) :
-                    new Tuple<IEnumerable<Dtos.FixedAssets>, int>(new List<Dtos.FixedAssets>(), 0);
+                fixedAssetsEntities = await _fixedAssetsRepository.GetFixedAssetsAsync(offset, limit, bypassCache);
             }
-            catch (Exception)
+            catch (RepositoryException ex)
             {
-                throw;
+                IntegrationApiExceptionAddError(ex, "Bad.Data");
+                throw IntegrationApiException;
             }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Bad.Data");
+                throw IntegrationApiException;
+            }
+
+            if (fixedAssetsEntities == null || !fixedAssetsEntities.Item1.Any())
+            {
+                return new Tuple<IEnumerable<Dtos.FixedAssets>, int>(new List<Dtos.FixedAssets>(), 0);
+            }
+
+            var personIds = fixedAssetsEntities.Item1
+                .Where(x => (!string.IsNullOrEmpty(x.FixStewerdId)))
+                .Select(x => x.FixStewerdId).Distinct().ToList();
+
+            var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(personIds);
+
+            var hostCountry = await HostCountryAsync();
+            foreach (var fixedAssetntity in fixedAssetsEntities.Item1)
+            {
+                try
+                {
+                    fixedAssets.Add(await ConvertFixedAssetsEntityToDtoAsync(fixedAssetntity, personGuidCollection, hostCountry, bypassCache));
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "Bad.Data");
+                }
+            }
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+            return new Tuple<IEnumerable<Dtos.FixedAssets>, int>(fixedAssets, fixedAssetsEntities.Item2);
+
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -96,20 +123,40 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 throw new ArgumentNullException("guid", "A GUID is required to obtain a fixed asset.");
             }
+
+            Domain.ColleagueFinance.Entities.FixedAssets fixedAssetEntity = null;
             try
             {
-                if (!await CheckViewFixedAssetsPermission())
-                {
-                    throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view fixed assets.");
-                }
-
-                var fixedAssetEntity = await _fixedAssetsRepository.GetFixedAssetByIdAsync(guid);
-                return await ConvertFixedAssetsEntityToDtoAsync(fixedAssetEntity, bypassCache);
+                fixedAssetEntity = await _fixedAssetsRepository.GetFixedAssetByIdAsync(guid);
             }
-            catch (Exception)
+            catch (RepositoryException ex)
             {
-                throw;
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
             }
+            catch (KeyNotFoundException)
+            {
+                throw new KeyNotFoundException(string.Format("No fixed-assets was found for GUID '{0}'", guid));
+            }
+            Ellucian.Colleague.Dtos.FixedAssets retval = null;
+            try
+            {
+
+                var hostCountry = await HostCountryAsync();
+                var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(new List<string> { fixedAssetEntity.FixStewerdId });
+
+                retval = await ConvertFixedAssetsEntityToDtoAsync(fixedAssetEntity, personGuidCollection, hostCountry, bypassCache);
+            }
+            catch (KeyNotFoundException)
+            {
+                throw new KeyNotFoundException(string.Format("No fixed-assets was found for GUID '{0}'", guid));
+            }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+            return retval;
         }
 
         /// <summary>
@@ -143,116 +190,201 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// </summary>
         /// <param name="source">FixedAssets domain entity</param>
         /// <returns>FixedAssets DTO</returns>
-        private async Task<Ellucian.Colleague.Dtos.FixedAssets> ConvertFixedAssetsEntityToDtoAsync(Domain.ColleagueFinance.Entities.FixedAssets source, bool bypassCache)
+        private async Task<Ellucian.Colleague.Dtos.FixedAssets> ConvertFixedAssetsEntityToDtoAsync(Domain.ColleagueFinance.Entities.FixedAssets source,
+            Dictionary<string, string> personGuidCollection, string hostCountry, bool bypassCache)
         {
-            var fixedAsset = new Ellucian.Colleague.Dtos.FixedAssets();
-            var building = await ConvertEntityToToBuildingAsync(source.FixBuilding, bypassCache);
+            if (source == null)
+            {
+                IntegrationApiExceptionAddError("FixedAssets is required.", "Bad.Data");
+                return null;
+            }
 
-            fixedAsset.Id = source.RecordGuid;
-            fixedAsset.Description = source.Description;
-            fixedAsset.Tag = source.FixPropertyTag;
-            fixedAsset.Type = await ConvertEntityToAssetTypeGuidObjectAsync(source, bypassCache);
-            fixedAsset.Category = await ConvertEntityToAssetCategoryGuidObjectAsync(source, bypassCache);
-            fixedAsset.CapitalizationStatus = ConvertEntityToCapitalizationStatus(source);
-            fixedAsset.AcquisitionMethod = await ConvertEntityToAcquisiotionMethod(source, bypassCache);
-            fixedAsset.Status = ConvertEntityToStatus(source.FixDisposalDate);
-            fixedAsset.Condition = await ConvertEntityToItemConditionAsync(source, bypassCache);
-            fixedAsset.Location = string.IsNullOrEmpty(source.FixLocation)? null : source.FixLocation;
-            fixedAsset.Building = building != null ? new GuidObject2(building.Guid) : null;
-            fixedAsset.Room = await ConvertEntityToRoomGuidObjectAsync(source, building, bypassCache);
-            fixedAsset.InsuredValue = await ConvertEntityToInsuredValueDto(source.InsuranceAmountCoverage, bypassCache);
-            fixedAsset.MarketValue = await ConvertEntityToInsuredValueDto(source.FixValueAmount, bypassCache);
-            fixedAsset.AcquisitionCost = await ConvertEntityToInsuredValueDto(source.FixAcqisitionCost, bypassCache);
-            fixedAsset.AccumulatedDepreciation = await ConvertEntityToInsuredValueDto(source.FixAllowAmount, bypassCache);
-            fixedAsset.DepreciationMethod = string.IsNullOrEmpty(source.FixCalculationMethod)? null : source.FixCalculationMethod;
-            fixedAsset.SalvageValue = await ConvertEntityToInsuredValueDto(source.FixSalvageValue, bypassCache);
-            fixedAsset.UsefulLife = source.FixUsefulLife.HasValue? source.FixUsefulLife.Value : default(int?);
-            fixedAsset.DepreciationExpenseAccount = ConvertEntityToAcquisiotionDeprExpAcctGuidObjectAsync(source.FixCalcAccount);
-            fixedAsset.RenewalCost = await ConvertEntityToInsuredValueDto(source.FixRenewalAmount, bypassCache);
-            fixedAsset.ResponsiblePersons = await ConvertEntityToPersonGuidObjectAsync(source);
+            var fixedAsset = new Ellucian.Colleague.Dtos.FixedAssets();
+
+            try
+            {
+
+                fixedAsset.Id = source.RecordGuid;
+                fixedAsset.Description = source.Description;
+                fixedAsset.Tag = source.FixPropertyTag;
+                if (!string.IsNullOrEmpty(source.FixAssetType))
+                {
+                    try
+                    {
+                        var assetTypeGuid = await _financeReferenceDataRepository.GetAssetTypesGuidAsync(source.FixAssetType);
+                        if (string.IsNullOrEmpty(assetTypeGuid))
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("No Guid found, Entity:'ASSET.TYPES', Record ID:'", source.FixAssetType, "'")
+                                , "GUID.Not.Found", source.RecordGuid, source.RecordKey);
+                        }
+                        else
+                        {
+                            fixedAsset.Type = new GuidObject2(assetTypeGuid);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", source.RecordGuid, source.RecordKey);
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(source.FixAssetCategory))
+                {
+                    try
+                    {
+                        var assetCategoryGuid = await _financeReferenceDataRepository.GetAssetCategoriesGuidAsync(source.FixAssetCategory);
+                        if (string.IsNullOrEmpty(assetCategoryGuid))
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("No Guid found, Entity:'ASSET.CATEGORIES', Record ID:'", source.FixAssetCategory, "'")
+                                , "GUID.Not.Found", source.RecordGuid, source.RecordKey);
+                        }
+                        else
+                        {
+                            fixedAsset.Category = new GuidObject2(assetCategoryGuid);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", source.RecordGuid, source.RecordKey);
+                    }
+                }
+
+                var capitalizationStatus = ConvertEntityToCapitalizationStatus(source);
+                if (capitalizationStatus != FixedAssetsCapitalizationStatus.NotSet)
+                {
+                    fixedAsset.CapitalizationStatus = capitalizationStatus;
+                }
+                var aquisitionMethod = await ConvertEntityToAcquisiotionMethod(source, bypassCache);
+                if (aquisitionMethod != FixedAssetsAcquisitionMethod.NotSet)
+                {
+                    fixedAsset.AcquisitionMethod = aquisitionMethod;
+                }
+                fixedAsset.Status = ConvertEntityToStatus(source.FixDisposalDate);
+                fixedAsset.Condition = await ConvertEntityToItemConditionAsync(source, bypassCache);
+                fixedAsset.Location = string.IsNullOrEmpty(source.FixLocation) ? null : source.FixLocation;
+
+                if (!string.IsNullOrEmpty(source.FixBuilding))
+                {
+                    try
+                    {
+                        var buildingGuid = await _referenceDataRepository.GetBuildingGuidAsync(source.FixBuilding);
+                        if (string.IsNullOrEmpty(buildingGuid))
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Building GUID not found for '{0}'", source.FixBuilding)
+                                , "GUID.Not.Found", source.RecordGuid, source.RecordKey);
+                        }
+                        else
+                        {
+                            fixedAsset.Building = string.IsNullOrEmpty(buildingGuid) ? null : new GuidObject2(buildingGuid);
+                            fixedAsset.Room = await ConvertEntityToRoomGuidObjectAsync(source, source.FixBuilding, bypassCache);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        IntegrationApiExceptionAddError(ex.Message, "Bad.Data", source.RecordGuid, source.RecordKey);
+                    }
+                }
+
+                if (string.IsNullOrEmpty(hostCountry))
+                {
+                    IntegrationApiExceptionAddError("Host country not found.", "Bad.Data", source.RecordGuid, source.RecordKey);
+                }
+                else
+                {
+                    var currency = ((hostCountry == "CAN") || (hostCountry == "CANADA")) ? CurrencyIsoCode.CAD : CurrencyIsoCode.USD;
+
+                    if (source.InsuranceAmountCoverage != null && source.InsuranceAmountCoverage.HasValue)
+                    {
+                        fixedAsset.InsuredValue = new Amount2DtoProperty() { Value = source.InsuranceAmountCoverage, Currency = currency };
+                    }
+
+                    if (source.FixValueAmount != null && source.FixValueAmount.HasValue)
+                    {
+                        fixedAsset.MarketValue = new Amount2DtoProperty() { Value = source.FixValueAmount, Currency = currency };
+                    }
+
+                    if (source.FixAcqisitionCost != null && source.FixAcqisitionCost.HasValue)
+                    {
+                        fixedAsset.AcquisitionCost = new Amount2DtoProperty() { Value = source.FixAcqisitionCost, Currency = currency };
+                    }
+
+                    if (source.FixAllowAmount != null && source.FixAllowAmount.HasValue)
+                    {
+                        fixedAsset.AccumulatedDepreciation = new Amount2DtoProperty() { Value = source.FixAllowAmount, Currency = currency };
+                    }
+
+                    if (source.FixSalvageValue != null && source.FixSalvageValue.HasValue)
+                    {
+                        fixedAsset.SalvageValue = new Amount2DtoProperty() { Value = source.FixSalvageValue, Currency = currency };
+                    }
+
+                    if (source.FixRenewalAmount != null && source.FixRenewalAmount.HasValue)
+                    {
+                        fixedAsset.RenewalCost = new Amount2DtoProperty() { Value = source.FixRenewalAmount, Currency = currency };
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(source.FixStewerdId))
+                {
+                    if (personGuidCollection == null)
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("Unable to locate GUID for personId: '", source.FixStewerdId, "'"),
+                            "GUID.Not.Found", source.RecordGuid, source.RecordKey);
+                    }
+                    else
+                    {
+                        var personGuid = string.Empty;
+                        personGuidCollection.TryGetValue(source.FixStewerdId, out personGuid);
+                        if (string.IsNullOrEmpty(personGuid))
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("Unable to locate GUID for personId: '", source.FixStewerdId, "'"),
+                                "GUID.Not.Found", source.RecordGuid, source.RecordKey);
+                        }
+                        fixedAsset.ResponsiblePersons = new List<GuidObject2>() { new GuidObject2(personGuid) };
+                    }
+                }
+
+                fixedAsset.DepreciationMethod = string.IsNullOrEmpty(source.FixCalculationMethod) ? null : source.FixCalculationMethod;
+                fixedAsset.UsefulLife = source.FixUsefulLife.HasValue ? source.FixUsefulLife.Value : default(int?);
+                fixedAsset.DepreciationExpenseAccount = string.IsNullOrEmpty(source.FixCalcAccount) ? null : new GuidObject2(source.FixCalcAccount);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Bad.Data", source.RecordGuid, source.RecordKey);
+            }
 
             return fixedAsset;
         }
 
-        #region Convert Methods
-
-        /// <summary>
-        /// Asset Type to GuidObject2.
-        /// </summary>
-        /// <param name="source"></param>
-        /// <param name="bypassCache"></param>
-        /// <returns></returns>
-        private async Task<GuidObject2> ConvertEntityToAssetTypeGuidObjectAsync(Domain.ColleagueFinance.Entities.FixedAssets source, bool bypassCache)
-        {
-            if(source != null && string.IsNullOrEmpty(source.FixAssetType))
-            {
-                return null;
-            }
-
-            var entity = await AssetTypesAsync(bypassCache);
-            if (entity == null || !entity.Any())
-            {
-                throw new InvalidOperationException("Asset types are not defined.");
-            }
-
-            var assetType = entity.FirstOrDefault(i => i.Code.Equals(source.FixAssetType, StringComparison.OrdinalIgnoreCase));
-            if(assetType == null)
-            {
-                throw new KeyNotFoundException(string.Format("Asset type not found for key: {0}. Guid: {1}", source.FixAssetType, source.RecordGuid));
-            }
-            return new GuidObject2(assetType.Guid);
-        }
-
-        /// <summary>
-        /// Asset Category to GuidObject2.
-        /// </summary>
-        /// <param name="source"></param>
-        /// <param name="bypassCache"></param>
-        /// <returns></returns>
-        private async Task<GuidObject2> ConvertEntityToAssetCategoryGuidObjectAsync(Domain.ColleagueFinance.Entities.FixedAssets source, bool bypassCache)
-        {
-            if (source != null && string.IsNullOrEmpty(source.FixAssetCategory))
-            {
-                return null;
-            }
-
-            var entity = await AssetCategoriesAsync(bypassCache);
-            if (entity == null || !entity.Any())
-            {
-                throw new InvalidOperationException("Asset categories are not defined.");
-            }
-
-            var assetCategory = entity.FirstOrDefault(i => i.Code.Equals(source.FixAssetCategory, StringComparison.OrdinalIgnoreCase));
-            if (assetCategory == null)
-            {
-                throw new KeyNotFoundException(string.Format("Asset category not found for key: {0}. Guid: {1}", source.FixAssetCategory, source.RecordGuid));
-            }
-            return new GuidObject2(assetCategory.Guid);
-        }
-
+        #region Convert Methods  
         /// <summary>
         /// Fixed Asset Capitalization Status enum.
         /// </summary>
         /// <param name="source"></param>
         /// <returns></returns>
         private FixedAssetsCapitalizationStatus ConvertEntityToCapitalizationStatus(Domain.ColleagueFinance.Entities.FixedAssets source)
-        {            
-            if(source != null && string.IsNullOrEmpty(source.CapitalizationStatus))
+        {
+            if (source != null && string.IsNullOrEmpty(source.CapitalizationStatus))
             {
-                throw new ArgumentNullException(string.Format("Capitalization status is required. Guid: {0}", source.RecordGuid));
+                IntegrationApiExceptionAddError("Capitalization status is required.", "Bad Data", source.RecordGuid, source.RecordKey);
             }
-
-            switch (source.CapitalizationStatus.ToUpperInvariant())
+            else
             {
-                case "Y":
-                case "C":
-                case "P":
-                    return FixedAssetsCapitalizationStatus.Capitalized;
-                case "N":
-                    return FixedAssetsCapitalizationStatus.Noncapital;
-                default:
-                    throw new InvalidOperationException(string.Format("The value {0} is invalid. Guid: {1}", source.CapitalizationStatus, source.RecordGuid));
+                switch (source.CapitalizationStatus.ToUpperInvariant())
+                {
+                    case "Y":
+                    case "C":
+                    case "P":
+                        return FixedAssetsCapitalizationStatus.Capitalized;
+                    case "N":
+                        return FixedAssetsCapitalizationStatus.Noncapital;
+                    default:
+                        IntegrationApiExceptionAddError(string.Format("Capitalization status '{0}' is invalid.", source.CapitalizationStatus),
+                           "Bad Data", source.RecordGuid, source.RecordKey);
+                        return FixedAssetsCapitalizationStatus.NotSet;
+                }
             }
+            return FixedAssetsCapitalizationStatus.NotSet;
         }
 
         /// <summary>
@@ -263,27 +395,36 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private async Task<FixedAssetsAcquisitionMethod> ConvertEntityToAcquisiotionMethod(Domain.ColleagueFinance.Entities.FixedAssets source, bool bypassCache)
         {
             var acqMethods = await AcquisitionMethodsAsync(bypassCache);
-            if(acqMethods == null)
+            if (acqMethods == null)
             {
-                throw new InvalidOperationException("Acquisition methods are not defined.");
+                IntegrationApiExceptionAddError("Acquisition methods are not defined.", "Bad Data", source.RecordGuid, source.RecordKey);
             }
-            var acqMethod = acqMethods.FirstOrDefault(i => i.Code.Equals(source.AcquisitionMethod, StringComparison.OrdinalIgnoreCase));
-            if(acqMethod == null)
+            else
             {
-                throw new KeyNotFoundException(string.Format("Acquisition method not found for key: {0}. Guid: {1}", source.AcquisitionMethod, source.RecordGuid));
+                var acqMethod = acqMethods.FirstOrDefault(i => i.Code.Equals(source.AcquisitionMethod, StringComparison.OrdinalIgnoreCase));
+                if (acqMethod == null)
+                {
+                    IntegrationApiExceptionAddError(string.Format("Unable to locate GUID for AcquisitionMethod: '{0}'", source.AcquisitionMethod),
+                          "Bad Data", source.RecordGuid, source.RecordKey);
+                }
+                else
+                {
+                    switch (acqMethod.AcquisitionType.ToUpperInvariant())
+                    {
+                        case "P":
+                            return FixedAssetsAcquisitionMethod.Purchased;
+                        case "L":
+                            return FixedAssetsAcquisitionMethod.Leased;
+                        case "D":
+                            return FixedAssetsAcquisitionMethod.Donation;
+                        default:
+                            IntegrationApiExceptionAddError(string.Format("The AcquisitionMethod '{0}' is invalid.", source.AcquisitionMethod),
+                                "Bad Data", source.RecordGuid, source.RecordKey);
+                            return FixedAssetsAcquisitionMethod.NotSet;
+                    }
+                }
             }
-
-            switch (acqMethod.AcquisitionType.ToUpperInvariant())
-            {
-                case "P":
-                    return FixedAssetsAcquisitionMethod.Purchased;
-                case "L":
-                    return FixedAssetsAcquisitionMethod.Leased;
-                case "D":
-                    return FixedAssetsAcquisitionMethod.Donation;
-                default:
-                    throw new InvalidOperationException(string.Format("The value {0} is invalid. Guid:{1}", source.AcquisitionMethod, source.RecordGuid));
-            }
+            return FixedAssetsAcquisitionMethod.NotSet;
         }
 
         /// <summary>
@@ -310,7 +451,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns></returns>
         private async Task<string> ConvertEntityToItemConditionAsync(Domain.ColleagueFinance.Entities.FixedAssets source, bool bypassCache)
         {
-            if(source != null && string.IsNullOrEmpty(source.FixInvoiceCondition))
+            if (source != null && string.IsNullOrEmpty(source.FixInvoiceCondition))
             {
                 return null;
             }
@@ -318,42 +459,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var entity = await ItemsConditionsAsync(bypassCache);
             if (entity == null || !entity.Any())
             {
-                throw new InvalidOperationException("Item conditions are not defined.");
-            }
-
-            var itemCondition = (entity).FirstOrDefault(i => i.Code.Equals(source.FixInvoiceCondition, StringComparison.OrdinalIgnoreCase));
-            if(itemCondition == null)
-            {
-                throw new KeyNotFoundException(string.Format("Item condition not found for key: {0}. Guid: {1}", source.FixInvoiceCondition, source.RecordGuid));
-            }
-            return itemCondition.Description;
-        }
-
-        /// <summary>
-        /// Converts source value to building.
-        /// </summary>
-        /// <param name="source"></param>
-        /// <param name="bypassCache"></param>
-        /// <returns></returns>
-        private async Task<Domain.Base.Entities.Building> ConvertEntityToToBuildingAsync(string source, bool bypassCache)
-        {
-            if(string.IsNullOrEmpty(source))
-            {
+                IntegrationApiExceptionAddError("Item conditions are not defined.", "Bad Data", source.RecordGuid, source.RecordKey);
                 return null;
             }
 
-            var entity = await BuildingsAsync(bypassCache);
-            if (entity == null || !entity.Any())
+            var itemCondition = (entity).FirstOrDefault(i => i.Code.Equals(source.FixInvoiceCondition, StringComparison.OrdinalIgnoreCase));
+            if (itemCondition == null)
             {
-                throw new InvalidOperationException("Buildings are not defined.");
+                IntegrationApiExceptionAddError(string.Format("Item condition not found for key: '{0}'.", source.FixInvoiceCondition),
+                    "Bad Data", source.RecordGuid, source.RecordKey);
+                return null;
             }
-
-            var building = entity.FirstOrDefault(b => b.Code.Equals(source, StringComparison.OrdinalIgnoreCase));
-            if (building == null)
-            {
-                throw new KeyNotFoundException(string.Format("Building not found for key: {0}.", source));
-            }
-            return building;
+            return itemCondition.Description;
         }
 
         /// <summary>
@@ -363,116 +480,35 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="building"></param>
         /// <param name="bypassCache"></param>
         /// <returns></returns>
-        private async Task<GuidObject2> ConvertEntityToRoomGuidObjectAsync(Domain.ColleagueFinance.Entities.FixedAssets source, Domain.Base.Entities.Building building, bool bypassCache)
+        private async Task<GuidObject2> ConvertEntityToRoomGuidObjectAsync(Domain.ColleagueFinance.Entities.FixedAssets source, string fixBuilding, bool bypassCache)
         {
-            if(building != null)
+            if (string.IsNullOrEmpty(fixBuilding))
+                return null;
+
+            if (source == null || string.IsNullOrEmpty(source.FixRoom))
+                return null;
+
+
+            var entity = await RoomsAsync(bypassCache);
+            if (entity == null || !entity.Any())
             {
-                if(source != null && !string.IsNullOrEmpty(source.FixRoom))
-                {
-                    var entity = await RoomsAsync(bypassCache);
-                    if (entity == null || !entity.Any())
-                    {
-                        throw new InvalidOperationException("Rooms are not defined.");
-                    }
-
-                    var room = entity.FirstOrDefault(r => r.Code.Equals(source.FixRoom, StringComparison.OrdinalIgnoreCase) && r.BuildingCode.Equals(building.Code, StringComparison.OrdinalIgnoreCase));
-                    if(room == null)
-                    {
-                        throw new KeyNotFoundException(string.Format("Room not found for key: {0} in building {1}. Guid: {2}", source.FixRoom, building.Code, source.RecordGuid));
-                    }
-                    return new GuidObject2(room.Guid);
-                }
+                IntegrationApiExceptionAddError("Rooms are not defined.", "Bad Data", source.RecordGuid, source.RecordKey);
+                return null;
             }
-            return null;
-        }
 
-        /// <summary>
-        /// Converts to various currency value.
-        /// </summary>
-        /// <param name="source"></param>
-        /// <param name="bypassCache"></param>
-        /// <returns></returns>
-        private async Task<Amount2DtoProperty> ConvertEntityToInsuredValueDto(decimal? source,  bool bypassCache)
-        {
-            if(source.HasValue)
+            var room = entity.FirstOrDefault(r => r.Code.Equals(source.FixRoom, StringComparison.OrdinalIgnoreCase) && r.BuildingCode.Equals(fixBuilding, StringComparison.OrdinalIgnoreCase));
+            if (room == null)
             {
-                Amount2DtoProperty currencyValue =  new Amount2DtoProperty()
-                {
-                    Value = source.Value
-                };
-
-                var currencyStr = await HostCountryAsync(bypassCache);
-                if (!string.IsNullOrEmpty(currencyStr))
-                {
-                    Dtos.EnumProperties.CurrencyIsoCode currency = Dtos.EnumProperties.CurrencyIsoCode.USD;
-                    currency = ((hostCountry == "CAN") || (hostCountry == "CANADA")) ? CurrencyIsoCode.CAD :
-                        CurrencyIsoCode.USD;
-                    currencyValue.Currency = currency;
-                }
-                else
-                {
-                    throw new InvalidOperationException("Host country is not defined.");
-                }
-                return currencyValue;
+                IntegrationApiExceptionAddError(string.Format("Room not found for key: '{0}' in building '{1}'.", source.FixRoom, fixBuilding),
+                     "GUID.Not.Found", source.RecordGuid, source.RecordKey);
+                return null;
             }
-            return null;
-        }
-
-        /// <summary>
-        /// Converts to acquisition cost to GuidObject2.
-        /// </summary>
-        /// <param name="source"></param>
-        /// <returns></returns>
-        private GuidObject2 ConvertEntityToAcquisiotionDeprExpAcctGuidObjectAsync(string source)
-        {
-            if(!string.IsNullOrEmpty(source))
-            {
-                return new GuidObject2(source);
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Converts person id to GuidObject2.
-        /// </summary>
-        /// <param name="source"></param>
-        /// <returns></returns>
-        private async Task<IEnumerable<GuidObject2>> ConvertEntityToPersonGuidObjectAsync(Domain.ColleagueFinance.Entities.FixedAssets source)
-        {
-            List<GuidObject2> personIds = new List<GuidObject2>();
-            if (source != null && !string.IsNullOrEmpty(source.FixStewerdId))
-            {
-                var person = await _personRepository.GetPersonGuidFromIdAsync(source.FixStewerdId);
-                if (string.IsNullOrEmpty(person))
-                {
-                    throw new Exception(string.Format("Person not found for key: {0}. Guid: {1}", source.FixStewerdId, source.RecordGuid));
-                }
-                personIds.Add(new GuidObject2(person));
-            }
-            return personIds.Any() ? personIds : null;
+            return new GuidObject2(room.Guid);
         }
 
         #endregion
 
         #region All Reference Data
-
-        /// <summary>
-        /// Asset Categories reference data.
-        /// </summary>
-        IEnumerable<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AssetCategories> _assetCategories = null;
-        private async Task<IEnumerable<Ellucian.Colleague.Domain.ColleagueFinance.Entities.AssetCategories>> AssetCategoriesAsync(bool bypassCache)
-        {
-            return _assetCategories ?? (_assetCategories = await _financeReferenceDataRepository.GetAssetCategoriesAsync(bypassCache));
-        }
-
-        /// <summary>
-        /// Asset Types reference data.
-        /// </summary>
-        IEnumerable<Domain.ColleagueFinance.Entities.AssetTypes> _assetTypes = null;
-        private async Task<IEnumerable<Domain.ColleagueFinance.Entities.AssetTypes>> AssetTypesAsync(bool bypassCache)
-        {
-            return _assetTypes ?? (_assetTypes = await _financeReferenceDataRepository.GetAssetTypesAsync(bypassCache));
-        }
 
         /// <summary>
         /// Rooms.
@@ -483,14 +519,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             return _rooms ?? (_rooms = await _roomRepository.GetRoomsAsync(bypassCache));
         }
 
-        /// <summary>
-        /// Buildings.
-        /// </summary>
-        IEnumerable<Domain.Base.Entities.Building> _buildings = null;
-        private async Task<IEnumerable<Domain.Base.Entities.Building>> BuildingsAsync(bool bypassCache)
-        {
-            return _buildings ?? (_buildings = await _referenceDataRepository.GetBuildings2Async(bypassCache));
-        }
 
         /// <summary>
         /// Item Conditions.
@@ -514,27 +542,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// Host Country.
         /// </summary>
         string hostCountry = null;
-        private async Task<string> HostCountryAsync(bool bypassCache)
+        private async Task<string> HostCountryAsync()
         {
-            return hostCountry ?? (hostCountry = await _fixedAssetsRepository.GetHostCountryAsync());
-        }
-
-        #endregion
-
-        #region Permission Check
-        
-        /// <summary>
-        /// Permissions code that allows an external system to perform the READ operation.
-        /// </summary>
-        /// <returns></returns>
-        private async Task<bool> CheckViewFixedAssetsPermission()
-        {
-            IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
-            if (userPermissions.Contains(ColleagueFinancePermissionCodes.ViewFixedAssets))
-            {
-                return true;
-            }
-            return false;
+            return hostCountry ?? (hostCountry = await _referenceDataRepository.GetHostCountryAsync());
         }
 
         #endregion

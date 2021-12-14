@@ -17,6 +17,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         string term = "2013/FA";
         string referenceNumber = "000067890";
         decimal amountPaid = 1000;
+        decimal balanceAmount = 1500;
         DateTime date = DateTime.Parse("07/31/2013");
         DateTime dueDate = DateTime.Parse("08/15/2013");
         DateTime billingEnd = DateTime.Parse("12/31/2013");
@@ -38,20 +39,20 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         [ExpectedException(typeof(ArgumentNullException))]
         public void InvoicePayment_Constructor_NullId()
         {
-            var result = new InvoicePayment(null, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(null, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void InvoicePayment_Constructor_EmptyId()
         {
-            var result = new InvoicePayment(String.Empty, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(String.Empty, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
         }
 
         [TestMethod]
         public void InvoicePayment_Constructor_IdValid()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, billingStart, dueDate, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
 
             Assert.AreEqual(id, result.Id);
         }
@@ -60,20 +61,20 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         [ExpectedException(typeof(ArgumentNullException))]
         public void InvoicePayment_Constructor_NullPersonId()
         {
-            var result = new InvoicePayment(id, null, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, null, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void InvoicePayment_Constructor_EmptyPersonId()
         {
-            var result = new InvoicePayment(id, String.Empty, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, String.Empty, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
         }
 
         [TestMethod]
         public void InvoicePayment_Constructor_PersonIdValid()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
 
             Assert.AreEqual(personId, result.PersonId);
         }
@@ -82,20 +83,20 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         [ExpectedException(typeof(ArgumentNullException))]
         public void InvoicePayment_Constructor_NullAccountTypeCode()
         {
-            var result = new InvoicePayment(id, personId, null, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, null, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void InvoicePayment_Constructor_EmptyAccountTypeCode()
         {
-            var result = new InvoicePayment(id, personId, String.Empty, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, String.Empty, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
         }
 
         [TestMethod]
         public void InvoicePayment_Constructor_AccountTypeCodeValid()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
 
             Assert.AreEqual(accountTypeCode, result.ReceivableTypeCode);
         }
@@ -103,7 +104,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         [TestMethod]
         public void InvoicePayment_Constructor_NullTermValid()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, null, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, null, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
 
             Assert.AreEqual(null, result.TermId);
         }
@@ -111,7 +112,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         [TestMethod]
         public void InvoicePayment_Constructor_EmptyTermValid()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, String.Empty, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, String.Empty, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
 
             Assert.AreEqual(String.Empty, result.TermId);
         }
@@ -119,7 +120,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         [TestMethod]
         public void InvoicePayment_Constructor_TermValid()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
 
             Assert.AreEqual(term, result.TermId);
         }
@@ -128,7 +129,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         [ExpectedException(typeof(ArgumentNullException))]
         public void InvoicePayment_Constructor_NullReferenceNumber()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, null, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, null, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
 
             Assert.AreEqual(referenceNumber, result.ReferenceNumber);
         }
@@ -137,7 +138,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         [ExpectedException(typeof(ArgumentNullException))]
         public void InvoicePayment_Constructor_EmptyReferenceNumber()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, string.Empty, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, string.Empty, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
 
             Assert.AreEqual(referenceNumber, result.ReferenceNumber);
         }
@@ -145,7 +146,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         [TestMethod]
         public void InvoicePayment_Constructor_ReferenceNumberValid()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
 
             Assert.AreEqual(referenceNumber, result.ReferenceNumber);
         }
@@ -153,7 +154,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         [TestMethod]
         public void InvoicePayment_Constructor_DateValid()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
 
             Assert.AreEqual(date, result.Date);
         }
@@ -161,7 +162,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         [TestMethod]
         public void InvoicePayment_Constructor_DueDateValid()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
 
             Assert.AreEqual(dueDate, result.DueDate);
         }
@@ -169,7 +170,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         [TestMethod]
         public void InvoicePayment_Constructor_BillingStartValid()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
 
             Assert.AreEqual(billingStart, result.BillingStart);
         }
@@ -177,7 +178,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         [TestMethod]
         public void InvoicePayment_Constructor_BillingEndValid()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
 
             Assert.AreEqual(billingEnd, result.BillingEnd);
         }
@@ -187,27 +188,27 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         public void InvoicePayment_Constructor_BadBillingDates()
         {
             billingStart = billingEnd.AddDays(1);
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void InvoicePayment_Constructor_NullDescription()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, null, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, null, charges, amountPaid, balanceAmount);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void InvoicePayment_Constructor_EmptyDescription()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, String.Empty, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, String.Empty, charges, amountPaid, balanceAmount);
         }
 
         [TestMethod]
         public void InvoicePayment_Constructor_DescriptionValid()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
 
             Assert.AreEqual(description, result.Description);
         }
@@ -216,21 +217,21 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         [ExpectedException(typeof(ArgumentNullException))]
         public void InvoicePayment_Constructor_NullCharges()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, null, 0);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, null, 0,0);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void InvoicePayment_Constructor_NoCharges()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, new List<Charge>(), 0);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, new List<Charge>(), 0,0);
         }
 
         [TestMethod]
         public void InvoicePayment_Constructor_ChargesValid()
         {
             var charges = new List<Charge>() { charge1, charge2 };
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
 
             Assert.IsNotNull(result.Charges);
             CollectionAssert.AreEqual(charges, result.Charges.ToList());
@@ -241,7 +242,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         {
             var charges = new List<Charge>() { charge1, charge2 };
             var baseAmount = charge1.BaseAmount + charge2.BaseAmount;
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
 
             Assert.AreEqual(baseAmount, result.BaseAmount);
         }
@@ -254,7 +255,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
             var baseAmount = charge1.BaseAmount + charge2.BaseAmount;
             var taxAmount = charge1.TaxAmount + charge2.TaxAmount;
             var amount = baseAmount + taxAmount;
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
 
             Assert.AreEqual(taxAmount, result.TaxAmount);
         }
@@ -267,7 +268,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
             var baseAmount = charge1.BaseAmount + charge2.BaseAmount;
             var taxAmount = charge1.TaxAmount + charge2.TaxAmount;
             var amount = baseAmount + taxAmount;
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
 
             Assert.AreEqual(amount, result.Amount);
         }
@@ -280,7 +281,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
             var baseAmount = charge1.BaseAmount + charge2.BaseAmount;
             var taxAmount = charge1.TaxAmount + charge2.TaxAmount;
             var amount = baseAmount + taxAmount;
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
 
             Assert.AreEqual(amountPaid, result.AmountPaid);
         }
@@ -289,7 +290,7 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         [ExpectedException(typeof(ArgumentNullException))]
         public void InvoicePayment_AddAdjustingInvoicePayment_NullValue()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
             result.AddAdjustingInvoice(null);
         }
 
@@ -297,14 +298,14 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         [ExpectedException(typeof(ArgumentNullException))]
         public void InvoicePayment_AddAdjustingInvoicePayment_EmptyValue()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
             result.AddAdjustingInvoice(String.Empty);
         }
 
         [TestMethod]
         public void InvoicePayment_AddAdjustingInvoicePayment_ValidValue()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
             foreach (var adj in adjustmentIds)
             {
                 result.AddAdjustingInvoice(adj);
@@ -316,13 +317,24 @@ namespace Ellucian.Colleague.Domain.Finance.Tests.Entities
         [TestMethod]
         public void InvoicePayment_AddAdjustingInvoicePayment_ValidNoDups()
         {
-            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid);
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
             foreach (var adj in adjustmentIdsWithDup)
             {
                 result.AddAdjustingInvoice(adj);
             }
 
             CollectionAssert.AreEqual(adjustmentIds, result.AdjustedByInvoices.ToList());
+        }
+        [TestMethod]
+        public void InvoicePayment_AmountPaid_BalanceAmount_Valid()
+        {
+            charge1.TaxAmount = 5;
+            var charges = new List<Charge>() { charge1, charge2 };
+            var baseAmount = charge1.BaseAmount + charge2.BaseAmount;
+            var taxAmount = charge1.TaxAmount + charge2.TaxAmount;
+            var amount = baseAmount + taxAmount;
+            var result = new InvoicePayment(id, personId, accountTypeCode, term, referenceNumber, date, dueDate, billingStart, billingEnd, description, charges, amountPaid, balanceAmount);
+            Assert.AreEqual(balanceAmount, result.BalanceAmount);
         }
     }
 }

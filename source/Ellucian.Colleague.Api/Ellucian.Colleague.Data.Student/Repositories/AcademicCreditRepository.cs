@@ -1,7 +1,7 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
@@ -31,16 +32,21 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         private IDictionary<string, Grade> grades;
         private readonly IGradeRepository gradeRepository;
         private ITermRepository termRepository;
+        private ISectionRepository sectionRepository;
         private IEnumerable<Term> termList;
         private string colleagueTimeZone;
         // Sets the maximum number of records to bulk read at one time
         readonly int readSize;
         public static char _SM = Convert.ToChar(DynamicArray.SM);
+        const string AllStudentEquivEvalsRecordsCache = "AllStudentEquivEvalsRecordKeys";
+        const int AllStudentEquivEvalsRecordsCacheTimeout = 20;
+        private RepositoryException exception = new RepositoryException();
 
         public AcademicCreditRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger,
             ICourseRepository courseRepository,
             IGradeRepository gradeRepository,
             ITermRepository termRepository,
+            ISectionRepository sectionRepository,
             ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)
         {
@@ -49,6 +55,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             types = new Dictionary<string, CreditType>();
             this.gradeRepository = gradeRepository;
             this.termRepository = termRepository;
+            this.sectionRepository = sectionRepository;
             termList = null;
             colleagueTimeZone = apiSettings.ColleagueTimeZone;
             this.readSize = ((apiSettings != null) && (apiSettings.BulkReadSize > 0)) ? apiSettings.BulkReadSize : 5000;
@@ -428,45 +435,69 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>A collection of AcademicCredit</returns>
         public async Task<Tuple<IEnumerable<StudentCourseTransfer>, int>> GetStudentCourseTransfersAsync(int offset, int limit, bool bypassCache)
         {
+            string selectedRecordCacheKey = CacheSupport.BuildCacheKey(AllStudentEquivEvalsRecordsCache);
             List<StudentCourseTransfer> studentCourseTransfers = new List<StudentCourseTransfer>();
 
             if (limit == 0) limit = readSize;
-
-
             int totalCount = 0;
-            string[] subList = null;
-            string[] acadCredIds = null;
-            var criteria = "WITH STE.COURSE.ACAD.CRED NE '' AND WITH STE.INSTITUTION NE '' BY.EXP STE.COURSE.ACAD.CRED SAVING STE.COURSE.ACAD.CRED";
-            acadCredIds = await DataReader.SelectAsync("STUDENT.EQUIV.EVALS", criteria);
-            acadCredIds = acadCredIds.Distinct().ToArray();
+            var selectionCriteria = new StringBuilder();
 
-            totalCount = acadCredIds.Count();
-            Array.Sort(acadCredIds);
-            subList = acadCredIds.Skip(offset).Take(limit).ToArray();
+            var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                selectedRecordCacheKey,
+                "STUDENT.EQUIV.EVALS",
+                offset,
+                limit,
+                AllStudentEquivEvalsRecordsCacheTimeout,
+                async () =>
+                {
+                    selectionCriteria.Append("WITH STE.COURSE.ACAD.CRED NE '' AND WITH STE.INSTITUTION NE '' BY.EXP STE.COURSE.ACAD.CRED SAVING STE.COURSE.ACAD.CRED");
+
+                    return new CacheSupport.KeyCacheRequirements()
+                    {
+                        criteria = selectionCriteria.ToString()
+                    };
+                });
+
+            if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
+            {
+                return new Tuple<IEnumerable<StudentCourseTransfer>, int>(new List<StudentCourseTransfer>(), 0);
+            }
+
+            totalCount = keyCacheObject.TotalCount.Value;
+
+            var subList = keyCacheObject.Sublist.ToArray();
+
+            if (subList == null || !subList.Any())
+            {
+                return new Tuple<IEnumerable<StudentCourseTransfer>, int>(new List<StudentCourseTransfer>(), 0);
+            }
 
             // Bulk read StudentAcadCreds
             //var acadCredRecords = await DataReader.BulkReadRecordAsync<StudentAcadCred>("STUDENT.ACAD.CRED", subList);
             var acadCredRecords = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<StudentAcadCred>("STUDENT.ACAD.CRED", subList);
 
-            if((acadCredRecords.InvalidKeys != null && acadCredRecords.InvalidKeys.Any()) ||
+            if ((acadCredRecords.InvalidKeys != null && acadCredRecords.InvalidKeys.Any()) ||
                 acadCredRecords.InvalidRecords != null && acadCredRecords.InvalidRecords.Any())
             {
-                var repositoryException = new RepositoryException();
 
                 if (acadCredRecords.InvalidKeys.Any())
                 {
-                    repositoryException.AddErrors(acadCredRecords.InvalidKeys
-                        .Select(key => new RepositoryError("invalid.key",
-                        string.Format("Unable to locate the following key '{0}'.", key.ToString()))));
+                    exception.AddErrors(acadCredRecords.InvalidKeys
+                        .Select(key => new RepositoryError("Bad.Data",
+                        string.Format("Unable to locate the following STUDENT.ACAD.CRED key '{0}' from STE.COURSE.ACAD.CRED in STUDENT.EQUIV.EVALS.", key.ToString()))));
                 }
                 if (acadCredRecords.InvalidRecords.Any())
                 {
-                    repositoryException.AddErrors(acadCredRecords.InvalidRecords
-                       .Select(r => new RepositoryError("invalid.record",
+                    exception.AddErrors(acadCredRecords.InvalidRecords
+                       .Select(r => new RepositoryError("Bad.Data",
                        string.Format("Error: '{0}' ", r.Value))
                        { SourceId = r.Key }));
                 }
-                throw repositoryException;
             }
 
             // Bulk read StudentEquivEvals, which is used to determine if credit was granted based on a non-course equivalency
@@ -477,22 +508,22 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             if ((equivRecords.InvalidKeys != null && equivRecords.InvalidKeys.Any()) ||
                 equivRecords.InvalidRecords != null && equivRecords.InvalidRecords.Any())
             {
-                var repositoryException = new RepositoryException();
+                //var repositoryException = new RepositoryException();
 
                 if (equivRecords.InvalidKeys.Any())
                 {
-                    repositoryException.AddErrors(equivRecords.InvalidKeys
-                        .Select(key => new RepositoryError("invalid.key",
-                        string.Format("Unable to locate the following key '{0}'.", key.ToString()))));
+                    exception.AddErrors(equivRecords.InvalidKeys
+                        .Select(key => new RepositoryError("Bad.Data",
+                        string.Format("Unable to locate the following key '{0}' from STUDENT.EQUIV.EVALS .", key.ToString()))));
                 }
                 if (equivRecords.InvalidRecords.Any())
                 {
-                    repositoryException.AddErrors(equivRecords.InvalidRecords
-                       .Select(r => new RepositoryError("invalid.record",
+                    exception.AddErrors(equivRecords.InvalidRecords
+                       .Select(r => new RepositoryError("Bad.Data",
                        string.Format("Error: '{0}' ", r.Value))
                        { SourceId = r.Key }));
                 }
-                throw repositoryException;
+                //throw repositoryException;
             }
             // Combine each distinct acad cred/equiv eval combination to make a StudentCourseTransfer domain object
             // (acad cred/equiv evals have a possible many-to-one relationship)
@@ -505,17 +536,22 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 try
                 {
                     equivEval = equivRecords.BulkRecordsRead.First(ae => ae.Recordkey == acadCred.StcStudentEquivEval);
+                    studentCourseTransfers.Add(await BuildStudentCourseTransfer(equivEval, acadCred));
                 }
                 catch (Exception e)
                 {
-                    var msg = string.Format("Unable to locate student equiv eval record with id of {0} that should exists for student academic credit" +
-                                                                                "record with id of {1}: " + e.Message
-                                                                                    , acadCred.StcStudentEquivEval, acadCred.Recordkey);
-                    logger.Error(msg);
-                    throw new KeyNotFoundException(msg);
+                    exception.AddError(new RepositoryError("Bad.Data", e.Message)
+                    {
+                        SourceId = acadCred.StcStudentEquivEval
+
+                    });
                 }
 
-                studentCourseTransfers.Add(await BuildStudentCourseTransfer(equivEval, acadCred));
+
+            }
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
             }
 
             return studentCourseTransfers.Any() ?
@@ -548,12 +584,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             try
             {
                 steRecord = await DataReader.ReadRecordAsync<StudentEquivEvals>(steKey);
-                if(steRecord == null)
+                if (steRecord == null)
                 {
                     throw new KeyNotFoundException(string.Format("Unable to locate student equiv eval record with id of '{0}'.", steKey));
                 }
             }
-            catch(KeyNotFoundException)
+            catch (KeyNotFoundException)
             {
                 throw;
             }
@@ -568,7 +604,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             try
             {
                 stcRecord = await DataReader.ReadRecordAsync<StudentAcadCred>(stcKey);
-                if(stcRecord == null)
+                if (stcRecord == null)
                 {
                     throw new KeyNotFoundException(string.Format("Unable to locate academic credit record with id of '{0}' that should exists for student equiv eval record with id of '{1}'.", stcKey, steKey));
                 }
@@ -585,8 +621,18 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 logger.Error(msg);
                 throw new KeyNotFoundException(msg);
             }
-
-            return await BuildStudentCourseTransfer(steRecord, stcRecord);
+            try
+            {
+                return await BuildStudentCourseTransfer(steRecord, stcRecord);
+            }
+            catch (RepositoryException ex)
+            {
+                throw ex;
+            }
+            catch (Exception)
+            {
+                throw new KeyNotFoundException(string.Format("Unable to locate student equiv eval record with id of '{0}'.", steKey));
+            }
 
         }
 
@@ -1739,7 +1785,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             string[] fiteredAcadCredIds = null;
             IEnumerable<AcademicCredit> filteredAcadCredits = new List<AcademicCredit>();
             string[] academicCreditsIds = academicCredits.Select(a => a.Id).ToArray<string>();
-            if (academicCreditsIds != null && academicCreditsIds.Length>0)
+            if (academicCreditsIds != null && academicCreditsIds.Length > 0)
             {
                 try
                 {
@@ -1748,7 +1794,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 catch (Exception ex)
                 {
-                    logger.Error(ex, "Exception occured while filtering academic credits, criteria passed is :"+ criteria);
+                    logger.Error(ex, "Exception occured while filtering academic credits, criteria passed is :" + criteria);
                     return academicCredits;
                 }
                 if (fiteredAcadCredIds != null && fiteredAcadCredIds.Any())
@@ -1813,6 +1859,244 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return UseCensusDate;
         }
 
+        public async Task<IEnumerable<StudentAnonymousGrading>> GetAnonymousGradingIdsAsync(AnonymousGradingType anonymousGradingType,
+            string studentId, List<string> termIds, List<string> sectionIds)
+        {
+            if (string.IsNullOrWhiteSpace(studentId))
+            {
+                var errorMessage = "a student id is required in order to retrieve grading ids for a student.";
+                logger.Info(errorMessage);
+                throw new ArgumentNullException("studentId", errorMessage);
+            }
+
+            if ((termIds != null && termIds.Count > 0) && (sectionIds != null && sectionIds.Count > 0))
+            {
+                throw new ArgumentException("either term ids or course section ids may be provided but not both");
+            }
+
+            var studentAnonymousGradingIds = new List<StudentAnonymousGrading>();
+
+            // this is a valid condition in which Anonymous Grading has not been configured (school is not doing any anonymous grading)
+            if (anonymousGradingType == AnonymousGradingType.None)
+            {
+                logger.Info("Anonymous Grading Type configuration has not been configured and is null or empty");
+                return studentAnonymousGradingIds;
+            }
+
+            // get student course sections for the given student id
+            var sectionCriteria = "WITH SCS.STUDENT EQ '" + studentId + "'";
+            var studentCourseSectionsData = await DataReader.BulkReadRecordAsync<StudentCourseSec>(sectionCriteria);
+
+            if (studentCourseSectionsData == null || !studentCourseSectionsData.Any())
+            {
+                return studentAnonymousGradingIds;
+            }
+
+            List<StudentCourseSec> studentCourseSections = studentCourseSectionsData.ToList();
+
+            //check that student has registered for sections in filter list
+            if (sectionIds != null && sectionIds.Count > 0)
+            {
+                //all the ids in sectionIds that are not in studentCourseSections.ScsCourseSection
+                var notRregisterdSectionIds = sectionIds.Where(sectionId => !studentCourseSections.Any(scs => scs.ScsCourseSection == sectionId));
+                foreach (var id in notRregisterdSectionIds)
+                {
+                    var message = "Student " + studentId + " is not registered for course section " + id + ".";
+                    logger.Error(message);
+                    studentAnonymousGradingIds.Add(new StudentAnonymousGrading(string.Empty, string.Empty, id, message));
+                }
+
+                //filter out sections if specified in the criteria
+                studentCourseSections = studentCourseSections.Where(scs => sectionIds.Contains(scs.ScsCourseSection)).ToList();
+            }
+
+            if (studentCourseSections == null || studentCourseSections.Count == 0)
+            {
+                logger.Error("No student course sections found for the student: " + studentId);
+                return studentAnonymousGradingIds;
+            }
+
+            // filter out any sections that are not configured for Grading by Random ID (flag on ASCI) 
+            studentCourseSections = await FilterRandomGradingSections(studentId, studentCourseSections);
+
+            //student has no sections that are configured for random grading
+            if (studentCourseSections.Count == 0)
+            {
+                var logMsg = "Student " + studentId + " has no student course sections that are configured for random grading.";
+                logger.Error(logMsg);
+                return studentAnonymousGradingIds;
+            }
+
+            //get student academic credits for sections that are configured for random grading
+            var acadCreditIds = studentCourseSections.Select(scs => scs.ScsStudentAcadCred).ToList();
+            if (acadCreditIds == null || acadCreditIds.Count == 0)
+            {
+                logger.Error("No student academic credit record ids found for the student: " + studentId);
+                return studentAnonymousGradingIds;
+            }
+
+            // read academic credits to find terms and filter out any credits that are dropped or deleted
+            var studentAcademicCreditsWithInvalidKeys = await GetWithInvalidKeysAsync(academicCreditIds: acadCreditIds);
+            var studentAcademicCredits = studentAcademicCreditsWithInvalidKeys.AcademicCredits.ToList();
+
+            //log any missing academic credits
+            if (studentAcademicCreditsWithInvalidKeys.InvalidAcademicCreditIds != null && studentAcademicCreditsWithInvalidKeys.InvalidAcademicCreditIds.Any())
+            {
+                logger.Error("AcademicCreditRepository: Failed to retrieve all academic credits for the student course sections.  Id count " + acadCreditIds.Count() + " Credits count " + studentAcademicCredits.Count);
+                logger.Error("   Missing Ids (includes dropped credits):" + string.Join(",", studentAcademicCreditsWithInvalidKeys.InvalidAcademicCreditIds));
+            }
+
+            //Only active academic credits should be used - filter credits to exclude dropped & withdrawn so they do not show on the student grading ids tab
+            var activeStudentAcademicCredits = studentAcademicCredits.Where(ac => ac.Status == CreditStatus.Add || ac.Status == CreditStatus.New).ToList();
+
+            //check that student has registered sections in the specified in the term criteria when present
+            if (termIds != null && termIds.Count > 0)
+            {
+
+                //all the ids in termIds that are not in studentAcademicCredits
+                var notRregisterdTermIds = termIds.Where(termId => !studentAcademicCredits.Any(sac => sac.TermCode == termId));
+                foreach (var id in notRregisterdTermIds)
+                {
+                    var message = "Student " + studentId + " is not registered for course sections that are configured for random grading in term: " + id + ".";
+                    logger.Error(message);
+                    studentAnonymousGradingIds.Add(new StudentAnonymousGrading(string.Empty, string.Empty, id, message));
+                }
+
+                // filter out terms if terms where specified in the query criteria
+                activeStudentAcademicCredits = activeStudentAcademicCredits.Where(sac => termIds.Contains(sac.TermCode)).ToList();
+            }
+
+            if (activeStudentAcademicCredits == null || activeStudentAcademicCredits.Count == 0)
+            {
+                logger.Error("No student academic credit records found with random grading configured sections for the student: " + studentId + " and terms: " + string.Join(",", termIds));
+                return studentAnonymousGradingIds;
+            }
+
+            //at this point we can build grading ids when configured for section based generation of of anonymous grading ids
+            if (anonymousGradingType == AnonymousGradingType.Section)
+            {
+                //return await BuildSectionAnonymousGradingIdsAsync(studentId, studentCourseSections, activeStudentAcademicCredits);
+                return BuildSectionAnonymousGradingIdsAsync(studentId, studentCourseSections, activeStudentAcademicCredits);
+            }
+
+            //retrieving student terms is only required when we are getting grading ids for term based generation of anonymous grading ids
+            if (anonymousGradingType == AnonymousGradingType.Term)
+            {
+                return await BuildTermAnonymousGradingIdsAsync(studentId, acadCreditIds, activeStudentAcademicCredits);
+            }
+
+            return studentAnonymousGradingIds;
+        }
+
+        /// <summary>
+        /// filter out any section that is not congifugred for random grading
+        /// </summary>
+        /// <param name="studentId"></param>
+        /// <param name="studentCourseSections"></param>
+        /// <returns>A List of Student Course Sections that are configured for random grading</returns>
+        private async Task<List<StudentCourseSec>> FilterRandomGradingSections(string studentId, List<StudentCourseSec> studentCourseSections)
+        {
+            var randomGradingStudenCourseSections = new List<StudentCourseSec>();
+
+
+            foreach (var studentCourseSection in studentCourseSections)
+            {
+                var section = (await sectionRepository.GetCachedSectionsAsync(new List<string>() { studentCourseSection.ScsCourseSection })).FirstOrDefault();
+
+                // log any missing sections, student course section record has an invalid section pointer 
+                if (section == null)
+                {
+                    var logMsg = "Section: " + studentCourseSection.ScsCourseSection + " for student: " + studentId + " was not found in course catalog.";
+                    logger.Info(logMsg);
+                    continue;
+                }
+
+                //check configuration of course section - only return sections that are configured for random grading
+                if (section.GradeByRandomId)
+                {
+                    randomGradingStudenCourseSections.Add(studentCourseSection);
+                }
+            }
+
+            return randomGradingStudenCourseSections;
+        }
+
+        private IEnumerable<StudentAnonymousGrading> BuildSectionAnonymousGradingIdsAsync(string studentId,
+            List<StudentCourseSec> studentCourseSections, List<AcademicCredit> studentAcademicCredits)
+        {
+            var studentAnonymousGradingIds = new List<StudentAnonymousGrading>();
+
+            foreach (var acadCredit in studentAcademicCredits)
+            {
+                string message = null;
+
+                //find the course section from the filtered acad credit list
+                var studentSection = studentCourseSections.Where(scs => scs.ScsStudentAcadCred == acadCredit.Id).FirstOrDefault();
+                if (studentSection == null || string.IsNullOrEmpty(studentSection.ScsCourseSection)) //ensure student course section has a section assigned
+                {
+                    var logMsg = "Student " + studentId + " has a student course section " + studentSection.Recordkey + " missing a section id.";
+                    logger.Error(logMsg);
+                    continue;
+                }
+
+                var gradingId = (studentSection.ScsRandomId.HasValue) ? studentSection.ScsRandomId.Value.ToString() : string.Empty;
+                var termId = (acadCredit.TermCode == null) ? string.Empty : acadCredit.TermCode;
+
+                //skip sections that are missing anonymous grading ids
+                if (string.IsNullOrEmpty(gradingId)) // ensure student course section has a random grading id assigned
+                {
+                    var logMsg = "Student " + studentId + " does not have a anonymous grading ID for course section: " + studentSection.ScsCourseSection;
+                    logger.Error(logMsg);
+                    continue;
+                }
+
+                studentAnonymousGradingIds.Add(new StudentAnonymousGrading(gradingId, termId, studentSection.ScsCourseSection, message));
+            }
+
+            return studentAnonymousGradingIds;
+        }
+
+        private async Task<IEnumerable<StudentAnonymousGrading>> BuildTermAnonymousGradingIdsAsync(string studentId,
+            IEnumerable<string> acadCreditIds, List<AcademicCredit> studentAcademicCredits)
+        {
+            var studentAnonymousGradingIds = new List<StudentAnonymousGrading>();
+
+            var studentTermKeys = studentAcademicCredits.Select(sac => studentId + "*" + sac.TermCode + "*" + sac.AcademicLevelCode).Distinct();
+            if (studentTermKeys == null || !studentTermKeys.Any())
+            {
+                logger.Info("error occurred while creating student term keys");
+                return studentAnonymousGradingIds;
+            }
+
+            var studentTermsOutput = await DataReader.BulkReadRecordWithInvalidRecordsAsync<StudentTerms>("STUDENT.TERMS", studentTermKeys.ToArray());
+
+            if (studentTermsOutput.InvalidKeys != null && studentTermsOutput.InvalidKeys.Any())
+            {
+                logger.Error("AcademicCreditRepository: Failed to retrieve all Student Terms for the student academic credits.  Id count " + acadCreditIds.Count() + " Credits count " + studentTermsOutput.BulkRecordsRead.Count);
+                logger.Error("   Missing Ids :" + string.Join(",", studentTermsOutput.InvalidKeys));
+            }
+
+            //at this point we can build grading ids when configured for terms based generation of of anonymous grading ids
+            foreach (var studentTerm in studentTermsOutput.BulkRecordsRead)
+            {
+                var gradingId = (studentTerm.SttrRandomId.HasValue) ? studentTerm.SttrRandomId.Value.ToString() : string.Empty;
+                var recordKeyValues = studentTerm.Recordkey.Split('*');
+                var termId = (recordKeyValues == null || recordKeyValues.Length != 3) ? string.Empty : recordKeyValues[1];
+                string message = null;
+
+                //skip terms that are missing an anonymous grading
+                if (string.IsNullOrEmpty(gradingId)) // ensure student term has a random grading id assigned
+                {
+                    var logMsg = "Student " + studentId + " does not have a anonymous grading ID for term: " + termId;
+                    logger.Error(logMsg);
+                    continue;
+                }
+
+                studentAnonymousGradingIds.Add(new StudentAnonymousGrading(gradingId, termId, null, message));
+            }
+
+            return studentAnonymousGradingIds;
+        }
 
     }
 }

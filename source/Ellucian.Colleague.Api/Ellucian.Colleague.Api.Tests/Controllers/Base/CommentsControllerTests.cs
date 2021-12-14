@@ -1,19 +1,24 @@
 ﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using Ellucian.Colleague.Api.Controllers;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Base.Tests;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -209,6 +214,98 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             await commentsController.GetCommentsAsync(It.IsAny<Paging>(), "", commentSubjectArea: commentSubjectAreaGuid);
         }
 
+        //GET v6
+        //Successful
+        //GetCommentsAsync
+
+        [TestMethod]
+        public async Task CommentsController_GetCommentsAsync_Permissions()
+        {
+            var commentCollectionSubjectsArea = commentsCollection.Where(x => x.CommentSubjectArea.Id == commentSubjectAreaGuid);
+            int offset = 0;
+            int Limit = commentCollectionSubjectsArea.Count();
+            Paging paging = new Paging(Limit, offset);
+            var expectedCollection = new Tuple<IEnumerable<Dtos.Comments>, int>(commentCollectionSubjectsArea, Limit);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Comments" },
+                    { "action", "GetCommentsAsync" }
+                };
+            HttpRoute route = new HttpRoute("comments", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            commentsController.Request.SetRouteData(data);
+            commentsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BasePermissionCodes.ViewComment, BasePermissionCodes.UpdateComment });
+
+            var controllerContext = commentsController.ControllerContext;
+            var actionDescriptor = commentsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+           
+
+            commentsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            commentsServiceMock.Setup(x => x.GetCommentsAsync(offset, Limit, "", commentSubjectAreaGuid, It.IsAny<bool>())).ReturnsAsync(expectedCollection);
+            var comments = (await commentsController.GetCommentsAsync(paging, "", commentSubjectAreaGuid));
+
+            Object filterObject;
+            commentsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewComment));
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdateComment));
+
+        }
+
+        //GET v6
+        //Exception
+        //GetCommentsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CommentsController_GetCommentsAsync_Invalid_Permissions()
+        {
+            var expected = commentsCollection.FirstOrDefault();
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Comments" },
+                    { "action", "GetCommentsAsync" }
+                };
+            HttpRoute route = new HttpRoute("comments", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            commentsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = commentsController.ControllerContext;
+            var actionDescriptor = commentsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                commentsServiceMock.Setup(x => x.GetCommentsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), true)).Throws<PermissionsException>();
+                commentsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view comments."));
+                await commentsController.GetCommentsAsync(It.IsAny<Paging>(), "", commentSubjectArea: commentSubjectAreaGuid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion GetComments
 
         #region GetCommentsByGuid
@@ -290,6 +387,92 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             var expected = commentsCollection.FirstOrDefault();
             commentsServiceMock.Setup(x => x.GetCommentByIdAsync(expected.Id)).Throws<Exception>();
             await commentsController.GetCommentsByGuidAsync(expected.Id);
+        }
+
+        //GET by id v6
+        //Successful
+        //GetCommentsByGuidAsync
+
+        [TestMethod]
+        public async Task CommentsController_GetCommentsByGuidAsync_Permissions()
+        {
+            var expected = commentsCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Comments" },
+                    { "action", "GetCommentsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("comments", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            commentsController.Request.SetRouteData(data);
+            commentsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BasePermissionCodes.ViewComment, BasePermissionCodes.UpdateComment });
+
+            var controllerContext = commentsController.ControllerContext;
+            var actionDescriptor = commentsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            commentsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            commentsServiceMock.Setup(x => x.GetCommentByIdAsync(expected.Id)).ReturnsAsync(expected);
+            var actual = (await commentsController.GetCommentsByGuidAsync(expected.Id));
+
+            Object filterObject;
+            commentsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewComment));
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdateComment));
+
+        }
+
+        //GET by id v6
+        //Exception
+        //GetCommentsByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CommentsController_GetCommentsByGuidAsync_Invalid_Permissions()
+        {
+            var expected = commentsCollection.FirstOrDefault();
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Comments" },
+                    { "action", "GetCommentsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("comments", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            commentsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = commentsController.ControllerContext;
+            var actionDescriptor = commentsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                commentsServiceMock.Setup(x => x.GetCommentByIdAsync(expected.Id)).Throws<PermissionsException>();
+                commentsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view comments."));
+                await commentsController.GetCommentsByGuidAsync(expected.Id);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
         }
 
         #endregion GetCommentsByGuid
@@ -383,6 +566,94 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             commentsServiceMock.Setup(x => x.PutCommentAsync(expected.Id, expected)).Throws<Exception>();
             await commentsController.PutCommentsAsync(expected.Id, expected);
         }
+
+        //PUT v6
+        //Successful
+        //PutCommentsAsync
+
+        [TestMethod]
+        public async Task CommentsController_PutCommentsAsync_Permissions()
+        {
+            var expected = commentsCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Comments" },
+                    { "action", "PutCommentsAsync" }
+                };
+            HttpRoute route = new HttpRoute("comments", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            commentsController.Request.SetRouteData(data);
+            commentsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(BasePermissionCodes.UpdateComment);
+
+            var controllerContext = commentsController.ControllerContext;
+            var actionDescriptor = commentsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            commentsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            commentsServiceMock.Setup(x => x.PutCommentAsync(expected.Id, It.IsAny<Dtos.Comments>())).ReturnsAsync(expected);
+            var actual = (await commentsController.PutCommentsAsync(expected.Id, expected));
+
+            Object filterObject;
+            commentsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdateComment));
+
+        }
+
+        //PUT v6
+        //Exception
+        //PutCommentsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CommentsController_PutCommentsAsync_Invalid_Permissions()
+        {
+            var expected = commentsCollection.FirstOrDefault();
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Comments" },
+                    { "action", "PutCommentsAsync" }
+                };
+            HttpRoute route = new HttpRoute("comments", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            commentsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = commentsController.ControllerContext;
+            var actionDescriptor = commentsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                commentsServiceMock.Setup(x => x.PutCommentAsync(expected.Id, expected)).Throws<PermissionsException>();
+                commentsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to update comments."));
+                await commentsController.PutCommentsAsync(expected.Id, expected);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
+
         #endregion
 
 
@@ -467,6 +738,94 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             commentsServiceMock.Setup(x => x.PostCommentAsync(expected)).Throws<Exception>();
             await commentsController.PostCommentsAsync(expected);
         }
+
+        //POST v6
+        //Successful
+        //PostCommentsAsync
+
+        [TestMethod]
+        public async Task CommentsController_PostCommentsAsync_Permissions()
+        {
+            var expected = commentsCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Comments" },
+                    { "action", "PostCommentsAsync" }
+                };
+            HttpRoute route = new HttpRoute("comments", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            commentsController.Request.SetRouteData(data);
+            commentsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(BasePermissionCodes.UpdateComment);
+
+            var controllerContext = commentsController.ControllerContext;
+            var actionDescriptor = commentsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            commentsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            commentsServiceMock.Setup(x => x.PostCommentAsync(expected)).ReturnsAsync(expected);
+            var actual = (await commentsController.PostCommentsAsync(expected));
+
+            Object filterObject;
+            commentsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdateComment));
+
+        }
+
+        //PUT v6
+        //Exception
+        //PostCommentsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CommentsController_PostCommentsAsync_Invalid_Permissions()
+        {
+            var expected = commentsCollection.FirstOrDefault();
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Comments" },
+                    { "action", "PostCommentsAsync" }
+                };
+            HttpRoute route = new HttpRoute("comments", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            commentsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = commentsController.ControllerContext;
+            var actionDescriptor = commentsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                commentsServiceMock.Setup(x => x.PostCommentAsync(expected)).Throws<PermissionsException>();
+                commentsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to create comments."));
+                await commentsController.PostCommentsAsync(expected);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
+
         #endregion
 
 
@@ -533,6 +892,93 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             commentsServiceMock.Setup(x => x.DeleteCommentByIdAsync(expected.Id)).Throws<Exception>();
             await commentsController.DeleteCommentByGuidAsync(expected.Id);
         }
+
+        //DELETE v6
+        //Successful
+        //DeleteCommentByGuidAsync
+
+        [TestMethod]
+        public async Task CommentsController_DeleteCommentByGuidAsync_Permissions()
+        {
+            var expected = commentsCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Comments" },
+                    { "action", "DeleteCommentByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("comments", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            commentsController.Request.SetRouteData(data);
+            commentsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(BasePermissionCodes.DeleteComment);
+
+            var controllerContext = commentsController.ControllerContext;
+            var actionDescriptor = commentsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            commentsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            commentsServiceMock.Setup(x => x.DeleteCommentByIdAsync(expected.Id)).Returns(Task.FromResult(new TaskStatus()));
+            await commentsController.DeleteCommentByGuidAsync(expected.Id);
+
+            Object filterObject;
+            commentsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.DeleteComment));
+
+        }
+
+        //DELETE v6
+        //Exception
+        //DeleteCommentByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task CommentsController_DeleteCommentByGuidAsync_Invalid_Permissions()
+        {
+            var expected = commentsCollection.FirstOrDefault();
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Comments" },
+                    { "action", "DeleteCommentByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("comments", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            commentsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = commentsController.ControllerContext;
+            var actionDescriptor = commentsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                commentsServiceMock.Setup(x => x.DeleteCommentByIdAsync(expected.Id)).Throws<PermissionsException>();
+                commentsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to delete comments."));
+                await commentsController.DeleteCommentByGuidAsync(expected.Id);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion
 
 

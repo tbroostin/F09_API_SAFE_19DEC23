@@ -1,4 +1,5 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Api.Controllers.Base;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
@@ -19,6 +20,11 @@ using System.Web.Http;
 using System.Web.Http.Hosting;
 using Ellucian.Web.Http.Models;
 using Newtonsoft.Json.Linq;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Colleague.Domain.Base;
+using System.Web.Http.Controllers;
+using System.Web.Http.Routing;
+using System.Collections;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 {
@@ -263,7 +269,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         {
             personHoldsServiceMock.Setup(s => s.DeletePersonHoldAsync(It.IsAny<string>())).Throws(new ArgumentNullException());
 
-            await personHoldsController.DeletePersonHoldAsync(It.IsAny<string>());
+            await personHoldsController.DeletePersonHoldAsync("");
         }
 
         [TestMethod]
@@ -295,6 +301,267 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         #endregion
 
         #region All GETS
+
+        //Get
+        //Version 6
+        //GetPersonsActiveHoldsAsync
+
+        //Example success 
+        [TestMethod]
+        public async Task PersonHoldsController_GetPersonsActiveHoldsAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PersonHolds" },
+                { "action", "GetPersonsActiveHoldsAsync" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personHoldsController.Request.SetRouteData(data);
+            personHoldsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { PersonHoldsPermissionCodes.ViewPersonHold, PersonHoldsPermissionCodes.CreateUpdatePersonHold });
+
+            var controllerContext = personHoldsController.ControllerContext;
+            var actionDescriptor = personHoldsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.PersonHold>, int>(personHoldDtoList, 5);
+            personHoldsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personHoldsServiceMock.Setup(s => s.GetPersonHoldsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            var resp = await personHoldsController.GetPersonsActiveHoldsAsync(new Paging(10, 0));
+            
+            Object filterObject;
+            personHoldsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(PersonHoldsPermissionCodes.ViewPersonHold));
+            Assert.IsTrue(permissionsCollection.Contains(PersonHoldsPermissionCodes.CreateUpdatePersonHold));
+
+        }
+
+        //Example exception
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonHoldsController_GetPersonsActiveHoldsAsync_Invalid_Permissionsn()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PersonHolds" },
+                { "action", "GetPersonsActiveHoldsAsync" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personHoldsController.Request.SetRouteData(data);
+   
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personHoldsController.ControllerContext;
+            var actionDescriptor = personHoldsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                //var tuple = new Tuple<IEnumerable<Dtos.PersonHold>, int>(personHoldDtoList, 5);
+                personHoldsServiceMock.Setup(s => s.GetPersonHoldsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
+                personHoldsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view person-holds."));
+                var resp = await personHoldsController.GetPersonsActiveHoldsAsync(new Paging(10, 10));
+            }
+            catch (PermissionsException ex)
+            {               
+                throw ex;
+            }
+        }
+
+
+        //Get
+        //Version 6
+        //GetPersonsActiveHoldsByPersonIdAsync
+
+        //Example success 
+        [TestMethod]
+        public async Task PersonHoldsController_GetPersonsActiveHoldsByPersonIdAsync_Permissions()
+        {
+            var personId = "895cebf0-e6e8-4169-aac6-e0e14dfefdd4";
+            var personHoldsByPersId = personHoldDtoList.Where(i => i.Person.Id.Equals(personId));
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PersonHolds" },
+                { "action", "GetPersonsActiveHoldsByPersonIdAsync" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personHoldsController.Request.SetRouteData(data);
+            personHoldsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { PersonHoldsPermissionCodes.ViewPersonHold, PersonHoldsPermissionCodes.CreateUpdatePersonHold });
+
+            var controllerContext = personHoldsController.ControllerContext;
+            var actionDescriptor = personHoldsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.PersonHold>, int>(personHoldDtoList, 5);
+            personHoldsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personHoldsServiceMock.Setup(s => s.GetPersonHoldsAsync(personId, It.IsAny<bool>())).ReturnsAsync(personHoldsByPersId);
+            var resp = await personHoldsController.GetPersonsActiveHoldsByPersonIdAsync(personId);
+
+            Object filterObject;
+            personHoldsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(PersonHoldsPermissionCodes.ViewPersonHold));
+            Assert.IsTrue(permissionsCollection.Contains(PersonHoldsPermissionCodes.CreateUpdatePersonHold));
+
+        }
+
+        //Example exception
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonHoldsController_GetPersonsActiveHoldsByPersonIdAsync_Exception()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PersonHolds" },
+                { "action", "GetPersonsActiveHoldsByPersonIdAsync" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personHoldsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personHoldsController.ControllerContext;
+            var actionDescriptor = personHoldsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                //var tuple = new Tuple<IEnumerable<Dtos.PersonHold>, int>(personHoldDtoList, 5);
+                personHoldsServiceMock.Setup(s => s.GetPersonHoldsAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
+                personHoldsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view person-holds."));
+                var resp = await personHoldsController.GetPersonsActiveHoldsByPersonIdAsync(It.IsAny<string>());
+
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //Get by Id
+        //Version 6
+        //GetPersonsActiveHoldAsync
+
+        //Example success 
+        [TestMethod]
+        public async Task PersonHoldsController_GetPersonsActiveHoldAsync_Permissions()
+        {
+            var id = "65747675-f4ca-4e8b-91aa-d37c3449a82c";
+            var personHold = personHoldDtoList.FirstOrDefault(i => i.Id == id);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PersonHolds" },
+                { "action", "GetPersonsActiveHoldAsync" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personHoldsController.Request.SetRouteData(data);
+            personHoldsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { PersonHoldsPermissionCodes.ViewPersonHold, PersonHoldsPermissionCodes.CreateUpdatePersonHold });
+
+            var controllerContext = personHoldsController.ControllerContext;
+            var actionDescriptor = personHoldsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.PersonHold>, int>(personHoldDtoList, 5);
+            personHoldsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personHoldsServiceMock.Setup(s => s.GetPersonHoldAsync(id, It.IsAny<bool>())).ReturnsAsync(personHold);
+
+            var resp = await personHoldsController.GetPersonsActiveHoldAsync(id); 
+
+            Object filterObject;
+            personHoldsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(PersonHoldsPermissionCodes.ViewPersonHold));
+            Assert.IsTrue(permissionsCollection.Contains(PersonHoldsPermissionCodes.CreateUpdatePersonHold));
+
+        }
+
+        //Example exception
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonHoldsController_GetPersonsActiveHoldAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PersonHolds" },
+                { "action", "GetPersonsActiveHoldAsync" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personHoldsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personHoldsController.ControllerContext;
+            var actionDescriptor = personHoldsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                //var tuple = new Tuple<IEnumerable<Dtos.PersonHold>, int>(personHoldDtoList, 5);
+                personHoldsServiceMock.Setup(s => s.GetPersonHoldAsync(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
+                personHoldsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view person-holds."));
+                var resp = await personHoldsController.GetPersonsActiveHoldAsync(It.IsAny<string>());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         [TestMethod]
         public async Task PersonHoldsController_GetPersonsActiveHoldsAsync()
         {
@@ -367,10 +634,99 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 Assert.AreEqual(personHold.PersonHoldTypeType, persHold.PersonHoldTypeType);
                 Assert.AreEqual(personHold.StartOn, persHold.StartOn);
             }
-        }         
+        }
         #endregion
 
         #region PUT
+
+        //Put
+        //Version 6
+        //PutPersonHoldAsync
+
+        //Example success 
+        [TestMethod]
+        public async Task PersonHoldsController_PutPersonHoldAsync_Permissions()
+        {
+            var id = "65747675-f4ca-4e8b-91aa-d37c3449a82c";
+            var personHold = personHoldDtoList.FirstOrDefault(i => i.Id == id);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PersonHolds" },
+                { "action", "PutPersonHoldAsync" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personHoldsController.Request.SetRouteData(data);
+            personHoldsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { PersonHoldsPermissionCodes.CreateUpdatePersonHold });
+
+            var controllerContext = personHoldsController.ControllerContext;
+            var actionDescriptor = personHoldsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            //var tuple = new Tuple<IEnumerable<Dtos.PersonHold>, int>(personHoldDtoList, 5);
+            personHoldsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personHoldsServiceMock.Setup(s => s.UpdatePersonHoldAsync(id, It.IsAny<Dtos.PersonHold>())).ReturnsAsync(personHold);
+            var resp = await personHoldsController.PutPersonHoldAsync(id, personHold);
+
+            Object filterObject;
+            personHoldsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(PersonHoldsPermissionCodes.CreateUpdatePersonHold));
+
+        }
+
+        //Example exception
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonHoldsController_PutPersonHoldAsync_Exceptions()
+        {
+            var id = "65747675-f4ca-4e8b-91aa-d37c3449a82c";
+            var personHold = personHoldDtoList.FirstOrDefault(i => i.Id == id);
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PersonHolds" },
+                { "action", "PutPersonHoldAsync" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personHoldsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personHoldsController.ControllerContext;
+            var actionDescriptor = personHoldsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                //var tuple = new Tuple<IEnumerable<Dtos.PersonHold>, int>(personHoldDtoList, 5);
+                personHoldsServiceMock.Setup(s => s.UpdatePersonHoldAsync(It.IsAny<string>(), It.IsAny<Dtos.PersonHold>())).ThrowsAsync(new Exception());
+                personHoldsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to update person-holds."));
+                var resp = await personHoldsController.PutPersonHoldAsync("1234", new Dtos.PersonHold());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
         [TestMethod]
         public async Task PersonHoldsController_PutPersonHoldAsync()
         {
@@ -391,6 +747,186 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         #endregion
 
         #region POST
+
+        //POST
+        //Version 6
+        //PostPersonHoldAsync
+
+        //Example success 
+        [TestMethod]
+        public async Task PersonHoldsController_PostPersonHoldAsync_Permissions()
+        {
+            
+            var id = Guid.Empty.ToString();
+            var personHold = personHoldDtoList.First();
+            personHold.Id = id;
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PersonHolds" },
+                { "action", "PostPersonHoldAsync" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personHoldsController.Request.SetRouteData(data);
+            personHoldsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { PersonHoldsPermissionCodes.CreateUpdatePersonHold });
+
+            var controllerContext = personHoldsController.ControllerContext;
+            var actionDescriptor = personHoldsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            //var tuple = new Tuple<IEnumerable<Dtos.PersonHold>, int>(personHoldDtoList, 5);
+            personHoldsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personHoldsServiceMock.Setup(s => s.CreatePersonHoldAsync(personHold)).ReturnsAsync(personHold);
+            var resp = await personHoldsController.PostPersonHoldAsync(personHold);
+
+            Object filterObject;
+            personHoldsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(PersonHoldsPermissionCodes.CreateUpdatePersonHold));
+
+        }
+
+        //Example exception
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonHoldsController_PostPersonsActiveHoldsAsync_Exception()
+        {
+            var id = Guid.Empty.ToString();
+            var personHold = personHoldDtoList.First();
+            personHold.Id = id;
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PersonHolds" },
+                { "action", "PostPersonHoldAsync" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personHoldsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personHoldsController.ControllerContext;
+            var actionDescriptor = personHoldsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                //var tuple = new Tuple<IEnumerable<Dtos.PersonHold>, int>(personHoldDtoList, 5);
+                personHoldsServiceMock.Setup(s => s.CreatePersonHoldAsync(It.IsAny<Dtos.PersonHold>())).ThrowsAsync(new Exception());
+                personHoldsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to create person-holds."));
+                var resp = await personHoldsController.PostPersonHoldAsync(new Dtos.PersonHold());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        public async Task PersonHoldsController_PostPersonsActiveHoldsAsync_Permissions()
+        {
+
+            var id = Guid.Empty.ToString();
+            var personHold = personHoldDtoList.FirstOrDefault(i => i.Id == id);
+            var newId = "65747675-f4ca-4e8b-91aa-d37c3449a82c";
+            var newPersonHold = personHoldDtoList.FirstOrDefault(i => i.Id == newId);
+            personHoldsServiceMock.Setup(s => s.CreatePersonHoldAsync(personHold)).ReturnsAsync(newPersonHold);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PersonHolds" },
+                { "action", "PostPersonHoldsAsync" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personHoldsController.Request.SetRouteData(data);
+            personHoldsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { PersonHoldsPermissionCodes.CreateUpdatePersonHold });
+
+            var controllerContext = personHoldsController.ControllerContext;
+            var actionDescriptor = personHoldsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.PersonHold>, int>(personHoldDtoList, 5);
+            personHoldsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                   .Returns(true);
+            personHoldsServiceMock.Setup(s => s.GetPersonHoldsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            var resp = await personHoldsController.PostPersonHoldAsync(personHold);
+
+            Object filterObject;
+            personHoldsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(PersonHoldsPermissionCodes.CreateUpdatePersonHold));
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonHoldsController_PostPersonsActiveHoldsAsync_Invalid_Permissions()
+        {
+            var id = Guid.Empty.ToString();
+            var personHold = personHoldDtoList.First();
+            personHold.Id = id;
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PersonHolds" },
+                { "action", "PostPersonHoldsAsync" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personHoldsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personHoldsController.ControllerContext;
+            var actionDescriptor = personHoldsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.PersonHold>, int>(personHoldDtoList, 5);
+
+                personHoldsServiceMock.Setup(s => s.GetPersonHoldsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+                personHoldsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User is not authorized to view person-holds."));
+                var resp = await personHoldsController.PostPersonHoldAsync(personHold);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
         [TestMethod]
         public async Task PersonHoldsController_PostPersonHoldAsync()
         {
@@ -411,6 +947,171 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         #endregion
 
         #region DELETE
+
+        //Delete
+        //Version 6
+        //DeletePersonHoldAsync
+
+        //Example success 
+        [TestMethod]
+        public async Task PersonHoldsController_DeletePersonsActiveHoldsAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PersonHolds" },
+                { "action", "DeletePersonHoldAsync" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personHoldsController.Request.SetRouteData(data);
+            personHoldsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { PersonHoldsPermissionCodes.DeletePersonHold});
+
+            var controllerContext = personHoldsController.ControllerContext;
+            var actionDescriptor = personHoldsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            //var tuple = new Tuple<IEnumerable<Dtos.PersonHold>, int>(personHoldDtoList, 5);
+            personHoldsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personHoldsServiceMock.Setup(s => s.DeletePersonHoldAsync("1234")).Returns(Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
+            await personHoldsController.DeletePersonHoldAsync("1234");
+
+            Object filterObject;
+            personHoldsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(PersonHoldsPermissionCodes.DeletePersonHold));
+
+        }
+
+        //Example exception
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonHoldsController_DeletePersonsActiveHoldsAsync_Exception()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PersonHolds" },
+                { "action", "DeletePersonHoldAsync" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personHoldsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personHoldsController.ControllerContext;
+            var actionDescriptor = personHoldsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                //var tuple = new Tuple<IEnumerable<Dtos.PersonHold>, int>(personHoldDtoList, 5);
+                personHoldsServiceMock.Setup(s => s.CreatePersonHoldAsync(It.IsAny<Dtos.PersonHold>())).ThrowsAsync(new Exception());
+                personHoldsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to delete person-holds."));
+                await personHoldsController.DeletePersonHoldAsync("1234");
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        [TestMethod]
+        public async Task PersonHoldsController_DeletePersonsActiveHoldsAsync_Invalid_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PersonHolds" },
+                { "action", "DeletePersonHoldsAsync" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personHoldsController.Request.SetRouteData(data);
+            personHoldsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { PersonHoldsPermissionCodes.DeletePersonHold});
+
+            var controllerContext = personHoldsController.ControllerContext;
+            var actionDescriptor = personHoldsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.PersonHold>, int>(personHoldDtoList, 5);
+            personHoldsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                   .Returns(true);
+            personHoldsServiceMock.Setup(s => s.GetPersonHoldsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            await personHoldsController.DeletePersonHoldAsync("1234");
+
+            Object filterObject;
+            personHoldsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(PersonHoldsPermissionCodes.DeletePersonHold));
+
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonHoldsController_DeletePersonsActiveHoldsAsync_No_Permission()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "PersonHolds" },
+                { "action", "DeletePersonHoldsAsync" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personHoldsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personHoldsController.ControllerContext;
+            var actionDescriptor = personHoldsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.PersonHold>, int>(personHoldDtoList, 5);
+
+                personHoldsServiceMock.Setup(s => s.GetPersonHoldsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+                personHoldsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User is not authorized to delete person-holds."));
+                await personHoldsController.DeletePersonHoldAsync("1234");
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
         [TestMethod]
         public async Task PersonHoldsController_DeletePersonHoldAsync_HttpResponseMessage()
         {

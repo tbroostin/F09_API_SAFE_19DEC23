@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Entities;
@@ -102,7 +102,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 studentAttendanceRepositoryMock.Setup(repository => repository.GetStudentSectionAttendancesAsync("0000123", new List<string>() {"1", "2", "3" })).Returns(Task.FromResult(studentAttendancesDataFor2Section));
 
                 //mock attendance as null
-                studentAttendanceRepositoryMock.Setup(repository => repository.GetStudentSectionAttendancesAsync("0000123", new List<string>() { "SEC1" })).ReturnsAsync(null);
+                studentAttendanceRepositoryMock.Setup(repository => repository.GetStudentSectionAttendancesAsync("0000123", new List<string>() { "SEC1" })).ReturnsAsync(() => null);
 
                 //mock empty attendance
                 studentAttendanceRepositoryMock.Setup(repository => repository.GetStudentSectionAttendancesAsync("0000123", new List<string>() { "SEC2" })).Returns(Task.FromResult(studentAttendancesDataForNoKeys));

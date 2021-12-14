@@ -1,17 +1,22 @@
 ﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -110,6 +115,86 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.AreEqual(expected.Id, actual.Id);
             }
 
+        }
+
+        [TestMethod]
+        public async Task StudentCourseTransfersController_GetStudentCourseTransfers_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "StudentCourseTransfersController" },
+                { "action", "GetStudentCourseTransfers2" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentCourseTransfersController.Request.SetRouteData(data);
+            studentCourseTransfersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentCourseTransfers });
+
+            var controllerContext = studentCourseTransfersController.ControllerContext;
+            var actionDescriptor = studentCourseTransfersController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.StudentCourseTransfer>, int>(studentCourseTransfersCollection, 5);
+            studentCourseTransfersServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                   .Returns(true);
+            studentCourseTransfersServiceMock.Setup(s => s.GetStudentCourseTransfersAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            var resp = await studentCourseTransfersController.GetStudentCourseTransfersAsync(new Paging(10, 0));
+
+            Object filterObject;
+            studentCourseTransfersController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentCourseTransfers));
+
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentCourseTransfersController_GetStudentCourseTransfers_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "StudentCourseTransfersController" },
+                { "action", "GetStudentCourseTransfers2" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentCourseTransfersController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = studentCourseTransfersController.ControllerContext;
+            var actionDescriptor = studentCourseTransfersController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.StudentCourseTransfer>, int>(studentCourseTransfersCollection, 5);
+
+                studentCourseTransfersServiceMock.Setup(s => s.GetStudentCourseTransfersAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+                studentCourseTransfersServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                     .Throws(new PermissionsException("User is not authorized to view person-holds."));
+                var resp = await studentCourseTransfersController.GetStudentCourseTransfersAsync(new Paging(10, 0));
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
         }
 
         [TestMethod]
@@ -359,6 +444,86 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.AreEqual(expected.Id, actual.Id);
             }
 
+        }
+
+        [TestMethod]
+        public async Task StudentCourseTransfersController_GetStudentCourseTransfers2_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "StudentCourseTransfersController" },
+                { "action", "GetStudentCourseTransfers2" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentCourseTransfersController.Request.SetRouteData(data);
+            studentCourseTransfersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentCourseTransfers });
+
+            var controllerContext = studentCourseTransfersController.ControllerContext;
+            var actionDescriptor = studentCourseTransfersController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.StudentCourseTransfer>, int>(studentCourseTransfersCollection, 5);
+            studentCourseTransfersServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                   .Returns(true);
+            studentCourseTransfersServiceMock.Setup(s => s.GetStudentCourseTransfers2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            var resp = await studentCourseTransfersController.GetStudentCourseTransfers2Async(new Paging(10, 0));
+
+            Object filterObject;
+            studentCourseTransfersController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentCourseTransfers));
+            
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentCourseTransfersController_GetStudentCourseTransfers2_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "StudentCourseTransfersController" },
+                { "action", "GetStudentCourseTransfers2" }
+            };
+            HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentCourseTransfersController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = studentCourseTransfersController.ControllerContext;
+            var actionDescriptor = studentCourseTransfersController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.StudentCourseTransfer>, int>(studentCourseTransfersCollection, 5);
+
+               studentCourseTransfersServiceMock.Setup(s => s.GetStudentCourseTransfers2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+               studentCourseTransfersServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User is not authorized to view person-holds."));
+                var resp = await studentCourseTransfersController.GetStudentCourseTransfers2Async(new Paging(10, 0));
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
         }
 
         [TestMethod]

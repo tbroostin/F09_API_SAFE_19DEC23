@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -69,6 +69,39 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public bool LockMidtermGradingWhenComplete { get; set; }
 
         /// <summary>
+        /// When true, do not allow faculty users to drop students who do not have a Last Date Attended and have not been flagged as never attending a course section.
+        /// </summary>
+        public bool RequireLastDateAttendedOrNeverAttendedFlagBeforeFacultyDrop { get; set; }
+
+        /// <summary>
+        /// Determines if and/or how the Last Date Attended / Never Attended field will be displayed for Final Grading in Colleague Self-Service
+        /// </summary>
+        public LastDateAttendedNeverAttendedFieldDisplayType FinalGradesLastDateAttendedNeverAttendedDisplayBehavior { get; set; }
+
+        /// <summary>
+        /// Determines if and/or how the Last Date Attended / Never Attended field will be displayed for Midterm Grading in Colleague Self-Service
+        /// </summary>
+        public LastDateAttendedNeverAttendedFieldDisplayType MidtermGradesLastDateAttendedNeverAttendedDisplayBehavior { get; set; }
+
+        /// <summary>
+        /// When true, display Pass/Audit column in Roster tab of Faculty
+        /// </summary>
+        public bool ShowPassAudit { get; set; }
+
+        /// <summary>
+        /// When true, display Repeated column in Roster tab of Faculty
+        /// </summary>
+        public bool ShowRepeated { get; set; }
+        /// <summary>
+        /// Deteermines if faculty is allowed to provide midterm or final grades to dropped or withdrawn students.
+        /// </summary>
+        public bool IsGradingAllowedForDroppedWithdrawnStudents { get; set; }
+        /// <summary>
+        /// Determines if faculty is allowed to provide midterm or final grades to students who never attended the class.
+        /// </summary>
+        public bool IsGradingAllowedForNeverAttendedStudents { get; set; }
+
+        /// <summary>
         /// Constructor for GraduationConfiguration
         /// </summary>
         public FacultyGradingConfiguration()
@@ -79,8 +112,18 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             LimitMidtermGradingToAllowedTerms = false;
             ProvideMidtermGradingCompleteFeature = false;
             LockMidtermGradingWhenComplete = false;
+            FinalGradesLastDateAttendedNeverAttendedDisplayBehavior = LastDateAttendedNeverAttendedFieldDisplayType.Editable;
+            MidtermGradesLastDateAttendedNeverAttendedDisplayBehavior = LastDateAttendedNeverAttendedFieldDisplayType.Editable;
+            ShowPassAudit = false;
+            ShowRepeated = false;
+            IsGradingAllowedForDroppedWithdrawnStudents = true; //default is allowed
+            IsGradingAllowedForNeverAttendedStudents = true; //default is allowed
         }
 
+        /// <summary>
+        /// Adds a grading term
+        /// </summary>
+        /// <param name="gradingTermCode">Term code for the grading term to add</param>
         public void AddGradingTerm(string gradingTermCode)
         {
             if (string.IsNullOrEmpty(gradingTermCode))

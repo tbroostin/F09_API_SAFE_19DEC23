@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -18,6 +18,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Domain.Base.Transactions;
 
 namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 {
@@ -95,7 +96,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             //[TestMethod]
             //public async Task ExternalEmploymentRepository_GetExternalEmploymentsAsync_NullResults()
             //{
-            //    dataAccessorMock.Setup(repo => repo.SelectAsync("EMPLOYMT", string.Empty)).ReturnsAsync(null);
+            //    dataAccessorMock.Setup(repo => repo.SelectAsync("EMPLOYMT", string.Empty)).ReturnsAsync(() => null);
             //    var results = await externalEmploymentRepository.GetExternalEmploymentsAsync(offset, limit);
             //    Assert.IsNull(results.Item1);
             //}
@@ -119,7 +120,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [ExpectedException(typeof(Exception))]
             public async Task ExternalEmploymentRepository_GetExternalEmploymentsAsync_Exception()
             {
-                dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.Employmt>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
+                dataAccessorMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.Employmt>("EMPLOYMT", It.IsAny<string[]>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
                 var results = await externalEmploymentRepository.GetExternalEmploymentsAsync(offset, limit);
             }
 
@@ -139,7 +140,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             //public async Task ExternalEmploymentRepository_GetExternalEmploymentByIdAsync_EmploymtRecordNull_KeyNotFoundException()
             //{
             //    dataAccessorMock.Setup(i => i.ReadRecordAsync<DataContracts.Employmt>(It.IsAny<string>(), It.IsAny<bool>()))
-            //        .ReturnsAsync(null);
+            //        .ReturnsAsync(() => null);
             //    var results = await externalEmploymentRepository.GetExternalEmploymentsByGuidAsync(guid);
             //}
 
@@ -242,6 +243,15 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.Employmt>(ids, It.IsAny<bool>())).ReturnsAsync(records);
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.Employmt>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(records);
 
+                var invalidRecords = new Dictionary<string, string>();
+                var results = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.Employmt>()
+                {
+                    BulkRecordsRead = new Collection<Employmt>() { records[0], records[1] },
+                    InvalidRecords = invalidRecords,
+                    InvalidKeys = new string[] { }
+                };
+                dataAccessorMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.Employmt > ("EMPLOYMT", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(results);
+                
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                  x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
                  .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
@@ -256,6 +266,44 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                     }
                     return Task.FromResult(result);
                 });
+
+                // Set up transaction manager for mocking 
+                var transManagerMock = new Mock<IColleagueTransactionInvoker>();
+
+                string[] requestedIds1 = { "1", "2" };
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 100,
+                    CacheName = "AllExternalEmploymentsRecordKeys",
+                    Entity = "EMPLOYMT",
+                    Sublist = requestedIds1.ToList(),
+                    TotalCount = 2,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+               {
+                   new KeyCacheInfo()
+                   {
+                       KeyCacheMax = 5905,
+                       KeyCacheMin = 1,
+                       KeyCachePart = "000",
+                       KeyCacheSize = 5905
+                   },
+                   new KeyCacheInfo()
+                   {
+                       KeyCacheMax = 7625,
+                       KeyCacheMin = 5906,
+                       KeyCachePart = "001",
+                       KeyCacheSize = 1720
+                   }
+               }
+                };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
+                var transManager = transManagerMock.Object;
+                // Set up transManagerMock as the object for the transaction manager
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager);
 
                 // Build  repository
                 externalEmploymentRepository = new ExternalEmploymentsRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);

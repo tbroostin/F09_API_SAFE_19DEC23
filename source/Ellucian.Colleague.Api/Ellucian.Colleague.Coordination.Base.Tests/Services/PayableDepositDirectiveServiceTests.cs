@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Adapters;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base;
@@ -170,7 +170,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             public async Task NullDomainObjectReturnsEmptyListTest()
             {
                 payableDepositDirectiveRepositoryMock.Setup(r => r.GetPayableDepositDirectivesAsync(It.IsAny<string>(), It.IsAny<string>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 Assert.IsNotNull(await Actual());
                 Assert.IsTrue(!(await Actual()).Any());
@@ -217,7 +217,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             public async Task RepositoryReturnsNullListTest()
             {
                 payableDepositDirectiveRepositoryMock.Setup(r => r.GetPayableDepositDirectivesAsync(It.IsAny<string>(), It.IsAny<string>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 await Actual();
             }
@@ -344,7 +344,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             public async Task CreateRepositoryMethodReturnsNullTest()
             {
                 payableDepositDirectiveRepositoryMock.Setup(r => r.CreatePayableDepositDirectiveAsync(It.IsAny<Domain.Base.Entities.PayableDepositDirective>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 await Actual();
 
@@ -440,7 +440,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             public async Task RepositoryReturnsNullListTest()
             {
                 payableDepositDirectiveRepositoryMock.Setup(r => r.GetPayableDepositDirectivesAsync(It.IsAny<string>(), It.IsAny<string>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 await Actual();
             }
@@ -503,7 +503,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             public async Task RepositoryUpdateMethodReturnsNullTest()
             {
                 payableDepositDirectiveRepositoryMock.Setup(r => r.UpdatePayableDepositDirectiveAsync(It.IsAny<Domain.Base.Entities.PayableDepositDirective>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 await Actual();
 

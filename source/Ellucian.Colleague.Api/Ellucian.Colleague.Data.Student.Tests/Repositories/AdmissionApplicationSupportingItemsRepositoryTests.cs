@@ -172,7 +172,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task GetAdmissionApplicationSupportingItemsIdFromGuidAsync_Returns_Dictionary_Null()
             {
-                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
                 await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsIdFromGuidAsync(guid);
             }
 
@@ -226,7 +226,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task GetAdmissionApplicationSupportingItemsByIdAsync_Application_KeyNotFoundException()
             {
-                dataReaderMock.Setup(d => d.ReadRecordAsync<Applications>(It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.ReadRecordAsync<Applications>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsByIdAsync(guid, "1", "1", DateTime.Today, "1");
             }
 
@@ -234,7 +234,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task GetAdmissionApplicationSupportingItemsByIdAsync_MailingId_KeyNotFoundException()
             {
-                dataReaderMock.Setup(d => d.ReadRecordAsync<Mailing>(It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.ReadRecordAsync<Mailing>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsByIdAsync(guid, "1", "1", DateTime.Today, "1");
             }
 
@@ -266,7 +266,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task GetAdmissionApplicationSupportingItemsByIdAsync_CoreStatuses_Empty()
             {
                 var dateInput = DateTime.Today;
-                dataReaderMock.Setup(d => d.ReadRecordAsync<ApplValcodes>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.ReadRecordAsync<ApplValcodes>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsByIdAsync(guid, "1", "1", dateInput, "1");
             }
 
@@ -309,7 +309,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task GetAdmissionApplicationSupportingItemsAsync_Returns_MailingSubList_Null()
             {
-                dataReaderMock.Setup(d => d.SelectAsync("APPLICATIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.SelectAsync("APPLICATIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(() => null);
                 var result = await admissionApplicationSupportingItemsRepository.GetAdmissionApplicationSupportingItemsAsync(0, 2);
 
                 Assert.IsNotNull(result);

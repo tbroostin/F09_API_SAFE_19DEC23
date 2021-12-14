@@ -238,7 +238,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [ExpectedException(typeof(PermissionsException))]
         public async Task ReceiveProcurementsService_GetReceiveProcurementsByPersonIdAsync_NoStffRecord()
         {
-            staffRepositoryMock.Setup(s => s.GetAsync(It.IsAny<string>())).ReturnsAsync(null);
+            staffRepositoryMock.Setup(s => s.GetAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             await receiveProcurementsService.GetReceiveProcurementsByPersonIdAsync(personId);
         }
 
@@ -259,7 +259,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [TestMethod]
         public async Task ReceiveProcurementsService_GetReceiveProcurementsByPersonIdAsync_NullResult()
         {
-            receiveProcurementsRepositoryMock.Setup(r => r.GetReceiveProcurementsByPersonIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+            receiveProcurementsRepositoryMock.Setup(r => r.GetReceiveProcurementsByPersonIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             await receiveProcurementsService.GetReceiveProcurementsByPersonIdAsync(personId);
         }
 
@@ -340,7 +340,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [ExpectedException(typeof(PermissionsException))]
         public async Task ReceiveProcurementsService_AcceptOrReturnProcurementItemsAsync_NoStffRecord()
         {
-            staffRepositoryMock.Setup(s => s.GetAsync(It.IsAny<string>())).ReturnsAsync(null);
+            staffRepositoryMock.Setup(s => s.GetAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             await receiveProcurementsService.AcceptOrReturnProcurementItemsAsync(procurementAcceptReturnItemInformationRequestDto);
         }
 

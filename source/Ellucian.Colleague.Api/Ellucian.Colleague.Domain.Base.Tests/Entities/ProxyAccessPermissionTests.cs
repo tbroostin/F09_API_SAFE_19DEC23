@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -29,21 +29,21 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         [TestMethod]
         public void ProxyAccessPermission_Constructor_NullId()
         {
-            var result = new ProxyAccessPermission(null, proxySubjectId, proxyUserId, workflowId, dateGranted);
+            var result = new ProxyAccessPermission(null, proxySubjectId, proxyUserId, workflowId, dateGranted, tomorrow);
             Assert.IsNull(result.Id);
         }
 
         [TestMethod]
         public void ProxyAccessPermission_Constructor_EmptyId()
         {
-            var result = new ProxyAccessPermission(string.Empty, proxySubjectId, proxyUserId, workflowId, dateGranted);
+            var result = new ProxyAccessPermission(string.Empty, proxySubjectId, proxyUserId, workflowId, dateGranted, tomorrow);
             Assert.AreEqual(string.Empty, result.Id);
         }
 
         [TestMethod]
         public void ProxyAccessPermission_Constructor_Id()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, dateGranted);
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, dateGranted, tomorrow);
             Assert.AreEqual(id, result.Id);
         }
 
@@ -51,7 +51,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         [ExpectedException(typeof(InvalidOperationException))]
         public void ProxyAccessPermission_Constructor_Id_InvalidChange()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, dateGranted);
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, dateGranted, tomorrow);
             result.Id = null;
         }
 
@@ -59,20 +59,20 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         [ExpectedException(typeof(ArgumentNullException))]
         public void ProxyAccessPermission_Constructor_NullProxySubjectId()
         {
-            var result = new ProxyAccessPermission(id, null, proxyUserId, workflowId, dateGranted);
+            var result = new ProxyAccessPermission(id, null, proxyUserId, workflowId, dateGranted, tomorrow);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void ProxyAccessPermission_Constructor_EmptyProxySubjectId()
         {
-            var result = new ProxyAccessPermission(id, string.Empty, proxyUserId, workflowId, dateGranted);
+            var result = new ProxyAccessPermission(id, string.Empty, proxyUserId, workflowId, dateGranted, tomorrow);
         }
 
         [TestMethod]
         public void ProxyAccessPermission_Constructor_ValidProxySubjectId()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, dateGranted);
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, dateGranted, tomorrow);
             Assert.AreEqual(proxyUserId, result.ProxyUserId);
         }
 
@@ -80,20 +80,20 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         [ExpectedException(typeof(ArgumentNullException))]
         public void ProxyAccessPermission_Constructor_NullProxyUserId()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, null, workflowId, dateGranted);
+            var result = new ProxyAccessPermission(id, proxySubjectId, null, workflowId, dateGranted, tomorrow);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void ProxyAccessPermission_Constructor_EmptyProxyUserId()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, string.Empty, workflowId, dateGranted);
+            var result = new ProxyAccessPermission(id, proxySubjectId, string.Empty, workflowId, dateGranted, tomorrow);
         }
 
         [TestMethod]
         public void ProxyAccessPermission_Constructor_ValidProxyUserId()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, dateGranted);
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, dateGranted, tomorrow);
             Assert.AreEqual(proxyUserId, result.ProxyUserId);
         }
 
@@ -101,20 +101,20 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         [ExpectedException(typeof(ArgumentNullException))]
         public void ProxyAccessPermission_Constructor_NullWorkflowId()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, null, dateGranted);
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, null, dateGranted, tomorrow);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void ProxyAccessPermission_Constructor_EmptyWorkflowId()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, string.Empty, dateGranted);
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, string.Empty, dateGranted, tomorrow);
         }
 
         [TestMethod]
         public void ProxyAccessPermission_Constructor_ValidWorkflowId()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, dateGranted);
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, dateGranted, tomorrow);
             Assert.AreEqual(workflowId, result.ProxyWorkflowCode);
         }
 
@@ -122,20 +122,20 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         [ExpectedException(typeof(ArgumentNullException))]
         public void ProxyAccessPermission_Constructor_DateGrantedInvalid()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, DateTime.MinValue);
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, DateTime.MinValue, tomorrow);
         }
 
         [TestMethod]
         public void ProxyAccessPermission_Constructor_DateGrantedValid()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, dateGranted);
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, dateGranted, tomorrow);
             Assert.AreEqual(dateGranted, result.StartDate);
         }
 
         [TestMethod]
         public void ProxyAccessPermission_Id_SetValueNull()
         {
-            var result = new ProxyAccessPermission(null, proxySubjectId, proxyUserId, workflowId, dateGranted);
+            var result = new ProxyAccessPermission(null, proxySubjectId, proxyUserId, workflowId, dateGranted, tomorrow);
             result.Id = null;
             Assert.IsNull(result.Id);
         }
@@ -143,7 +143,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         [TestMethod]
         public void ProxyAccessPermission_Id_SetValueEmpty()
         {
-            var result = new ProxyAccessPermission(null, proxySubjectId, proxyUserId, workflowId, dateGranted);
+            var result = new ProxyAccessPermission(null, proxySubjectId, proxyUserId, workflowId, dateGranted, tomorrow);
             result.Id = string.Empty;
             Assert.IsNull(result.Id);
         }
@@ -151,7 +151,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         [TestMethod]
         public void ProxyAccessPermission_Id_SetValueValid()
         {
-            var result = new ProxyAccessPermission(null, proxySubjectId, proxyUserId, workflowId, dateGranted);
+            var result = new ProxyAccessPermission(null, proxySubjectId, proxyUserId, workflowId, dateGranted, tomorrow);
             result.Id = id;
             Assert.AreEqual(id, result.Id);
         }
@@ -160,7 +160,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         [ExpectedException(typeof(InvalidOperationException))]
         public void ProxyAccessPermission_Id_SetValueInvalid()
         {
-            var result = new ProxyAccessPermission(null, proxySubjectId, proxyUserId, workflowId, dateGranted);
+            var result = new ProxyAccessPermission(null, proxySubjectId, proxyUserId, workflowId, dateGranted, tomorrow);
             result.Id = id;
             result.Id = null;
         }
@@ -168,14 +168,14 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         [TestMethod]
         public void ProxyAccessPermission_EffectiveDate_NoEndDate()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, yesterday);
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, yesterday, null);
             Assert.AreEqual(yesterday, result.EffectiveDate);
         }
 
         [TestMethod]
         public void ProxyAccessPermission_EffectiveDate_EndDateIsPast()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, yesterday.AddDays(-3));
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, yesterday.AddDays(-3), yesterday);
             result.EndDate = yesterday;
             Assert.AreEqual(yesterday, result.EffectiveDate);
         }
@@ -183,7 +183,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         [TestMethod]
         public void ProxyAccessPermission_EffectiveDate_EndDateIsToday()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, yesterday);
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, yesterday, DateTime.Today);
             result.EndDate = DateTime.Today;
             Assert.AreEqual(DateTime.Today, result.EffectiveDate);
         }
@@ -191,7 +191,7 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         [TestMethod]
         public void ProxyAccessPermission_EffectiveDate_EndDateIsFuture()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, yesterday);
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, yesterday, tomorrow);
             result.EndDate = tomorrow;
             Assert.AreEqual(yesterday, result.EffectiveDate);
         }
@@ -199,23 +199,42 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         [TestMethod]
         public void ProxyAccessPermission_IsGranted_EndDateIsPast()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, yesterday);
-            result.EndDate = yesterday;
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, yesterday, yesterday);         
             Assert.IsFalse(result.IsGranted);
         }
 
         [TestMethod]
         public void ProxyAccessPermission_IsGranted_EndDateIsToday()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, yesterday);
-            result.EndDate = dateGranted;
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, yesterday, DateTime.Today);            
             Assert.IsFalse(result.IsGranted);
+        }
+
+        [TestMethod]
+        public void ProxyAccessPermission_EmployeeProxy_IsGranted_EndDateIsNull()
+        {
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, yesterday, null, true);          
+            Assert.IsTrue(result.IsGranted);
+        }
+
+        [TestMethod]
+        public void ProxyAccessPermission_EmployeeProxy_IsGranted_EndDateIsToday()
+        {
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, yesterday, DateTime.Today, true);            
+            Assert.IsFalse(result.IsGranted);
+        }
+
+        [TestMethod]
+        public void ProxyAccessPermission_EmployeeProxy_IsGranted_EndDateIsInFuture()
+        {
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, yesterday, DateTime.Today.AddDays(1), true);
+            Assert.IsTrue(result.IsGranted);
         }
 
         [TestMethod]
         public void ProxyAccessPermission_IsGranted_EndDateIsFuture()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, yesterday);
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, yesterday, tomorrow);
             result.EndDate = tomorrow;
             Assert.IsTrue(result.IsGranted);
         }
@@ -223,21 +242,21 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         [TestMethod]
         public void ProxyAccessPermission_IsGranted_StartDateIsPast()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, yesterday);
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, yesterday, tomorrow);
             Assert.IsTrue(result.IsGranted);
         }
 
         [TestMethod]
         public void ProxyAccessPermission_IsGranted_StartDateIsToday()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, dateGranted);
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, dateGranted, tomorrow);
             Assert.IsTrue(result.IsGranted);
         }
 
         [TestMethod]
         public void ProxyAccessPermission_IsGranted_StartDateIsFuture()
         {
-            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, tomorrow);
+            var result = new ProxyAccessPermission(id, proxySubjectId, proxyUserId, workflowId, tomorrow, tomorrow.AddDays(1));
             Assert.IsFalse(result.IsGranted);
         }
     }

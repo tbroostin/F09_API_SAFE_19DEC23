@@ -60,17 +60,27 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             //check for remainder overlaps
             if (payrollDepositDirective.Priority == remainderPriority)
             {
-                var overlapRemainder = PayrollDepositDirectives.Where(d => d.Priority == remainderPriority).FirstOrDefault(existingDirective =>
-                {
-                    var existingEndDate = existingDirective.EndDate ?? DateTime.MaxValue;
-                    var newDirectiveEndDate = payrollDepositDirective.EndDate ?? DateTime.MaxValue;
 
-                    return payrollDepositDirective.StartDate <= existingEndDate && newDirectiveEndDate >= existingDirective.StartDate;
-                });
-
-                if (overlapRemainder != null)
+                var isFutureDelete = false;
+                if (payrollDepositDirective.EndDate.HasValue)
                 {
-                    throw new ArgumentException(string.Format("depositDirective is invalid. cannot overlap with directive {0}", overlapRemainder.Id), "payrollDepositDirective");
+                    // an account is deleted when the end date is before the start date.
+                    isFutureDelete = DateTime.Compare(payrollDepositDirective.StartDate, payrollDepositDirective.EndDate.Value) > 0;
+                }
+                if (!isFutureDelete)
+                {
+                    var overlapRemainder = PayrollDepositDirectives.Where(d => d.Priority == remainderPriority).FirstOrDefault(existingDirective =>
+                    {
+                        var existingEndDate = existingDirective.EndDate ?? DateTime.MaxValue;
+                        var newDirectiveEndDate = payrollDepositDirective.EndDate ?? DateTime.MaxValue;
+
+                        return payrollDepositDirective.StartDate <= existingEndDate && newDirectiveEndDate >= existingDirective.StartDate;
+                    });
+
+                    if (overlapRemainder != null)
+                    {
+                        throw new ArgumentException(string.Format("depositDirective is invalid. cannot overlap with directive {0}", overlapRemainder.Id), "payrollDepositDirective");
+                    }
                 }
             }
 

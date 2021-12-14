@@ -11,12 +11,20 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
     public interface ILeavePlansRepository
     {
         /// <summary>
-        /// Get LeavePlans objects for all LeavePlans bypassing cache and reading directly from the database.
+        /// Using a collection of LEAVPLAN ids, get a dictionary collection of associated guids
         /// </summary>
-        /// <param name="offset">Offset for record index on page reads.</param>
-        /// <param name="limit">Take number of records on page reads.</param>
-        
-        /// <returns>Tuple of LeavePlan Entity objects <see cref="LeavePlan"/> and a count for paging.</returns>
+        /// <param name="leavplanIds">collection of LEAVPLAN ids</param>
+        /// <returns>Dictionary consisting of a LEAVPLAN (key) and guid (value)</returns>
+        Task<Dictionary<string, string>> GetLeavplanGuidsCollectionAsync(IEnumerable<string> leavplanIds);
+       
+            
+       /// <summary>
+       /// Get LeavePlans objects for all LeavePlans bypassing cache and reading directly from the database.
+       /// </summary>
+       /// <param name="offset">Offset for record index on page reads.</param>
+       /// <param name="limit">Take number of records on page reads.</param>
+
+       /// <returns>Tuple of LeavePlan Entity objects <see cref="LeavePlan"/> and a count for paging.</returns>
         Task<Tuple<IEnumerable<LeavePlan>, int>> GetLeavePlansAsync(int offset, int limit, bool bypassCache = false);
 
         /// <summary>

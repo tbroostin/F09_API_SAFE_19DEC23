@@ -234,7 +234,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.InstantEnrollment
             PayerPostalCode = payerPostalCode;
 
             // If there is a convenience fee, there must be a GL number
-            if (convFeeAmount != null && String.IsNullOrEmpty(convFeeGlAccount))
+            if (convFeeAmount != null && convFeeAmount.Value > 0 && String.IsNullOrEmpty(convFeeGlAccount))
             {
                 throw new ArgumentException("A convenience fee requires a corresponding GL account.");
             }

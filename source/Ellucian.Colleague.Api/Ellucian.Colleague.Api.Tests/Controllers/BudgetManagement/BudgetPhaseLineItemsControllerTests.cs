@@ -19,6 +19,11 @@ using slf4net;
 using Ellucian.Web.Http.Models;
 using Ellucian.Colleague.Api.Controllers.BudgetManagement;
 using Ellucian.Colleague.Coordination.BudgetManagement.Services;
+using Ellucian.Colleague.Domain.BudgetManagement;
+using Ellucian.Web.Http.Filters;
+using System.Web.Http.Routing;
+using System.Web.Http.Controllers;
+using System.Collections;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.BudgetManagement
 {
@@ -76,7 +81,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.BudgetManagement
 
             budgetPhaseLineItemsCollectionTuple = new Tuple<IEnumerable<Dtos.BudgetPhaseLineItems>, int>(budgetPhaseLineItemsCollection, budgetPhaseLineItemsCollection.Count);
             budgetPhaseLineItemsServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
-            budgetPhaseLineItemsServiceMock.Setup(s => s.GetExtendedEthosDataByResource(It.IsAny<EthosResourceRouteInfo>(), It.IsAny<IEnumerable<string>>(), It.IsAny<bool>())).ReturnsAsync(new List<EthosExtensibleData>());
+            budgetPhaseLineItemsServiceMock.Setup(s => s.GetExtendedEthosDataByResource(It.IsAny<EthosResourceRouteInfo>(), It.IsAny<IEnumerable<string>>(), It.IsAny<bool>(), It.IsAny<bool>())).ReturnsAsync(new List<EthosExtensibleData>());
             budgetPhaseLineItemsServiceMock.Setup(s => s.GetBudgetPhaseLineItemsByGuidAsync(It.IsAny<string>(), true)).ReturnsAsync(budgetPhaseLineItemsCollection.FirstOrDefault());
         }
 
@@ -90,6 +95,85 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.BudgetManagement
         }
 
         #region GETALL
+        [TestMethod]
+        public async Task BudgetPhaseLineItemsController_GetBudgertPhaseLineItemsAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "BudgetPhaseLineItems" },
+                { "action", "GetBudgetPhaseLineItemsAsync" }
+            };
+            HttpRoute route = new HttpRoute("budget-phase-line-items", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            budgetPhaseLineItemsController.Request.SetRouteData(data);
+            budgetPhaseLineItemsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BudgetManagementPermissionCodes.ViewBudgetPhaseLineItems });
+
+            var controllerContext = budgetPhaseLineItemsController.ControllerContext;
+            var actionDescriptor = budgetPhaseLineItemsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+      
+            budgetPhaseLineItemsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                   .Returns(true);
+            budgetPhaseLineItemsServiceMock.Setup(x => x.GetBudgetPhaseLineItemsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(), false)).ReturnsAsync(budgetPhaseLineItemsCollectionTuple);
+            var resp = await budgetPhaseLineItemsController.GetBudgetPhaseLineItemsAsync(new Paging(10, 0));
+
+            Object filterObject;
+            budgetPhaseLineItemsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BudgetManagementPermissionCodes.ViewBudgetPhaseLineItems));
+           
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task BudgetPhaseLineItemsController_GetBudgetPhaseLineItemsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "BudgetPhaseLineItems" },
+                { "action", "GetBudgetPhaseLineItemsAsync" }
+            };
+            HttpRoute route = new HttpRoute("budget-phase-line-items", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            budgetPhaseLineItemsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = budgetPhaseLineItemsController.ControllerContext;
+            var actionDescriptor = budgetPhaseLineItemsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                budgetPhaseLineItemsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                   .Throws(new PermissionsException("User is not authorized to view budget-phase-line-items."));
+                budgetPhaseLineItemsServiceMock.Setup(x => x.GetBudgetPhaseLineItemsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<List<string>>(), false)).ReturnsAsync(budgetPhaseLineItemsCollectionTuple);
+        
+                var resp = await budgetPhaseLineItemsController.GetBudgetPhaseLineItemsAsync(new Paging(10, 0));
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
 
         [TestMethod]
         public async Task BudgetPhaseLineItemsController_GetAll_ValidateFields_Nocache()

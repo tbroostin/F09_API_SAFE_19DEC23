@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.ComponentModel;
 using System.Net;
@@ -72,6 +72,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <summary>
         /// Gets the proxy configuration
         /// </summary>
+        /// <accessComments>
+        /// Any authenticated user can access the proxy information.
+        /// </accessComments>
         /// <returns>Proxy configuration information.</returns>
         public async Task<ProxyConfiguration> GetProxyConfigurationAsync()
         {

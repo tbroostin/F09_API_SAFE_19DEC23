@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.Base;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
@@ -66,7 +66,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             };
 
             authenticationSchemeServiceMock.Setup(s => s.GetAuthenticationSchemeAsync("colleagueauthuser")).ReturnsAsync(authenticationSchemeColleagueDto);
-            authenticationSchemeServiceMock.Setup(s => s.GetAuthenticationSchemeAsync("nullauthuser")).ReturnsAsync(null);
+            authenticationSchemeServiceMock.Setup(s => s.GetAuthenticationSchemeAsync("nullauthuser")).ReturnsAsync(() => null);
             authenticationSchemeServiceMock.Setup(s => s.GetAuthenticationSchemeAsync("notfounduser")).ThrowsAsync(new ApplicationException());
 
             authenticationSchemeController = new AuthenticationSchemeController(authenticationSchemeService, logger);

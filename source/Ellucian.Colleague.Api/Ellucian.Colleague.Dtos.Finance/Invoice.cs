@@ -60,6 +60,11 @@ namespace Ellucian.Colleague.Dtos.Finance
         public DateTime DueDate { get; set; }
 
         /// <summary>
+        /// The due date offset by CTZS
+        /// </summary>
+        public DateTimeOffset? DueDateOffset { get; set; }
+
+        /// <summary>
         /// List of Charges associated with the invoice
         /// </summary>
         public List<Charge> Charges { get; set; }

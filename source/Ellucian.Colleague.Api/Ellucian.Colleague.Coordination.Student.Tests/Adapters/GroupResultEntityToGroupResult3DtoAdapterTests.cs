@@ -48,11 +48,11 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
             groupResultEntity.Explanations.Add(Ellucian.Colleague.Domain.Student.Entities.Requirements.GroupExplanation.MinGpa);
             groupResultEntity.Explanations.Add(Ellucian.Colleague.Domain.Student.Entities.Requirements.GroupExplanation.MinInstCredits);
 
-            AcademicCredit ac = tacr.GetAsync("1").Result;
+            Domain.Student.Entities.AcademicCredit ac = tacr.GetAsync("1").Result;
             Ellucian.Colleague.Domain.Student.Entities.Requirements.AcadResult ar = new Ellucian.Colleague.Domain.Student.Entities.Requirements.CreditResult(ac) { Result = Ellucian.Colleague.Domain.Student.Entities.Requirements.Result.Applied };
             groupResultEntity.Results.Add(ar);
 
-            AcademicCredit ac1 = tacr.GetAsync("2").Result;
+            Domain.Student.Entities.AcademicCredit ac1 = tacr.GetAsync("2").Result;
             Ellucian.Colleague.Domain.Student.Entities.Requirements.AcadResult ar1 = new Ellucian.Colleague.Domain.Student.Entities.Requirements.CreditResult(ac1) { Result = Ellucian.Colleague.Domain.Student.Entities.Requirements.Result.ReplacedWithGPAValues };
             groupResultEntity.Results.Add(ar1);
 
@@ -131,11 +131,11 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
             groupResultEntity.Explanations.Add(Ellucian.Colleague.Domain.Student.Entities.Requirements.GroupExplanation.MinGpa);
             groupResultEntity.Explanations.Add(Ellucian.Colleague.Domain.Student.Entities.Requirements.GroupExplanation.MinInstCredits);
 
-            AcademicCredit ac = tacr.GetAsync("1").Result;
+            Domain.Student.Entities.AcademicCredit ac = tacr.GetAsync("1").Result;
             Ellucian.Colleague.Domain.Student.Entities.Requirements.AcadResult ar = new Ellucian.Colleague.Domain.Student.Entities.Requirements.CreditResult(ac) { Result = Ellucian.Colleague.Domain.Student.Entities.Requirements.Result.Applied };
             groupResultEntity.Results.Add(ar);
 
-            AcademicCredit ac1 = tacr.GetAsync("2").Result;
+            Domain.Student.Entities.AcademicCredit ac1 = tacr.GetAsync("2").Result;
             Ellucian.Colleague.Domain.Student.Entities.Requirements.AcadResult ar1 = new Ellucian.Colleague.Domain.Student.Entities.Requirements.CreditResult(ac1) { Result = Ellucian.Colleague.Domain.Student.Entities.Requirements.Result.ReplacedWithGPAValues };
             groupResultEntity.Results.Add(ar1);
 
@@ -167,12 +167,14 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
             Assert.AreEqual(groupResultDto.MinGroupStatus, GroupResultMinGroupStatus.None);
             Assert.IsNotNull(groupResultDto.RelatedAcademicCredits);
             Assert.AreEqual(0, groupResultDto.RelatedAcademicCredits.Count);
+            Assert.IsNotNull(groupResultDto.RelatedPlannedCredits);
+            Assert.AreEqual(0, groupResultDto.RelatedPlannedCredits.Count);
         }
 
         [TestMethod]
         public void GroupResultAdapter_With_NonEmptyRelatedCourses()
         {
-            AcademicCredit ac = tacr.GetAsync("3").Result;
+            Domain.Student.Entities.AcademicCredit ac = tacr.GetAsync("3").Result;
             Ellucian.Colleague.Domain.Student.Entities.Requirements.AcadResult ar = new Ellucian.Colleague.Domain.Student.Entities.Requirements.CreditResult(ac) { Result = Ellucian.Colleague.Domain.Student.Entities.Requirements.Result.MaxCourses };
             groupResultEntity.Results.Add(ar);
             groupResultDto = adapter.MapToType(groupResultEntity);
@@ -193,11 +195,13 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
             Assert.AreEqual(1, groupResultDto.RelatedAcademicCredits.Count);
             Assert.AreEqual("3", groupResultDto.RelatedAcademicCredits[0].AcademicCreditId);
             Assert.AreEqual(AcadResultExplanation.None, groupResultDto.RelatedAcademicCredits[0].Explanation);
+            Assert.IsNotNull(groupResultDto.RelatedPlannedCredits);
+            Assert.AreEqual(0, groupResultDto.RelatedPlannedCredits.Count);
         }
         [TestMethod]
         public void GroupResultAdapter_NonEmptyRelatedCourses_With_Extra_Notation()
         {
-            AcademicCredit ac = tacr.GetAsync("3").Result;
+            Domain.Student.Entities.AcademicCredit ac = tacr.GetAsync("3").Result;
             Ellucian.Colleague.Domain.Student.Entities.Requirements.AcadResult ar = new Ellucian.Colleague.Domain.Student.Entities.Requirements.CreditResult(ac) { Result = Ellucian.Colleague.Domain.Student.Entities.Requirements.Result.MaxCourses };
             ar.Explanation = Domain.Student.Entities.Requirements.AcadResultExplanation.Extra;
             groupResultEntity.Results.Add(ar);
@@ -219,11 +223,13 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
             Assert.AreEqual(1, groupResultDto.RelatedAcademicCredits.Count);
             Assert.AreEqual("3", groupResultDto.RelatedAcademicCredits[0].AcademicCreditId);
             Assert.AreEqual(AcadResultExplanation.Extra, groupResultDto.RelatedAcademicCredits[0].Explanation);
+            Assert.IsNotNull(groupResultDto.RelatedPlannedCredits);
+            Assert.AreEqual(0, groupResultDto.RelatedPlannedCredits.Count);
         }
         [TestMethod]
         public void GroupResultAdapter_NonEmptyRelatedCourses_With_MinGrade()
         {
-            AcademicCredit ac = tacr.GetAsync("3").Result;
+            Domain.Student.Entities.AcademicCredit ac = tacr.GetAsync("3").Result;
             Ellucian.Colleague.Domain.Student.Entities.Requirements.AcadResult ar = new Ellucian.Colleague.Domain.Student.Entities.Requirements.CreditResult(ac) { Result = Ellucian.Colleague.Domain.Student.Entities.Requirements.Result.MinGrade };
             ar.Explanation = Domain.Student.Entities.Requirements.AcadResultExplanation.Extra;
             groupResultEntity.Results.Add(ar);
@@ -245,8 +251,38 @@ namespace Ellucian.Colleague.Coordination.Student.Adapters
             Assert.AreEqual(1, groupResultDto.RelatedAcademicCredits.Count);
             Assert.AreEqual("3", groupResultDto.RelatedAcademicCredits[0].AcademicCreditId);
             Assert.AreEqual(AcadResultExplanation.MinGrade, groupResultDto.RelatedAcademicCredits[0].Explanation);
+            Assert.IsNotNull(groupResultDto.RelatedPlannedCredits);
+            Assert.AreEqual(0, groupResultDto.RelatedPlannedCredits.Count);
         }
 
+        [TestMethod]
+        public void GroupResultAdapter_NonEmptyRelatedCourses_PlannedCourses_ThatAreRepeated()
+        {
+            co = tcr.GetAsync("110").Result;
+            termCode = "2015/FA";
+            Ellucian.Colleague.Domain.Student.Entities.Requirements.AcadResult ar2 = new Ellucian.Colleague.Domain.Student.Entities.Requirements.CourseResult(new Ellucian.Colleague.Domain.Student.Entities.Requirements.PlannedCredit(co, "2015/FA") {ReplacedStatus=ReplacedStatus.ReplaceInProgress }) { Result = Ellucian.Colleague.Domain.Student.Entities.Requirements.Result.ReplaceInProgress };
+            
+            groupResultEntity.Results.Add(ar2);
+            groupResultDto = adapter.MapToType(groupResultEntity);
+
+            Assert.AreEqual("10000", groupResultDto.GroupId);
+            Assert.IsTrue(groupResultDto.AppliedAcademicCredits.FirstOrDefault(a => a.AcademicCreditId.Contains("1")) != null);
+            Assert.IsTrue(groupResultDto.AppliedPlannedCourses.FirstOrDefault(a => a.CourseId.Contains("139")) != null);
+            Assert.IsTrue(groupResultDto.AcademicCreditIdsIncludedInGPA.Contains("2"));
+            Assert.AreEqual(1, groupResultDto.AppliedPlannedCredits.Count());
+            Assert.AreEqual("2014/FA", groupResultDto.AppliedPlannedCredits.ElementAt(0).TermCode);
+            Assert.AreEqual("139", groupResultDto.AppliedPlannedCredits.ElementAt(0).CourseId);
+            Assert.AreEqual(CompletionStatus.PartiallyCompleted, groupResultDto.CompletionStatus);
+            Assert.AreEqual(PlanningStatus.PartiallyPlanned, groupResultDto.PlanningStatus);
+            Assert.IsTrue(groupResultDto.MinGpaIsNotMet);
+            Assert.IsTrue(groupResultDto.MinInstitutionalCreditsIsNotMet);
+            Assert.AreEqual(groupResultDto.MinGroupStatus, GroupResultMinGroupStatus.None);
+            Assert.IsNotNull(groupResultDto.RelatedPlannedCredits);
+            Assert.AreEqual(1, groupResultDto.RelatedPlannedCredits.Count);
+            Assert.AreEqual("110", groupResultDto.RelatedPlannedCredits[0].CourseId);
+            Assert.AreEqual(Ellucian.Colleague.Dtos.Student.ReplacedStatus.ReplaceInProgress, groupResultDto.RelatedPlannedCredits[0].ReplacedStatus);
+
+        }
     }
 
 }

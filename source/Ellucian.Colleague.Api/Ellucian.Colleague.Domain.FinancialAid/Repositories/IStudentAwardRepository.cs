@@ -53,6 +53,14 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Repositories
         Task<StudentAward> GetStudentAwardAsync(string studentId, StudentAwardYear studentAwardYear, string awardCode, IEnumerable<Award> allAwards, IEnumerable<AwardStatus> allAwardStatuses);
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="studentId"></param>
+        /// <param name="awardYear"></param>
+        /// <returns></returns>
+        Task<IEnumerable<string>> GetCFPVersionAsync(string studentId, string awardYear);
+
+        /// <summary>
         /// Updates student awards with received data
         /// </summary>
         /// <param name="studentAwardYear">student award year awards are associated with</param>

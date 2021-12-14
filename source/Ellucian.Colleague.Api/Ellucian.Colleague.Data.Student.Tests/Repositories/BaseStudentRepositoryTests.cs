@@ -39,7 +39,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task BaseStudentRepository_GetRegistrationConfigurationAsync_null_RegDefaults_returns_RegistrationConfiguration()
             {
-                dataReaderMock.Setup(r => r.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.RegDefaults>("ST.PARMS", "REG.DEFAULTS", It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.RegDefaults>("ST.PARMS", "REG.DEFAULTS", It.IsAny<bool>())).ReturnsAsync(() => null);
                 var data = await _repository.GetRegistrationConfigurationAsync();
                 Assert.AreEqual(false, data.RequireFacultyAddAuthorization);
                 Assert.AreEqual(0, data.AddAuthorizationStartOffsetDays);
@@ -55,7 +55,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task BaseStudentRepository_GetRegistrationConfigurationAsync_null_StwebDefaults_returns_RegistrationConfiguration()
             {
-                dataReaderMock.Setup(r => r.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS", It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS", It.IsAny<bool>())).ReturnsAsync(() => null);
                 var data = await _repository.GetRegistrationConfigurationAsync();
                 Assert.AreEqual(true, data.RequireFacultyAddAuthorization);
                 Assert.AreEqual(2, data.AddAuthorizationStartOffsetDays);

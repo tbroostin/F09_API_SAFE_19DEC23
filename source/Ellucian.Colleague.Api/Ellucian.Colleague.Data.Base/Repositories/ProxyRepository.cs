@@ -1,6 +1,7 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Data.Base.DataContracts;
@@ -51,6 +52,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 async () =>
                 {
                     ProxyConfiguration config;
+
+                    // Get the master data from MAP.PROXY.USER.PERMISSIONS
+                    var proxyAndUserPermissionsMapEntiies = await GetProxyAndUserPermissionsMappingInfoAsync();
+
                     var proxyDefaults = await this.DataReader.ReadRecordAsync<ProxyDefaults>("UT.PARMS", "PROXY.DEFAULTS");
                     // Checks to see if Dflts is using a custom subroutine to format SSN
                     var ldapContextSubroutine = await this.DataReader.ReadRecordAsync<Dflts>("CORE.PARMS", "DEFAULTS");
@@ -61,7 +66,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         throw new ConfigurationException("Proxy setup not complete.");
                     }
 
-                    config = new ProxyConfiguration(proxyDefaults.PrxdProxyEnabled.ToUpperInvariant() == "Y", proxyDefaults.PrxdDisclosureReleaseDoc, proxyDefaults.PrxdProxyEmailDocument, proxyDefaults.PrxdAddNewProxyAllowed.ToUpperInvariant() == "Y", customSubroutine)
+                    config = new ProxyConfiguration(proxyDefaults.PrxdProxyEnabled.ToUpperInvariant() == "Y", proxyDefaults.PrxdDisclosureReleaseDoc, proxyDefaults.PrxdProxyEmailDocument, proxyDefaults.PrxdAddNewProxyAllowed.ToUpperInvariant() == "Y", customSubroutine, proxyAndUserPermissionsMapEntiies)
                     {
                         DisclosureReleaseText = proxyDefaults.PrxdDisclosureReleaseText,
                         AddProxyHeaderText = proxyDefaults.PrxdGrantAccessText,
@@ -93,8 +98,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         }
                     }
 
-
-
                     return config;
                 }, ProxyRepositoryCacheTimeout);
         }
@@ -103,7 +106,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// Posts a user's grants and revocations for proxy access.
         /// </summary>
         /// <param name="assignment">Proxy permission assignment object</param>
-        public async Task<IEnumerable<ProxyAccessPermission>> PostUserProxyPermissionsAsync(ProxyPermissionAssignment assignment)
+        /// <param name="useEmployeeGroups">Optional parameter used to differentiate between employee proxy and person proxy</param>
+        public async Task<IEnumerable<ProxyAccessPermission>> PostUserProxyPermissionsAsync(ProxyPermissionAssignment assignment, bool useEmployeeGroups = false)
         {
             if (assignment == null)
             {
@@ -139,12 +143,28 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             request.DisclosureDocumentText.AddRange(assignment.ProxySubjectApprovalDocumentText);
             foreach (var permission in assignment.Permissions)
             {
-                var proxyPermission = new ProxyPermissions()
+                ProxyPermissions proxyPermission;
+                // Employee proxy specific changes
+                if (useEmployeeGroups)
                 {
-                    ProxyIdentifiers = permission.ProxyUserId,
-                    ProxyPermissionIdentifiers = permission.ProxyWorkflowCode,
-                    ProxyPermissionGrantedIndicators = permission.IsGranted
-                };
+                    proxyPermission = new ProxyPermissions()
+                    {
+                        ProxyIdentifiers = permission.ProxyUserId,
+                        ProxyPermissionIdentifiers = permission.ProxyWorkflowCode,
+                        ProxyPermissionGrantedIndicators = permission.IsGranted,
+                        ProxyPermissionStartDates = DateTime.SpecifyKind(permission.StartDate, DateTimeKind.Unspecified),
+                        ProxyPermissionEndDates = permission.EndDate.HasValue ? DateTime.SpecifyKind(permission.EndDate.Value, DateTimeKind.Unspecified) : permission.EndDate
+                    };
+                }
+                else
+                {
+                    proxyPermission = new ProxyPermissions()
+                    {
+                        ProxyIdentifiers = permission.ProxyUserId,
+                        ProxyPermissionIdentifiers = permission.ProxyWorkflowCode,
+                        ProxyPermissionGrantedIndicators = permission.IsGranted
+                    };
+                }
                 request.ProxyPermissions.Add(proxyPermission);
             }
             request.ReauthorizationIndicator = assignment.IsReauthorizing;
@@ -181,7 +201,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     throw new RepositoryException(message);
                 }
 
-                return BuildProxyPermissions(data);
+                return BuildProxyPermissions(data, useEmployeeGroups);
             }
             catch (Exception ex)
             {
@@ -290,8 +310,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// Gets a collection of proxy access permissions, by user, for the supplied person
         /// </summary>
         /// <param name="id">The identifier of the entity of interest</param>
+        /// <param name="useEmployeeGroups">Optional parameter used to differentiate between employee proxy and person proxy</param>
         /// <returns>A collection of proxy access permissions, by user, for the supplied person</returns>
-        public async Task<IEnumerable<ProxyUser>> GetUserProxyPermissionsAsync(string id)
+        public async Task<IEnumerable<ProxyUser>> GetUserProxyPermissionsAsync(string id, bool useEmployeeGroups = false)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -306,7 +327,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 logger.Error("User " + id + " has not currently granted permissions for proxy access to any users for any workflows.");
                 return proxyUsers;
             }
-            permissions = BuildProxyPermissions(data);
+            permissions = BuildProxyPermissions(data, useEmployeeGroups);
             var proxyUserIds = permissions.Select(p => p.ProxyUserId).Distinct().ToList();
             proxyUserIds.ForEach(userId => proxyUsers.Add(new ProxyUser(userId)));
 
@@ -358,11 +379,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     permissions.Add(new Domain.Base.Entities.ProxyAccessPermission(
                         pa.Recordkey, pa.PracPrincipalWebUser, pa.PracProxyWebUser,
-                        pa.PracProxyAccessPermission, pa.PracBeginDate.GetValueOrDefault())
+                        pa.PracProxyAccessPermission, pa.PracBeginDate.GetValueOrDefault(), pa.PracEndDate)
                     {
                         ApprovalEmailDocumentId = pa.PracProxyApprovalEmail,
-                        DisclosureReleaseDocumentId = pa.PracDisclosureReleaseDoc,
-                        EndDate = pa.PracEndDate,
+                        DisclosureReleaseDocumentId = pa.PracDisclosureReleaseDoc,                       
                         ReauthorizationDate = pa.PracReauthReqDate
                     });
                 }
@@ -383,28 +403,28 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return proxySubjects;
         }
 
-
         #region Private methods
-        private List<ProxyAccessPermission> BuildProxyPermissions(ICollection<ProxyAccess> proxyAccesses)
+        private List<ProxyAccessPermission> BuildProxyPermissions(ICollection<ProxyAccess> proxyAccesses, bool useEmployeeGroups = false)
         {
             var permissions = new List<ProxyAccessPermission>();
             foreach (var pa in proxyAccesses)
             {
                 try
                 {
-                    permissions.Add(new ProxyAccessPermission(pa.Recordkey, pa.PracPrincipalWebUser, pa.PracProxyWebUser, pa.PracProxyAccessPermission, pa.PracBeginDate.GetValueOrDefault())
+                    var permission = new ProxyAccessPermission(pa.Recordkey, pa.PracPrincipalWebUser, pa.PracProxyWebUser, pa.PracProxyAccessPermission, pa.PracBeginDate.GetValueOrDefault(), pa.PracEndDate, useEmployeeGroups)
                     {
                         ApprovalEmailDocumentId = pa.PracProxyApprovalEmail,
                         DisclosureReleaseDocumentId = pa.PracDisclosureReleaseDoc,
-                        EndDate = pa.PracEndDate,
                         ReauthorizationDate = pa.PracReauthReqDate
-                    });
+                    };
+                    permissions.Add(permission);
                 }
                 catch (Exception ex)
                 {
                     LogDataError("PROXY.ACCESS", pa.Recordkey, pa, ex);
                 }
             }
+
             return permissions;
         }
 
@@ -528,6 +548,28 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             result.Suffix = data.PrxcSuffix;
 
             return result;
+        }
+
+        private async Task<List<ProxyAndUserPermissionsMap>> GetProxyAndUserPermissionsMappingInfoAsync()
+        {
+            var proxyAndUserPermissionsMapEnties = new List<ProxyAndUserPermissionsMap>();
+            var proxyAndUserPermissionsMapRecords = new Collection<MapProxyUserPerms>();
+            var ProxyAndUserPermissionsMappingKeys = await DataReader.SelectAsync("MAP.PROXY.USER.PERMS", "");
+            if (ProxyAndUserPermissionsMappingKeys != null && ProxyAndUserPermissionsMappingKeys.Length != 0)
+            {
+                proxyAndUserPermissionsMapRecords = await DataReader.BulkReadRecordAsync<MapProxyUserPerms>(ProxyAndUserPermissionsMappingKeys);
+            }
+            if (proxyAndUserPermissionsMapRecords.Any())
+            {
+                foreach (var proxyAndUserPermissionsMapRecord in proxyAndUserPermissionsMapRecords)
+                {
+                    proxyAndUserPermissionsMapEnties.Add(new ProxyAndUserPermissionsMap(proxyAndUserPermissionsMapRecord.Recordkey,
+                        proxyAndUserPermissionsMapRecord.MpupPermission,
+                        proxyAndUserPermissionsMapRecord.MpupProxyAccessPermission));
+                }
+            }
+
+            return proxyAndUserPermissionsMapEnties;
         }
         #endregion
     }

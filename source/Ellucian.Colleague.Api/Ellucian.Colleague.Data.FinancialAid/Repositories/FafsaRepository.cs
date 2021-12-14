@@ -160,6 +160,112 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="studentId"></param>
+        /// <param name="awardYears"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<ProfileEFC>> GetEfcAsync(string studentId, IEnumerable<StudentAwardYear> awardYears)
+        {
+            if (studentId == null)
+            {
+                logger.Info("No studentIds passed to GetFafsas in FafsaRepository");
+                throw new ArgumentNullException("studentIds");
+            }
+
+            if (awardYears == null || awardYears.Count() == 0)
+            {
+                logger.Info("No awardYears passed to GetFafsas in FafsaRepository");
+                throw new ArgumentNullException("awardYears");
+            }
+
+            var distinctAwardYears = awardYears.Distinct();
+            var profileEfcList = new List<ProfileEFC>();
+            var isirFafsaListProf = new List<IsirFafsa>();
+
+            foreach (var awardYear in distinctAwardYears)
+            {
+                var acyrFile = "CS." + awardYear;
+                var csRecord = await DataReader.ReadRecordAsync<CsAcyr>(acyrFile, studentId);
+                if (csRecord != null)
+                {
+                    if (csRecord != null)
+                    {
+                        if (!string.IsNullOrEmpty(csRecord.CsInstIsirId))
+                        {
+                            var isirFafsas = await DataReader.ReadRecordAsync<IsirFafsa>(csRecord.CsInstIsirId);
+                            if (isirFafsas != null)
+                            {
+                                if (isirFafsas.IfafIsirType == "PROF")
+                                {
+                                    isirFafsaListProf.Add(isirFafsas);
+                                    if (isirFafsaListProf != null && isirFafsaListProf.Any())
+                                    {
+                                        profileEfcList.Add(new ProfileEFC(studentId, awardYear.Code, csRecord.CsInstFc));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return profileEfcList;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="studentId"></param>
+        /// <param name="awardYears"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<ProfileEFC>> GetFafsaEfcAsync(string studentId, IEnumerable<StudentAwardYear> awardYears)
+        {
+            if (studentId == null)
+            {
+                logger.Info("No studentIds passed to GetFafsas in FafsaRepository");
+                throw new ArgumentNullException("studentIds");
+            }
+
+            if (awardYears == null || awardYears.Count() == 0)
+            {
+                logger.Info("No awardYears passed to GetFafsas in FafsaRepository");
+                throw new ArgumentNullException("awardYears");
+            }
+
+            var distinctAwardYears = awardYears.Distinct();
+            var fafsaEfcList = new List<ProfileEFC>();
+            var isirFafsaList = new List<IsirFafsa>();
+
+            foreach (var awardYear in distinctAwardYears)
+            {
+                var acyrFile = "CS." + awardYear;
+                var csRecord = await DataReader.ReadRecordAsync<CsAcyr>(acyrFile, studentId);
+                if (csRecord != null)
+                {
+                    if (csRecord != null)
+                    {
+                        if (!string.IsNullOrEmpty(csRecord.CsFedIsirId))
+                        {
+                            var isirFafsas = await DataReader.ReadRecordAsync<IsirFafsa>(csRecord.CsFedIsirId);
+                            if (isirFafsas != null)
+                            {
+                                if (isirFafsas.IfafIsirType == "ISIR" || isirFafsas.IfafIsirType == "CPSSG")
+                                {
+                                    isirFafsaList.Add(isirFafsas);
+                                    if (isirFafsaList != null && isirFafsaList.Any())
+                                    {
+                                        fafsaEfcList.Add(new ProfileEFC(studentId, awardYear.Code, Convert.ToInt32(csRecord.CsFc)));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return fafsaEfcList;
+        }
+
+        /// <summary>
         /// Helper method to bulk read records using a read size limiter.
         /// </summary>
         /// <typeparam name="T">IColleagueEntity as a DataContract</typeparam>
@@ -213,22 +319,22 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             var csAcyrDictionary = new Dictionary<Tuple<string, string>, CsAcyr>();
             var acyrFile = "CS." + awardYear;
             for (int i = 0; i < studentIds.Count(); i += bulkReadSize)
+            {
+                var subList = studentIds.Skip(i).Take(bulkReadSize).ToArray();
+                var bulkData = await DataReader.BulkReadRecordAsync<CsAcyr>(acyrFile, subList);
+                if (bulkData != null && bulkData.Count > 0)
                 {
-                    var subList = studentIds.Skip(i).Take(bulkReadSize).ToArray();
-                    var bulkData = await DataReader.BulkReadRecordAsync<CsAcyr>(acyrFile, subList);
-                    if (bulkData != null && bulkData.Count > 0)
+                    foreach (var csRecord in bulkData)
                     {
-                        foreach (var csRecord in bulkData)
+                        if (csRecord != null)
                         {
-                            if (csRecord != null)
-                            {
-                                csAcyrDictionary.Add(new Tuple<string, string>(awardYear, csRecord.Recordkey), csRecord);
-                            }
+                            csAcyrDictionary.Add(new Tuple<string, string>(awardYear, csRecord.Recordkey), csRecord);
                         }
                     }
                 }
+            }
             bool error = false;
-            var isirFafsaIds = csAcyrDictionary.Where(c => !string.IsNullOrEmpty(c.Value.CsFedIsirId)).Select(c => c.Value.CsFedIsirId);            
+            var isirFafsaIds = csAcyrDictionary.Where(c => !string.IsNullOrEmpty(c.Value.CsFedIsirId)).Select(c => c.Value.CsFedIsirId);
             if (isirFafsaIds != null && isirFafsaIds.Count() > 0)
             {
                 var allIsirFafsaRecords = await LimitBulkReadAsync<IsirFafsa>(isirFafsaIds.ToArray());
@@ -238,7 +344,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 var allIsirFafsaCorrections = await LimitBulkReadAsync<IsirFafsa>(allCorrectionIds.ToArray());
 
                 if (allIsirFafsaRecords != null && allIsirFafsaRecords.Any())
-                {       
+                {
                     foreach (var studentId in studentIds)
                     {
                         try
@@ -284,7 +390,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                             logger.Error(e.GetBaseException().StackTrace);
                             error = true;
                         }
-                    }                    
+                    }
                 }
             }
             if (error && fafsaDataRecords.Count() == 0)

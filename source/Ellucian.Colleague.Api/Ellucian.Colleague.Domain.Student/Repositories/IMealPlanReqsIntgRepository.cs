@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -13,13 +13,14 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
     /// </summary>
     public interface IMealPlanReqsIntgRepository : IEthosExtended
     {
+
         Task<MealPlanReqsIntg> GetByIdAsync(string id);
 
         Task<Tuple<IEnumerable<MealPlanReqsIntg>, int>> GetAsync(int offset, int limit, bool bypassCache);
 
-       Task<MealPlanReqsIntg> UpdateMealPlanReqsIntgAsync(MealPlanReqsIntg MealPlanReqsIntgEntity);
+        Task<MealPlanReqsIntg> UpdateMealPlanReqsIntgAsync(MealPlanReqsIntg MealPlanReqsIntgEntity);
 
-       Task<MealPlanReqsIntg> CreateMealPlanReqsIntgAsync(MealPlanReqsIntg MealPlanReqsIntgEntity);
+        Task<MealPlanReqsIntg> CreateMealPlanReqsIntgAsync(MealPlanReqsIntg MealPlanReqsIntgEntity);
 
     }
 }

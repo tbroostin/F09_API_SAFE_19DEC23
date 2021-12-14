@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
@@ -174,6 +174,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// For all other users that are not assigned faculty to a course section cannot retrieve list of active students Ids and
         /// response object is returned with a X-Content-Restricted header with a value of "partial".
         /// </accessComments>
+        [Obsolete("Obsolete as of Api version 1.31, use version 5 of this API")]
         [ParameterSubstitutionFilter(ParameterNames = new string[] { "bestFit", "startDate", "endDate" })]
         public async Task<IEnumerable<Section3>> GetFacultySections4Async(string facultyId, DateTime? startDate = null, DateTime? endDate = null, bool bestFit = false)
         {
@@ -205,6 +206,54 @@ namespace Ellucian.Colleague.Api.Controllers
                 throw CreateHttpResponseException(exception.Message, HttpStatusCode.BadRequest);
             }
         }
+
+        /// <summary>
+        /// Get a list of sections taught by faculty ID based on a date range or system parameters. If a start date is not provided sections will be returned based on 
+        /// the allowed terms defined on Registration Web Parameters (RGWP), Class Schedule Web Parameters (CSWP) and Grading Web Parameters (GRWP).
+        /// </summary>
+        /// <param name="facultyId">A faculty ID. If not supplied, an empty list of sections is returned.</param>
+        /// <param name="startDate">Optional, startDate, ISO-8601, yyyy-mm-dd.</param>
+        /// <param name="endDate">Optional, endDate, ISO-8601, yyyy-mm-dd. If a start date is specified but end date is not, it will default to 90 days past start date. It must be greater than start date if specified, otherwise it will default to 90 days past start.</param>
+        /// <param name="bestFit">Optional, true assigns a term to any non-term section based on the section start date. Defaults to false.</param>
+        /// <returns>List of <see cref="Section3">Sections</see></returns>
+        /// <accessComments>
+        /// Any authenticated user can retrieve faculty course section information; however,
+        /// only an assigned faculty user may retrieve list of active students Ids in a course section.
+        /// For all other users that are not assigned faculty to a course section cannot retrieve list of active students Ids and
+        /// response object is returned with a X-Content-Restricted header with a value of "partial".
+        /// </accessComments>
+        [ParameterSubstitutionFilter(ParameterNames = new string[] { "bestFit", "startDate", "endDate" })]
+        public async Task<IEnumerable<Section4>> GetFacultySections5Async(string facultyId, DateTime? startDate = null, DateTime? endDate = null, bool bestFit = false)
+        {
+            if (string.IsNullOrEmpty(facultyId))
+            {
+                return new List<Section4>();
+            }
+            bool useCache = true;
+            if (Request.Headers.CacheControl != null)
+            {
+                if (Request.Headers.CacheControl.NoCache)
+                {
+                    useCache = false;
+                }
+            }
+            try
+            {
+                var privacyWrapper = await _facultyService.GetFacultySections5Async(facultyId, startDate, endDate, bestFit, useCache);
+                var sectionDtos = privacyWrapper.Dto as IEnumerable<Ellucian.Colleague.Dtos.Student.Section4>;
+                if (privacyWrapper.HasPrivacyRestrictions)
+                {
+                    SetContentRestrictedHeader("partial");
+                }
+                return sectionDtos;
+            }
+            catch (Exception exception)
+            {
+                _logger.Error(exception.ToString());
+                throw CreateHttpResponseException(exception.Message, HttpStatusCode.BadRequest);
+            }
+        }
+
 
         /// <summary>
         /// Retrieves many faculty members at once.

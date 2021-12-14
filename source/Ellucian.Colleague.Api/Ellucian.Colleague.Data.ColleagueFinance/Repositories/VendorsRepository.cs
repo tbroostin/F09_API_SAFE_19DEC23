@@ -1,4 +1,4 @@
-﻿/*Copyright 2016-2020 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2016-2021 Ellucian Company L.P. and its affiliates.*/
 
 using System;
 using System.Collections.Generic;
@@ -58,7 +58,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             catch (RepositoryException ex)
             {
-                ex.AddError(new RepositoryError("Vendors.Guid.NotFound", "GUID not found for vendor id: " + id));
+                ex.AddError(new RepositoryError("Bad.Data", "GUID not found for vendor id: " + id));
                 throw ex;
             }
         }
@@ -244,14 +244,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 subList = keyCache.Sublist.ToArray();
                 totalCount = keyCache.TotalCount.Value;
                 var vendorsData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.ColleagueFinance.DataContracts.Vendors>("VENDORS", subList);
-                if (vendorsData != null  && vendorsData.Any())
+                if (vendorsData != null && vendorsData.Any())
                 {
                     var personsData = await DataReader.BulkReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("PERSON", subList);
                     var corpContract = await DataReader.BulkReadRecordAsync<Corp>("PERSON", subList);
                     var corpFoundData = await DataReader.BulkReadRecordAsync<CorpFounds>(subList);
                     var vendors = BuildVendors2(vendorsData, personsData, corpContract, corpFoundData);
                     return new Tuple<IEnumerable<Vendors>, int>(vendors, totalCount);
-                    
+
                 }
                 else
                 {
@@ -273,7 +273,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// Get a list of vendors using criteria
         /// </summary>
         /// <returns></returns>
-        public async Task<Tuple<IEnumerable<Vendors>, int>> GetVendorsMaximumAsync(int offset, int limit, string vendorDetail = "", 
+        public async Task<Tuple<IEnumerable<Vendors>, int>> GetVendorsMaximumAsync(int offset, int limit, string vendorDetail = "",
             List<string> statuses = null, List<string> types = null, string taxId = null, List<string> addresses = null)
         {
             try
@@ -344,7 +344,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
         }
 
-       
+
 
         /// <summary>
         /// Get vendor criteria and limiting list.
@@ -488,7 +488,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if ((addresses != null) && (addresses.Any()))
             {
                 var addrCriteria = string.Empty;
-                foreach(var addr in addresses)
+                foreach (var addr in addresses)
                 {
                     if (string.IsNullOrEmpty(addrCriteria))
                         addrCriteria = string.Format("WITH PERSON.ADDRESSES EQ '{0}'", addr);
@@ -509,7 +509,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     return new CacheSupport.KeyCacheRequirements() { criteria = string.Empty, limitingKeys = new List<string>(), NoQualifyingRecords = true };
                 }
             }
-                
+
 
             if (!string.IsNullOrEmpty(taxId))
             {
@@ -594,7 +594,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 throw ex;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 var exception = new RepositoryException();
                 exception.AddError(new RepositoryError("Bad.Data", ex.Message)
@@ -644,7 +644,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     VendorAddress = x.AlVendorAddresses,
                     TaxForm = x.AlVendorTaxForm,
                     TaxFormCode = x.AlVendorTaxFormCode,
-                    TaxFormLocation = x.AlVendorTaxFormLoc
+                    TaxFormLocation = x.AlVendorTaxFormLoc,
+                    TaxForm1099NecWithholding = x.AlVendorNecWthhld,
+                    TaxForm1099MiscWithholding = x.AlVendor1099Wthhld,
+                    AddressTypeCode = x.AlVendAddrTypeCodes,
+                    AddressTypeDesc = x.AlVendAddrTypeDesc,
+                    VendorApTypes = !string.IsNullOrEmpty(x.AlVenApTypes) ? x.AlVenApTypes.Split(_SM).ToList() : new List<string>()
                 }).ToList();
             }
 
@@ -671,7 +676,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 throw new InvalidOperationException("An error occurred during person matching");
             }
-            if (searchResponse.AlErrorMessages.Count() > 0 && searchResponse.AError )
+            if (searchResponse.AlErrorMessages.Count() > 0 && searchResponse.AError)
             {
                 var errorMessage = "Error(s) occurred during vendor search:";
                 errorMessage += string.Join(Environment.NewLine, searchResponse.AlErrorMessages);
@@ -700,10 +705,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     resultEntity.TaxForm = x.AlVendorTaxForm;
                     resultEntity.TaxFormCode = x.AlVendorTaxFormCode;
                     resultEntity.TaxFormLocation = x.AlVendorTaxFormLoc;
-
+                    resultEntity.TaxForm1099NecWithholding = x.AlVendor1099necWthhld;
+                    resultEntity.TaxForm1099MiscWithholding = x.AlVendor1099miWthhld;
+                    resultEntity.AddressTypeCode = x.AlVendAddrTypeCodes;
+                    resultEntity.AddressTypeDesc = x.AlVendAddrTypeDesc;
+                    resultEntity.VendorApTypes = !string.IsNullOrEmpty(x.AlVenApTypes) ? x.AlVenApTypes.Split(_SM).ToList() : new List<string>(); 
                     voucherVendorSearchResults.Add(resultEntity);
                 }
-
+               
             }
 
             return voucherVendorSearchResults.AsEnumerable();
@@ -771,21 +780,21 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var repositoryException = new RepositoryException();
             CreateUpdateVendorRequest updateRequest = null;
             Vendors updatedEntity = null;
-                try
-                {
-                    updateRequest = await BuildVendorsUpdateRequestAsync(vendorsEntity);
-                    updateRequest.Version = "11";
-                }
-                catch (Exception ex)
-                {
-                    repositoryException.AddError(
-                        new RepositoryError("Bad.Data", ex.Message)
-                        {
-                            Id = vendorsEntity.Guid,
-                            SourceId = vendorsEntity.Id
-                        });
-                    throw repositoryException;
-                }
+            try
+            {
+                updateRequest = await BuildVendorsUpdateRequestAsync(vendorsEntity);
+                updateRequest.Version = "11";
+            }
+            catch (Exception ex)
+            {
+                repositoryException.AddError(
+                    new RepositoryError("Bad.Data", ex.Message)
+                    {
+                        Id = vendorsEntity.Guid,
+                        SourceId = vendorsEntity.Id
+                    });
+                throw repositoryException;
+            }
             if (updateRequest != null)
             {
                 var extendedDataTuple = GetEthosExtendedDataLists();
@@ -818,7 +827,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     {
                         updatedEntity = await GetVendorsByGuid2Async(updateResponse.VendorGuid);
                     }
-                    catch(Exception ex)
+                    catch (Exception ex)
                     {
                         repositoryException.AddError(
                        new RepositoryError("Bad.Data", ex.Message)
@@ -1117,7 +1126,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 throw exception;
             }
 
-            
+
         }
 
         /// <summary>
@@ -1128,7 +1137,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns>vendor default tax info entity</returns>
         public async Task<VendorDefaultTaxFormInfo> GetVendorDefaultTaxFormInfoAsync(string vendorId, string apType)
         {
-                       
+
             if (string.IsNullOrEmpty(vendorId))
                 throw new ArgumentNullException("vendorId", "vendorId is required");
 
@@ -1145,6 +1154,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             taxFormInfo.TaxForm = response.ATaxForm;
             taxFormInfo.TaxFormBoxCode = response.ATaxFormCode;
             taxFormInfo.TaxFormState = response.ATaxFormLoc;
+            taxFormInfo.TaxForm1099NecWithholding = response.AVen1099necWthhldFlag;
+            taxFormInfo.TaxForm1099MiscWithholding = response.AVen1099miWthhldFlag;
+            taxFormInfo.VendorApTypes = response.AlVenApTypes;
             return taxFormInfo;
         }
 
@@ -1348,7 +1360,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             if (person != null)
             {
-                vendor.IsOrganization = (person.PersonCorpIndicator == "Y");                
+                vendor.IsOrganization = (person.PersonCorpIndicator == "Y");
             }
 
             if (source.VenIntgHoldReasons != null && source.VenIntgHoldReasons.Any())
@@ -1508,12 +1520,12 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <param name="addresses">List of <see cref="Address">addresses</see></param>
         /// <returns>Boolean where true is success and false otherwise</returns>
         private Tuple<List<Phone>, List<Domain.Base.Entities.Address>, bool> GetPersonIntegrationDataAsync(string personId,
-            Base.DataContracts.Person personData, PersonIntg personIntgData, List<Base.DataContracts.Address> addressData )
+            Base.DataContracts.Person personData, PersonIntg personIntgData, List<Base.DataContracts.Address> addressData)
         {
-            List<Domain.Base.Entities.Address> addresses = new List<Domain.Base.Entities.Address>();          
+            List<Domain.Base.Entities.Address> addresses = new List<Domain.Base.Entities.Address>();
             List<Phone> phones = new List<Phone>();
             //get person phones.
-            if (personData != null )
+            if (personData != null)
             {
                 foreach (var phone in personData.PerphoneEntityAssociation)
                 {
@@ -1544,7 +1556,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         throw new RepositoryException(string.Format(exception.Message + ".  Could not load phone number for person id '{0}' with GUID '{1}'", personData.Recordkey, personData.RecordGuid));
                     }
                 }
-            }                
+            }
 
             if (personData != null && addressData != null && personData.PersonAddresses != null && personData.PersonAddresses.Any())
             {
@@ -1576,7 +1588,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             addressEntity.TypeCode = assocEntity.AddrTypeAssocMember;
                             addressEntity.EffectiveStartDate = assocEntity.AddrEffectiveStartAssocMember;
                             addressEntity.EffectiveEndDate = assocEntity.AddrEffectiveEndAssocMember;
-                            
+
                         }
                         addressEntity.IsPreferredAddress = (address.Recordkey == personData.PreferredAddress);
                         addressEntity.IsPreferredResidence = (address.Recordkey == personData.PreferredResidence);

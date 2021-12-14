@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -2336,6 +2336,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 DegreePlan originalDegreePlan = new DegreePlan(1, "0000894", 0);
                 originalDegreePlan.AddTerm("2012/FA");
                 originalDegreePlan.LastReviewedDate = DateTime.Now;
+                originalDegreePlan.ArchiveNotificationDate = DateTime.Now;
                 studentDegreePlanRepoMock.Setup(x => x.GetAsync(It.IsAny<int>())).Returns(Task.FromResult(originalDegreePlan));
                 // Act
                 var dp = await studentDegreePlanService.UpdateDegreePlan6Async(degreePlanDto);

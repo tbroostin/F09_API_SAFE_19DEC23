@@ -1,21 +1,18 @@
-﻿/*Copyright 2015 Ellucian Company L.P. and its affiliates.*/
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿/*Copyright 2015-2021 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Data.Base.DataContracts;
+using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
-using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
-using Ellucian.Web.Http.Configuration;
-using slf4net;
-using Ellucian.Colleague.Domain.Base.Exceptions;
-using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Web.Dependency;
+using slf4net;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
@@ -46,7 +43,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 catch (Exception e)
                 {
                     var message = string.Format("Error updating communication {0} for student {1}", communication.Code, communication.PersonId);
-                    logger.Warn(e, message);
+                    logger.Error(e, message);
                     throw;
                 }
             }
@@ -59,7 +56,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 catch (Exception e)
                 {
                     var message = string.Format("Error creating communication {0} for student {1}", communication.Code, communication.PersonId);
-                    logger.Warn(e, message);
+                    logger.Error(e, message);
                     throw;
                 }
             }

@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -32,12 +32,13 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         public List<Tuple<string, DateTime?>> Ccds { get; set; }
         public string StudentProgramGuid { get; set; }
         public List<string> AcadDisciplines { get; set; }
-        //public List<string> AcadMajors { get; set; }
-        //public List<string> AcadMinors { get; set; }
-        //public List<string> Specializations { get; set; }
+
         public string AcadThesis { get; set; }
         public string AcadTerm { get; set; }
         public List<string> AcadHonors { get; set; }
+        public List<string> AcadMajors { get; set; }
+        public List<string> AcadMinors { get; set; }
+        public List<string> AcadSpecializations { get; set; }
 
         public StudentAcademicCredential(string guid, string recordKey)
         {

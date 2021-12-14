@@ -1,4 +1,4 @@
-//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+//Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -24,6 +24,7 @@ using Ellucian.Web.Http.ModelBinding;
 using System.Linq;
 using System.Net.Http;
 using System.Configuration;
+using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -58,7 +59,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="person">person GUID filter option</param>
         /// <returns>List of PersonExternalEducationCredentials <see cref="Dtos.PersonExternalEducationCredentials"/> objects representing matching personExternalEducationCredentials</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { BasePermissionCodes.ViewPersonExternalEducationCredentials, BasePermissionCodes.UpdatePersonExternalEducationCredentials })]
         [QueryStringFilterFilter("criteria", typeof(Ellucian.Colleague.Dtos.PersonExternalEducationCredentials))]
         [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter2))]
         [QueryStringFilterFilter("person", typeof(Dtos.Filters.PersonGuidFilter))]
@@ -77,6 +78,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
+                _personExternalEducationCredentialsService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -158,7 +160,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="guid">GUID to desired personExternalEducationCredentials</param>
         /// <returns>A personExternalEducationCredentials object <see cref="Dtos.PersonExternalEducationCredentials"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { BasePermissionCodes.ViewPersonExternalEducationCredentials, BasePermissionCodes.UpdatePersonExternalEducationCredentials })]
         public async Task<Dtos.PersonExternalEducationCredentials> GetPersonExternalEducationCredentialsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -176,7 +178,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
-               AddEthosContextProperties(
+                _personExternalEducationCredentialsService.ValidatePermissions(GetPermissionsMetaData());
+                AddEthosContextProperties(
                   await _personExternalEducationCredentialsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                   await _personExternalEducationCredentialsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                       new List<string>() { guid }));
@@ -221,7 +224,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="personExternalEducationCredentials">DTO of the updated personExternalEducationCredentials</param>
         /// <returns>A PersonExternalEducationCredentials object <see cref="Dtos.PersonExternalEducationCredentials"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(BasePermissionCodes.UpdatePersonExternalEducationCredentials)]
         public async Task<Dtos.PersonExternalEducationCredentials> PutPersonExternalEducationCredentialsAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.PersonExternalEducationCredentials personExternalEducationCredentials)
         {
             if (string.IsNullOrEmpty(guid))
@@ -249,7 +252,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
 
             try
-            {          
+            {
+                _personExternalEducationCredentialsService.ValidatePermissions(GetPermissionsMetaData());
                 return await _personExternalEducationCredentialsService.UpdatePersonExternalEducationCredentialsAsync(
                   await PerformPartialPayloadMerge(personExternalEducationCredentials, async () => await _personExternalEducationCredentialsService.GetPersonExternalEducationCredentialsByGuidAsync(guid, true),
                   await _personExternalEducationCredentialsService.GetDataPrivacyListByApi(GetRouteResourceName(), true),
@@ -298,7 +302,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="personExternalEducationCredentials">DTO of the new personExternalEducationCredentials</param>
         /// <returns>A personExternalEducationCredentials object <see cref="Dtos.PersonExternalEducationCredentials"/> in HeDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPost]
+        [HttpPost, PermissionsFilter(BasePermissionCodes.UpdatePersonExternalEducationCredentials)]
         public async Task<Dtos.PersonExternalEducationCredentials> PostPersonExternalEducationCredentialsAsync(Dtos.PersonExternalEducationCredentials personExternalEducationCredentials)
         {
             if (personExternalEducationCredentials == null)
@@ -318,6 +322,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _personExternalEducationCredentialsService.ValidatePermissions(GetPermissionsMetaData());
                 return await _personExternalEducationCredentialsService.CreatePersonExternalEducationCredentialsAsync(personExternalEducationCredentials);
             }
             catch (KeyNotFoundException e)

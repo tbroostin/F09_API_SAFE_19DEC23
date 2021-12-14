@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -505,7 +505,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 //Arrange
                 viewStudentProgramRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentAcademicProgramConsent));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
-                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicProgramByGuidAsync(It.IsAny<string>(), defaultInst)).ReturnsAsync(null);
+                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicProgramByGuidAsync(It.IsAny<string>(), defaultInst)).ReturnsAsync(() => null);
                 var result = await StudentAcademicProgramService.GetStudentAcademicProgramByGuidAsync("abcd");
 
             }
@@ -537,20 +537,20 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(IntegrationApiException))]
-            public async Task StudentAcademicProgramService_GetStudentAcademicProgramByGuidAsync_PermissionsException()
-            {
-                //Arrange
-                viewStudentProgramRole = new Domain.Entities.Role(1, "INVALID");
-                // viewStudentProgramRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateStudentAcademicProgramConsent));
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
+            //[TestMethod]
+            //[ExpectedException(typeof(IntegrationApiException))]
+            //public async Task StudentAcademicProgramService_GetStudentAcademicProgramByGuidAsync_PermissionsException()
+            //{
+            //    //Arrange
+            //    viewStudentProgramRole = new Domain.Entities.Role(1, "INVALID");
+            //    // viewStudentProgramRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateStudentAcademicProgramConsent));
+            //    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
 
-                studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicProgramByGuidAsync(It.IsAny<string>(), defaultInst)).ReturnsAsync(null);
+            //    studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicProgramByGuidAsync(It.IsAny<string>(), defaultInst)).ReturnsAsync(() => null);
 
-                var result = await StudentAcademicProgramService.GetStudentAcademicProgramByGuidAsync("abcd");
+            //    var result = await StudentAcademicProgramService.GetStudentAcademicProgramByGuidAsync("abcd");
 
-            }
+            //}
 
             [TestMethod]
             public async Task StudentAcademicProgramService_GetStudentAcademicProgramsAsync_WithFilters_WrongStudentId()
@@ -662,7 +662,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 //Arrange
                 viewStudentProgramRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.ViewStudentAcademicProgramConsent));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
-                studentReferenceDataRepositoryMock.Setup(srdr => srdr.GetAcademicProgramsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+                studentReferenceDataRepositoryMock.Setup(srdr => srdr.GetAcademicProgramsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
 
                 studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                     It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(stuAcadProgsTuple);
@@ -788,7 +788,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
 
                 studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(defaultInst, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(() => null);
 
                 var result = await StudentAcademicProgramService.GetStudentAcademicProgramsAsync(It.IsAny<int>(), It.IsAny<int>());
                 Assert.AreEqual(result.Item2, 0);
@@ -1799,7 +1799,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 var expected = stuAcadProgs[0];
                 studentAcademicProgramRepositoryMock.Setup(s => s.CreateStudentAcademicProgramAsync(It.IsAny<Domain.Student.Entities.StudentAcademicProgram>(), defaultInst)).ReturnsAsync(expected);
-                personRepositoryMock.Setup(pr => pr.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                personRepositoryMock.Setup(pr => pr.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 var dto = StuAcadProgDtos[0];
                 var result = await StudentAcademicProgramService.CreateStudentAcademicProgramAsync(dto);
 
@@ -2041,21 +2041,21 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task StudentAcademicProgramService_CreateStudentAcademicProgramAsync_PermissionsException()
-            {
-                //Arrange
-                viewStudentProgramRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateAndUpdateCourse));
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
-                var expected = stuAcadProgs[0];
-                studentAcademicProgramRepositoryMock.Setup(s => s.CreateStudentAcademicProgramAsync(It.IsAny<Domain.Student.Entities.StudentAcademicProgram>(), defaultInst)).ReturnsAsync(expected);
-                var dto = StuAcadProgDtos[0];
-                var result = await StudentAcademicProgramService.CreateStudentAcademicProgramAsync(dto);
+            //[TestMethod]
+            //[ExpectedException(typeof(PermissionsException))]
+            //public async Task StudentAcademicProgramService_CreateStudentAcademicProgramAsync_PermissionsException()
+            //{
+            //    //Arrange
+            //    viewStudentProgramRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateAndUpdateCourse));
+            //    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewStudentProgramRole });
+            //    var expected = stuAcadProgs[0];
+            //    studentAcademicProgramRepositoryMock.Setup(s => s.CreateStudentAcademicProgramAsync(It.IsAny<Domain.Student.Entities.StudentAcademicProgram>(), defaultInst)).ReturnsAsync(expected);
+            //    var dto = StuAcadProgDtos[0];
+            //    var result = await StudentAcademicProgramService.CreateStudentAcademicProgramAsync(dto);
 
 
 
-            }
+            //}
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentException))]
@@ -2507,13 +2507,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 await studentAcademicProgramService.GetStudentAcademicProgramByGuid2Async(null);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(IntegrationApiException))]
-            public async Task StuAcadPrgm_GetStudentAcademicProgramByGuid2Async_PermissionException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                await studentAcademicProgramService.GetStudentAcademicProgramByGuid2Async(guid);
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(IntegrationApiException))]
+            //public async Task StuAcadPrgm_GetStudentAcademicProgramByGuid2Async_PermissionException()
+            //{
+            //    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+            //    await studentAcademicProgramService.GetStudentAcademicProgramByGuid2Async(guid);
+            //}
 
             [TestMethod]
             public async Task StuAcadPrgm_GetStudentAcademicProgramByGuid2Async()
@@ -2523,13 +2523,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Assert.AreEqual(guid, result.Id);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
-            public async Task StuAcadPrgm_GetStudentAcademicPrograms2Async_PermissionException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                await studentAcademicProgramService.GetStudentAcademicPrograms2Async(0, 100);
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(ArgumentException))]
+            //public async Task StuAcadPrgm_GetStudentAcademicPrograms2Async_PermissionException()
+            //{
+            //    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+            //    await studentAcademicProgramService.GetStudentAcademicPrograms2Async(0, 100);
+            //}
 
             [TestMethod]
             public async Task StuAcadPrgm_GetStudentAcademicPrograms2Async_ArgumentException()
@@ -2551,7 +2551,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms2Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(),
                     It.IsAny<string>(), It.IsAny<string>()
                     , It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-                   It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
+                   It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(() => null);
 
                 var result = await studentAcademicProgramService.GetStudentAcademicPrograms2Async(0, 100, true, guid);
 
@@ -2868,19 +2868,19 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             #endregion
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task StuAcadPrgm_CreateStudentAcademicProgram2Async_PermissionException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                await studentAcademicProgramService.CreateStudentAcademicProgram2Async(studentAcademicProgram);
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(PermissionsException))]
+            //public async Task StuAcadPrgm_CreateStudentAcademicProgram2Async_PermissionException()
+            //{
+            //    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+            //    await studentAcademicProgramService.CreateStudentAcademicProgram2Async(studentAcademicProgram);
+            //}
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentException))]
             public async Task StuAcadPrgm_CreateStudentAcademicProgram2Async_Invalid_StudentId()
             {
-                personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 await studentAcademicProgramService.CreateStudentAcademicProgram2Async(studentAcademicProgram);
             }
 
@@ -3155,13 +3155,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Assert.IsNotNull(result);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task StuAcadPrgm_UpdateStudentAcademicProgram2Async_PermissionException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                await studentAcademicProgramService.UpdateStudentAcademicProgram2Async(studentAcademicProgram);
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(PermissionsException))]
+            //public async Task StuAcadPrgm_UpdateStudentAcademicProgram2Async_PermissionException()
+            //{
+            //    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+            //    await studentAcademicProgramService.UpdateStudentAcademicProgram2Async(studentAcademicProgram);
+            //}
 
             [TestMethod]
             public async Task StuAcadPrgm_UpdateStudentAcademicProgram2Async()
@@ -3413,15 +3413,15 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 await studentAcademicProgramService.GetStudentAcademicProgramByGuid3Async(null);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(IntegrationApiException))]
-            public async Task StuAcadPrgm_GetStudentAcademicProgramByGuid3Async_PermissionException()
-            {
-                getStudentAcademicPrograms = new Domain.Entities.Role(1, "INVALID");
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { getStudentAcademicPrograms });
+            //[TestMethod]
+            //[ExpectedException(typeof(IntegrationApiException))]
+            //public async Task StuAcadPrgm_GetStudentAcademicProgramByGuid3Async_PermissionException()
+            //{
+            //    getStudentAcademicPrograms = new Domain.Entities.Role(1, "INVALID");
+            //    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { getStudentAcademicPrograms });
 
-                await studentAcademicProgramService.GetStudentAcademicProgramByGuid3Async(guid);
-            }
+            //    await studentAcademicProgramService.GetStudentAcademicProgramByGuid3Async(guid);
+            //}
 
             [TestMethod]
             public async Task StuAcadPrgm_GetStudentAcademicProgramByGuid3Async_ViewPermissions()
@@ -3515,14 +3515,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(IntegrationApiException))]
-            public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_PermissionException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, null);
-            }
-
-            [TestMethod]
             public async Task StuAcadPrgm_GetStudentAcademicPrograms3Async_ArgumentException()
             {
                 personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("");
@@ -3542,7 +3534,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(),
                     It.IsAny<string>(), It.IsAny<string>()
                     , It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-                   It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), CurriculumObjectiveCategory.NotSet, It.IsAny<bool>())).ReturnsAsync(null);
+                   It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), CurriculumObjectiveCategory.NotSet, It.IsAny<bool>())).ReturnsAsync(() => null);
 
                 var result = await studentAcademicProgramService.GetStudentAcademicPrograms3Async(0, 100, new StudentAcademicPrograms3() { Id = guid });
 
@@ -4383,15 +4375,15 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 await studentAcademicProgramService.GetStudentAcademicProgramByGuid4Async(null);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(IntegrationApiException))]
-            public async Task StuAcadPrgm_GetStudentAcademicProgramByGuid4Async_PermissionException()
-            {
-                getStudentAcademicPrograms = new Domain.Entities.Role(1, "INVALID");
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { getStudentAcademicPrograms });
+            //[TestMethod]
+            //[ExpectedException(typeof(IntegrationApiException))]
+            //public async Task StuAcadPrgm_GetStudentAcademicProgramByGuid4Async_PermissionException()
+            //{
+            //    getStudentAcademicPrograms = new Domain.Entities.Role(1, "INVALID");
+            //    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { getStudentAcademicPrograms });
 
-                await studentAcademicProgramService.GetStudentAcademicProgramByGuid4Async(guid);
-            }
+            //    await studentAcademicProgramService.GetStudentAcademicProgramByGuid4Async(guid);
+            //}
 
             [TestMethod]
             public async Task StuAcadPrgm_GetStudentAcademicProgramByGuid4Async_ViewPermissions()
@@ -4484,13 +4476,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 }
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(IntegrationApiException))]
-            public async Task StuAcadPrgm_GetStudentAcademicPrograms4Async_PermissionException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                await studentAcademicProgramService.GetStudentAcademicPrograms4Async(0, 100, null, "");
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(IntegrationApiException))]
+            //public async Task StuAcadPrgm_GetStudentAcademicPrograms4Async_PermissionException()
+            //{
+            //    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+            //    await studentAcademicProgramService.GetStudentAcademicPrograms4Async(0, 100, null, "");
+            //}
 
             [TestMethod]
             public async Task StuAcadPrgm_GetStudentAcademicPrograms4Async_ArgumentException()
@@ -4514,7 +4506,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 studentAcademicProgramRepositoryMock.Setup(s => s.GetStudentAcademicPrograms3Async(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), true, It.IsAny<string>(),
                     It.IsAny<string>(), It.IsAny<string>()
                     , It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-                   It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), CurriculumObjectiveCategory.NotSet, It.IsAny<bool>())).ReturnsAsync(null);
+                   It.IsAny<List<string>>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<string>(), CurriculumObjectiveCategory.NotSet, It.IsAny<bool>())).ReturnsAsync(() => null);
 
                 var result = await studentAcademicProgramService.GetStudentAcademicPrograms4Async(0, 100, new StudentAcademicPrograms4() { Id = guid }, "");
 
@@ -5390,15 +5382,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             await studentAcademicProgramService.GetStudentAcademicProgramSubmissionByGuidAsync(null);
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(IntegrationApiException))]
-        public async Task StuAcadPrgm_GetStudentAcademicProgramSubmissionsByGuidAsync_PermissionException()
-        {
-            getStudentAcademicPrograms = new Domain.Entities.Role(1, "INVALID");
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { getStudentAcademicPrograms });
-
-            await studentAcademicProgramService.GetStudentAcademicProgramSubmissionByGuidAsync(guid);
-        }
 
         [TestMethod]
         public async Task StuAcadPrgm_GetStudentAcademicProgramSubmissionsByGuidAsync_ViewPermissions()
@@ -5713,13 +5696,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
         #endregion
         #region PUT/POST
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task StuAcadPrgm_CreateStudentAcademicProgramSubmissionAsync_PermissionException()
-        {
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-            await studentAcademicProgramService.CreateStudentAcademicProgramSubmissionAsync(studentAcademicProgramSubmissions);
-        }
+        //[TestMethod]
+        //[ExpectedException(typeof(PermissionsException))]
+        //public async Task StuAcadPrgm_CreateStudentAcademicProgramSubmissionAsync_PermissionException()
+        //{
+        //    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+        //    await studentAcademicProgramService.CreateStudentAcademicProgramSubmissionAsync(studentAcademicProgramSubmissions);
+        //}
 
         
 
@@ -6025,7 +6008,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         [ExpectedException(typeof(IntegrationApiException))]
         public async Task StuAcadPrgm_CreateStudentAcademicProgramSubmissionAsync_Invalid_StudentId()
         {
-            personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             try
             {
                 await studentAcademicProgramService.CreateStudentAcademicProgramSubmissionAsync(studentAcademicProgramSubmissions);
@@ -6580,13 +6563,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             Assert.IsNotNull(result);
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task StuAcadPrgm_UpdateStudentAcademicProgram2Async_PermissionException()
-        {
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-            await studentAcademicProgramService.UpdateStudentAcademicProgramSubmissionAsync(studentAcademicProgramSubmissions);
-        }
+        //[TestMethod]
+        //[ExpectedException(typeof(PermissionsException))]
+        //public async Task StuAcadPrgm_UpdateStudentAcademicProgram2Async_PermissionException()
+        //{
+        //    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+        //    await studentAcademicProgramService.UpdateStudentAcademicProgramSubmissionAsync(studentAcademicProgramSubmissions);
+        //}
 
         [TestMethod]
         public async Task StuAcadPrgm_UpdateStudentAcademicProgram2Async()
@@ -6893,13 +6876,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         #endregion
        
         #region PUT/POST
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_PermissionException()
-        {
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-            await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
-        }
+        //[TestMethod]
+        //[ExpectedException(typeof(PermissionsException))]
+        //public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_PermissionException()
+        //{
+        //    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+        //    await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());
+        //}
 
 
 
@@ -7186,7 +7169,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         [ExpectedException(typeof(IntegrationApiException))]
         public async Task StuAcadPrgm_CreateStudentAcademicProgramReplacementsAsync_Invalid_StudentId()
         {
-            personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             try
             {
                 await studentAcademicProgramService.CreateStudentAcademicProgramReplacementsAsync(studentAcademicProgramReplacements, It.IsAny<bool>());

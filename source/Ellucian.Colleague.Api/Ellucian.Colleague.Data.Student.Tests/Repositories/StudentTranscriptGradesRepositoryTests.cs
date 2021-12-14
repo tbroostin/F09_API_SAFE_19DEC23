@@ -171,7 +171,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         public async Task StudentTranscriptGradesRepository_GET_EmptySet()
         {
             dataAccessorMock.Setup(repo => repo.SelectAsync("STUDENT.ACAD.CRED", It.IsAny<string>())).ReturnsAsync(new[] { "1", "200" });
-            dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.StudentAcadCred>("STUDENT.ACAD.CRED", It.IsAny<string[]>(), true)).ReturnsAsync(null);
+            dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.StudentAcadCred>("STUDENT.ACAD.CRED", It.IsAny<string[]>(), true)).ReturnsAsync(() => null);
 
             var results = await _StudentTranscriptGradesRepository.GetStudentTranscriptGradesAsync(It.IsAny<int>(), It.IsAny<int>());
             Assert.IsNotNull(results);
@@ -211,7 +211,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             dataAccessorMock.Setup(acc => acc.ReadRecordAsync<LdmGuid>("LDM.GUID", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(ldmGuid);
 
             dataAccessorMock.Setup(acc => acc.ReadRecordAsync<DataContracts.StudentAcadCred>(It.IsAny<string>(), It.IsAny<bool>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
 
             var recordLookupDict = new Dictionary<string, RecordKeyLookupResult>();
 
@@ -231,10 +231,10 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             var studentAcadCredRecord = records.FirstOrDefault(x => x.RecordGuid == guid);
             studentAcadCredRecord.Recordkey = null;
             var ldmGuid = new LdmGuid() { LdmGuidEntity = "STUDENT.ACAD.CRED", LdmGuidSecondaryFld = "STC.INTG.KEY.IDX", LdmGuidPrimaryKey = "1" };
-            dataAccessorMock.Setup(acc => acc.ReadRecordAsync<LdmGuid>("LDM.GUID", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+            dataAccessorMock.Setup(acc => acc.ReadRecordAsync<LdmGuid>("LDM.GUID", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
 
             dataAccessorMock.Setup(acc => acc.ReadRecordAsync<DataContracts.StudentAcadCred>(It.IsAny<string>(), It.IsAny<bool>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
 
             var recordLookupDict = new Dictionary<string, RecordKeyLookupResult>();
 
@@ -260,7 +260,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             dataAccessorMock.Setup(acc => acc.ReadRecordAsync<DataContracts.StudentAcadCred>(It.IsAny<string>(), It.IsAny<bool>()))
                 .ReturnsAsync(studentAcadCredRecord);
 
-            dataReaderMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS", It.IsAny<bool>())).ReturnsAsync(null);
+            dataReaderMock.Setup<Task<StwebDefaults>>(acc => acc.ReadRecordAsync<StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS", It.IsAny<bool>())).ReturnsAsync(() => null);
 
             await _StudentTranscriptGradesRepository.GetStudentTranscriptGradesByGuidAsync(guid);
         }
@@ -285,7 +285,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 new RecordKeyLookupResult() { Guid = guid });
 
             //setting the recordKeyLookup to null generates the error
-            dataAccessorMock.Setup(dr => dr.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(null);
+            dataAccessorMock.Setup(dr => dr.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(() => null);
 
             dataAccessorMock.Setup(dr => dr.SelectAsync("STUDENT.COURSE.SEC", It.IsAny<string[]>(), ""))
                 .ReturnsAsync(new string[] { studentAcadCredRecord.StcStudentCourseSec });
@@ -374,7 +374,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task StudentTranscriptGradesRepository_GETById_StudentTranscriptGradess_Null_KeyNotFoundException()
         {
-            dataAccessorMock.Setup(acc => acc.ReadRecordAsync<DataContracts.StudentAcadCred>(It.IsAny<string>(), true)).ReturnsAsync(null);
+            dataAccessorMock.Setup(acc => acc.ReadRecordAsync<DataContracts.StudentAcadCred>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
             var results = await _StudentTranscriptGradesRepository.GetStudentTranscriptGradesByGuidAsync("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc");
         }
 

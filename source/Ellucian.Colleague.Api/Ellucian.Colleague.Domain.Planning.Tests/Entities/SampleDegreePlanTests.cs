@@ -1,4 +1,5 @@
-﻿using System;
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,6 +20,8 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
             string description;
             CourseBlocks block1;
             CourseBlocks block2;
+            CourseBlocks block3;
+            CourseBlocks block4;
             List<CourseBlocks> blocks;
 
             [TestInitialize]
@@ -26,9 +29,12 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
             {
                 trackCode = "TRACK1";
                 description = "ENGL.BA 2010";
-                block1 = new CourseBlocks("Block 1", new List<string>() { "1", "2", "3" });
-                block2 = new CourseBlocks("Block 2", new List<string>() { "4", "5", "6" });
-                blocks = new List<CourseBlocks>() { block1, block2 };
+                block1 = new CourseBlocks("Block 1", new List<string>() { "1", "2", "3" }, new List<string>() { "a", "b", "c" });
+                block2 = new CourseBlocks("Block 2", new List<string>() { "4", "5", "6" }, new List<string>() { "d", "e", "f" });
+                block3 = new CourseBlocks("Block No Placeholders", new List<string>() { "7", "8", "9" }, new List<string>());
+                block4 = new CourseBlocks("Block No Courses", new List<string>(), new List<string>() { "x", "y", "z" });
+
+                blocks = new List<CourseBlocks>() { block1, block2, block3, block4 };
                 track = new SampleDegreePlan(trackCode, description, blocks);
             }
 
@@ -47,8 +53,10 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
             [TestMethod]
             public void CourseBlockCodes()
             {
-                Assert.AreEqual(blocks.ElementAt(0), track.CourseBlocks.ElementAt(0));
-                Assert.AreEqual(blocks.ElementAt(1), track.CourseBlocks.ElementAt(1));
+                for (var i = 0; i < blocks.Count; i++)
+                {
+                    Assert.AreEqual(blocks[i], track.CourseBlocks[i]);
+                }
             }
 
             [TestMethod]

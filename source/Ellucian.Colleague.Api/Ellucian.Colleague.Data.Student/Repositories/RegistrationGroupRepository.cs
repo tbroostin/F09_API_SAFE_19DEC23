@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -154,8 +154,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 {
                                     if (logger.IsInfoEnabled)
                                     {
-                                        logger.Info("RegUser recordkey " + regUser.Recordkey + " error adding Registration Group staff assignment for staff id " + regStaff.RguStaffIdsAssocMember);
-                                        logger.Info("Exception message: " + ex.Message);
+                                        logger.Error("RegUser recordkey " + regUser.Recordkey + " error adding Registration Group staff assignment for staff id " + regStaff.RguStaffIdsAssocMember);
+                                        logger.Error("Exception message: " + ex.Message);
                                     }
                                 }
                             }

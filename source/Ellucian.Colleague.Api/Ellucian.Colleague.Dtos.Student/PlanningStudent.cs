@@ -1,6 +1,7 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using Ellucian.Colleague.Dtos.Base;
+using System;
 
 namespace Ellucian.Colleague.Dtos.Student
 {
@@ -85,5 +86,10 @@ namespace Ellucian.Colleague.Dtos.Student
         /// All email address of student
         /// </summary>
         public List<EmailAddress> EmailAddresses { get; set; }
+
+        /// <summary>
+        /// List of completed advisements for the student for a given date and time by a given advisor
+        /// </summary>
+        public IEnumerable<CompletedAdvisement> CompletedAdvisements { get; set; }
     }
 }

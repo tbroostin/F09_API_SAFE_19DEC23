@@ -1,4 +1,4 @@
-﻿//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -23,6 +23,7 @@ using System.Linq;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using System.Web.Http.ModelBinding;
 using Ellucian.Web.Http.ModelBinding;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 
 namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 {
@@ -54,7 +55,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <param name="criteria">QueryStringFilter</param>
         /// <returns>List of ProcurementReceipts <see cref="Dtos.ProcurementReceipts"/> objects representing matching procurementReceipts</returns>
-        [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewProcurementReceipts, ColleagueFinancePermissionCodes.CreateProcurementReceipts }), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.ProcurementReceipts))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
@@ -74,7 +76,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 {
                     page = new Paging(100, 0);
                 }
-
+                _procurementReceiptsService.ValidatePermissions(GetPermissionsMetaData());
                 var criteriaValues = GetFilterObject<Dtos.ProcurementReceipts>(_logger, "criteria");
 
                 if (CheckForEmptyFilterParameters())
@@ -127,7 +129,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="guid">GUID to desired procurementReceipts</param>
         /// <returns>A procurementReceipts object <see cref="Dtos.ProcurementReceipts"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewProcurementReceipts, ColleagueFinancePermissionCodes.CreateProcurementReceipts }), EedmResponseFilter]
         public async Task<Dtos.ProcurementReceipts> GetProcurementReceiptsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -145,7 +148,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
-                 AddEthosContextProperties(
+                _procurementReceiptsService.ValidatePermissions(GetPermissionsMetaData());
+                AddEthosContextProperties(
                    await _procurementReceiptsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                    await _procurementReceiptsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                        new List<string>() { guid }));
@@ -188,7 +192,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="procurementReceipts">DTO of the new procurementReceipts</param>
         /// <returns>A procurementReceipts object <see cref="Dtos.ProcurementReceipts"/> in EEDM format</returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.CreateProcurementReceipts }), EedmResponseFilter]
         public async Task<Dtos.ProcurementReceipts> PostProcurementReceiptsAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.ProcurementReceipts procurementReceipts)
         {
             if (procurementReceipts == null)
@@ -207,6 +211,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
             try
             {
+                _procurementReceiptsService.ValidatePermissions(GetPermissionsMetaData());
                 //call import extend method that needs the extracted extension data and the config
                 await _procurementReceiptsService.ImportExtendedEthosData(await ExtractExtendedData(await _procurementReceiptsService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
@@ -261,6 +266,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="guid">GUID of the procurementReceipts to update</param>
         /// <param name="procurementReceipts">DTO of the updated procurementReceipts</param>
         /// <returns>A procurementReceipts object <see cref="Dtos.ProcurementReceipts"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPut]
         public async Task<Dtos.ProcurementReceipts> PutProcurementReceiptsAsync([FromUri] string guid, [FromBody] Dtos.ProcurementReceipts procurementReceipts)
         {
@@ -273,6 +279,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// Delete (DELETE) a procurementReceipts
         /// </summary>
         /// <param name="guid">GUID to desired procurementReceipts</param>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpDelete]
         public async Task DeleteProcurementReceiptsAsync(string guid)
         {

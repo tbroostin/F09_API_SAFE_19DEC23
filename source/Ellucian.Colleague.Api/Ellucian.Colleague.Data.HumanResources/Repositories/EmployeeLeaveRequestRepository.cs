@@ -958,7 +958,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                       leaveRequestDetail.Recordkey,
                       leaveRequestDetail.LrdLeaveRequestId,
                       leaveRequestDetail.LrdLeaveDate.Value,
-                      leaveRequestDetail.LrdLeaveHours));
+                      leaveRequestDetail.LrdLeaveHours,
+                      !string.IsNullOrWhiteSpace(leaveRequestDetail.LrdPayPeriodProcessed) && leaveRequestDetail.LrdPayPeriodProcessed.Equals("Y", StringComparison.OrdinalIgnoreCase)));
                 }
             }
 

@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 
@@ -68,5 +68,10 @@ namespace Ellucian.Colleague.Dtos.Base
         /// Flag indicating if the SSN is formatted. (###-##-####)
         /// </summary>
         public bool SSNIsFormatted { get; set; }
+
+        /// <summary>
+        /// Proxy and User Permission mapping objects
+        /// </summary>
+        public IEnumerable<ProxyAndUserPermissionsMap> ProxyAndUserPermissionsMap { get; set; }
     }
 }

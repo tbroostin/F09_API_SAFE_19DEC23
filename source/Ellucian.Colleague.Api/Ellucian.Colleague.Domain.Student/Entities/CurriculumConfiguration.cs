@@ -9,11 +9,6 @@ namespace Ellucian.Colleague.Domain.Student.Entities
     public class CurriculumConfiguration
     {
         /// <summary>
-        /// Mapping for Course Subjects and Departments
-        /// </summary>
-        public ExternalMapping SubjectDepartmentMapping { get; set; }
-
-        /// <summary>
         /// Status code assigned to active courses
         /// </summary>
         public string CourseActiveStatusCode { get; set; }

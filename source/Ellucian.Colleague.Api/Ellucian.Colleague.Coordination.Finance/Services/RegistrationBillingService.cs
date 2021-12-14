@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Finance;
@@ -175,7 +176,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
             // Only student can do approvals
             if (!UserIsSelf(acceptance.StudentId))
             {
-                logger.Info(CurrentUser + " cannot make approvals for student " + acceptance.StudentId);
+                logger.Error(CurrentUser.PersonId + " cannot make approvals for student " + acceptance.StudentId);
                 throw new PermissionsException();
             }
 
@@ -591,7 +592,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
 
             var ruleIds = new List<string>();
             var ruleResults = new List<Domain.Base.Entities.RuleResult>();
-            var acctHolder = _arRepository.GetAccountHolder(studentId);
+            var acctHolder = Task.Run(async () => await _arRepository.GetAccountHolderAsync(studentId)).GetAwaiter().GetResult(); ;
 
             // Set the payment requirement to the default payment requirement for the term (no associated rule)
             var paymentReq = paymentRequirements.First(x => x.ProcessingOrder == 0);

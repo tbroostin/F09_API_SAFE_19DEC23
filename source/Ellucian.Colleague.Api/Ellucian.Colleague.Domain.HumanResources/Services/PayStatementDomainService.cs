@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Web.Dependency;
 using System;
@@ -101,9 +101,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Services
                     {
                         if (!Context[data.EmployeeId].ContainsKey(data.PayDate.Year))
                         {
-                            Context[data.EmployeeId].Add(
-                                data.PayDate.Year,
-                                new List<PayStatementReportDataContext>()
+                            Context[data.EmployeeId].Add(data.PayDate.Year,
+                                                                new List<PayStatementReportDataContext>()
                                 {
                                     new PayStatementReportDataContext(data,
                                         payrollRegisterDictByPayStatementReferenceId[data.ReferenceKey],
@@ -121,7 +120,26 @@ namespace Ellucian.Colleague.Domain.HumanResources.Services
                                     personStatusLookup.Contains(data.EmployeeId) ? personStatusLookup[data.EmployeeId] : new List<PersonEmploymentStatus>()));
                         }
                     }
-                }
+
+                    //get all adjustments for the employee that were made on or after the paystatement date if any
+                    var adjustments = payrollRegister.Where(pre => pre.IsAdjustment
+                        && pre.EmployeeId == data.EmployeeId
+                        && pre.PaycheckDate.Value.Year == data.PayDate.Year //adjustments for the same year only
+                        && (DateTime.Compare(pre.PaycheckDate.Value, data.PayDate) <= 0)); // adjustment date needs to be on or before the paystatement date but within the same year
+
+                    //now add the adjustments - they will end up in the YTD context for the statement
+                    foreach (var adjustment in adjustments)
+                    {
+                        if(!Context[data.EmployeeId][data.PayDate.Year].Any(dc => dc.payrollRegisterEntry.Id == adjustment.Id))
+                        {
+                            Context[data.EmployeeId][data.PayDate.Year].Add(
+                                new PayStatementReportDataContext(data, adjustment,
+                                personStatusLookup.Contains(data.EmployeeId) ? personStatusLookup[data.EmployeeId] : new List<PersonEmploymentStatus>()));
+                        }
+                        
+                    }
+                }                  
+                
             }
         }
 

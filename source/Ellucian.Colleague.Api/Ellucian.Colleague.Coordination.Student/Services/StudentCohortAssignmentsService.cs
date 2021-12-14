@@ -1,7 +1,8 @@
-//Copyright 2019 Ellucian Company L.P. and its affiliates.
+//Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
@@ -64,11 +65,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         public async Task<Tuple<IEnumerable<StudentCohortAssignments>, int>> GetStudentCohortAssignmentsAsync(int offset, int limit, 
             StudentCohortAssignments criteria = null, Dictionary<string, string> filterQualifiers = null, bool bypassCache = false)
         {
-            if (!await CheckViewStudentCohortAssignmentsPermissionAsync())
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view student-cohort-assignments.");
-            }
-
+          
             StudentCohortAssignment criteriaObj = null;
             if(criteria != null)
             {
@@ -143,11 +140,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>StudentCohortAssignments DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.StudentCohortAssignments> GetStudentCohortAssignmentsByGuidAsync(string guid, bool bypassCache = true)
         {
-            if (!await CheckViewStudentCohortAssignmentsPermissionAsync())
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view student-cohort-assignments.");
-            }
-
+           
             try
             {
                 if (string.IsNullOrEmpty(guid))
@@ -198,24 +191,37 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var personGuid = string.Empty;
             if(personGuids != null && personGuids.Any() && !personGuids.TryGetValue(source.PersonId, out personGuid))
             {
-                IntegrationApiExceptionAddError(string.Format("Unable to locate guid for person ID '{0}'", source.PersonId), "person.id", source.RecordGuid, source.RecordKey);
+                IntegrationApiExceptionAddError(string.Format("Unable to locate guid for person ID '{0}'", source.PersonId), "Bad.Data", source.RecordGuid, source.RecordKey);
             }
             dto.Person = new GuidObject2(personGuid);
 
-            var cohortGuid = await _studentReferenceDataRepository.GetStudentCohortGuidAsync(source.CohortId);
-            if(cohortGuid == null)
+            try
             {
-                IntegrationApiExceptionAddError(string.Format("Unable to locate guid for cohort ID '{0}'", source.CohortId), "cohort.id", source.RecordGuid, source.RecordKey);
-
+                var cohortGuid = await _studentReferenceDataRepository.GetStudentCohortGuidAsync(source.CohortId);
+                if (cohortGuid == null)
+                {
+                    IntegrationApiExceptionAddError(string.Format("Unable to locate guid for cohort ID '{0}'", source.CohortId), "Bad.Data", source.RecordGuid, source.RecordKey);
+                }
+                dto.Cohort = new GuidObject2(cohortGuid);
             }
-            dto.Cohort = new GuidObject2(cohortGuid);            
-
-            var levelGuid = await _studentReferenceDataRepository.GetAcademicLevelsGuidAsync(source.AcadLevel);
-            if (string.IsNullOrEmpty(levelGuid))
+            catch (RepositoryException)
             {
-                IntegrationApiExceptionAddError(string.Format("Unable to locate guid for academic level ID '{0}'", source.AcadLevel), "academicLevel.id", source.RecordGuid, source.RecordKey);
+                IntegrationApiExceptionAddError(string.Format("Unable to locate guid for cohort ID '{0}'", source.CohortId), "Bad.Data", source.RecordGuid, source.RecordKey);
             }
-            dto.AcademicLevel = new GuidObject2(levelGuid);
+
+            try
+            {
+                var levelGuid = await _studentReferenceDataRepository.GetAcademicLevelsGuidAsync(source.AcadLevel);
+                if (string.IsNullOrEmpty(levelGuid))
+                {
+                    IntegrationApiExceptionAddError(string.Format("Unable to locate guid for academic level ID '{0}'", source.AcadLevel), "Bad.Data", source.RecordGuid, source.RecordKey);
+                }
+                dto.AcademicLevel = new GuidObject2(levelGuid);
+            }
+            catch (RepositoryException)
+            {
+                IntegrationApiExceptionAddError(string.Format("Unable to locate guid for academic level ID '{0}'", source.AcadLevel), "Bad.Data", source.RecordGuid, source.RecordKey);
+            }
             dto.StartOn = source.StartOn.HasValue ? source.StartOn.Value : default(DateTime?);
             dto.EndOn = source.EndOn.HasValue ? source.EndOn.Value : default(DateTime?);
 
@@ -223,23 +229,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         #endregion All Convert Methods
-
-        #region Permission Check
-
-        /// <summary>
-        /// Permissions code that allows an external system to perform the READ operation.
-        /// </summary>
-        /// <returns></returns>
-        private async Task<bool> CheckViewStudentCohortAssignmentsPermissionAsync()
-        {
-            IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
-            if (userPermissions.Contains(StudentPermissionCodes.ViewStudentCohortAssignments))
-            {
-                return true;
-            }
-            return false;
-        }
-
-        #endregion
+    
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2013-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2013-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -782,7 +782,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
             string programCode = "EXCLUDED_REQ";
             programrequirements = await programRequirementsRepo.GetAsync(programCode, "2013");
             // Exclude GEN requirement type
-            programrequirements.Requirements.ElementAt(0).Exclusions = new List<string>() { "GEN" };
+            programrequirements.Requirements.ElementAt(0).RequirementExclusions = new List<RequirementBlockExclusion>() { new RequirementBlockExclusion("GEN") };
+
             studentprogram = await GetStudentProgram(studentId, programCode);
             // two academic credits for MUSC-209, repeated for credit 
             credits = (await academicCreditRepo.GetAsync(new Collection<string>() { "63", "64" })).ToList();
@@ -807,7 +808,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
             string programCode = "EXCLUDED_REQ";
             programrequirements = await programRequirementsRepo.GetAsync(programCode, "2013");
             // Exclude GEN requirement type
-            programrequirements.Requirements.ElementAt(0).Exclusions = new List<string>() { "GEN" };
+            programrequirements.Requirements.ElementAt(0).RequirementExclusions = new List<RequirementBlockExclusion>() { new RequirementBlockExclusion("GEN") };
+
             studentprogram = await GetStudentProgram(studentId, programCode);
             // two academic credits for MUSC-209, repeated for credit 
             credits = (await academicCreditRepo.GetAsync(new Collection<string>() { "63", "64" })).ToList();
@@ -864,7 +866,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
             string programCode = "EXCLUDED_REQ2";
             programrequirements = await programRequirementsRepo.GetAsync(programCode, "2013");
             // Exclude GEN requirement type
-            programrequirements.Requirements.ElementAt(0).Exclusions = new List<string>() { "GEN" };
+            programrequirements.Requirements.ElementAt(0).RequirementExclusions = new List<RequirementBlockExclusion>() { new RequirementBlockExclusion("GEN") };
+
             studentprogram = await GetStudentProgram(studentId, programCode);
             // academic credits for MUSC-209 level 200 - would fulfill a group in both requirements but exclusions prevent it.
             credits = (await academicCreditRepo.GetAsync(new Collection<string>() { "63" })).ToList();
@@ -894,7 +897,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
             string programCode = "EXCLUDED_REQ";
             programrequirements = await programRequirementsRepo.GetAsync(programCode, "2013");
             // Exclude GEN requirement type
-            programrequirements.Requirements.ElementAt(0).Exclusions = new List<string>() { "GEN" };
+            programrequirements.Requirements.ElementAt(0).RequirementExclusions = new List<RequirementBlockExclusion>() { new RequirementBlockExclusion("GEN") };
+
             studentprogram = await GetStudentProgram(studentId, programCode);
             // two academic credits for MUSC-209, repeated for credit 
             credits = (await academicCreditRepo.GetAsync(new Collection<string>() { "63", "64" })).ToList();
@@ -948,8 +952,9 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
             string programCode = "EXCLUDED_REQ3";
             programrequirements = await programRequirementsRepo.GetAsync(programCode, "2013");
             // Exclude GEN requirement type
-            programrequirements.Requirements.ElementAt(0).Exclusions = new List<string>() { "GEN" };
-            programrequirements.Requirements.ElementAt(1).Exclusions = new List<string>() { "GEN" };
+            programrequirements.Requirements.ElementAt(0).RequirementExclusions = new List<RequirementBlockExclusion>() { new RequirementBlockExclusion("GEN") };
+            programrequirements.Requirements.ElementAt(1).RequirementExclusions = new List<RequirementBlockExclusion>() { new RequirementBlockExclusion("GEN") };
+
 
             // Set MinGrade for the group (makes it so that a credit with a grade of 'F' isn't applied to a requirement)
             programrequirements.Requirements.ElementAt(0).SubRequirements.ElementAt(0).Groups.ElementAt(0).MinGrade = (await graderepo.GetAsync()).Where(g => g.Id == "D").First();
@@ -986,7 +991,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
             programrequirements = await programRequirementsRepo.GetAsync(programCode, "2013");
             // This is a GEN requirement type, exclude MAJ requirement type. This will also imply that MAJ requirement types exclude GEN requirement types.
             programrequirements.Requirements.ElementAt(0).RequirementType = new RequirementType("GEN", "General", "98");
-            programrequirements.Requirements.ElementAt(0).Exclusions = new List<string>() { "MAJ" };
+            programrequirements.Requirements.ElementAt(0).RequirementExclusions = new List<RequirementBlockExclusion>(){new RequirementBlockExclusion("MAJ") };
             // Second requirement is also a GEN requirement type. 
             programrequirements.Requirements.ElementAt(1).RequirementType = new RequirementType("GEN", "General", "98");
             studentprogram = await GetStudentProgram(studentId, programCode);
@@ -1063,6 +1068,41 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
             // Verify that the course was applied twice to one requirement, but only once to the other (because it shared with the "takeall" group but will not share with the "take credits" group.
             Assert.AreEqual(6, eval.RequirementResults.ElementAt(0).GetAppliedCredits());
             Assert.AreEqual(3, eval.RequirementResults.ElementAt(1).GetAppliedCredits());
+        }
+
+        [TestMethod]
+        public async Task ReqExclusion_WithExclusionFlag()
+        {
+            // Simple program with three requirements,
+            //R1 type MAJ   with S1 -> G1 -> Take 10 courses from level 100,200,300,400,500 (SIMPLY.ANY)
+            //R2 type MAJ  with S2 -> G1 -> ake 10 courses from level 100,200,300,400,500 (SIMPLY.ANY) and S1 -> G2 (TAKE MUSC-209)
+            //R3 type MIN this excludes MAJ with flag=Y with S3 ->G2 -> take MUSC-209
+            string studentId = "0004002";
+            string programCode = "EXCLUDED_REQ_WITH_EXCLUSION_FLAG";
+            programrequirements = await programRequirementsRepo.GetAsync(programCode, "2013");
+            studentprogram = await GetStudentProgram(studentId, programCode);
+
+            // 64 - MUSC-209,  58 is TR,  61 is IP and others are completed
+            credits = (await academicCreditRepo.GetAsync(new Collection<string>() { "58", "64" , "61","43", "115"})).ToList();
+            plannedcourses = new List<PlannedCredit>();
+            // Evaluate
+            additionalrequirements = new List<Requirement>();
+            overrides = new List<Override>();
+            plannedcourses = new List<PlannedCredit>();
+            ProgramEvaluation eval = new ProgramEvaluator(studentprogram, programrequirements, additionalrequirements, credits, plannedcourses, ruleResults, overrides, courses, logger).Evaluate();
+            //R1 with first MAJ should not have MUSC-209 applied because it should only be applied to MIN
+            Assert.AreEqual(4, eval.RequirementResults.ElementAt(0).SubRequirementResults[0].GroupResults[0].GetApplied().Count());
+            Assert.IsFalse(eval.RequirementResults.ElementAt(0).SubRequirementResults[0].GroupResults[0].GetApplied().Select(s=>s.GetAcadCredId()).Contains("64"));
+            //R2 of type MAJ should apply all the courses because it is 2nd major
+            Assert.AreEqual(1, eval.RequirementResults.ElementAt(1).SubRequirementResults[0].GroupResults[0].GetApplied().Count());
+            Assert.AreEqual("64", eval.RequirementResults.ElementAt(1).SubRequirementResults[0].GroupResults[0].GetApplied().ToList()[0].GetAcadCredId());
+
+            //R2 should have MUSC-209 applied because MIN is only excluding first major
+            Assert.AreEqual(5, eval.RequirementResults.ElementAt(1).SubRequirementResults[0].GroupResults[1].GetApplied().Count());
+            //apply MSUC-209
+            Assert.AreEqual(1, eval.RequirementResults.ElementAt(2).SubRequirementResults[0].GroupResults[0].GetApplied().Count());
+            Assert.AreEqual("64", eval.RequirementResults.ElementAt(2).SubRequirementResults[0].GroupResults[0].GetApplied().ToList()[0].GetAcadCredId());
+            
         }
 
         // Verifies that when a requirement is set up to not allow course reuse between subrequirements, and there
@@ -1432,6 +1472,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
             Assert.AreEqual("66", creditApplied.ElementAt(0).GetAcadCredId());
             // Replaced course is in other courses
             Assert.IsTrue(eval.OtherAcademicCredits.Contains("65"));
+            Assert.IsTrue(eval.NotAppliedOtherAcademicCredits.Contains(credits[0]));
         }
 
         /// <summary>
@@ -2405,7 +2446,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Services
                 // Check each term for planned courses
                 foreach (var term in dp.TermIds)
                 {
-                    IEnumerable<PlannedCourse> plannedtermcourses = dp.GetPlannedCourses(term);
+                    IEnumerable<PlannedCourse> plannedtermcourses = dp.GetPlannedCourses(term).Where(c => !string.IsNullOrEmpty(c.CourseId));
 
                     foreach (var plannedCourse in plannedtermcourses)
                     {

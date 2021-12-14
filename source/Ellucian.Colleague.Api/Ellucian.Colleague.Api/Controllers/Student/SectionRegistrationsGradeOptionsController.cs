@@ -1,10 +1,11 @@
-//Copyright 2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
@@ -52,7 +53,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="criteria"></param>
         /// <returns></returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { SectionPermissionCodes.ViewRegistrations, SectionPermissionCodes.UpdateRegistrations })]
         [QueryStringFilterFilter("criteria", typeof(Dtos.SectionRegistrationsGradeOptions))]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
@@ -68,6 +69,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _sectionRegistrationService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -130,7 +132,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID to desired sectionRegistrationsGradeOptions</param>
         /// <returns>A sectionRegistrationsGradeOptions object <see cref="Dtos.SectionRegistrationsGradeOptions"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { SectionPermissionCodes.ViewRegistrations, SectionPermissionCodes.UpdateRegistrations })]
         public async Task<Dtos.SectionRegistrationsGradeOptions> GetSectionRegistrationsGradeOptionsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -148,6 +150,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _sectionRegistrationService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                    await _sectionRegistrationService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                    await _sectionRegistrationService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),

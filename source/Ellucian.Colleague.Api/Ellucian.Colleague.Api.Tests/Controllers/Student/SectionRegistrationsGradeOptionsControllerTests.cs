@@ -1,21 +1,26 @@
-//Copyright 2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -283,5 +288,178 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         {
             await sectionRegistrationsGradeOptionsController.DeleteSectionRegistrationsGradeOptionsAsync(sectionRegistrationsGradeOptionsCollection.FirstOrDefault().Id);
         }
+
+        //GET v1.0.0
+        //Successful
+        //GetSectionRegistrationsGradeOptionsAsync
+
+        [TestMethod]
+        public async Task SectionRegistrationsGradeOptionsController_GetSectionRegistrationsGradeOptionsAsync_Permissions()
+        {
+            Tuple<IEnumerable<Dtos.SectionRegistrationsGradeOptions>, int> tuple = new Tuple<IEnumerable<Dtos.SectionRegistrationsGradeOptions>, int>(sectionRegistrationsGradeOptionsCollection, sectionRegistrationsGradeOptionsCollection.Count());
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrationsGradeOptions" },
+                    { "action", "GetSectionRegistrationsGradeOptionsAsync" }
+                };
+            HttpRoute route = new HttpRoute("section-registrations-grade-options", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            sectionRegistrationsGradeOptionsController.Request.SetRouteData(data);
+            sectionRegistrationsGradeOptionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { SectionPermissionCodes.ViewRegistrations, SectionPermissionCodes.UpdateRegistrations });
+
+            var controllerContext = sectionRegistrationsGradeOptionsController.ControllerContext;
+            var actionDescriptor = sectionRegistrationsGradeOptionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            sectionRegistrationsGradeOptionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            sectionRegistrationsGradeOptionsServiceMock.Setup(x => x.GetSectionRegistrationsGradeOptionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.SectionRegistrationsGradeOptions>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+
+            var sourceContexts = await sectionRegistrationsGradeOptionsController.GetSectionRegistrationsGradeOptionsAsync(new Web.Http.Models.Paging(100, 0), new Web.Http.Models.QueryStringFilter("criteria", ""));
+
+            Object filterObject;
+            sectionRegistrationsGradeOptionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(SectionPermissionCodes.ViewRegistrations));
+            Assert.IsTrue(permissionsCollection.Contains(SectionPermissionCodes.UpdateRegistrations));
+
+        }
+
+        //GET v1.0.0
+        //Exception
+        //GetSectionRegistrationsGradeOptionsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task SectionRegistrationsGradeOptionsController_GetSectionRegistrationsGradeOptionsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrationsGradeOptions" },
+                    { "action", "GetSectionRegistrationsGradeOptionsAsync" }
+                };
+            HttpRoute route = new HttpRoute("section-registrations-grade-options", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            sectionRegistrationsGradeOptionsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = sectionRegistrationsGradeOptionsController.ControllerContext;
+            var actionDescriptor = sectionRegistrationsGradeOptionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                sectionRegistrationsGradeOptionsServiceMock.Setup(x => x.GetSectionRegistrationsGradeOptionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.SectionRegistrationsGradeOptions>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                sectionRegistrationsGradeOptionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view section-registrations-grade-options."));
+                await sectionRegistrationsGradeOptionsController.GetSectionRegistrationsGradeOptionsAsync(new Web.Http.Models.Paging(100, 0), new Web.Http.Models.QueryStringFilter("criteria", ""));
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET by id v1.0.0
+        //Successful
+        //GetSectionRegistrationsGradeOptionsByGuidAsync
+
+        [TestMethod]
+        public async Task SectionRegistrationsGradeOptionsController_GetSectionRegistrationsGradeOptionsByGuidAsync_Permissions()
+        {
+            var expected = sectionRegistrationsGradeOptionsCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrationsGradeOptions" },
+                    { "action", "GetSectionRegistrationsGradeOptionsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("section-registrations-grade-options", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            sectionRegistrationsGradeOptionsController.Request.SetRouteData(data);
+            sectionRegistrationsGradeOptionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { SectionPermissionCodes.ViewRegistrations, SectionPermissionCodes.UpdateRegistrations });
+
+            var controllerContext = sectionRegistrationsGradeOptionsController.ControllerContext;
+            var actionDescriptor = sectionRegistrationsGradeOptionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            sectionRegistrationsGradeOptionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            sectionRegistrationsGradeOptionsServiceMock.Setup(x => x.GetSectionRegistrationsGradeOptionsByGuidAsync(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
+         
+            var actual = await sectionRegistrationsGradeOptionsController.GetSectionRegistrationsGradeOptionsByGuidAsync(expected.Id);
+
+            Object filterObject;
+            sectionRegistrationsGradeOptionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(SectionPermissionCodes.ViewRegistrations));
+            Assert.IsTrue(permissionsCollection.Contains(SectionPermissionCodes.UpdateRegistrations));
+
+        }
+
+        //GET by id v1.0.0
+        //Exception
+        //GetSectionRegistrationsGradeOptionsByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task SectionRegistrationsGradeOptionsController_GetSectionRegistrationsGradeOptionsByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrationsGradeOptions" },
+                    { "action", "GetSectionRegistrationsGradeOptionsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("section-registrations-grade-options", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            sectionRegistrationsGradeOptionsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = sectionRegistrationsGradeOptionsController.ControllerContext;
+            var actionDescriptor = sectionRegistrationsGradeOptionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                sectionRegistrationsGradeOptionsServiceMock.Setup(x => x.GetSectionRegistrationsGradeOptionsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                sectionRegistrationsGradeOptionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view section-registrations-grade-options."));
+                await sectionRegistrationsGradeOptionsController.GetSectionRegistrationsGradeOptionsByGuidAsync(expectedGuid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
     }
 }

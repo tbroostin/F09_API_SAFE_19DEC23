@@ -19,6 +19,11 @@ namespace Ellucian.Colleague.Dtos.Finance.AccountDue
         public DateTime? DueDate { get; set; }
 
         /// <summary>
+        /// Date due offset to CTZS timezone setting
+        /// </summary>
+        public DateTimeOffset? DueDateOffset { get; set; }
+
+        /// <summary>
         /// Item description
         /// </summary>
         public string Description { get; set; }

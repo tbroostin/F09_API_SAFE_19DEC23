@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Tests;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
@@ -59,16 +59,16 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             /// Essentially this is a test of GetSectionAsync (which uses GetNonCachedSectionsAsync)
             /// </summary>
 
-            SectionRepository sectionRepo;
-            Mock<IStudentRepositoryHelper> stuRepoHelperMock;
-            IStudentRepositoryHelper stuRepoHelper;
-            CourseSections cs;
-            CourseSecMeeting csm;
-            CourseSecFaculty csf;
-            Section result;
-            CdDefaults cdDefaults;
-            PortalSites ps;
-            string csId;
+            protected SectionRepository sectionRepo;
+            protected Mock<IStudentRepositoryHelper> stuRepoHelperMock;
+            protected IStudentRepositoryHelper stuRepoHelper;
+            protected CourseSections cs;
+            protected CourseSecMeeting csm;
+            protected CourseSecFaculty csf;
+            protected Section result;
+            protected CdDefaults cdDefaults;
+            protected PortalSites ps;
+            protected string csId;
 
             [TestInitialize]
             public async void Initialize()
@@ -123,7 +123,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     SecHideInCatalog = "Y",
                     SecOtherRegBillingRates = new List<string>() { "123", "124" },
                     SecSynonym = "Synonym",
-                    SecAttendTrackingType = "A" // Corresponds to HoursByDateWithoutSectionMeeting in AttendanceTrackingType enum
+                    SecAttendTrackingType = "A", // Corresponds to HoursByDateWithoutSectionMeeting in AttendanceTrackingType enum
+                    SecShowDropRosterFlag = null,
                 };
                 cs.SecEndDate = cs.SecStartDate.Value.AddDays(69);
                 cs.SecContactEntityAssociation = new List<CourseSectionsSecContact>();
@@ -142,7 +143,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 cs.SecFaculty.Add("1");
                 // Pointer to CourseSecMeeting
                 cs.SecMeeting.Add("1");
-               
+                
                 BuildLdmConfiguration(dataReaderMock, out cdDefaults);
 
                 MockRecordAsync<CourseSections>("COURSE.SECTIONS", cs, cs.RecordGuid);
@@ -189,8 +190,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // Set up response for instructional methods and ST web defaults
                 MockRecordsAsync<InstrMethods>("INSTR.METHODS", BuildValidInstrMethodResponse());
-
-
                 // Set up repo response for GUID course types - the read record and the select
                 var allCourseTypes = new TestCourseTypeRepository().Get().ToList();
                 var courseTypeValcodeResponse = BuildValcodeResponse(allCourseTypes);
@@ -311,7 +310,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     null,
                     new SemaphoreSlim(1, 1)
                     ));
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object,new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
                 result = await sectionRepo.GetSectionAsync(csId);
                 result.NumberOnWaitlist = 10;
                 result.PermittedToRegisterOnWaitlist = 3;
@@ -923,8 +922,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task SectionRepository_SectionCharges_Null_SecOtherRegBillingRates()
             {
                 cs.SecOtherRegBillingRates = null;
-                dataReaderMock.Setup<Task<Collection<RegBillingRates>>>(cacc => cacc.BulkReadRecordAsync<RegBillingRates>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(null);
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                dataReaderMock.Setup<Task<Collection<RegBillingRates>>>(cacc => cacc.BulkReadRecordAsync<RegBillingRates>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(() => null);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(), apiSettings);
                 result = await sectionRepo.GetSectionAsync(csId);
 
                 Assert.IsFalse(result.SectionCharges.Any());
@@ -935,7 +934,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 cs.SecOtherRegBillingRates = new List<string>();
                 dataReaderMock.Setup<Task<Collection<RegBillingRates>>>(cacc => cacc.BulkReadRecordAsync<RegBillingRates>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(new Collection<RegBillingRates>());
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new Ellucian.Colleague.Domain.Student.Tests.TestTermRepository(),  apiSettings);
                 result = await sectionRepo.GetSectionAsync(csId);
 
                 Assert.IsFalse(result.SectionCharges.Any());
@@ -944,8 +943,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task SectionRepository_SectionCharges_DataReader_returns_Null_RegBillingRates_Collection()
             {
-                dataReaderMock.Setup<Task<Collection<RegBillingRates>>>(cacc => cacc.BulkReadRecordAsync<RegBillingRates>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(null);
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                dataReaderMock.Setup<Task<Collection<RegBillingRates>>>(cacc => cacc.BulkReadRecordAsync<RegBillingRates>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(() => null);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(), apiSettings);
                 result = await sectionRepo.GetSectionAsync(csId);
                 Assert.AreEqual(0, result.SectionCharges.Count());
             }
@@ -973,7 +972,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     }
                 };
                 dataReaderMock.Setup<Task<Collection<RegBillingRates>>>(cacc => cacc.BulkReadRecordAsync<RegBillingRates>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(rbrs);
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
                 result = await sectionRepo.GetSectionAsync(csId);
                 Assert.AreEqual(1, result.SectionCharges.Count);
             }
@@ -1001,7 +1000,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     },
                 };
                 dataReaderMock.Setup<Task<Collection<RegBillingRates>>>(cacc => cacc.BulkReadRecordAsync<RegBillingRates>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(rbrs);
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
                 result = await sectionRepo.GetSectionAsync(csId);
 
                 Assert.AreEqual(2, result.SectionCharges.Count);
@@ -1021,6 +1020,242 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public void SectionRepository_TestAllFields_AttendanceTrackingType()
             {
                 Assert.AreEqual(AttendanceTrackingType.HoursByDateWithoutSectionMeeting, result.AttendanceTrackingType);
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_TestAllFields_ShowDropRoster_ResponseYes()
+            {
+                cs.SecShowDropRosterFlag = "Y";
+                MockRecordAsync<CourseSections>("COURSE.SECTIONS", cs, cs.RecordGuid);
+                var result = await sectionRepo.GetSectionAsync(csId);
+                Assert.IsTrue(result.ShowDropRoster);
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_TestAllFields_ShowDropRoster_ResponseLowercaseYes()
+            {
+                cs.SecShowDropRosterFlag = "y";
+                MockRecordAsync<CourseSections>("COURSE.SECTIONS", cs, cs.RecordGuid);
+                var result = await sectionRepo.GetSectionAsync(csId);
+                Assert.IsTrue(result.ShowDropRoster);
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_TestAllFields_ShowDropRoster_ResponseNo()
+            {
+                cs.SecShowDropRosterFlag = "N";
+                MockRecordAsync<CourseSections>("COURSE.SECTIONS", cs, cs.RecordGuid);
+                var result = await sectionRepo.GetSectionAsync(csId);
+                Assert.IsFalse(result.ShowDropRoster);
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_TestAllFields_ShowDropRoster_ResponseLowercaseNo()
+            {
+                cs.SecShowDropRosterFlag = "n";
+                MockRecordAsync<CourseSections>("COURSE.SECTIONS", cs, cs.RecordGuid);
+                var result = await sectionRepo.GetSectionAsync(csId);
+                Assert.IsFalse(result.ShowDropRoster);
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_TestAllFields_ShowDropRoster_ResponseInvalidValue()
+            {
+                cs.SecShowDropRosterFlag = "Z";
+                MockRecordAsync<CourseSections>("COURSE.SECTIONS", cs, cs.RecordGuid);
+                var result = await sectionRepo.GetSectionAsync(csId);
+                Assert.IsFalse(result.ShowDropRoster);
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_TestAllFields_ShowDropRoster_ResponseWhitespace()
+            {
+                cs.SecShowDropRosterFlag = " ";
+                MockRecordAsync<CourseSections>("COURSE.SECTIONS", cs, cs.RecordGuid);
+                var result = await sectionRepo.GetSectionAsync(csId);
+                Assert.IsFalse(result.ShowDropRoster);
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_TestAllFields_ShowDropRoster_ResponseEmtpy()
+            {
+                cs.SecShowDropRosterFlag = string.Empty;
+                MockRecordAsync<CourseSections>("COURSE.SECTIONS", cs, cs.RecordGuid);
+                var result = await sectionRepo.GetSectionAsync(csId);
+                Assert.IsFalse(result.ShowDropRoster);
+            }
+
+            [TestMethod]
+            public void SectionRepository_TestAllFields_ShowDropRoster_ResponseNull()
+            {
+                // Section 12345 (csId) has SecShowDropRosterFlag set to null
+                Assert.IsFalse(result.ShowDropRoster);
+            }
+
+            [TestMethod]
+            public void SectionRepository_TestAllFields_InstructionalMethods_PickedFromSectionMeetings()
+            {
+                Assert.IsNotNull(result.SectionInstructionalMethods);
+                Assert.AreEqual(1, result.SectionInstructionalMethods.Count);
+                Assert.AreEqual("LEC", result.SectionInstructionalMethods[0].Code);
+
+            }
+            [TestMethod]
+            public async Task SectionRepository_TestAllFields_InstructionalMethods_PickedFromInstructionMethods_WhenSectionMeetingsIsNull()
+            {
+                cs.SecMeeting = null;
+                MockRecordAsync<CourseSections>("COURSE.SECTIONS", cs, cs.RecordGuid);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(), apiSettings);
+                result = await sectionRepo.GetSectionAsync(csId);
+                Assert.IsNotNull(result.SectionInstructionalMethods);
+                Assert.AreEqual(2, result.SectionInstructionalMethods.Count);
+                Assert.AreEqual("LEC", result.SectionInstructionalMethods[0].Code);
+                Assert.AreEqual("LAB", result.SectionInstructionalMethods[1].Code);
+            }
+            [TestMethod]
+            public async Task SectionRepository_TestAllFields_InstructionalMethods_IsEmpty_WhenSectionMeetingsIsNull_And_WhenInstructionalMethodsIsNUll()
+            {
+                cs.SecMeeting = null;
+                cs.SecInstrMethods = new List<string>();
+                MockRecordAsync<CourseSections>("COURSE.SECTIONS", cs, cs.RecordGuid);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(), apiSettings);
+                result = await sectionRepo.GetSectionAsync(csId);
+                Assert.IsNotNull(result.SectionInstructionalMethods);
+                Assert.AreEqual(0, result.SectionInstructionalMethods.Count);
+            }
+
+            [TestMethod]
+            public void SectionRepository_TestAllFields_OnlineCategory_PickedFromSectionMeetings()
+            {
+                //section meeting is set to LEC (which is not online)
+                Assert.AreEqual(OnlineCategory.NotOnline, result.OnlineCategory);
+            }
+            [TestMethod]
+            public async Task SectionRepository_TestAllFields_OnlineCategory_PickedFromSectionMeetings_WithSectionMeetingsAsOnline()
+            {
+                Collection<CourseSecMeeting> meetings = new Collection<CourseSecMeeting>();
+                // Set up repo response for course.sec.meeting to online classes
+                csm = new CourseSecMeeting()
+                {
+                    Recordkey = "1",
+                    CsmInstrMethod = "ONL",
+                    CsmCourseSection = "12345",
+                    CsmStartDate = DateTime.Today,
+                    CsmEndDate = DateTime.Today.AddDays(27),
+                    CsmStartTime = (new DateTime(1, 1, 1, 10, 0, 0) as DateTime?).ToTimeOfDayDateTimeOffset(colleagueTimeZone).ToLocalDateTime(colleagueTimeZone),
+                    CsmEndTime = (new DateTime(1, 1, 1, 11, 20, 0) as DateTime?).ToTimeOfDayDateTimeOffset(colleagueTimeZone).ToLocalDateTime(colleagueTimeZone),
+                    CsmMonday = "Y"
+                };
+                CourseSecMeeting csm2 = new CourseSecMeeting()
+                {
+                    Recordkey = "2",
+                    CsmInstrMethod = "ONL",//ONLINE
+                    CsmCourseSection = "12345",
+                    CsmStartDate = DateTime.Today,
+                    CsmEndDate = DateTime.Today.AddDays(20),
+                    CsmStartTime = (new DateTime(1, 2, 1, 10, 0, 0) as DateTime?).ToTimeOfDayDateTimeOffset(colleagueTimeZone).ToLocalDateTime(colleagueTimeZone),
+                    CsmEndTime = (new DateTime(1, 2, 1, 11, 20, 0) as DateTime?).ToTimeOfDayDateTimeOffset(colleagueTimeZone).ToLocalDateTime(colleagueTimeZone),
+                    CsmMonday = "Y"
+                };
+                meetings.Add(csm);
+                meetings.Add(csm2);
+                dataReaderMock.Setup<Task<Collection<CourseSecMeeting>>>(acc => acc.BulkReadRecordAsync<CourseSecMeeting>("COURSE.SEC.MEETING", It.IsAny<string[]>(), true)).Returns(Task.FromResult(meetings));
+                cs.SecMeeting.Add("1");
+                cs.SecMeeting.Add("2");
+                MockRecordAsync<CourseSections>("COURSE.SECTIONS", cs, cs.RecordGuid);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(), apiSettings);
+                result = await sectionRepo.GetSectionAsync(csId);
+                Assert.AreEqual(OnlineCategory.Online, result.OnlineCategory);
+            }
+            [TestMethod]
+            public async Task SectionRepository_TestAllFields_OnlineCategory_PickedFromSectionMeetings_WithSectionMeetingsAsHybrid()
+            {
+                Collection<CourseSecMeeting> meetings = new Collection<CourseSecMeeting>();
+                // Set up repo response for course.sec.meeting to online classes
+                csm = new CourseSecMeeting()
+                {
+                    Recordkey = "1",
+                    CsmInstrMethod = "LEC", //LEC
+                    CsmCourseSection = "12345",
+                    CsmStartDate = DateTime.Today,
+                    CsmEndDate = DateTime.Today.AddDays(27),
+                    CsmStartTime = (new DateTime(1, 1, 1, 10, 0, 0) as DateTime?).ToTimeOfDayDateTimeOffset(colleagueTimeZone).ToLocalDateTime(colleagueTimeZone),
+                    CsmEndTime = (new DateTime(1, 1, 1, 11, 20, 0) as DateTime?).ToTimeOfDayDateTimeOffset(colleagueTimeZone).ToLocalDateTime(colleagueTimeZone),
+                    CsmMonday = "Y"
+                };
+                CourseSecMeeting csm2 = new CourseSecMeeting()
+                {
+                    Recordkey = "2",
+                    CsmInstrMethod = "ONL",//ONLINE,
+                    CsmCourseSection = "12345",
+                    CsmStartDate = DateTime.Today,
+                    CsmEndDate = DateTime.Today.AddDays(20),
+                    CsmStartTime = (new DateTime(1, 2, 1, 10, 0, 0) as DateTime?).ToTimeOfDayDateTimeOffset(colleagueTimeZone).ToLocalDateTime(colleagueTimeZone),
+                    CsmEndTime = (new DateTime(1, 2, 1, 11, 20, 0) as DateTime?).ToTimeOfDayDateTimeOffset(colleagueTimeZone).ToLocalDateTime(colleagueTimeZone),
+                    CsmMonday = "Y"
+                };
+                meetings.Add(csm);
+                meetings.Add(csm2);
+                dataReaderMock.Setup<Task<Collection<CourseSecMeeting>>>(acc => acc.BulkReadRecordAsync<CourseSecMeeting>("COURSE.SEC.MEETING", It.IsAny<string[]>(), true)).Returns(Task.FromResult(meetings));
+                cs.SecMeeting.Add("1");
+                cs.SecMeeting.Add("2");
+                MockRecordAsync<CourseSections>("COURSE.SECTIONS", cs, cs.RecordGuid);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(), apiSettings);
+                result = await sectionRepo.GetSectionAsync(csId);
+                Assert.AreEqual(OnlineCategory.Hybrid, result.OnlineCategory);
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_TestAllFields_OnlineCategory_PickedFromInstructionMethods_WhenSectionMeetingsIsNull()
+            {
+                cs.SecMeeting = null;
+                MockRecordAsync<CourseSections>("COURSE.SECTIONS", cs, cs.RecordGuid);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new Ellucian.Colleague.Domain.Student.Tests.TestTermRepository(), apiSettings);
+                result = await sectionRepo.GetSectionAsync(csId);
+                Assert.IsNotNull(result.InstructionalMethods);
+                Assert.AreEqual(2, result.InstructionalMethods.Count);
+                Assert.AreEqual("LEC", result.InstructionalMethods[0]);
+                Assert.AreEqual("LAB", result.InstructionalMethods[1]);
+                Assert.AreEqual(OnlineCategory.NotOnline, result.OnlineCategory);
+            }
+            [TestMethod]
+            public async Task SectionRepository_TestAllFields_OnlineCategory_PickedFromInstructionMethods_Online_WhenSectionMeetingsIsNull()
+            {
+                cs.SecMeeting = null;
+                cs.SecInstrMethods = new List<string>() { "ONL" };
+                MockRecordAsync<CourseSections>("COURSE.SECTIONS", cs, cs.RecordGuid);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(), apiSettings);
+                result = await sectionRepo.GetSectionAsync(csId);
+                Assert.IsNotNull(result.InstructionalMethods);
+                Assert.AreEqual(1, result.InstructionalMethods.Count);
+                Assert.AreEqual("ONL", result.InstructionalMethods[0]);
+                Assert.AreEqual(OnlineCategory.Online, result.OnlineCategory);
+            }
+            [TestMethod]
+            public async Task SectionRepository_TestAllFields_OnlineCategory_PickedFromInstructionMethods_Hybrid_WhenSectionMeetingsIsNull()
+            {
+                cs.SecMeeting = null;
+                cs.SecInstrMethods = new List<string>() { "ONL", "LEC" };
+                MockRecordAsync<CourseSections>("COURSE.SECTIONS", cs, cs.RecordGuid);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(), apiSettings);
+                result = await sectionRepo.GetSectionAsync(csId);
+                Assert.IsNotNull(result.InstructionalMethods);
+                Assert.AreEqual(2, result.InstructionalMethods.Count);
+                Assert.AreEqual("ONL", result.InstructionalMethods[0]);
+                Assert.AreEqual("LEC", result.InstructionalMethods[1]);
+                Assert.AreEqual(OnlineCategory.Hybrid, result.OnlineCategory);
+            }
+            [TestMethod]
+            public async Task SectionRepository_TestAllFields_OnlineCategory_IsEmpty_WhenSectionMeetingsIsNull_And_WhenInstructionalMethodsIsNUll()
+            {
+                cs.SecMeeting = null;
+                cs.SecInstrMethods = new List<string>();
+                MockRecordAsync<CourseSections>("COURSE.SECTIONS", cs, cs.RecordGuid);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(), apiSettings);
+                result = await sectionRepo.GetSectionAsync(csId);
+                Assert.IsNotNull(result.InstructionalMethods);
+                Assert.AreEqual(0, result.InstructionalMethods.Count);
+                Assert.AreEqual(OnlineCategory.NotOnline, result.OnlineCategory);
             }
         }
 
@@ -1142,7 +1377,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 null,
                 new SemaphoreSlim(1, 1)
                 ));
-                sectionRepo = new SectionRepository(cacheProvider, transFactory, logger, apiSettings);
+                sectionRepo = new SectionRepository(cacheProvider, transFactory, logger, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
             }
 
             [TestMethod]
@@ -1219,25 +1454,25 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         [TestClass]
         public class SectionRepository_GeneralTests : SectionRepositoryTests
         {
-            IEnumerable<Section> regSections;
-            Dictionary<string, Section> regSectionsDict;
-            List<Term> registrationTerms = new List<Term>();
-            Collection<CourseSections> sectionsResponseData;
-            Collection<CourseSecMeeting> sectionMeetingResponseData;
-            Collection<CourseSecFaculty> sectionFacultyResponseData;
-            List<StudentCourseSectionStudents> studentCourseSecResponseData;
-            DeleteInstructionalEventRequest request;
-            DeleteInstructionalEventResponse response;
-            Collection<PortalSites> portalSitesResponseData;
-            Collection<CourseSecXlists> crosslistResponseData;
-            Collection<CourseSecPending> pendingResponseData;
-            Collection<WaitList> waitlistResponseData;
+            protected IEnumerable<Section> regSections;
+            protected Dictionary<string, Section> regSectionsDict;
+            protected List<Term> registrationTerms = new List<Term>();
+            protected Collection<CourseSections> sectionsResponseData;
+            protected Collection<CourseSecMeeting> sectionMeetingResponseData;
+            protected Collection<CourseSecFaculty> sectionFacultyResponseData;
+            protected List<StudentCourseSectionStudents> studentCourseSecResponseData;
+            protected DeleteInstructionalEventRequest request;
+            protected DeleteInstructionalEventResponse response;
+            protected Collection<PortalSites> portalSitesResponseData;
+            protected Collection<CourseSecXlists> crosslistResponseData;
+            protected Collection<CourseSecPending> pendingResponseData;
+            protected Collection<WaitList> waitlistResponseData;
             //   ApiSettings apiSettingsMock;
-            CdDefaults cdDefaults;
+           protected CdDefaults cdDefaults;
             String guid;
             String id;
 
-            SectionRepository sectionRepo;
+            protected SectionRepository sectionRepo;
 
             [TestInitialize]
             public async void Initialize()
@@ -1812,8 +2047,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 // Mock null roster response
                 studentCourseSecResponseData = null;
 
-                dataReaderMock.Setup(ac => ac.SelectAsync("STUDENT.COURSE.SEC", It.IsAny<string[]>(), "SAVING SCS.COURSE.SECTION")).ReturnsAsync(null);
-                dataReaderMock.Setup(ac => ac.SelectAsync("STUDENT.COURSE.SEC", It.IsAny<string[]>(), "SAVING SCS.STUDENT")).ReturnsAsync(null);
+                dataReaderMock.Setup(ac => ac.SelectAsync("STUDENT.COURSE.SEC", It.IsAny<string[]>(), "SAVING SCS.COURSE.SECTION")).ReturnsAsync(() => null);
+                dataReaderMock.Setup(ac => ac.SelectAsync("STUDENT.COURSE.SEC", It.IsAny<string[]>(), "SAVING SCS.STUDENT")).ReturnsAsync(() => null);
                 IEnumerable<Section> sections = await sectionRepo.GetRegistrationSectionsAsync(registrationTerms);
                 Section testSection = sections.ElementAt(0);
                 Assert.IsNotNull(testSection);
@@ -2123,7 +2358,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
 
                 // Construct section repository
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new Ellucian.Colleague.Domain.Student.Tests.TestTermRepository(),  apiSettings);
 
                 return sectionRepo;
             }
@@ -2187,7 +2422,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                   x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
                   .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
                 // Construct section repository
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
                 return sectionRepo;
             }
@@ -2736,6 +2971,9 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.IsFalse(section.OnlyPassNoPass);
                 Assert.IsFalse(section.AllowWaitlist);
                 Assert.AreEqual(20, section.Capacity);
+                Assert.IsFalse(section.HideRequisiteWaiver);
+                Assert.IsFalse(section.HideStudentPetition);
+                Assert.IsFalse(section.HideFacultyConsent);
             }
 
             // TODO: SSS This test broken by Async changes, needs to be resolved
@@ -2825,8 +3063,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 // Mock null roster response
                 studentCourseSecResponseData = null;
 
-                dataReaderMock.Setup(ac => ac.SelectAsync("STUDENT.COURSE.SEC", It.IsAny<string[]>(), "SAVING SCS.COURSE.SECTION")).ReturnsAsync(null);
-                dataReaderMock.Setup(ac => ac.SelectAsync("STUDENT.COURSE.SEC", It.IsAny<string[]>(), "SAVING SCS.STUDENT")).ReturnsAsync(null);
+                dataReaderMock.Setup(ac => ac.SelectAsync("STUDENT.COURSE.SEC", It.IsAny<string[]>(), "SAVING SCS.COURSE.SECTION")).ReturnsAsync(() => null);
+                dataReaderMock.Setup(ac => ac.SelectAsync("STUDENT.COURSE.SEC", It.IsAny<string[]>(), "SAVING SCS.STUDENT")).ReturnsAsync(() => null);
                 List<string> sectionIds = new List<string>() { "1", "2", "3" };
                 IEnumerable<Section> sections = await sectionRepo.GetNonCachedSectionsAsync(sectionIds);
                 Assert.AreEqual(3, sections.Count());
@@ -3318,7 +3556,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 bookOptions.ValsEntityAssociation.Add(new ApplValcodesVals("O", "Optional", "2", "O", "", "", ""));
                 dataReaderMock.Setup<Task<ApplValcodes>>(cacc => cacc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "BOOK.OPTION", true)).ReturnsAsync(bookOptions);
                 // Construct section repository
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
                 return sectionRepo;
             }
@@ -3332,7 +3570,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup<Task<Collection<CourseSections>>>(acc => acc.BulkReadRecordAsync<CourseSections>("COURSE.SECTIONS", It.IsAny<string[]>(), true)).Throws(expectedFailure);
 
                 // Construct section repository
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
                 return sectionRepo;
             }
@@ -3869,7 +4107,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(r => r.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<bool>())).Returns<string, bool>(
                    (id, repl) => Task.FromResult((stWebDflt.Recordkey == id) ? stWebDflt : null)
                    );
-                repository = new SectionRepository(cacheProvider, transFactory, logger, apiSettings);
+                repository = new SectionRepository(cacheProvider, transFactory, logger, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
 
 
@@ -4140,7 +4378,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(r => r.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<bool>())).Returns<string, bool>(
                    (id, repl) => Task.FromResult((stWebDflt.Recordkey == id) ? stWebDflt : null)
                    );
-                repository = new SectionRepository(cacheProvider, transFactory, logger, apiSettings);
+                repository = new SectionRepository(cacheProvider, transFactory, logger, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
 
 
@@ -4350,7 +4588,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(r => r.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<bool>())).Returns<string, bool>(
                    (id, repl) => Task.FromResult((stWebDflt.Recordkey == id) ? stWebDflt : null)
                    );
-                repository = new SectionRepository(cacheProvider, transFactory, logger, apiSettings);
+                repository = new SectionRepository(cacheProvider, transFactory, logger, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
             }
 
             [TestMethod]
@@ -4658,7 +4896,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(r => r.ReadRecordAsync<StwebDefaults>(It.IsAny<string>(), It.IsAny<bool>())).Returns<string, bool>(
                    (id, repl) => Task.FromResult((stWebDflt.Recordkey == id) ? stWebDflt : null)
                    );
-                repository = new SectionRepository(cacheProvider, transFactory, logger, apiSettings);
+                repository = new SectionRepository(cacheProvider, transFactory, logger, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
 
 
@@ -4777,7 +5015,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetSectionWaitlistStatusRequest, GetSectionWaitlistStatusResponse>(It.IsAny<GetSectionWaitlistStatusRequest>())).ReturnsAsync(wlResp);
 
 
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettingsMock);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettingsMock);
 
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                    x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
@@ -4801,9 +5039,9 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 // Test basic execution. Mocked ImportGradesAsync should return a response with the same
                 // student ID as GetSectionGrades that is passed in as the request.
                 var grades = GetSectionGrades();
-                var response = await sectionRepo.ImportGradesAsync(grades, false, true, GradesPutCallerTypes.ILP);
+                var response = await sectionRepo.ImportGradesAsync(grades, false, true, GradesPutCallerTypes.ILP, false);
 
-                foreach (var r in response)
+                foreach (var r in response.StudentResponses)
                 {
                     Assert.AreEqual(GetSectionGrades().StudentGrades[0].StudentId, r.StudentId);
                 }
@@ -4817,8 +5055,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 grades.StudentGrades[0].MidtermGrade1 = null;
                 grades.SectionId = "TrueForceVerify";
                 // Tests that ForceNoVerify is passed to the CTX when true
-                IEnumerable<SectionGradeResponse> response = await sectionRepo.ImportGradesAsync(grades, true, true, GradesPutCallerTypes.ILP);
-                Assert.AreEqual(response.First().Errors[0].Message, "WasTrue");
+                SectionGradeSectionResponse response = await sectionRepo.ImportGradesAsync(grades, true, true, GradesPutCallerTypes.ILP, false);
+                Assert.AreEqual(response.StudentResponses.First().Errors[0].Message, "WasTrue");
             }
 
             [TestMethod]
@@ -4829,8 +5067,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 grades.StudentGrades[0].MidtermGrade1 = null;
                 grades.SectionId = "FalseForceVerify";
                 // Tests that ForceNoVerify is passed to the CTX when false
-                IEnumerable<SectionGradeResponse> response = await sectionRepo.ImportGradesAsync(grades, false, false, GradesPutCallerTypes.ILP);
-                Assert.AreEqual(response.First().Errors[0].Message, "WasFalse");
+                SectionGradeSectionResponse response = await sectionRepo.ImportGradesAsync(grades, false, false, GradesPutCallerTypes.ILP, false);
+                Assert.AreEqual(response.StudentResponses.First().Errors[0].Message, "WasFalse");
             }
 
             [TestMethod]
@@ -4841,8 +5079,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 grades.StudentGrades[0].MidtermGrade1 = null;
                 grades.SectionId = "TestCallerType";
                 // Tests that ForceNoVerify is passed to the CTX when false
-                IEnumerable<SectionGradeResponse> response = await sectionRepo.ImportGradesAsync(grades, true, true, GradesPutCallerTypes.ILP);
-                Assert.AreEqual(response.First().Errors[0].Message, "IlpCaller");
+                SectionGradeSectionResponse response = await sectionRepo.ImportGradesAsync(grades, true, true, GradesPutCallerTypes.ILP, false);
+                Assert.AreEqual(response.StudentResponses.First().Errors[0].Message, "IlpCaller");
             }
 
             [TestMethod]
@@ -4853,8 +5091,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 grades.StudentGrades[0].MidtermGrade1 = null;
                 grades.SectionId = "TestCallerType";
                 // Tests that ForceNoVerify is passed to the CTX when false
-                IEnumerable<SectionGradeResponse> response = await sectionRepo.ImportGradesAsync(grades, true, true, GradesPutCallerTypes.Standard);
-                Assert.AreEqual(response.First().Errors[0].Message, "StandardCaller");
+                SectionGradeSectionResponse response = await sectionRepo.ImportGradesAsync(grades, true, true, GradesPutCallerTypes.Standard, false);
+                Assert.AreEqual(response.StudentResponses.First().Errors[0].Message, "StandardCaller");
             }
 
 
@@ -4912,7 +5150,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 apiSettingsMock = new ApiSettings("null");
 
                 //sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettingsMock);
-                sectionRepo = new PrivateObject(typeof(SectionRepository), cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettingsMock);
+                sectionRepo = new PrivateObject(typeof(SectionRepository), cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettingsMock);
 
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                        x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
@@ -4975,85 +5213,87 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 ImportGradesFromILPResponse transactionOutput = new ImportGradesFromILPResponse();
 
                 // empty input and output
-                var sectionGradeResponses = (List<SectionGradeResponse>)sectionRepo.Invoke("ConvertImportOutputToDomainEntities", transactionOutput);
-                Assert.AreEqual(sectionGradeResponses.Count(), 0);
+                var sectionGradeResponse = (SectionGradeSectionResponse)sectionRepo.Invoke("ConvertImportOutputToDomainEntities", transactionOutput);
+                Assert.AreEqual(sectionGradeResponse.StudentResponses.Count(), 0);
+                Assert.AreEqual(sectionGradeResponse.InformationalMessages.Count(), 0);
+
 
                 // single success record
                 transactionOutput = GetSingleSuccessResponse_ForSingleStudent();
-                sectionGradeResponses = (List<SectionGradeResponse>)sectionRepo.Invoke("ConvertImportOutputToDomainEntities", transactionOutput);
-                Assert.AreEqual(transactionOutput.ItemsToPostOutput[0].ItemOutPerson, sectionGradeResponses[0].StudentId);
-                Assert.AreEqual("success", sectionGradeResponses[0].Status);
+                sectionGradeResponse = (SectionGradeSectionResponse)sectionRepo.Invoke("ConvertImportOutputToDomainEntities", transactionOutput);
+                Assert.AreEqual(transactionOutput.ItemsToPostOutput[0].ItemOutPerson, sectionGradeResponse.StudentResponses[0].StudentId);
+                Assert.AreEqual("success", sectionGradeResponse.StudentResponses[0].Status);
 
                 // single failure record
                 transactionOutput = GetSingleFailureResponse_ForSingleStudent();
-                sectionGradeResponses = (List<SectionGradeResponse>)sectionRepo.Invoke("ConvertImportOutputToDomainEntities", transactionOutput);
-                Assert.AreEqual(transactionOutput.ItemsToPostOutput[0].ItemOutPerson, sectionGradeResponses[0].StudentId);
-                Assert.AreEqual("failure", sectionGradeResponses[0].Status);
-                Assert.IsTrue(sectionGradeResponses[0].Errors.Count() == 1);
-                Assert.AreEqual(transactionOutput.ItemsToPostOutput[0].ItemOutCode, sectionGradeResponses[0].Errors[0].Property);
-                Assert.AreEqual(transactionOutput.ItemsToPostOutput[0].ItemErrorMsg, sectionGradeResponses[0].Errors[0].Message);
+                sectionGradeResponse = (SectionGradeSectionResponse)sectionRepo.Invoke("ConvertImportOutputToDomainEntities", transactionOutput);
+                Assert.AreEqual(transactionOutput.ItemsToPostOutput[0].ItemOutPerson, sectionGradeResponse.StudentResponses[0].StudentId);
+                Assert.AreEqual("failure", sectionGradeResponse.StudentResponses[0].Status);
+                Assert.IsTrue(sectionGradeResponse.StudentResponses[0].Errors.Count() == 1);
+                Assert.AreEqual(transactionOutput.ItemsToPostOutput[0].ItemOutCode, sectionGradeResponse.StudentResponses[0].Errors[0].Property);
+                Assert.AreEqual(transactionOutput.ItemsToPostOutput[0].ItemErrorMsg, sectionGradeResponse.StudentResponses[0].Errors[0].Message);
 
                 // mixed response for single person
                 transactionOutput = GetMixedResponse_ForSingleStudent();
-                sectionGradeResponses = (List<SectionGradeResponse>)sectionRepo.Invoke("ConvertImportOutputToDomainEntities", transactionOutput);
-                Assert.AreEqual(transactionOutput.ItemsToPostOutput[0].ItemOutPerson, sectionGradeResponses[0].StudentId);
-                Assert.AreEqual("failure", sectionGradeResponses[0].Status);
-                Assert.IsTrue(sectionGradeResponses[0].Errors.Count() == 1);
-                Assert.AreEqual(transactionOutput.ItemsToPostOutput.First(x => x.ItemOutStatus == "failure").ItemOutCode, sectionGradeResponses[0].Errors[0].Property);
-                Assert.AreEqual(transactionOutput.ItemsToPostOutput.First(x => x.ItemOutStatus == "failure").ItemErrorMsg, sectionGradeResponses[0].Errors[0].Message);
+                sectionGradeResponse = (SectionGradeSectionResponse)sectionRepo.Invoke("ConvertImportOutputToDomainEntities", transactionOutput);
+                Assert.AreEqual(transactionOutput.ItemsToPostOutput[0].ItemOutPerson, sectionGradeResponse.StudentResponses[0].StudentId);
+                Assert.AreEqual("failure", sectionGradeResponse.StudentResponses[0].Status);
+                Assert.IsTrue(sectionGradeResponse.StudentResponses[0].Errors.Count() == 1);
+                Assert.AreEqual(transactionOutput.ItemsToPostOutput.First(x => x.ItemOutStatus == "failure").ItemOutCode, sectionGradeResponse.StudentResponses[0].Errors[0].Property);
+                Assert.AreEqual(transactionOutput.ItemsToPostOutput.First(x => x.ItemOutStatus == "failure").ItemErrorMsg, sectionGradeResponse.StudentResponses[0].Errors[0].Message);
 
                 // multiple success for single person
                 transactionOutput = GetMultiSuccessResponse_ForSingleStudent();
-                sectionGradeResponses = (List<SectionGradeResponse>)sectionRepo.Invoke("ConvertImportOutputToDomainEntities", transactionOutput);
-                Assert.AreEqual(transactionOutput.ItemsToPostOutput[0].ItemOutPerson, sectionGradeResponses[0].StudentId);
-                Assert.AreEqual("success", sectionGradeResponses[0].Status);
+                sectionGradeResponse = (SectionGradeSectionResponse)sectionRepo.Invoke("ConvertImportOutputToDomainEntities", transactionOutput);
+                Assert.AreEqual(transactionOutput.ItemsToPostOutput[0].ItemOutPerson, sectionGradeResponse.StudentResponses[0].StudentId);
+                Assert.AreEqual("success", sectionGradeResponse.StudentResponses[0].Status);
 
                 // multiple failures for single person
                 transactionOutput = GetMultiFailureResponse_ForSingleStudent();
-                sectionGradeResponses = (List<SectionGradeResponse>)sectionRepo.Invoke("ConvertImportOutputToDomainEntities", transactionOutput);
-                Assert.AreEqual(transactionOutput.ItemsToPostOutput[0].ItemOutPerson, sectionGradeResponses[0].StudentId);
-                Assert.AreEqual("failure", sectionGradeResponses[0].Status);
-                Assert.IsTrue(sectionGradeResponses[0].Errors.Count() > 1);
+                sectionGradeResponse = (SectionGradeSectionResponse)sectionRepo.Invoke("ConvertImportOutputToDomainEntities", transactionOutput);
+                Assert.AreEqual(transactionOutput.ItemsToPostOutput[0].ItemOutPerson, sectionGradeResponse.StudentResponses[0].StudentId);
+                Assert.AreEqual("failure", sectionGradeResponse.StudentResponses[0].Status);
+                Assert.IsTrue(sectionGradeResponse.StudentResponses[0].Errors.Count() > 1);
                 transactionOutput.ItemsToPostOutput.ForEach(x =>
                 {
-                    Assert.IsTrue(sectionGradeResponses[0].Errors.Any(z => z.Property == x.ItemOutCode));
-                    Assert.IsTrue(sectionGradeResponses[0].Errors.Any(z => z.Message == x.ItemErrorMsg));
+                    Assert.IsTrue(sectionGradeResponse.StudentResponses[0].Errors.Any(z => z.Property == x.ItemOutCode));
+                    Assert.IsTrue(sectionGradeResponse.StudentResponses[0].Errors.Any(z => z.Message == x.ItemErrorMsg));
                 });
 
                 // two people, both success
                 transactionOutput = GetSuccessResponse_ForMultiStudent();
-                sectionGradeResponses = (List<SectionGradeResponse>)sectionRepo.Invoke("ConvertImportOutputToDomainEntities", transactionOutput);
+                sectionGradeResponse = (SectionGradeSectionResponse)sectionRepo.Invoke("ConvertImportOutputToDomainEntities", transactionOutput);
                 transactionOutput.ItemsToPostOutput.ForEach(x =>
                 {
-                    Assert.IsTrue(sectionGradeResponses.Any(z => z.StudentId == x.ItemOutPerson && z.Status == "success"));
+                    Assert.IsTrue(sectionGradeResponse.StudentResponses.Any(z => z.StudentId == x.ItemOutPerson && z.Status == "success"));
                 });
 
                 // two people, both failure
                 transactionOutput = GetFailureResponse_ForMultiStudent();
-                sectionGradeResponses = (List<SectionGradeResponse>)sectionRepo.Invoke("ConvertImportOutputToDomainEntities", transactionOutput);
+                sectionGradeResponse = (SectionGradeSectionResponse)sectionRepo.Invoke("ConvertImportOutputToDomainEntities", transactionOutput);
                 transactionOutput.ItemsToPostOutput.ForEach(x =>
                 {
-                    Assert.IsTrue(sectionGradeResponses.Any(z => z.StudentId == x.ItemOutPerson && z.Status == "failure"));
-                    Assert.IsTrue(sectionGradeResponses.Any(z => z.StudentId == x.ItemOutPerson && z.Errors.Any(y => y.Property == x.ItemOutCode)));
-                    Assert.IsTrue(sectionGradeResponses.Any(z => z.StudentId == x.ItemOutPerson && z.Errors.Any(y => y.Message == x.ItemErrorMsg)));
+                    Assert.IsTrue(sectionGradeResponse.StudentResponses.Any(z => z.StudentId == x.ItemOutPerson && z.Status == "failure"));
+                    Assert.IsTrue(sectionGradeResponse.StudentResponses.Any(z => z.StudentId == x.ItemOutPerson && z.Errors.Any(y => y.Property == x.ItemOutCode)));
+                    Assert.IsTrue(sectionGradeResponse.StudentResponses.Any(z => z.StudentId == x.ItemOutPerson && z.Errors.Any(y => y.Message == x.ItemErrorMsg)));
                 });
 
                 // two people, one success, one failure
                 transactionOutput = GetFailureResponse_ForMultiStudent();
-                sectionGradeResponses = (List<SectionGradeResponse>)sectionRepo.Invoke("ConvertImportOutputToDomainEntities", transactionOutput);
+                sectionGradeResponse = (SectionGradeSectionResponse)sectionRepo.Invoke("ConvertImportOutputToDomainEntities", transactionOutput);
                 transactionOutput.ItemsToPostOutput.ForEach(x =>
                 {
-                    Assert.IsTrue(sectionGradeResponses.Any(z => z.StudentId == x.ItemOutPerson && z.Status == x.ItemOutStatus));
+                    Assert.IsTrue(sectionGradeResponse.StudentResponses.Any(z => z.StudentId == x.ItemOutPerson && z.Status == x.ItemOutStatus));
 
                     if (x.ItemOutStatus == "success")
                     {
-                        Assert.IsTrue(sectionGradeResponses.First(z => z.StudentId == x.ItemOutStatus).Errors.Count() == 0);
+                        Assert.IsTrue(sectionGradeResponse.StudentResponses.First(z => z.StudentId == x.ItemOutStatus).Errors.Count() == 0);
                     }
 
                     if (x.ItemOutStatus == "failure")
                     {
-                        Assert.IsTrue(sectionGradeResponses.Any(z => z.StudentId == x.ItemOutPerson && z.Errors.Any(y => y.Property == x.ItemOutCode)));
-                        Assert.IsTrue(sectionGradeResponses.Any(z => z.StudentId == x.ItemOutPerson && z.Errors.Any(y => y.Message == x.ItemErrorMsg)));
+                        Assert.IsTrue(sectionGradeResponse.StudentResponses.Any(z => z.StudentId == x.ItemOutPerson && z.Errors.Any(y => y.Property == x.ItemOutCode)));
+                        Assert.IsTrue(sectionGradeResponse.StudentResponses.Any(z => z.StudentId == x.ItemOutPerson && z.Errors.Any(y => y.Message == x.ItemErrorMsg)));
                     }
                 });
             }
@@ -5273,7 +5513,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
 
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettingsMock);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettingsMock);
 
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                    x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
@@ -5295,10 +5535,10 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task SectionRepository_ImportGradesFailure()
             {
                 var grades = GetSectionGrades();
-                var response = await sectionRepo.ImportGradesAsync(grades, false, true, GradesPutCallerTypes.ILP);
+                var response = await sectionRepo.ImportGradesAsync(grades, false, true, GradesPutCallerTypes.ILP, false);
                 var expectedData = GetTransactionResponse();
 
-                foreach (var r in response)
+                foreach (var r in response.StudentResponses)
                 {
                     Assert.AreEqual(GetSectionGrades().StudentGrades[0].StudentId, r.StudentId);
                     Assert.AreEqual("failure", r.Status);
@@ -5406,7 +5646,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     )).Returns(Task.FromResult(transactionResponse));
                 transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataReaderMock.Object);
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettingsMock);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettingsMock);
             }
 
             [TestCleanup]
@@ -5641,9 +5881,10 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     Section sec3= sections.Where(sec => sec.Id == "2").FirstOrDefault();
                     //have no books at all
                     Section sec4 = sections.Where(sec => sec.Id == "11").FirstOrDefault();
-                    Assert.AreEqual(sec1.Books.Count, 2);
-                    Assert.AreEqual(sec2.Books.Count, 0);
-                    Assert.AreEqual(sec3.Books.Count, 0);
+                    Assert.AreEqual(sec1.Books.Count, 2);                    
+                    // Returns a count of 2 for sec2 and sec3 for SEC.BOOKS without associated SEC.BOOK.OPTIONS (which is valid in Colleague)
+                    Assert.AreEqual(sec2.Books.Count, 2);
+                    Assert.AreEqual(sec3.Books.Count, 2);
                     Assert.AreEqual(sec4.Books.Count, 0);
                     Assert.AreEqual(sectionFaculty0000049Term2012FAResponseData.Count(), sections.Count());
                 }
@@ -5803,7 +6044,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
 
                     // Construct section repository
-                    sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettingsMock);
+                    sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettingsMock);
 
                     return sectionRepo;
                 }
@@ -5828,7 +6069,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     //cacheProviderMock.Setup(provider => provider.GetCache(It.IsAny<string>())).Returns(localCacheMock.Object);
 
                     // Construct section repository
-                    sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettingsMock);
+                    sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettingsMock);
 
                     return sectionRepo;
                 }
@@ -6241,7 +6482,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task SectionRepository_ImportGradesSectionNull()
             {
-                await sectionRepo.ImportGradesAsync(null, false, true, GradesPutCallerTypes.ILP);
+                await sectionRepo.ImportGradesAsync(null, false, true, GradesPutCallerTypes.ILP, false);
             }
 
             [TestMethod]
@@ -6250,7 +6491,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 var grades = new SectionGrades();
                 grades.StudentGrades = null;
-                await sectionRepo.ImportGradesAsync(grades, false, true, GradesPutCallerTypes.ILP);
+                await sectionRepo.ImportGradesAsync(grades, false, true, GradesPutCallerTypes.ILP, false);
             }
 
             [TestMethod]
@@ -6259,7 +6500,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 var grades = new SectionGrades();
                 grades.StudentGrades = new List<StudentGrade>();
-                await sectionRepo.ImportGradesAsync(grades, false, true, GradesPutCallerTypes.ILP);
+                await sectionRepo.ImportGradesAsync(grades, false, true, GradesPutCallerTypes.ILP, false);
             }
 
             [TestMethod]
@@ -6267,7 +6508,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task SectionRepository_ImportGradesTransactionException()
             {
                 var grades = GetSectionGrades();
-                await sectionRepo.ImportGradesAsync(grades, false, true, GradesPutCallerTypes.ILP);
+                await sectionRepo.ImportGradesAsync(grades, false, true, GradesPutCallerTypes.ILP, false);
             }
 
             private SectionGrades GetSectionGrades()
@@ -6499,7 +6740,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
                     .ReturnsAsync(resp);
 
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
             }
 
             [TestCleanup]
@@ -6815,7 +7056,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
                 transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
                     .ReturnsAsync(resp);
-                dataReaderMock.Setup(repo => repo.SelectAsync("COURSES", It.IsAny<string[]>(), "SAVING CRS.SECTIONS")).ReturnsAsync(null);
+                dataReaderMock.Setup(repo => repo.SelectAsync("COURSES", It.IsAny<string[]>(), "SAVING CRS.SECTIONS")).ReturnsAsync(() => null);
                 var results = await sectionRepo.GetSections2Async(0, 3, "Title", "2016/01/01", "2016/12/31", "code", "number", "learningProvider", "termId", "academicLevel", new List<string>() { "course" }, "location",
                                                                        "location", "status", It.IsAny<List<string>>(), "subject", new List<string>(){ "1", "2" }, "");
                 Assert.AreEqual(false, results.Item1.Any());
@@ -6840,7 +7081,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
                 transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
                     .ReturnsAsync(resp);
-                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(null);
+                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(() => null);
 
                 var results = await sectionRepo.GetSections2Async(0, 3, "Title", "2016/01/01", "2016/12/31", "code", "number", "learningProvider", "termId", "academicLevel", new List<string>() { "course" }, "location",
                                                                        "status", "department", It.IsAny<List<string>>(), "");
@@ -6866,7 +7107,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
                 transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
                     .ReturnsAsync(resp);
-                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(null);
+                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(() => null);
 
                 var results = await sectionRepo.GetSections2Async(0, 3, "Title", "2016/01/01", "2016/12/31", "code", "number", "learningProvider", "", "academicLevel", It.IsAny<List<string>>(), "location",
                                                                        "status", "department", new List<string>() { "subject" } );
@@ -6892,7 +7133,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
                 transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
                     .ReturnsAsync(resp);
-                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(null);
+                dataReaderMock.Setup(dr => dr.SelectAsync("COURSE.SECTIONS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(() => null);
 
                 var results = await sectionRepo.GetSections2Async(0, 3, "Title", "2016/01/01", "2016/12/31", "code", "number", "learningProvider", "", "academicLevel", It.IsAny<List<string>>(), "location",
                                                                        "status", "department", It.IsAny<List<string>>(), "");
@@ -7618,7 +7859,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task SectionRepository_GetSectionFacultyByGuidAsync_CourseSecFaculty_Null()
             {
-                dataReaderMock.Setup(dr => dr.ReadRecordAsync<CourseSecFaculty>(It.IsAny<GuidLookup>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(dr => dr.ReadRecordAsync<CourseSecFaculty>(It.IsAny<GuidLookup>(), It.IsAny<bool>())).ReturnsAsync(() => null);
 
                 var actual = await sectionRepo.GetSectionFacultyByGuidAsync("");
             }
@@ -7648,7 +7889,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 };
                 dataReaderMock.Setup(dr => dr.ReadRecordAsync<CourseSecFaculty>(It.IsAny<GuidLookup>(), It.IsAny<bool>())).ReturnsAsync(sectionFacultyResponseData);
 
-                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<CourseSecMeeting>("COURSE.SEC.MEETING", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<CourseSecMeeting>("COURSE.SEC.MEETING", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(() => null);
 
                 await sectionRepo.GetSectionFacultyByGuidAsync(guid);
 
@@ -8338,7 +8579,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 dataReaderMock.Setup(rdr => rdr.ReadRecordAsync<CourseSections>(section.Id, It.IsAny<bool>())).ReturnsAsync(cs);
 
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
             }
 
@@ -8481,7 +8722,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(ArgumentNullException))]
             public async Task SectionRepository_GetSectionFacultyByGuidAsync_CourseSecFaculty_Null()
             {
-                dataReaderMock.Setup(dr => dr.ReadRecordAsync<CourseSecFaculty>(It.IsAny<GuidLookup>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(dr => dr.ReadRecordAsync<CourseSecFaculty>(It.IsAny<GuidLookup>(), It.IsAny<bool>())).ReturnsAsync(() => null);
 
                 var actual = await sectionRepo.GetSectionFacultyByGuidAsync("");
             }
@@ -8635,7 +8876,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task GetSectionMeetingInstancesAsync_Null_CalsData()
             {
                 dataReaderMock.Setup<Task<Collection<CalendarSchedules>>>(acc => acc.BulkReadRecordAsync<CalendarSchedules>("CALENDAR.SCHEDULES", It.IsAny<string[]>(), It.IsAny<bool>())).Returns(Task.FromResult<Collection<CalendarSchedules>>(null));
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
                 var instances = await sectionRepo.GetSectionMeetingInstancesAsync(sectionId);
                 Assert.AreEqual(0, instances.Count());
@@ -8645,7 +8886,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task GetSectionMeetingInstancesAsync_Empty_CalsData()
             {
                 dataReaderMock.Setup<Task<Collection<CalendarSchedules>>>(acc => acc.BulkReadRecordAsync<CalendarSchedules>("CALENDAR.SCHEDULES", It.IsAny<string[]>(), It.IsAny<bool>())).Returns(Task.FromResult<Collection<CalendarSchedules>>(new Collection<CalendarSchedules>()));
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new Ellucian.Colleague.Domain.Student.Tests.TestTermRepository(),  apiSettings);
 
                 var instances = await sectionRepo.GetSectionMeetingInstancesAsync(sectionId);
                 Assert.AreEqual(0, instances.Count());
@@ -8680,7 +8921,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task GetSectionMeetingInstancesAsync_Null_SectionMeetingData()
             {
                 dataReaderMock.Setup<Task<Collection<CourseSecMeeting>>>(acc => acc.BulkReadRecordAsync<CourseSecMeeting>("COURSE.SEC.MEETING", It.IsAny<string[]>(), It.IsAny<bool>())).Returns(Task.FromResult<Collection<CourseSecMeeting>>(null));
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
                 var instances = await sectionRepo.GetSectionMeetingInstancesAsync(sectionId);
                 Assert.AreEqual(calendarSchedules.Count, instances.Count());
@@ -8694,7 +8935,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task GetSectionMeetingInstancesAsync_Empty_SectionMeetingData()
             {
                 dataReaderMock.Setup<Task<Collection<CourseSecMeeting>>>(acc => acc.BulkReadRecordAsync<CourseSecMeeting>("COURSE.SEC.MEETING", It.IsAny<string[]>(), It.IsAny<bool>())).Returns(Task.FromResult<Collection<CourseSecMeeting>>(new Collection<CourseSecMeeting>()));
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
                 var instances = await sectionRepo.GetSectionMeetingInstancesAsync(sectionId);
                 Assert.AreEqual(calendarSchedules.Count, instances.Count());
@@ -8708,7 +8949,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task GetSectionMeetingInstancesAsync_No_Matching_SectionMeetingData()
             {
                 calendarSchedules[1].CalsCourseSecMeeting = "ABCD";
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
                 var instances = await sectionRepo.GetSectionMeetingInstancesAsync(sectionId);
                 Assert.AreEqual(calendarSchedules.Count, instances.Count());
@@ -8834,7 +9075,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 bookOptions.ValsEntityAssociation.Add(new ApplValcodesVals("O", "Optional", "2", "O", "", "", ""));
                 dataReaderMock.Setup<Task<ApplValcodes>>(cacc => cacc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "BOOK.OPTION", true)).ReturnsAsync(bookOptions);
                 // Construct section repository
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
                 return sectionRepo;
             }
@@ -8880,7 +9121,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 MockRecordsAsync<CourseSecFaculty>("COURSE.SEC.FACULTY", courseSecFacultys);
 
                 // Construct section repository
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
             }
 
             [TestMethod]
@@ -8916,7 +9157,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 MockRecordsAsync<CourseSecFaculty>("COURSE.SEC.FACULTY", courseSecFacultys);
 
                 // Construct section repository
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(), apiSettings);
 
                 // Call repository
                 var entity = await sectionRepo.GetSectionRosterAsync(sectionId);
@@ -8948,7 +9189,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 MockRecordsAsync<StudentCourseSec>("STUDENT.COURSE.SEC", studentCourseSecs);
 
                 // Construct section repository
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
                 // Call repository
                 var entity = await sectionRepo.GetSectionRosterAsync(sectionId);
@@ -8976,7 +9217,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 MockRecordsAsync<CourseSecFaculty>("COURSE.SEC.FACULTY", courseSecFacultys);
 
                 // Construct section repository
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
                 // Call repository
                 var entity = await sectionRepo.GetSectionRosterAsync(sectionId);
@@ -8997,7 +9238,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 MockRecordsAsync<StudentCourseSec>("STUDENT.COURSE.SEC", studentCourseSecs);
 
                 // Construct section repository
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
                 // Call repository
                 var entity = await sectionRepo.GetSectionRosterAsync(sectionId);
@@ -9021,7 +9262,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 MockRecordsAsync<CourseSecFaculty>("COURSE.SEC.FACULTY", courseSecFacultys);
 
                 // Construct section repository
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
                 // Call repository
                 var entity = await sectionRepo.GetSectionRosterAsync(sectionId);
@@ -9055,7 +9296,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 MockRecordsAsync<StudentCourseSec>("STUDENT.COURSE.SEC", studentCourseSecs);
 
                 // Construct section repository
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
                 // Call repository
                 var entity = await sectionRepo.GetSectionRosterAsync(sectionId);
@@ -9084,7 +9325,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 MockRecordsAsync<CourseSecFaculty>("COURSE.SEC.FACULTY", courseSecFacultys);
 
                 // Construct section repository
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
                 // Call repository
                 var entity = await sectionRepo.GetSectionRosterAsync(sectionId);
@@ -9116,7 +9357,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 MockRecordsAsync<StudentCourseSec>("STUDENT.COURSE.SEC", studentCourseSecs);
 
                 // Construct section repository
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
                 // Call repository
                 var entity = await sectionRepo.GetSectionRosterAsync(sectionId);
@@ -9148,7 +9389,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<CourseSecFaculty>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(courseSecFacultys);
 
                 // Construct section repository
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
                 // Call repository
                 var entity = await sectionRepo.GetSectionRosterAsync(sectionId);
@@ -9180,7 +9421,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<StudentCourseSec>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(studentCourseSecs);
 
                 // Construct section repository
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
 
                 // Call repository
                 var entity = await sectionRepo.GetSectionRosterAsync(sectionId);
@@ -9245,7 +9486,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 allCals = new TestEventRepository().Get();
                 regSectionsDict = new Dictionary<string, Section>();
                
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
                 cacheKey = sectionRepo.BuildFullCacheKey("AllRegistrationSections");
                 cacheProviderMock.Setup(x => x.Contains(cacheKey, null)).Returns(true);
                 cacheProviderMock.Setup(x => x.Get(cacheKey, null)).Returns(regSectionsDict).Verifiable();
@@ -9510,7 +9751,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 base.MainInitialize();
 
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
                 stWebDflt = BuildStwebDefaults();
                 dataReaderMock.Setup<Task<StwebDefaults>>(ps => ps.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults>("ST.PARMS", "STWEB.DEFAULTS", false)).Returns(Task.FromResult(stWebDflt));
 
@@ -9642,7 +9883,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public void Initialize()
             {
                 MainInitialize();
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
             }
 
             [TestMethod]
@@ -9657,7 +9898,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 // Test the logic that still returns an entity when there is no SEC.GRADING.STATUS record in the database.
                 string sectionId = "123";
-                dataReaderMock.Setup(dr => dr.ReadRecordAsync<SecGradingStatus>("SEC.GRADING.STATUS", sectionId, It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(dr => dr.ReadRecordAsync<SecGradingStatus>("SEC.GRADING.STATUS", sectionId, It.IsAny<bool>())).ReturnsAsync(() => null);
 
                 SectionMidtermGradingComplete entity = await sectionRepo.GetSectionMidtermGradingCompleteAsync(sectionId);
 
@@ -9837,7 +10078,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public void Initialize()
             {
                 MainInitialize();
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
             }
 
             [TestMethod]
@@ -10181,7 +10422,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 };
                 dataReaderMock.Setup(acc => acc.BulkReadRecordWithInvalidKeysAndRecordsAsync<CourseSections>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(bulkReadOutput);
 
-                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
             }
 
             [TestMethod]
@@ -10308,7 +10549,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     (param, id, repl) => Task.FromResult(stwebDefaults)
                     );
                 //When no REG.USERS record, assume datareader returns null
-                dataReaderMock.Setup<Task<Collection<RegUsers>>>(dr => dr.BulkReadRecordAsync<RegUsers>("REG.USERS", It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup<Task<Collection<RegUsers>>>(dr => dr.BulkReadRecordAsync<RegUsers>("REG.USERS", It.IsAny<string>(), true)).ReturnsAsync(() => null);
 
                 IEnumerable<Section> sections = await sectionRepo.GetInstantEnrollmentSectionsAsync();
                 Assert.IsNotNull(sections);
@@ -10322,7 +10563,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task IE_RegControls_isNull()
             {
 
-                dataReaderMock.Setup<Task<Collection<RegControls>>>(cacc => cacc.BulkReadRecordAsync<RegControls>("REG.CONTROLS", "", true)).ReturnsAsync(null);
+                dataReaderMock.Setup<Task<Collection<RegControls>>>(cacc => cacc.BulkReadRecordAsync<RegControls>("REG.CONTROLS", "", true)).ReturnsAsync(() => null);
 
                 IEnumerable<Section> sections = await sectionRepo.GetInstantEnrollmentSectionsAsync();
                 Assert.AreEqual(2, sections.Count());
@@ -10352,6 +10593,202 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
         }
 
+
+        [TestClass]
+        public class SectionRepository_SectionCensusCertification: SectionRepository_GeneralTests
+        {
+            [TestInitialize]
+            public new void Initialize()
+            {
+                base.Initialize();
+                //modify course sections data contract collection here- sectionResponseData is DataContract returned after COURSE.SECTIONS bulkread mock
+                sectionsResponseData[0].SecCertCensusEntityAssociation = new List<CourseSectionsSecCertCensus>();
+
+                //one of the COURSE.SECTION have null certs
+                sectionsResponseData[1].SecCertCensusEntityAssociation = null;
+
+                //COURSE.SECTION have certs with different types of data
+                sectionsResponseData[2].SecCertCensusEntityAssociation = new List<CourseSectionsSecCertCensus>();
+                sectionsResponseData[2].SecCertCensusEntityAssociation.Add(new CourseSectionsSecCertCensus());
+                sectionsResponseData[2].SecCertCensusEntityAssociation.Add(new CourseSectionsSecCertCensus(null, null, null, null, null, null));
+                sectionsResponseData[2].SecCertCensusEntityAssociation.Add(new CourseSectionsSecCertCensus(new DateTime(2021,01,01), new DateTime(2021, 01, 02), new DateTime(2021,01,02,12,20,30), "personid", "1" , "after a month completion"));
+            }
+            [TestMethod]
+            public async Task SectionRepository_GetRegistrationSections_WhenCensusIsEmpty()
+            {
+                //this returns sections from mocked section repo. 
+                var sections = (await sectionRepo.GetRegistrationSectionsAsync(registrationTerms)).ToList();
+               
+                Assert.AreEqual(sectionsResponseData[0].Recordkey, sections[0].Id);
+                Assert.AreEqual(0, sections[0].SectionCertifiedCensuses.Count());
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_GetRegistrationSections_WhenCensusIsNull_InDataContract()
+            {
+                //this returns sections from mocked section repo. 
+                var sections = (await sectionRepo.GetRegistrationSectionsAsync(registrationTerms)).ToList();
+
+                Assert.AreEqual(sectionsResponseData[1].Recordkey, sections[1].Id);
+                Assert.IsNotNull(sections[1].SectionCertifiedCensuses);
+                Assert.AreEqual(0, sections[1].SectionCertifiedCensuses.Count());
+            }
+
+            [TestMethod]
+            public async Task SectionRepository_GetRegistrationSections_WhenCensusIsNotNull()
+            {
+                //this returns sections from mocked section repo. 
+                var sections = (await sectionRepo.GetRegistrationSectionsAsync(registrationTerms)).ToList();
+            
+                Assert.AreEqual(sectionsResponseData[2].Recordkey, sections[2].Id);
+                Assert.IsNotNull(sections[2].SectionCertifiedCensuses);
+                //data contract has 3
+                Assert.AreEqual(3, sectionsResponseData[2].SecCertCensusEntityAssociation.Count());
+                //but when data contract is mapped to entity, null census dates are ignored
+                Assert.AreEqual(1, sections[2].SectionCertifiedCensuses.Count());
+
+              //only non-nulls are stored
+                Assert.AreEqual(sectionsResponseData[2].SecCertCensusEntityAssociation[2].SecCertCensusDatesAssocMember, sections[2].SectionCertifiedCensuses[0].CensusCertificationDate);
+                Assert.AreEqual(sectionsResponseData[2].SecCertCensusEntityAssociation[2].SecCertRecordedDatesAssocMember, sections[2].SectionCertifiedCensuses[0].CensusCertificationRecordedDate);
+                Assert.AreEqual(sectionsResponseData[2].SecCertCensusEntityAssociation[2].SecCertRecordedTimesAssocMember, sections[2].SectionCertifiedCensuses[0].CensusCertificationRecordedTime);
+                Assert.AreEqual(sectionsResponseData[2].SecCertCensusEntityAssociation[2].SecCertPositionsAssocMember, sections[2].SectionCertifiedCensuses[0].CensusCertificationPosition);
+                Assert.AreEqual(sectionsResponseData[2].SecCertCensusEntityAssociation[2].SecCertPositionLabelsAssocMember, sections[2].SectionCertifiedCensuses[0].CensusCertificationLabel);
+                Assert.AreEqual(sectionsResponseData[2].SecCertCensusEntityAssociation[2].SecCertPersonIdsAssocMember, sections[2].SectionCertifiedCensuses[0].PersonId);
+
+            }
+        }
+
+        [TestClass]
+        //inheriting from existing test class because that class already mocks for GetSection for the given section id
+        public class SectionRepository_UpdateSectionCensusCertification: SectionRepository_TestAllFields
+        {
+            string sectionId = string.Empty;
+            Mock<IColleagueTransactionInvoker> mockManager = new Mock<IColleagueTransactionInvoker>();
+            UpdateSectionCensusCertificationResponse sectionCensusResponse = new UpdateSectionCensusCertificationResponse();
+            Section sectionToUse = null;
+
+            [TestInitialize]
+            public new void Initialize()
+            {
+                base.Initialize();
+                //both these variables are populated from base class Initialize method
+                //csId is section Id declare in base test class
+                sectionId = csId;
+                //result is Section entity declared in base test class
+                sectionToUse = result;
+
+                //section census certified response from CTX
+                sectionCensusResponse.AError = false;
+                sectionCensusResponse.AlErrorMsgs = null;
+
+                //update COURSE.SECTIONS to have census certified dates
+
+                cs.SecCertCensusEntityAssociation = new List<CourseSectionsSecCertCensus>()
+                {
+                    new CourseSectionsSecCertCensus(new DateTime(2021, 01, 02),null, null, "personId", "1","something"),
+                    new CourseSectionsSecCertCensus(new DateTime(2021, 02, 02), new DateTime(2021, 02, 03), new DateTime(2021, 02, 03, 04, 05, 06), "personId-2", "2","something-2")
+                };
+
+                MockRecordAsync<CourseSections>("COURSE.SECTIONS", cs, cs.RecordGuid);
+
+
+            }
+            [TestMethod]
+           [ExpectedException(typeof(ArgumentNullException))]
+           public async Task SectionRepository_UpdateSectionCensusCertification_SectionId_IsNull()
+            {
+                var sections = await sectionRepo.CreateSectionCensusCertificationAsync(null, new DateTime(2021, 01, 02), "1", "final test", DateTime.Today, DateTime.Now, "personId");
+            }
+
+            //when ctx returns error messages
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task SectionRepository_UpdateSectionCensusCertification_CTX_ReturnsErrorMessages()
+            {
+                sectionCensusResponse.AError = true;
+                sectionCensusResponse.AlErrorMsgs = new List<string>() { "error-msg-1", "error-msg-2" };
+                mockManager.Setup(mgr => mgr.ExecuteAsync<UpdateSectionCensusCertificationRequest, UpdateSectionCensusCertificationResponse>(It.IsAny<UpdateSectionCensusCertificationRequest>())).ReturnsAsync(sectionCensusResponse);
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(mockManager.Object);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
+                var certifiedCensus = await sectionRepo.CreateSectionCensusCertificationAsync(sectionId, new DateTime(2021, 01, 02), "1", "something", DateTime.Today, DateTime.Now, "personId");
+                loggerMock.Verify(l => l.Error(string.Format("Error returned by CTX for the section {0} while updating certification for Census position {1}", sectionId, "1")));
+            }
+
+            //when ctx return error message flag but no errors
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task SectionRepository_UpdateSectionCensusCertification_CTX_ReturnsNoErrorMessages_ButErrorFlagIsTrue()
+            {
+                sectionCensusResponse.AError = true;
+                sectionCensusResponse.AlErrorMsgs = null;
+                mockManager.Setup(mgr => mgr.ExecuteAsync<UpdateSectionCensusCertificationRequest, UpdateSectionCensusCertificationResponse>(It.IsAny<UpdateSectionCensusCertificationRequest>())).ReturnsAsync(sectionCensusResponse);
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(mockManager.Object);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
+                var certifiedCensus = await sectionRepo.CreateSectionCensusCertificationAsync(sectionId, new DateTime(2021, 01, 02), "1", "something", DateTime.Today, DateTime.Now, "personId");
+                loggerMock.Verify(l => l.Error(string.Format("Error Flag returned by CTX for the section {0} while updating certification for Census position {1} is true but the errors collection does not have any errors returned ", sectionId, "1")));
+            }
+
+            //when ctx return error message flag is empty but no errors
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task SectionRepository_UpdateSectionCensusCertification_CTX_ReturnsEmptyErrorMessages_ButErrorFlagIsTrue()
+            {
+                sectionCensusResponse.AError = true;
+                sectionCensusResponse.AlErrorMsgs = new List<string>();
+                mockManager.Setup(mgr => mgr.ExecuteAsync<UpdateSectionCensusCertificationRequest, UpdateSectionCensusCertificationResponse>(It.IsAny<UpdateSectionCensusCertificationRequest>())).ReturnsAsync(sectionCensusResponse);
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(mockManager.Object);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
+                var sectionCensusCertified = await sectionRepo.CreateSectionCensusCertificationAsync(sectionId, new DateTime(2021, 01, 02), "1", "something", DateTime.Today, DateTime.Now, "personId");
+                loggerMock.Verify(l => l.Error(string.Format("Error Flag returned by CTX for the section {0} while updating certification for Census position {1} is true but the errors collection does not have any errors returned ", sectionId, "1")));
+            }
+
+            //when census exist for census date and  position but not certified
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task SectionRepository_UpdateSectionCensusCertification_CTX_Success_But_Census_Missing()
+            {
+                sectionCensusResponse.AError = false;
+                sectionCensusResponse.AlErrorMsgs = null;
+                mockManager.Setup(mgr => mgr.ExecuteAsync<UpdateSectionCensusCertificationRequest, UpdateSectionCensusCertificationResponse>(It.IsAny<UpdateSectionCensusCertificationRequest>())).ReturnsAsync(sectionCensusResponse);
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(mockManager.Object);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
+                var sectionCensusCertified = await sectionRepo.CreateSectionCensusCertificationAsync(sectionId, new DateTime(2021, 01, 02), "1", "something", DateTime.Today, DateTime.Now, "personId");
+                loggerMock.Verify(l => l.Error(string.Format("There is no certified census for the section {0} for the date {1} at position {2}. ", sectionId, new DateTime(2021, 01, 02), "1")));
+            }
+
+            //when census exist for census date and  position but not certified
+            [TestMethod]
+            [ExpectedException(typeof(ApplicationException))]
+            public async Task SectionRepository_UpdateSectionCensusCertification_CTX_Success_But_Census_Not_Certified()
+            {
+                sectionCensusResponse.AError = false;
+                sectionCensusResponse.AlErrorMsgs = null;
+                mockManager.Setup(mgr => mgr.ExecuteAsync<UpdateSectionCensusCertificationRequest, UpdateSectionCensusCertificationResponse>(It.IsAny<UpdateSectionCensusCertificationRequest>())).ReturnsAsync(sectionCensusResponse);
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(mockManager.Object);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new TestTermRepository(),  apiSettings);
+                var sectionCensusCertified = await sectionRepo.CreateSectionCensusCertificationAsync(sectionId, new DateTime(2021, 01, 02), "1", "something", DateTime.Today, DateTime.Now, "personId");
+                loggerMock.Verify(l => l.Error(string.Format("Census for the section {0} for the date {1} at position {2} couldn't be certified.", sectionId, new DateTime(2021, 01, 02), "1")));
+            }
+
+            //when section retrieved after return from CTX have census certified data
+            [TestMethod]
+            public async Task SectionRepository_UpdateSectionCensusCertification_CTX_Success_Census_Certified()
+            {
+                sectionCensusResponse.AError = false;
+                sectionCensusResponse.AlErrorMsgs = null;
+                mockManager.Setup(mgr => mgr.ExecuteAsync<UpdateSectionCensusCertificationRequest, UpdateSectionCensusCertificationResponse>(It.IsAny<UpdateSectionCensusCertificationRequest>())).ReturnsAsync(sectionCensusResponse);
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(mockManager.Object);
+                sectionRepo = new SectionRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new Ellucian.Colleague.Domain.Student.Tests.TestTermRepository(), apiSettings);
+                var sectionCensusCertified = await sectionRepo.CreateSectionCensusCertificationAsync(sectionId, new DateTime(2021, 02, 02), "2", "something-2", new DateTime(2021, 02, 03), new DateTime(2021, 02, 03, 04, 05, 06), "personId-2");
+                Assert.IsNotNull(sectionCensusCertified);
+                Assert.AreEqual(new DateTime(2021, 02, 02), sectionCensusCertified.CensusCertificationDate);
+                Assert.AreEqual("personId-2", sectionCensusCertified.PersonId);
+                Assert.AreEqual("2", sectionCensusCertified.CensusCertificationPosition);
+                Assert.AreEqual("something-2", sectionCensusCertified.CensusCertificationLabel);
+                Assert.AreEqual(new DateTime(2021, 02, 03), sectionCensusCertified.CensusCertificationRecordedDate);
+                Assert.AreEqual(new DateTime(2021, 02, 03, 04, 05, 06), sectionCensusCertified.CensusCertificationRecordedTime);
+            }
+        }
 
         #region Private helper methods - static so they can be used in any of the above subclasses
 

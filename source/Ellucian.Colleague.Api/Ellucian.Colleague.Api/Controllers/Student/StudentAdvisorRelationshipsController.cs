@@ -21,6 +21,7 @@ using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
 using Newtonsoft.Json;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -52,7 +53,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <param name="criteria">Filters to be used within this API. They must be in JSON and contain the following fields: student,advisor, advisorType and startAcademicPeriod</param>
         /// <returns>List of StudentAdvisorRelationships <see cref="Dtos.StudentAdvisorRelationships"/> objects representing matching studentAdvisorRelationships</returns>
-        [HttpGet, EedmResponseFilter, FilteringFilter(IgnoreFiltering = true)]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter, FilteringFilter(IgnoreFiltering = true), PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentAdivsorRelationships })]
         [ValidateQueryStringFilter()]
         [QueryStringFilterFilter("criteria", typeof(Dtos.Filters.StudentAdvisorRelationshipFilter))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
@@ -70,6 +72,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _studentAdvisorRelationshipsService.ValidatePermissions(GetPermissionsMetaData());
+
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -104,7 +108,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -133,7 +137,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired studentAdvisorRelationships</param>
         /// <returns>A studentAdvisorRelationships object <see cref="Dtos.StudentAdvisorRelationships"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentAdivsorRelationships })]
         public async Task<Dtos.StudentAdvisorRelationships> GetStudentAdvisorRelationshipsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -152,6 +157,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _studentAdvisorRelationshipsService.ValidatePermissions(GetPermissionsMetaData());
+
                 AddEthosContextProperties(
                    await _studentAdvisorRelationshipsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                    await _studentAdvisorRelationshipsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -166,7 +173,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -195,6 +202,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="studentAdvisorRelationships">DTO of the new studentAdvisorRelationships</param>
         /// <returns>A studentAdvisorRelationships object <see cref="Dtos.StudentAdvisorRelationships"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPost]
         public async Task<Dtos.StudentAdvisorRelationships> PostStudentAdvisorRelationshipsAsync([FromBody] Dtos.StudentAdvisorRelationships studentAdvisorRelationships)
         {
@@ -209,6 +217,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID of the studentAdvisorRelationships to update</param>
         /// <param name="studentAdvisorRelationships">DTO of the updated studentAdvisorRelationships</param>
         /// <returns>A studentAdvisorRelationships object <see cref="Dtos.StudentAdvisorRelationships"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPut]
         public async Task<Dtos.StudentAdvisorRelationships> PutStudentAdvisorRelationshipsAsync([FromUri] string guid, [FromBody] Dtos.StudentAdvisorRelationships studentAdvisorRelationships)
         {
@@ -221,6 +230,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Delete (DELETE) a studentAdvisorRelationships
         /// </summary>
         /// <param name="guid">GUID to desired studentAdvisorRelationships</param>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpDelete]
         public async Task DeleteStudentAdvisorRelationshipsAsync(string guid)
         {

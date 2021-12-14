@@ -1,4 +1,4 @@
-﻿//Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
@@ -16,7 +16,6 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Ellucian.Colleague.Domain.Base.Services;
 
 namespace Ellucian.Colleague.Data.HumanResources.Repositories
 {
@@ -186,6 +185,57 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             return await GetGuidValcodeAsync<DeductionCategory>("HR", "BENDED.TYPES",
                 (cl, g) => new DeductionCategory(g, cl.ValInternalCodeAssocMember, (string.IsNullOrEmpty(cl.ValExternalRepresentationAssocMember)
                     ? cl.ValInternalCodeAssocMember : cl.ValExternalRepresentationAssocMember)), bypassCache: ignoreCache);
+        }
+
+
+
+        /// <summary>
+        /// Get guid for DeductionTypes code
+        /// </summary>
+        /// <param name="code">DeductionTypes code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetDeductionTypesGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            try
+            {
+                var allCodesCache = await GetDeductionTypesAsync(false);
+                DeductionType codeCache = null;
+                if (allCodesCache != null && allCodesCache.Any())
+                {
+                    codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                }
+                //if we cannot find that code in the cache, then refresh the cache and try again.
+                if (codeCache == null)
+                {
+                    var allCodesNoCache = await GetDeductionTypesAsync(true);
+                    if (allCodesNoCache == null)
+                    {
+                        throw new RepositoryException(string.Concat("No Guid found, Entity:'BENDED', Record ID:'", code, "'"));
+                    }
+                    var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                    if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                        guid = codeNoCache.Guid;
+                    else
+                        throw new RepositoryException(string.Concat("No Guid found, Entity:'BENDED', Record ID:'", code, "'"));
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(codeCache.Guid))
+                        guid = codeCache.Guid;
+                    else
+                        throw new RepositoryException(string.Concat("No Guid found, Entity:'BENDED', Record ID:'", code, "'"));
+                }
+            }
+            catch (Exception)
+            {
+                throw new RepositoryException(string.Concat("No Guid found, Entity:'BENDED', Record ID:'", code, "'"));
+            }
+            return guid;
+
         }
 
         /// <summary>
@@ -509,7 +559,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             if (codeCache == null)
             {
                 var allCodesNoCache = await GetEmploymentStatusEndingReasonsAsync(true);
-                if (allCodesCache == null)
+                if (allCodesNoCache == null)
                 {
                     throw new RepositoryException(string.Concat("No Guid found, Entity:'STATUS.ENDING.REASONS', Record ID:'", code, "'"));
                 }
@@ -542,18 +592,47 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                bypassCache: ignoreCache);
         }
 
-        ///// <summary>
-        ///// Get a collection of institution job supervisors
-        ///// </summary>
-        ///// <param name="ignoreCache">Bypass cache flag</param>
-        ///// <returns>Collection of institution job supervisors</returns>
-        //public async Task<IEnumerable<InstitutionJobSupervisor>> GetInstitutionJobSupervisorsAsync(bool ignoreCache)
-        //{
-        //    var coreDefaultData = GetDefaults();
+        /// <summary>
+        /// Get guid for leave type.
+        /// </summary>
+        /// <param name="code">LeaveType code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetLeaveTypesGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetLeaveTypesAsync(false);
+            LeaveType codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
 
-        //    return await GetGuidCodeItemAsync<Perpos, InstitutionJobSupervisor>("AllInstitutionJobSupervisors", "PERPOS",
-        //        (ijs, g) => new InstitutionJobSupervisor(g, ijs.Recordkey, ijs.RecordModelName, ijs.PerposHrpId, ijs.PerposPositionId) { SupervisorId = ijs.PerposSupervisorHrpId, AlternateSupervisorId = ijs.PerposAltSupervisorId, Employer = coreDefaultData.DefaultHostCorpId }, bypassCache: ignoreCache);
-        //}
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetLeaveTypesAsync(true);
+                if (allCodesNoCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'HR-VALCODES, LEAVE.TYPES', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'HR-VALCODES, LEAVE.TYPES', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'HR-VALCODES, LEAVE.TYPES', Record ID:'", code, "'"));
+            }
+            return guid;
+        }
 
         /// <summary>
         /// Get a collection of LeaveType
@@ -606,6 +685,48 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         }
 
         /// <summary>
+        /// Get guid for payclasses
+        /// </summary>
+        /// <param name="code">payclass code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetPayClassesGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetPayClassesAsync(false);
+            PayClass codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetPayClassesAsync(true);
+                if (allCodesNoCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'PAYCLASS', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'PAYCLASS', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'PAYCLASS', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
+
+        /// <summary>
         /// Get a collection of pay cycles
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
@@ -646,6 +767,49 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
 
         /// <summary>
+        /// Get guid for PayrollDeductionArrangementChangeReasons
+        /// </summary>
+        /// <param name="code">ayrollDeductionArrangementChangeReasons code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetPayrollDeductionArrangementChangeReasonsGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetPayrollDeductionArrangementChangeReasonsAsync(false);
+            PayrollDeductionArrangementChangeReason codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetPayrollDeductionArrangementChangeReasonsAsync(true);
+                if (allCodesNoCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'BENDED.CHANGE.REASONS', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'BENDED.CHANGE.REASONS', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'BENDED.CHANGE.REASONS', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
+
+
+        /// <summary>
         /// Returns payroll deduction arrangement change reasons.
         /// </summary>
         /// <param name="ignoreCache"></param>
@@ -657,17 +821,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                bypassCache: ignoreCache);
         }
 
-        /// <summary>
-        /// Returns HR Person statuses used in PERSTAT.STATUS.
-        /// </summary>
-        /// <param name="ignoreCache"></param>
-        /// <returns></returns>
-        //public async Task<IEnumerable<PersonStatuses>> GetPersonStatusesAsync(bool ignoreCache)
-        //{
-        //    return await GetGuidValcodeAsync<PersonStatuses>("HR", "HR.STATUSES",
-        //       (e, g) => new PersonStatuses(g, e.ValInternalCodeAssocMember, e.ValExternalRepresentationAssocMember, e.ValActionCode3AssocMember),
-        //       bypassCache: ignoreCache);
-        //}
 
         /// <summary>
         /// Get a collection of TenureTypes
@@ -931,6 +1084,48 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 default:
                     return TaxCodeType.FicaWithholding;
             }
+        }
+
+        /// <summary>
+        /// Get guid for EmploymentFrequencies.
+        /// </summary>
+        /// <param name="code">EmploymentFrequencies code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetEmploymentFrequenciesGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetEmploymentFrequenciesAsync(false);
+            EmploymentFrequency codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetEmploymentFrequenciesAsync(true);
+                if (allCodesNoCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'HR-VALCODES, TIME.FREQUENCIES', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'HR-VALCODES, TIME.FREQUENCIES', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'HR-VALCODES, TIME.FREQUENCIES', Record ID:'", code, "'"));
+            }
+            return guid;
         }
 
         public async Task<IEnumerable<EmploymentFrequency>> GetEmploymentFrequenciesAsync(bool ignoreCache)

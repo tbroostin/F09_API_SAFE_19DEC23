@@ -2,6 +2,7 @@
 /* Copyright 2016 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.HumanResources.Repositories;
+using Ellucian.Colleague.Domain.Base.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Tests;
@@ -167,9 +168,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 Assert.IsFalse((await getActualPositions()).Any());
                 loggerMock.Verify(l => l.Error(It.IsAny<ArgumentException>(), It.IsAny<string>()));           
             }
-
-
-
         }
 
         [TestClass]
@@ -192,6 +190,41 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 MockInitialize();
                 positionRepository = BuildRepository();
                 BuildData();
+
+                GetCacheApiKeysRequest request = new GetCacheApiKeysRequest()
+                {
+                    Criteria = criteria,
+
+                };
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 2,
+                    CacheName = "AllPositionsRecordsKeys:",
+                    Entity = "POSITION",
+                    Sublist = new List<string>() { "0000071813", "0000071913", "0000072013", "0000072113" },
+                    TotalCount = 4,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+                };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
             }
 
             private void BuildData()
@@ -540,7 +573,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 var id = "0000071813";
                 Dictionary<string, GuidLookupResult> result = new Dictionary<string, GuidLookupResult>();
                 result.Add("POSITION", new GuidLookupResult() { Entity = "POSITION", PrimaryKey = id, SecondaryKey = id }); ;
-                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
                 try
                 {
                     var actual = await positionRepository.GetPositionByGuidAsync(guid);
@@ -630,7 +663,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             public async Task PositionRepository_PositionPay_GetPositionPayByIdsAsync_NullPositionPay_Log_Error()
             {
                 Projects proj = new Projects() { PrjRefNo = "1" };
-                dataReaderMock.Setup(dr => dr.ReadRecordAsync<DataContracts.Pospay>("POSPAY", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(dr => dr.ReadRecordAsync<DataContracts.Pospay>("POSPAY", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 dataReaderMock.Setup(dr => dr.ReadRecordAsync<Projects>("PROJECTS", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(proj);
 
                 var actual = await positionRepository.GetPositionPayByIdsAsync(new List<string>() { "1" });
@@ -662,22 +695,29 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             [ExpectedExceptionAttribute(typeof(RepositoryException))]
             public async Task PositionRepository_GET_ALL_RepositoryException()
             {
-                dataReaderMock.Setup(dr => dr.SelectAsync("POSITION", It.IsAny<string[]>(), criteria)).ThrowsAsync(new RepositoryException());
-                var actuals = await positionRepository.GetPositionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
-            }
+                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<DataContracts.Position>("POSITION", new string[] { "0000071813", "0000071913", "0000072013", "0000072113" }, It.IsAny<bool>())).ReturnsAsync(positions);
+                positions.FirstOrDefault().PosTitle = null;
 
-            [TestMethod]
-            [ExpectedExceptionAttribute(typeof(ArgumentNullException))]
-            public async Task PositionRepository_GET_ALL_NUllEntity_RepositoryException()
-            {
-                dataReaderMock.Setup(dr => dr.SelectAsync("POSITION", It.IsAny<string[]>(), criteria)).ReturnsAsync(new List<string>() { "0000071813", "0000071913", "0000072013", "0000072113" }.ToArray());
-                dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<DataContracts.Position>("POSITION", new string[] { "0000071813", "0000071913", "0000072013", "0000072113" }, It.IsAny<bool>()))
-                    .ReturnsAsync(new Collection<DataContracts.Position>() { null });
-                var actuals = await positionRepository.GetPositionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
+                try
+                {
+                    var actuals = await positionRepository.GetPositionsAsync(offset, limit, It.IsAny<string>(), It.IsAny<string>(),
+                                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(),
+                                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
+                }
+                catch (RepositoryException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "The position title is required but is missing from the position record." && error.Code == "Bad.Data")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, string.Format("error.Message == '{0}' error.Code == '{1}'", ex.Errors.FirstOrDefault().Message, ex.Errors.FirstOrDefault().Code));
+                    throw ex;
+                }
             }
 
             public PositionRepository BuildRepository()

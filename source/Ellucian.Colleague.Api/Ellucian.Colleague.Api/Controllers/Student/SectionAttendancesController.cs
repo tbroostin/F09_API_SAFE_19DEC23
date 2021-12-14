@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
@@ -44,8 +44,42 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <returns><see cref="SectionAttendanceResponse">SectionAttendanceResponse</see> DTO.</returns>
         /// <accessComments>Only a faculty user who is assigned to the associated course section can update student attendance data for that course section.</accessComments>
         [HttpPut]
+        public async Task<SectionAttendanceResponse> PutSectionAttendances2Async([FromBody] SectionAttendance sectionAttendance)
+        {
+            if (sectionAttendance == null)
+            {
+                string errorText = "Must provide the section attendance to update.";
+                _logger.Error(errorText);
+                throw CreateHttpResponseException(errorText, HttpStatusCode.BadRequest);
+            }
+            try
+            {
+                return await _studentAttendanceService.UpdateSectionAttendance2Async(sectionAttendance);
+            }
+            catch (PermissionsException pe)
+            {
+                _logger.Info(pe.ToString());
+                throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception e)
+            {
+                _logger.Info(e.ToString());
+                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+            }
+
+        }
+
+
+    /// <summary>
+    /// Update attendance information for a particular section and meeting instance.
+    /// </summary>
+    /// <param name="sectionAttendance"><see cref="SectionAttendance">Section Attendance</see> DTO that contains the section and the attendance information to be updated.</param>
+    /// <returns><see cref="SectionAttendanceResponse">SectionAttendanceResponse</see> DTO.</returns>
+    /// <accessComments>Only a faculty user who is assigned to the associated course section can update student attendance data for that course section.</accessComments>
+    [HttpPut]
         public async Task<SectionAttendanceResponse> PutSectionAttendancesAsync([FromBody] SectionAttendance sectionAttendance)
         {
+
             if (sectionAttendance == null)
             {
                 string errorText = "Must provide the section attendance to update.";

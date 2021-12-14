@@ -1,4 +1,4 @@
-//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -17,6 +17,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 {    
@@ -85,13 +86,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
 
         #region GET GET ALL
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task ProcurementReceiptsService_GetProcurementReceiptsAsync_PermissionsException()
-        {
-            _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>());
-            await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.ProcurementReceipts>(), It.IsAny<bool>());
-        }
 
         [TestMethod]
         public async Task ProcurementReceiptsService_GetProcurementReceiptsAsync_EmptyTuple()
@@ -105,32 +99,24 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
-        public async Task ProcurementReceiptsService_GetProcurementReceiptsAsync_KeyNotFoundException()
+        [ExpectedException(typeof(IntegrationApiException))]
+        public async Task ProcurementReceiptsService_GetProcurementReceiptsAsync_IntegrationApiException()
         {
-            _purchaseOrderRepositoryMock.Setup(i => i.GetGuidFromIdAsync(It.IsAny<string>(), "PURCHASE.ORDERS")).ReturnsAsync(null);
+            _purchaseOrderRepositoryMock.Setup(i => i.GetGuidFromIdAsync(It.IsAny<string>(), "PURCHASE.ORDERS")).ReturnsAsync(() => null);
 
             var results = await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.ProcurementReceipts>(), It.IsAny<bool>());
         }
 
         [TestMethod]
-        [ExpectedException(typeof(InvalidOperationException))]
-        public async Task ProcurementReceiptsService_GetProcurementReceiptsAsync_ShippingMethods_Null()
-        {
-            _financeReferenceRepositoryMock.Setup(i => i.GetShippingMethodsAsync(It.IsAny<bool>())).ReturnsAsync(null);
-            var results = await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.ProcurementReceipts>(), It.IsAny<bool>());
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task ProcurementReceiptsService_GetProcurementReceiptsAsync_ShippingMethods_InvalidId()
         {
-            _procurementReceiptsCollection.First().ArrivedVia = "WrongShippedVia";
+            _financeReferenceRepositoryMock.Setup(i => i.GetShippingMethodGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
             var results = await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.ProcurementReceipts>(), It.IsAny<bool>());
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task ProcurementReceiptsService_GetProcurementReceiptsAsync_ReceivedByGuid()
         {
             _procurementReceiptsCollection.First().ReceivedBy = "WrongReceivedBy";
@@ -169,7 +155,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 PurchaseOrder = new GuidObject2("90c7d97e-8564-49c9-b020-a0fd635660f5")
             };
             
-            _purchaseOrderRepositoryMock.Setup(x => x.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            _purchaseOrderRepositoryMock.Setup(x => x.GetPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
             var results = await _procurementReceiptsService.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), filter, It.IsAny<bool>());
             Assert.IsNotNull(results);
@@ -204,7 +190,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task ProcurementReceiptsService_GetProcurementReceiptsByGuidAsync_ArgumentNullException()
         {
             _purchaseOrderReceiptRepositoryMock.Setup(i => i.GetPurchaseOrderReceiptByGuidAsync(It.IsAny<string>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
 
             var results = await _procurementReceiptsService.GetProcurementReceiptsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>());
         }
@@ -219,7 +205,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(InvalidOperationException))]
+        [ExpectedException(typeof(Exception))]
         public async Task ProcurementReceiptsService_GetProcurementReceiptsByGuidAsync_InvalidOperationException()
         {
             _purchaseOrderReceiptRepositoryMock.Setup(i => i.GetPurchaseOrderReceiptByGuidAsync(It.IsAny<string>())).ThrowsAsync(new InvalidOperationException());
@@ -235,7 +221,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(Exception))]
         public async Task ProcurementReceiptsService_GetProcurementReceiptsByGuidAsync_ArgumentException()
         {
             _purchaseOrderReceiptRepositoryMock.Setup(i => i.GetPurchaseOrderReceiptByGuidAsync(It.IsAny<string>())).ThrowsAsync(new ArgumentException());
@@ -266,15 +252,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_Null_DotId()
         {
             var result = await _procurementReceiptsService.CreateProcurementReceiptsAsync(new ProcurementReceipts() { Id = string.Empty });
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_PermissionsException()
-        {
-            _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewProcurementReceiptsRole });
-            var result = await _procurementReceiptsService.CreateProcurementReceiptsAsync(new ProcurementReceipts() { Id = "123" });
-        }
+        }        
 
         [TestMethod]
         [ExpectedException(typeof(Exception))]
@@ -328,7 +306,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [ExpectedException(typeof(Exception))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_PO_Null()
         {
-            _purchaseOrderRepositoryMock.Setup(i => i.GetPurchaseOrdersByGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+            _purchaseOrderRepositoryMock.Setup(i => i.GetPurchaseOrdersByGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             var result = await _procurementReceiptsService.CreateProcurementReceiptsAsync(procurementReciept);
         }
 
@@ -674,7 +652,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         [ExpectedException(typeof(Exception))]
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync_ShippingMethod_Null()
         {
-            _financeReferenceRepositoryMock.Setup(i => i.GetShippingMethodsAsync(It.IsAny<bool>())).ReturnsAsync(null);
+            _financeReferenceRepositoryMock.Setup(i => i.GetShippingMethodsAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
             var result = await _procurementReceiptsService.CreateProcurementReceiptsAsync(procurementReciept);
         }
 
@@ -708,7 +686,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         public async Task ProcurementReceiptsService_CreateProcurementReceiptsAsync()
         {
             _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
-            _purchaseOrderReceiptRepositoryMock.Setup(i => i.CreatePurchaseOrderReceiptAsync(It.IsAny<PurchaseOrderReceipt>())).ReturnsAsync(new PurchaseOrderReceipt("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc"));
+            _purchaseOrderReceiptRepositoryMock.Setup(i => i.CreatePurchaseOrderReceiptAsync(It.IsAny<PurchaseOrderReceipt>())).ReturnsAsync(_procurementReceiptsCollection.FirstOrDefault());
             var result = await _procurementReceiptsService.CreateProcurementReceiptsAsync(procurementReciept);
             Assert.IsNotNull(result);
         }
@@ -812,6 +790,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 new ShippingMethod("c97c91eb-cb42-4b01-b607-17d512327110", "Ups", "Descr 2")
             };
             _financeReferenceRepositoryMock.Setup(i => i.GetShippingMethodsAsync(It.IsAny<bool>())).ReturnsAsync(_shippingMethods);
+            foreach (var record in _shippingMethods)
+            {
+                _financeReferenceRepositoryMock.Setup(r => r.GetShippingMethodGuidAsync(record.Code)).ReturnsAsync(record.Guid);
+            }
 
             _currencyConv = new List<Domain.ColleagueFinance.Entities.CurrencyConversion>()
             {

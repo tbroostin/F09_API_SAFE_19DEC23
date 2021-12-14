@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -20,6 +20,11 @@ using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using System.Web.Http.Hosting;
 using Newtonsoft.Json.Linq;
+using System.Web.Http.Routing;
+using Ellucian.Colleague.Domain.ColleagueFinance;
+using Ellucian.Web.Http.Filters;
+using System.Web.Http.Controllers;
+using System.Collections;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 {
@@ -874,6 +879,93 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             accountsPayableInvoicesServiceMock.Setup(
                 x => x.GetAccountsPayableInvoices2Async(offset, limit, It.IsAny<AccountsPayableInvoices2>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
             var actuals = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(page, It.IsAny<QueryStringFilter>());
+        }
+
+        [TestMethod]
+        public async Task AccountsPayableInvoicesController_GetAccountsPayableInvoices2Async_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "accountsPayableInvoices" },
+                { "action", "GetAccountsPayableInvoices2Async" }
+            };
+            HttpRoute route = new HttpRoute("accounts-payable-invoices", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            accountsPayableInvoicesController.Request.SetRouteData(data);
+            accountsPayableInvoicesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewApInvoices,
+           ColleagueFinancePermissionCodes.UpdateApInvoices });
+
+            var controllerContext = accountsPayableInvoicesController.ControllerContext;
+            var actionDescriptor = accountsPayableInvoicesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var DtosAPI = new List<Dtos.AccountsPayableInvoices2>();
+            DtosAPI.Add(accountsPayableInvoices);
+
+            page = new Paging(1, 1);
+            var tuple = new Tuple<IEnumerable<Dtos.AccountsPayableInvoices2>, int>(DtosAPI, DtosAPI.Count);
+            accountsPayableInvoicesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                   .Returns(true);
+            accountsPayableInvoicesServiceMock.Setup(s => s.GetAccountsPayableInvoices2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<AccountsPayableInvoices2>(),
+                It.IsAny<bool>())).ReturnsAsync(tuple);
+            var resp = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(new Paging(10, 0), null);
+
+            Object filterObject;
+            accountsPayableInvoicesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewApInvoices));
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.UpdateApInvoices));
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AccountsPayableInvoicesController_GetAccountsPayableInvoices2Async_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "accountsPayableInvoices" },
+                { "action", "GetAccountsPayableInvoices2Async" }
+            };
+            HttpRoute route = new HttpRoute("accounts-payable-invoices", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            accountsPayableInvoicesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = accountsPayableInvoicesController.ControllerContext;
+            var actionDescriptor = accountsPayableInvoicesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var DtosAPI = new List<Dtos.AccountsPayableInvoices2>();
+                DtosAPI.Add(accountsPayableInvoices);
+                var tuple = new Tuple<IEnumerable<Dtos.AccountsPayableInvoices2>, int>(DtosAPI, DtosAPI.Count);
+                accountsPayableInvoicesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User is not authorized to view requisistions."));
+                accountsPayableInvoicesServiceMock.Setup(s => s.GetAccountsPayableInvoices2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<AccountsPayableInvoices2>(),
+                    It.IsAny<bool>())).ReturnsAsync(tuple);
+                var resp = await accountsPayableInvoicesController.GetAccountsPayableInvoices2Async(new Paging(10, 0), null);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
         }
 
 

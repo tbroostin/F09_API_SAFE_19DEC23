@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Entities;
@@ -109,6 +109,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 sectionRepositoryMock.Setup(repository => repository.GetCachedSectionsAsync(queryIds2, It.IsAny<bool>())).Returns(Task.FromResult(unassignedSectionData.AsEnumerable()));
                 List<string> queryIds3 = new List<string>() { "XXX" };
                 sectionRepositoryMock.Setup(repository => repository.GetCachedSectionsAsync(queryIds3, It.IsAny<bool>())).Returns(Task.FromResult(new List<Domain.Student.Entities.Section>().AsEnumerable()));
+                sectionRepositoryMock.Setup(repository => repository.GetNonCachedSectionsAsync(queryIds1, It.IsAny<bool>())).Returns(Task.FromResult(sectionData.AsEnumerable()));
+                sectionRepositoryMock.Setup(repository => repository.GetNonCachedSectionsAsync(queryIds2, It.IsAny<bool>())).Returns(Task.FromResult(unassignedSectionData.AsEnumerable()));
+                sectionRepositoryMock.Setup(repository => repository.GetNonCachedSectionsAsync(queryIds3, It.IsAny<bool>())).Returns(Task.FromResult(new List<Domain.Student.Entities.Section>().AsEnumerable()));
+
                 // Mock student Attendance response
                 studentAttendancesData = BuildStudentAttendancesRepositoryResponse("SEC1");
                 studentAttendanceRepositoryMock.Setup(repository => repository.GetStudentAttendancesAsync(It.IsAny<List<string>>(), attendanceDate)).Returns(Task.FromResult(studentAttendancesData.AsEnumerable()));
@@ -198,6 +202,32 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 }
             }
 
+            [TestMethod]
+            public async Task GetStudentAttendanceAsync_ReturnsAttendancesIfCurrentUserIsSelf_UseCache_False()
+            {
+                sectionRepositoryMock.Setup(repository => repository.GetCachedSectionsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>())).ThrowsAsync(new Exception("Wrong repository method called!"));
+                StudentAttendanceQueryCriteria criteria = new StudentAttendanceQueryCriteria() { SectionId = "SEC1", AttendanceDate = attendanceDate };
+                var studentAttendanceDtos = await studentAttendanceService.QueryStudentAttendancesAsync(criteria, false);
+
+                Assert.AreEqual(studentAttendancesData.Count(), studentAttendanceDtos.Count());
+                foreach (var expectedEntity in studentAttendancesData)
+                {
+                    var saDto = studentAttendanceDtos.Where(sa => sa.StudentId == expectedEntity.StudentId).FirstOrDefault();
+                    Assert.IsNotNull(saDto);
+                    Assert.AreEqual(expectedEntity.AttendanceCategoryCode, saDto.AttendanceCategoryCode);
+                    Assert.AreEqual(expectedEntity.MinutesAttended, saDto.MinutesAttended);
+                    Assert.AreEqual(expectedEntity.Comment, saDto.Comment);
+                    Assert.AreEqual(expectedEntity.StudentCourseSectionId, saDto.StudentCourseSectionId);
+                    Assert.AreEqual(expectedEntity.MeetingDate, saDto.MeetingDate);
+                    Assert.AreEqual(expectedEntity.SectionId, saDto.SectionId);
+                    Assert.AreEqual(expectedEntity.InstructionalMethod, saDto.InstructionalMethod);
+                    Assert.AreEqual(expectedEntity.MinutesAttended, saDto.MinutesAttended);
+                    Assert.AreEqual(expectedEntity.MinutesAttendedToDate, saDto.MinutesAttendedToDate);
+                    Assert.AreEqual(expectedEntity.CumulativeMinutesAttended, saDto.CumulativeMinutesAttended);
+                }
+            }
+
+
             private List<Domain.Student.Entities.StudentAttendance> BuildStudentAttendancesRepositoryResponse(string sectionId)
             {
                 List<Domain.Student.Entities.StudentAttendance> Attendances = new List<Domain.Student.Entities.StudentAttendance>();
@@ -230,6 +260,581 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 return Attendances;
             }
 
+        }
+
+        [TestClass]
+        public class UpdateSectionAttendance2Async : CurrentUserSetup
+        {
+            //mock repositories
+            private ILogger logger;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<IRoleRepository> roleRepositoryMock;
+            private IRoleRepository roleRepository;
+            private ICurrentUserFactory currentUserFactory;
+            private Mock<IStudentAttendanceRepository> studentAttendanceRepositoryMock;
+            private IStudentAttendanceRepository studentAttendanceRepository;
+            private Mock<ISectionRepository> sectionRepositoryMock;
+            private ISectionRepository sectionRepository;
+            private Mock<IStudentRepository> studentRepositoryMock;
+            private IStudentRepository studentRepository;
+            private IConfigurationRepository baseConfigurationRepository;
+            private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+
+            //attendance service
+            private IStudentAttendanceService studentAttendanceService;
+
+            //attendance dto
+            private Dtos.Student.SectionAttendance sectionAttendanceDto;
+            private Dtos.Student.SectionAttendance secondaryAttendanceToUpdate;
+            private Dtos.Student.SectionAttendance adHocSectionAttendanceDto;
+            private Dtos.Student.SectionAttendance adHocSecondaryAttendanceToUpdate;
+
+            //responses
+            private Domain.Student.Entities.SectionAttendanceResponse sectionAttendanceResponse;
+            private Domain.Student.Entities.SectionAttendanceResponse adHocSectionAttendanceResponse;
+            private Domain.Student.Entities.SectionAttendanceResponse secondaryAttendanceResponse;
+            private Domain.Student.Entities.SectionAttendanceResponse adHocSecondaryAttendanceResponse;
+            private IEnumerable<Domain.Student.Entities.SectionMeetingInstance> sectionMeetingInstanceResponse;
+            private IEnumerable<Domain.Student.Entities.SectionMeetingInstance> adHocSectionMeetingInstanceResponse;
+
+            private List<Domain.Student.Entities.Section> sectionData;
+            private List<Domain.Student.Entities.Section> adHocSectionData;
+            private List<Domain.Student.Entities.Section> unassignedSectionData;
+            private List<Domain.Student.Entities.Section> secondarySectionData;
+            private List<Domain.Student.Entities.Section> adHocSecondarySectionData;
+            private List<string> crossListIds;
+            private DateTime meetingDate;
+            private DateTime adHocMeetingDate;
+            private DateTimeOffset? startTime;
+            private DateTimeOffset? endTime;
+            private SectionMeetingInstance meetingInstance;
+            private SectionMeetingInstance adHocMeetingInstance;
+            //private Domain.Student.Entities.SectionAttendance sectionAttendanceEntity;
+            private List<StudentSectionAttendance> studentSectionAttendancesToUpdate;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                logger = new Mock<ILogger>().Object;
+
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+
+                roleRepositoryMock = new Mock<IRoleRepository>();
+                roleRepository = roleRepositoryMock.Object;
+
+                baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
+                baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+
+                sectionRepositoryMock = new Mock<ISectionRepository>();
+                sectionRepository = sectionRepositoryMock.Object;
+
+                studentRepositoryMock = new Mock<IStudentRepository>();
+                studentRepository = studentRepositoryMock.Object;
+
+                studentAttendanceRepositoryMock = new Mock<IStudentAttendanceRepository>();
+                studentAttendanceRepository = studentAttendanceRepositoryMock.Object;
+
+                meetingDate = DateTime.Today;
+                adHocMeetingDate = new DateTime(2012, 09, 01);
+                startTime = DateTimeOffset.Now.AddHours(-10);
+                endTime = DateTimeOffset.Now;
+
+                // Meeting Id matches one of the ones returned in the response
+                meetingInstance = new SectionMeetingInstance()
+                {
+                    Id = "14",
+                    SectionId = "SEC1",
+                    MeetingDate = meetingDate,
+                    StartTime = startTime,
+                    EndTime = endTime,
+                    InstructionalMethod = "LEC"
+                };
+
+                adHocMeetingInstance = new SectionMeetingInstance()
+                {
+                    Id = "",
+                    SectionId = "SEC1A",
+                    MeetingDate = adHocMeetingDate,
+                    StartTime = startTime,
+                    EndTime = endTime,
+                    InstructionalMethod = "LEC"
+                };
+
+                studentSectionAttendancesToUpdate = new List<StudentSectionAttendance>()
+                {
+                    new StudentSectionAttendance()
+                    {
+                            StudentCourseSectionId = "courseSec1",
+                            AttendanceCategoryCode = "L",
+                            Comment = "Comment1"
+                    },
+                    new StudentSectionAttendance()
+                    {
+                            StudentCourseSectionId = "courseSec2",
+                            AttendanceCategoryCode = "P"
+                    },
+                    new StudentSectionAttendance()
+                    {
+                            StudentCourseSectionId = "courseSec3",
+                            MinutesAttended = 60
+                    }
+                };
+
+                sectionAttendanceDto = new Dtos.Student.SectionAttendance()
+                {
+                    SectionId = "SEC1",
+                    MeetingInstance = meetingInstance,
+                    StudentAttendances = studentSectionAttendancesToUpdate
+                };
+                
+                secondaryAttendanceToUpdate = new Dtos.Student.SectionAttendance()
+                {
+                    SectionId = "SECXL1",
+                    MeetingInstance = meetingInstance,
+                    StudentAttendances = studentSectionAttendancesToUpdate
+                };
+
+                adHocSectionAttendanceDto = new Dtos.Student.SectionAttendance()
+                {
+                    SectionId = "SEC1A",
+                    MeetingInstance = adHocMeetingInstance,
+                    StudentAttendances = studentSectionAttendancesToUpdate
+                };
+
+                adHocSecondaryAttendanceToUpdate = new Dtos.Student.SectionAttendance()
+                {
+                    SectionId = "SECXL1A",
+                    MeetingInstance = adHocMeetingInstance,
+                    StudentAttendances = studentSectionAttendancesToUpdate
+                };
+
+                // Mock section repository responses
+                sectionData = new List<Domain.Student.Entities.Section>();
+                unassignedSectionData = new List<Domain.Student.Entities.Section>();
+
+                // Setup a good section's response
+                var testSection1 = new TestSectionRepository().GetAsync().Result.First();
+                testSection1.AddFaculty("0000011");
+                sectionData.Add(testSection1);
+
+                // Setup an unassigned section's response - section does not belong to the faculty - permission problem
+                var testSection2 = new TestSectionRepository().GetAsync().Result.First();
+                unassignedSectionData.Add(testSection2);
+
+                // Section that is a secondary crosslisted section but is also for the correct faculty
+                secondarySectionData = new List<Domain.Student.Entities.Section>();
+                var testSection3 = new TestSectionRepository().GetAsync().Result.ElementAt(1);
+                var testSection4 = new TestSectionRepository().GetAsync().Result.ElementAt(2);
+                crossListIds = new List<string>() { "something" };
+                testSection3.PrimarySectionId = "SEC1";
+                testSection3.AddCrossListedSection(testSection4);
+                testSection3.AddFaculty("0000011");
+                secondarySectionData.Add(testSection3);
+
+                // Setup a good ad hoc meeting section's response
+                adHocSectionData = new List<Domain.Student.Entities.Section>();
+                var testSection1A = new TestSectionRepository().GetAsync().Result.First();
+                testSection1A.AttendanceTrackingType = Domain.Student.Entities.AttendanceTrackingType.PresentAbsentWithoutSectionMeeting;
+                testSection1A.AddFaculty("0000011");
+                adHocSectionData.Add(testSection1A);
+
+                // Ad Hoc Meeting Section that is a secondary crosslisted ad hoc meeting section but is also for the correct faculty
+                adHocSecondarySectionData = new List<Domain.Student.Entities.Section>();
+                var testSection3A = new TestSectionRepository().GetAsync().Result.ElementAt(1);
+                testSection3A.AttendanceTrackingType = Domain.Student.Entities.AttendanceTrackingType.PresentAbsentWithoutSectionMeeting;
+                var testSection4A = new TestSectionRepository().GetAsync().Result.ElementAt(2);
+                testSection4A.AttendanceTrackingType = Domain.Student.Entities.AttendanceTrackingType.PresentAbsentWithoutSectionMeeting;
+                crossListIds = new List<string>() { "something" };
+                testSection3A.PrimarySectionId = "SEC1";
+                testSection3A.AddCrossListedSection(testSection4A);
+                testSection3A.AddFaculty("0000011");
+                adHocSecondarySectionData.Add(testSection3A);
+
+
+                List<string> queryIds1 = new List<string>() { "SEC1" };
+                sectionRepositoryMock.Setup(repository => repository.GetCachedSectionsAsync(queryIds1, It.IsAny<bool>())).Returns(Task.FromResult(sectionData.AsEnumerable()));
+                sectionRepositoryMock.Setup(repository => repository.GetNonCachedSectionsAsync(queryIds1, It.IsAny<bool>())).Returns(Task.FromResult(sectionData.AsEnumerable()));
+
+                List<string> queryIds2 = new List<string>() { "SEC2" };
+                sectionRepositoryMock.Setup(repository => repository.GetCachedSectionsAsync(queryIds2, It.IsAny<bool>())).Returns(Task.FromResult(unassignedSectionData.AsEnumerable()));
+                sectionRepositoryMock.Setup(repository => repository.GetNonCachedSectionsAsync(queryIds2, It.IsAny<bool>())).Returns(Task.FromResult(unassignedSectionData.AsEnumerable()));
+
+                List<string> queryIds3 = new List<string>() { "XXX" };
+                sectionRepositoryMock.Setup(repository => repository.GetCachedSectionsAsync(queryIds3, It.IsAny<bool>())).Returns(Task.FromResult(new List<Domain.Student.Entities.Section>().AsEnumerable()));
+                sectionRepositoryMock.Setup(repository => repository.GetNonCachedSectionsAsync(queryIds3, It.IsAny<bool>())).Returns(Task.FromResult(new List<Domain.Student.Entities.Section>().AsEnumerable()));
+
+                List<string> queryIds4 = new List<string>() { "SECXL1" };
+                sectionRepositoryMock.Setup(repository => repository.GetCachedSectionsAsync(queryIds4, It.IsAny<bool>())).Returns(Task.FromResult(secondarySectionData.AsEnumerable()));
+                sectionRepositoryMock.Setup(repository => repository.GetNonCachedSectionsAsync(queryIds4, It.IsAny<bool>())).Returns(Task.FromResult(secondarySectionData.AsEnumerable()));
+
+                List<string> queryIds1A = new List<string>() { "SEC1A" };
+                sectionRepositoryMock.Setup(repository => repository.GetCachedSectionsAsync(queryIds1A, It.IsAny<bool>())).Returns(Task.FromResult(adHocSectionData.AsEnumerable()));
+                sectionRepositoryMock.Setup(repository => repository.GetNonCachedSectionsAsync(queryIds1A, It.IsAny<bool>())).Returns(Task.FromResult(adHocSectionData.AsEnumerable()));
+
+                List<string> queryIds4A = new List<string>() { "SECXL1A" };
+                sectionRepositoryMock.Setup(repository => repository.GetCachedSectionsAsync(queryIds4A, It.IsAny<bool>())).Returns(Task.FromResult(adHocSecondarySectionData.AsEnumerable()));
+                sectionRepositoryMock.Setup(repository => repository.GetNonCachedSectionsAsync(queryIds4A, It.IsAny<bool>())).Returns(Task.FromResult(adHocSecondarySectionData.AsEnumerable()));
+
+                sectionMeetingInstanceResponse = BuildSectionMeetingInstanceResponse();
+                sectionRepositoryMock.Setup(repo => repo.GetSectionMeetingInstancesAsync("SEC1")).ReturnsAsync(sectionMeetingInstanceResponse);
+                sectionRepositoryMock.Setup(repo => repo.GetSectionMeetingInstancesAsync("SECXL1")).ReturnsAsync(new List<Domain.Student.Entities.SectionMeetingInstance>());
+
+                adHocSectionMeetingInstanceResponse = AdHocBuildSectionMeetingInstanceResponse();
+                sectionRepositoryMock.Setup(repo => repo.GetSectionMeetingInstancesAsync("SEC1A")).ReturnsAsync(adHocSectionMeetingInstanceResponse);
+                sectionRepositoryMock.Setup(repo => repo.GetSectionMeetingInstancesAsync("SECXL1A")).ReturnsAsync(new List<Domain.Student.Entities.SectionMeetingInstance>());
+
+                // Mock student Attendance response
+                sectionAttendanceResponse = BuildStudentAttendancesRepositoryResponse(sectionAttendanceDto);
+                adHocSectionAttendanceResponse = BuildStudentAttendancesRepositoryResponse(adHocSectionAttendanceDto);
+
+                // Mock secondary student Attendance response
+                secondaryAttendanceResponse = BuildStudentAttendancesRepositoryResponse(secondaryAttendanceToUpdate);
+                adHocSecondaryAttendanceResponse = BuildStudentAttendancesRepositoryResponse(adHocSecondaryAttendanceToUpdate);
+
+                // Mock the many Adapters
+                var SectionAttendanceDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.SectionAttendanceResponse, Dtos.Student.SectionAttendanceResponse>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.Student.Entities.SectionAttendanceResponse, Dtos.Student.SectionAttendanceResponse>()).Returns(SectionAttendanceDtoAdapter);
+
+                var MeetingDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.SectionMeetingInstance, Dtos.Student.SectionMeetingInstance>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.Student.Entities.SectionMeetingInstance, Dtos.Student.SectionMeetingInstance>()).Returns(MeetingDtoAdapter);
+
+                var AttendanceDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.StudentAttendance, Dtos.Student.StudentAttendance>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.Student.Entities.StudentAttendance, Dtos.Student.StudentAttendance>()).Returns(AttendanceDtoAdapter);
+
+                var AttendanceEntityAdapter = new AutoMapperAdapter<Dtos.Student.SectionAttendance, Domain.Student.Entities.SectionAttendance>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<Dtos.Student.SectionAttendance, Domain.Student.Entities.SectionAttendance>()).Returns(AttendanceEntityAdapter);
+
+                var MeetingEntityAdapter = new AutoMapperAdapter<Dtos.Student.SectionMeetingInstance, Domain.Student.Entities.SectionMeetingInstance>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<Dtos.Student.SectionMeetingInstance, Domain.Student.Entities.SectionMeetingInstance>()).Returns(MeetingEntityAdapter);
+
+                var StudentSectionAttendanceEntityAdapter = new AutoMapperAdapter<Dtos.Student.StudentSectionAttendance, Domain.Student.Entities.StudentSectionAttendance>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<Dtos.Student.StudentSectionAttendance, Domain.Student.Entities.StudentSectionAttendance>()).Returns(StudentSectionAttendanceEntityAdapter);
+
+                // Set up current user
+                currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
+
+                // create attendance service
+                studentAttendanceService = new StudentAttendanceService(adapterRegistry, studentAttendanceRepository, studentRepository, sectionRepository, currentUserFactory, roleRepository, logger, baseConfigurationRepository);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                adapterRegistry = null;
+                studentAttendanceRepository = null;
+                studentRepository = null;
+                sectionRepository = null;
+                roleRepository = null;
+                studentAttendanceService = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task UpdateSectionAttendance2Async_ThrowsExceptionIfStudentAttendanceNull()
+            {
+                await studentAttendanceService.UpdateSectionAttendance2Async(null);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task UpdateSectionAttendance2Async_ThrowsExceptionIfSectiontIdNull()
+            {
+                var tempSa = new Dtos.Student.SectionAttendance()
+                {
+                    MeetingInstance = meetingInstance,
+                    StudentAttendances = studentSectionAttendancesToUpdate
+
+                };
+                await studentAttendanceService.UpdateSectionAttendance2Async(tempSa);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task UpdateSectionAttendance2Async_ThrowsExceptionIfSectiontIdEmpty()
+            {
+                var tempSa = new Dtos.Student.SectionAttendance()
+                {
+                    SectionId = string.Empty,
+                    MeetingInstance = meetingInstance,
+                    StudentAttendances = studentSectionAttendancesToUpdate
+
+                };
+                await studentAttendanceService.UpdateSectionAttendance2Async(tempSa);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task UpdateSectionAttendance2Async_ThrowsExceptionIfMeetingNull()
+            {
+                var tempSa = new Dtos.Student.SectionAttendance()
+                {
+                    SectionId = "sectionId",
+                    MeetingInstance = null,
+                    StudentAttendances = studentSectionAttendancesToUpdate
+
+                };
+                await studentAttendanceService.UpdateSectionAttendance2Async(tempSa);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task UpdateSectionAttendance2Async_ThrowsExceptionIfMeetingHasNoMeetingDate()
+            {
+                var tempSa = new Dtos.Student.SectionAttendance()
+                {
+                    SectionId = "sectionId",
+                    MeetingInstance = new SectionMeetingInstance() { SectionId = "SectionId", StartTime = startTime, EndTime = endTime },
+                    StudentAttendances = studentSectionAttendancesToUpdate
+
+                };
+                await studentAttendanceService.UpdateSectionAttendance2Async(tempSa);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task UpdateSectionAttendance2Async_ThrowsExceptionIfAttendancesNull()
+            {
+                var tempSa = new Dtos.Student.SectionAttendance()
+                {
+                    SectionId = "sectionId",
+                    MeetingInstance = new SectionMeetingInstance() { SectionId = "SectionId", StartTime = startTime, EndTime = endTime },
+
+                };
+                await studentAttendanceService.UpdateSectionAttendance2Async(tempSa);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task UpdateSectionAttendance2Async_ThrowsExceptionIfAttendancesEmpty()
+            {
+                var tempSa = new Dtos.Student.SectionAttendance()
+                {
+                    SectionId = "sectionId",
+                    MeetingInstance = new SectionMeetingInstance() { SectionId = "SectionId", StartTime = startTime, EndTime = endTime },
+                    StudentAttendances = new List<StudentSectionAttendance>()
+
+                };
+                await studentAttendanceService.UpdateSectionAttendance2Async(tempSa);
+            }
+
+            /// Passed initial validations
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task UpdateSectionAttendance2Async_ThrowsExceptionIfCurrentUserIsNotAssignedInstructor()
+            {
+                var tempSa = new Dtos.Student.SectionAttendance()
+                {
+                    SectionId = "SEC2",
+                    MeetingInstance = meetingInstance,
+                    StudentAttendances = studentSectionAttendancesToUpdate
+
+                };
+                await studentAttendanceService.UpdateSectionAttendance2Async(tempSa);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task UpdateSectionAttendance2Async_ThrowsExceptionIfAdapterCannotConvert()
+            {
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<Dtos.Student.SectionAttendance, Domain.Student.Entities.SectionAttendance>()).Throws(new Exception());
+                await studentAttendanceService.UpdateSectionAttendance2Async(sectionAttendanceDto);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(KeyNotFoundException))]
+            public async Task UpdateStudentAttendanceAsync_SectionNotfound()
+            {
+                var tempSa = new Dtos.Student.SectionAttendance()
+                {
+                    SectionId = "XXX",
+                    MeetingInstance = meetingInstance,
+                    StudentAttendances = studentSectionAttendancesToUpdate
+
+                };
+                await studentAttendanceService.UpdateSectionAttendance2Async(tempSa);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task UpdateSectionAttendance2Async_NotAValidMeetingInstance()
+            {
+                var tempSa = new Dtos.Student.SectionAttendance()
+                {
+                    SectionId = "SEC1",
+                    MeetingInstance = new SectionMeetingInstance() { SectionId = "SEC1", Id = "test", MeetingDate = meetingDate, StartTime = startTime, EndTime = endTime, InstructionalMethod = "Y" },
+                    StudentAttendances = studentSectionAttendancesToUpdate
+
+                };
+                await studentAttendanceService.UpdateSectionAttendance2Async(tempSa);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
+            public async Task UpdateSectionAttendance2Async_RethrowsExceptionFromStudentAttendanceRepository()
+            {
+                studentAttendanceRepositoryMock.Setup(repository => repository.UpdateSectionAttendanceAsync(It.IsAny<Domain.Student.Entities.SectionAttendance>(), It.IsAny<List<string>>())).Throws(new Exception());
+                var newResult = await studentAttendanceService.UpdateSectionAttendance2Async(sectionAttendanceDto);
+            }
+
+            [TestMethod]
+            public async Task UpdateSectionAttendance2Async_SuccessIfCurrentUserIsInstructor()
+            {
+                studentAttendanceRepositoryMock.Setup(repository => repository.UpdateSectionAttendanceAsync(It.IsAny<Domain.Student.Entities.SectionAttendance>(), It.IsAny<List<string>>())).ReturnsAsync(sectionAttendanceResponse);
+                var newResult = await studentAttendanceService.UpdateSectionAttendance2Async(sectionAttendanceDto);
+                Assert.IsInstanceOfType(newResult, typeof(SectionAttendanceResponse));
+                Assert.IsNotNull(newResult);
+                Assert.IsNotNull(newResult.MeetingInstance);
+                Assert.AreEqual(sectionAttendanceDto.SectionId, newResult.SectionId);
+                Assert.AreEqual(sectionAttendanceDto.MeetingInstance.Id, newResult.MeetingInstance.Id);
+                Assert.AreEqual(sectionAttendanceDto.StudentAttendances.Count(), newResult.UpdatedStudentAttendances.Count());
+                Assert.AreEqual(0, newResult.StudentAttendanceErrors.Count());
+            }
+
+            [TestMethod]
+            public async Task UpdateSectionAttendance2Async_SuccessWhenSecondarySection()
+            {
+                studentAttendanceRepositoryMock.Setup(repository => repository.UpdateSectionAttendanceAsync(It.IsAny<Domain.Student.Entities.SectionAttendance>(), It.IsAny<List<string>>())).ReturnsAsync(secondaryAttendanceResponse);
+                var newResult = await studentAttendanceService.UpdateSectionAttendance2Async(secondaryAttendanceToUpdate);
+                Assert.IsInstanceOfType(newResult, typeof(SectionAttendanceResponse));
+                Assert.IsNotNull(newResult);
+                Assert.IsNotNull(newResult.MeetingInstance);
+                Assert.AreEqual(secondaryAttendanceToUpdate.SectionId, newResult.SectionId);
+                Assert.AreEqual(secondaryAttendanceToUpdate.MeetingInstance.Id, newResult.MeetingInstance.Id);
+                Assert.AreEqual(secondaryAttendanceToUpdate.StudentAttendances.Count(), newResult.UpdatedStudentAttendances.Count());
+                Assert.AreEqual(0, newResult.StudentAttendanceErrors.Count());
+            }
+
+
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task UpdateSectionAttendance2Async_AdHocMeetingInFutureThrows()
+            {
+                var tempSa = new Dtos.Student.SectionAttendance()
+                {
+                    SectionId = "SEC1A",
+                    MeetingInstance = new SectionMeetingInstance() { SectionId = "SEC1A", Id = "test", MeetingDate = DateTime.Today.AddDays(1), StartTime = startTime, EndTime = endTime, InstructionalMethod = "Y" },
+                    StudentAttendances = studentSectionAttendancesToUpdate
+
+                };
+                await studentAttendanceService.UpdateSectionAttendance2Async(tempSa);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task UpdateSectionAttendance2Async_AdHocMeetingBeforeSectionStartThrows()
+            {
+                var tempSa = new Dtos.Student.SectionAttendance()
+                {
+                    SectionId = "SEC1A",
+                    MeetingInstance = new SectionMeetingInstance() { SectionId = "SEC1A", Id = "test", MeetingDate = new DateTime(2010, 01, 01), StartTime = startTime, EndTime = endTime, InstructionalMethod = "Y" },
+                    StudentAttendances = studentSectionAttendancesToUpdate
+                };
+                await studentAttendanceService.UpdateSectionAttendance2Async(tempSa);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task UpdateSectionAttendance2Async_AdHocMeetingAfterSectionEndThrows()
+            {
+                var tempSa = new Dtos.Student.SectionAttendance()
+                {
+                    SectionId = "SEC1A",
+                    MeetingInstance = new SectionMeetingInstance() { SectionId = "SEC1A", Id = "test", MeetingDate = new DateTime(2013, 01, 01), StartTime = startTime, EndTime = endTime, InstructionalMethod = "Y" },
+                    StudentAttendances = studentSectionAttendancesToUpdate
+                };
+                await studentAttendanceService.UpdateSectionAttendance2Async(tempSa);
+            }
+
+            [TestMethod]
+            public async Task UpdateSectionAttendance2Async_AdHocMeetingSuccessIfCurrentUserIsInstructor()
+            {
+                studentAttendanceRepositoryMock.Setup(repository => repository.UpdateSectionAttendanceAsync(It.IsAny<Domain.Student.Entities.SectionAttendance>(), It.IsAny<List<string>>())).ReturnsAsync(adHocSectionAttendanceResponse);
+                var newResult = await studentAttendanceService.UpdateSectionAttendance2Async(adHocSectionAttendanceDto);
+                Assert.IsInstanceOfType(newResult, typeof(SectionAttendanceResponse));
+                Assert.IsNotNull(newResult);
+                Assert.IsNotNull(newResult.MeetingInstance);
+                Assert.AreEqual(adHocSectionAttendanceDto.SectionId, newResult.SectionId);
+                Assert.AreEqual(adHocSectionAttendanceDto.MeetingInstance.Id, newResult.MeetingInstance.Id);
+                Assert.AreEqual(adHocSectionAttendanceDto.MeetingInstance.MeetingDate, newResult.MeetingInstance.MeetingDate);
+                Assert.AreEqual(adHocSectionAttendanceDto.StudentAttendances.Count(), newResult.UpdatedStudentAttendances.Count());
+                Assert.AreEqual(0, newResult.StudentAttendanceErrors.Count());
+            }
+
+            [TestMethod]
+            public async Task UpdateSectionAttendance2Async_AdHocMeetingSuccessWhenSecondarySection()
+            {
+                studentAttendanceRepositoryMock.Setup(repository => repository.UpdateSectionAttendanceAsync(It.IsAny<Domain.Student.Entities.SectionAttendance>(), It.IsAny<List<string>>())).ReturnsAsync(adHocSecondaryAttendanceResponse);
+                var newResult = await studentAttendanceService.UpdateSectionAttendance2Async(adHocSecondaryAttendanceToUpdate);
+                Assert.IsInstanceOfType(newResult, typeof(SectionAttendanceResponse));
+                Assert.IsNotNull(newResult);
+                Assert.IsNotNull(newResult.MeetingInstance);
+                Assert.AreEqual(adHocSecondaryAttendanceToUpdate.SectionId, newResult.SectionId);
+                Assert.AreEqual(adHocSecondaryAttendanceToUpdate.MeetingInstance.Id, newResult.MeetingInstance.Id);
+                Assert.AreEqual(adHocSecondaryAttendanceToUpdate.MeetingInstance.MeetingDate, newResult.MeetingInstance.MeetingDate);
+                Assert.AreEqual(adHocSecondaryAttendanceToUpdate.StudentAttendances.Count(), newResult.UpdatedStudentAttendances.Count());
+                Assert.AreEqual(0, newResult.StudentAttendanceErrors.Count());
+            }
+
+            private Domain.Student.Entities.SectionAttendanceResponse BuildStudentAttendancesRepositoryResponse(Dtos.Student.SectionAttendance sa)
+            {
+                Domain.Student.Entities.SectionAttendanceResponse result = null;
+                Domain.Student.Entities.SectionMeetingInstance sme = null;
+                if (sa != null)
+                {
+                    sme = new Domain.Student.Entities.SectionMeetingInstance(sa.MeetingInstance.Id, sa.SectionId, sa.MeetingInstance.MeetingDate, sa.MeetingInstance.StartTime, sa.MeetingInstance.EndTime) { InstructionalMethod = sa.MeetingInstance.InstructionalMethod };
+
+                    result = new Domain.Student.Entities.SectionAttendanceResponse(sa.SectionId, sme);
+                    foreach (var saItem in sa.StudentAttendances)
+                    {
+                        result.AddUpdatedStudentAttendance(new Domain.Student.Entities.StudentAttendance("studentId", sa.SectionId, sa.MeetingInstance.MeetingDate, saItem.AttendanceCategoryCode, null, saItem.Comment) { StudentCourseSectionId = saItem.StudentCourseSectionId });
+                    }
+                }
+                return result;
+            }
+
+            private IEnumerable<Domain.Student.Entities.SectionMeetingInstance> BuildSectionMeetingInstanceResponse()
+            {
+                var results = new List<Domain.Student.Entities.SectionMeetingInstance>()
+                {
+                    new Domain.Student.Entities.SectionMeetingInstance("12", "SEC1", DateTime.Today.AddDays(-30), startTime, endTime ) {InstructionalMethod = "LEC" },
+                    new Domain.Student.Entities.SectionMeetingInstance("13", "SEC1", DateTime.Today.AddDays(-15), startTime, endTime ) {InstructionalMethod = "LEC" },
+                    new Domain.Student.Entities.SectionMeetingInstance("14", "SEC1", meetingDate, startTime, endTime ) {InstructionalMethod = "LEC" },
+                    new Domain.Student.Entities.SectionMeetingInstance("15", "SEC1", DateTime.Today.AddDays(15), startTime, endTime ) { InstructionalMethod = "LEC" },
+                };
+
+                return results;
+            }
+            private IEnumerable<Domain.Student.Entities.SectionMeetingInstance> AdHocBuildSectionMeetingInstanceResponse()
+            {
+                var results = new List<Domain.Student.Entities.SectionMeetingInstance>()
+                {
+                    new Domain.Student.Entities.SectionMeetingInstance("", "SEC1A", DateTime.Today.AddDays(-30), startTime, endTime ) {InstructionalMethod = "LEC" },
+                    new Domain.Student.Entities.SectionMeetingInstance("", "SEC1A", DateTime.Today.AddDays(-15), startTime, endTime ) {InstructionalMethod = "LEC" },
+                    new Domain.Student.Entities.SectionMeetingInstance(null, "SEC1A", meetingDate, startTime, endTime ) {InstructionalMethod = "LEC" },
+                    new Domain.Student.Entities.SectionMeetingInstance(null, "SEC1A", DateTime.Today.AddDays(15), startTime, endTime ) { InstructionalMethod = "LEC" },
+                };
+                return results;
+            }
+
+            private Domain.Student.Entities.SectionAttendance BuildSectionAttendanceEntity(Dtos.Student.SectionAttendance sa)
+            {
+                Domain.Student.Entities.SectionAttendance result = null;
+                Domain.Student.Entities.SectionMeetingInstance sme = null;
+                if (sa != null)
+                {
+                    sme = new Domain.Student.Entities.SectionMeetingInstance(sa.MeetingInstance.Id, sa.SectionId, sa.MeetingInstance.MeetingDate, sa.MeetingInstance.StartTime, sa.MeetingInstance.EndTime) { InstructionalMethod = sa.MeetingInstance.InstructionalMethod };
+
+                    result = new Domain.Student.Entities.SectionAttendance(sa.SectionId, sme);
+                    foreach (var saItem in sa.StudentAttendances)
+                    {
+                        result.AddStudentSectionAttendance(new Domain.Student.Entities.StudentSectionAttendance(saItem.StudentCourseSectionId, saItem.AttendanceCategoryCode, null, saItem.Comment));
+                    }
+                }
+                return result;
+            }
         }
 
         [TestClass]
@@ -364,7 +969,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 sectionRepositoryMock.Setup(repository => repository.GetCachedSectionsAsync(queryIds3, It.IsAny<bool>())).Returns(Task.FromResult(new List<Domain.Student.Entities.Section>().AsEnumerable()));
                 List<string> queryIds4 = new List<string>() { "SECXL1" };
                 sectionRepositoryMock.Setup(repository => repository.GetCachedSectionsAsync(queryIds4, It.IsAny<bool>())).Returns(Task.FromResult(secondarySectionData.AsEnumerable()));
-                ;
+                sectionRepositoryMock.Setup(repository => repository.GetNonCachedSectionsAsync(queryIds1, It.IsAny<bool>())).Returns(Task.FromResult(sectionData.AsEnumerable()));
+                sectionRepositoryMock.Setup(repository => repository.GetNonCachedSectionsAsync(queryIds2, It.IsAny<bool>())).Returns(Task.FromResult(unassignedSectionData.AsEnumerable()));
+                sectionRepositoryMock.Setup(repository => repository.GetNonCachedSectionsAsync(queryIds3, It.IsAny<bool>())).Returns(Task.FromResult(new List<Domain.Student.Entities.Section>().AsEnumerable()));
+                sectionRepositoryMock.Setup(repository => repository.GetNonCachedSectionsAsync(queryIds4, It.IsAny<bool>())).Returns(Task.FromResult(secondarySectionData.AsEnumerable()));
 
                 sectionMeetingInstanceResponse = BuildSectionMeetingInstanceResponse();
                 sectionRepositoryMock.Setup(repo => repo.GetSectionMeetingInstancesAsync("SEC1")).ReturnsAsync(sectionMeetingInstanceResponse);
@@ -757,7 +1365,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 sectionRepositoryMock.Setup(repository => repository.GetCachedSectionsAsync(queryIds3, It.IsAny<bool>())).Returns(Task.FromResult(new List<Domain.Student.Entities.Section>().AsEnumerable()));
                 List<string> queryIds4 = new List<string>() { "SECXL1" };
                 sectionRepositoryMock.Setup(repository => repository.GetCachedSectionsAsync(queryIds4, It.IsAny<bool>())).Returns(Task.FromResult(secondarySectionData.AsEnumerable()));
-                ;
+                sectionRepositoryMock.Setup(repository => repository.GetNonCachedSectionsAsync(queryIds1, It.IsAny<bool>())).Returns(Task.FromResult(sectionData.AsEnumerable()));
+                sectionRepositoryMock.Setup(repository => repository.GetNonCachedSectionsAsync(queryIds2, It.IsAny<bool>())).Returns(Task.FromResult(unassignedSectionData.AsEnumerable()));
+                sectionRepositoryMock.Setup(repository => repository.GetNonCachedSectionsAsync(queryIds3, It.IsAny<bool>())).Returns(Task.FromResult(new List<Domain.Student.Entities.Section>().AsEnumerable()));
+                sectionRepositoryMock.Setup(repository => repository.GetNonCachedSectionsAsync(queryIds4, It.IsAny<bool>())).Returns(Task.FromResult(secondarySectionData.AsEnumerable()));
 
                 sectionMeetingInstanceResponse = BuildSectionMeetingInstanceResponse();
                 sectionRepositoryMock.Setup(repo => repo.GetSectionMeetingInstancesAsync("SEC1")).ReturnsAsync(sectionMeetingInstanceResponse);

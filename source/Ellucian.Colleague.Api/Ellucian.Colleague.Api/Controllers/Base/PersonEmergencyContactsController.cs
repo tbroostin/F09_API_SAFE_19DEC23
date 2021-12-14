@@ -1,4 +1,4 @@
-﻿//Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -24,6 +24,7 @@ using Ellucian.Web.Http.ModelBinding;
 using System.Linq;
 using System.Net.Http;
 using System.Configuration;
+using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -57,7 +58,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         ///  <param name="personFilter">Selection from SaveListParms definition or person-filters</param>
         /// <returns>List of PersonEmergencyContacts <see cref="Dtos.PersonEmergencyContacts"/> objects representing matching personEmergencyContacts</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPersonContact, BasePermissionCodes.UpdatePersonContact })]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.PersonEmergencyContacts))]
         [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter2))]
@@ -74,6 +75,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
+                _personEmergencyContactsService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(200, 0);
@@ -145,7 +147,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="guid">GUID to desired personEmergencyContacts</param>
         /// <returns>A personEmergencyContacts object <see cref="Dtos.PersonEmergencyContacts"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPersonContact, BasePermissionCodes.UpdatePersonContact })]
         public async Task<Dtos.PersonEmergencyContacts> GetPersonEmergencyContactsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -163,6 +165,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
+                _personEmergencyContactsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                    await _personEmergencyContactsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                    await _personEmergencyContactsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -208,7 +211,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="personEmergencyContacts">DTO of the updated personEmergencyContacts</param>
         /// <returns>A PersonEmergencyContacts object <see cref="Dtos.PersonEmergencyContacts"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(BasePermissionCodes.UpdatePersonContact)]
         public async Task<Dtos.PersonEmergencyContacts> PutPersonEmergencyContactsAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.PersonEmergencyContacts personEmergencyContacts)
         {
             if (string.IsNullOrEmpty(guid))
@@ -237,6 +240,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _personEmergencyContactsService.ValidatePermissions(GetPermissionsMetaData());
                 return await _personEmergencyContactsService.UpdatePersonEmergencyContactsAsync(
                   await PerformPartialPayloadMerge(personEmergencyContacts, async () => await _personEmergencyContactsService.GetPersonEmergencyContactsByGuid2Async(guid, true),
                   await _personEmergencyContactsService.GetDataPrivacyListByApi(GetRouteResourceName(), true),
@@ -285,11 +289,12 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="personEmergencyContacts">DTO of the new personEmergencyContacts</param>
         /// <returns>A personEmergencyContacts object <see cref="Dtos.PersonEmergencyContacts"/> in HeDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPost]
+        [HttpPost, PermissionsFilter(BasePermissionCodes.UpdatePersonContact)]
         public async Task<Dtos.PersonEmergencyContacts> PostPersonEmergencyContactsAsync(Dtos.PersonEmergencyContacts personEmergencyContacts)
         {
             try
             {
+                _personEmergencyContactsService.ValidatePermissions(GetPermissionsMetaData());
                 return await _personEmergencyContactsService.CreatePersonEmergencyContactsAsync(personEmergencyContacts);
             }
             catch (KeyNotFoundException e)
@@ -335,11 +340,12 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="guid">GUID to desired personEmergencyContacts</param>
         /// <returns>HttpResponseMessage</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpDelete]
+        [HttpDelete, PermissionsFilter(BasePermissionCodes.DeletePersonContact)]
         public async Task<HttpResponseMessage> DeletePersonEmergencyContactsAsync([FromUri] string guid)
         {
             try
             {
+                _personEmergencyContactsService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(guid))
                 {
                     throw new ArgumentNullException("id", "guid is a required for delete");

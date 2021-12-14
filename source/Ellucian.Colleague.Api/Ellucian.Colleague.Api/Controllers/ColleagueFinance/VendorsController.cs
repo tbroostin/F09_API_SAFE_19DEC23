@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -29,6 +29,7 @@ using Newtonsoft.Json.Linq;
 using Ellucian.Colleague.Dtos.ColleagueFinance;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Dtos.DtoProperties;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 
 namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 {
@@ -60,8 +61,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <param name="criteria">The default named query implementation for filtering</param>
         /// <returns>List of Vendors <see cref="Vendors"/> objects representing matching vendors</returns>
-        [HttpGet, EedmResponseFilter]
-        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewVendors, ColleagueFinancePermissionCodes.UpdateVendors })]
         [QueryStringFilterFilter("criteria", typeof(Vendors))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
         public async Task<IHttpActionResult> GetVendorsAsync(Paging page, QueryStringFilter criteria)
@@ -89,7 +89,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 criteriaValue.vendorDetail = criteriaObj.VendorDetail.Institution.Id;
             if (criteriaObj.VendorDetail != null && criteriaObj.VendorDetail.Organization != null && !string.IsNullOrEmpty(criteriaObj.VendorDetail.Organization.Id))
                 criteriaValue.vendorDetail = criteriaObj.VendorDetail.Organization.Id;
-            if (criteriaObj.VendorDetail != null && criteriaObj.VendorDetail.Person!= null && !string.IsNullOrEmpty(criteriaObj.VendorDetail.Person.Id))
+            if (criteriaObj.VendorDetail != null && criteriaObj.VendorDetail.Person != null && !string.IsNullOrEmpty(criteriaObj.VendorDetail.Person.Id))
                 criteriaValue.vendorDetail = criteriaObj.VendorDetail.Person.Id;
             if (criteriaObj.Classifications != null && criteriaObj.Classifications.Any() && !string.IsNullOrEmpty(criteriaObj.Classifications.FirstOrDefault().Id))
             {
@@ -111,6 +111,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
             try
             {
+                _vendorsService.ValidatePermissions(GetPermissionsMetaData());
                 var pageOfItems = await _vendorsService.GetVendorsAsync(page.Offset, page.Limit, criteriaValue, bypassCache);
 
                 AddEthosContextProperties(await _vendorsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -156,7 +157,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="guid">GUID to desired vendor</param>
         /// <returns>A vendor object <see cref="Dtos.Vendors"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] {ColleagueFinancePermissionCodes.ViewVendors, ColleagueFinancePermissionCodes.UpdateVendors })]
         public async Task<Dtos.Vendors> GetVendorsByGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -176,6 +177,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
             try
             {
+                _vendorsService.ValidatePermissions(GetPermissionsMetaData());
                 var vendor = await _vendorsService.GetVendorsByGuidAsync(guid);
 
                 if (vendor != null)
@@ -227,7 +229,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="vendor">DTO of the new vendor</param>
         /// <returns>A vendor object <see cref="Dtos.Vendors"/> in EEDM format</returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(ColleagueFinancePermissionCodes.UpdateVendors)]
         public async Task<Dtos.Vendors> PostVendorsAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.Vendors vendor)
         {
             if (vendor == null)
@@ -237,6 +239,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                _vendorsService.ValidatePermissions(GetPermissionsMetaData());
                 ValidateVendor(vendor);
 
                 var vendorDetail = vendor.VendorDetail;
@@ -306,21 +309,22 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="guid">GUID of the vendor to update</param>
         /// <param name="vendor">DTO of the updated vendor</param>
         /// <returns>A vendor object <see cref="Dtos.Vendors"/> in EEDM format</returns>
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(ColleagueFinancePermissionCodes.UpdateVendors)]
         public async Task<Dtos.Vendors> PutVendorsAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.Vendors vendor)
         {
             ValidateUpdateRequest(guid, vendor);
 
             try
             {
+                _vendorsService.ValidatePermissions(GetPermissionsMetaData());
                 //get Data Privacy List
                 var dpList = await _vendorsService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
                 //call import extend method that needs the extracted extension dataa and the config
                 await _vendorsService.ImportExtendedEthosData(await ExtractExtendedData(await _vendorsService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
-                var mergedVendor = 
-                    await PerformPartialPayloadMerge(vendor, async () => await _vendorsService.GetVendorsByGuidAsync(guid), 
+                var mergedVendor =
+                    await PerformPartialPayloadMerge(vendor, async () => await _vendorsService.GetVendorsByGuidAsync(guid),
                     dpList, _logger);
 
                 if (vendor.VendorDetail == null)
@@ -333,7 +337,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                     if (vendor.VendorDetail.Institution == null || mergedVendor.VendorDetail.Institution == null || vendor.VendorDetail.Institution.Id != mergedVendor.VendorDetail.Institution.Id)
                     {
                         throw new ArgumentException("Updates to vendorDetail are not permitted.");
-                    } 
+                    }
                 }
 
                 if (vendor.VendorDetail.Organization != null || mergedVendor.VendorDetail.Organization != null)
@@ -344,7 +348,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                     }
                 }
 
-                if ( vendor.VendorDetail.Person != null || mergedVendor.VendorDetail.Person != null)
+                if (vendor.VendorDetail.Person != null || mergedVendor.VendorDetail.Person != null)
                 {
                     if (vendor.VendorDetail.Person == null || mergedVendor.VendorDetail.Person == null || vendor.VendorDetail.Person.Id != mergedVendor.VendorDetail.Person.Id)
                     {
@@ -480,7 +484,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
         }
 
-        
+
         /// <summary>
         /// Validate the request on Put meets conditions for guid consistency 
         /// </summary>
@@ -525,7 +529,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="criteria">The default named query implementation for filtering</param>
         ///  <param name="vendorDetail">Vendor detail id GUId filter as in person or organization or institution guid</param>
         /// <returns>List of Vendors <see cref="Dtos.Vendors2"/> objects representing matching vendors</returns>
-        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter, PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewVendors, ColleagueFinancePermissionCodes.UpdateVendors })]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Vendors2))]
         [QueryStringFilterFilter("vendorDetail", typeof(Dtos.Filters.VendorDetail))]
@@ -554,7 +558,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 vendorDetails = vendorDetailFilterObj.vendorDetail.Id;
             }
 
-           
+
             List<string> relatedReferences = null, statuses = null, classifications = null, types = null;
             string taxId = string.Empty;
 
@@ -611,6 +615,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
             try
             {
+                _vendorsService.ValidatePermissions(GetPermissionsMetaData());
                 var pageOfItems = await _vendorsService.GetVendorsAsync2(page.Offset, page.Limit, vendorDetails, classifications,
                     statuses, relatedReferences, types, taxId, bypassCache);
 
@@ -658,8 +663,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="guid">GUID to desired vendor</param>
         /// <returns>A vendor object <see cref="Dtos.Vendors2"/> in EEDM format</returns>
-        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
-        
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter, PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewVendors, ColleagueFinancePermissionCodes.UpdateVendors })]
+
         public async Task<Dtos.Vendors2> GetVendorsByGuidAsync2(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -679,6 +684,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
             try
             {
+                _vendorsService.ValidatePermissions(GetPermissionsMetaData());
                 var vendor = await _vendorsService.GetVendorsByGuidAsync2(guid);
 
                 if (vendor != null)
@@ -729,11 +735,12 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="vendor">DTO of the new vendor</param>
         /// <returns>A vendor object <see cref="Dtos.Vendors"/> in EEDM format</returns>
-        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter, PermissionsFilter(ColleagueFinancePermissionCodes.UpdateVendors)]
         public async Task<Dtos.Vendors2> PostVendorsAsync2([ModelBinder(typeof(EedmModelBinder))] Dtos.Vendors2 vendor)
         {
             try
-            {                
+            {
+                _vendorsService.ValidatePermissions(GetPermissionsMetaData());
                 //call import extend method that needs the extracted extension data and the config
                 await _vendorsService.ImportExtendedEthosData(await ExtractExtendedData(await _vendorsService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
@@ -808,11 +815,12 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="guid">GUID of the vendor to update</param>
         /// <param name="vendor">DTO of the updated vendor</param>
         /// <returns>A vendor object <see cref="Dtos.Vendors2"/> in EEDM format</returns>
-        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter, PermissionsFilter(ColleagueFinancePermissionCodes.UpdateVendors)]
         public async Task<Dtos.Vendors2> PutVendorsAsync2([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.Vendors2 vendor)
         {
             try
             {
+                _vendorsService.ValidatePermissions(GetPermissionsMetaData());
                 //get Data Privacy List
                 var dpList = await _vendorsService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
@@ -940,7 +948,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="criteria">The default named query implementation for filtering</param>
         ///  <param name="vendorDetail">Vendor detail id GUId filter as in person or organization or institution guid</param>
         /// <returns>List of Vendors <see cref="Dtos.VendorsMaximum"/> objects representing matching vendors</returns>
-        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter, PermissionsFilter(ColleagueFinancePermissionCodes.ViewVendors)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(VendorsMaximum))]
         [QueryStringFilterFilter("vendorDetail", typeof(Dtos.Filters.VendorDetail))]
@@ -972,10 +980,11 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             var criteriaObj = GetFilterObject<VendorsMaximum>(_logger, "criteria");
 
             if (CheckForEmptyFilterParameters())
-                return new PagedHttpActionResult<IEnumerable<VendorsMaximum>>(new List<VendorsMaximum>(), page, 0, this.Request);            
+                return new PagedHttpActionResult<IEnumerable<VendorsMaximum>>(new List<VendorsMaximum>(), page, 0, this.Request);
 
             try
             {
+                _vendorsService.ValidatePermissions(GetPermissionsMetaData());
                 var pageOfItems = await _vendorsService.GetVendorsMaximumAsync(page.Offset, page.Limit, criteriaObj, vendorDetails, bypassCache);
 
                 AddEthosContextProperties(await _vendorsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -1022,7 +1031,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="id">GUID to desired vendor</param>
         /// <returns>A vendor object <see cref="Dtos.VendorsMaximum"/> in EEDM format</returns>
-        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter, PermissionsFilter(ColleagueFinancePermissionCodes.ViewVendors)]
 
         public async Task<Dtos.VendorsMaximum> GetVendorsMaximumByGuidAsync(string id)
         {
@@ -1042,12 +1051,13 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                _vendorsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                    await _vendorsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                    await _vendorsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                        new List<string>() { id }));
                 return await _vendorsService.GetVendorsMaximumByGuidAsync(id);
-            }            
+            }
             catch (KeyNotFoundException e)
             {
                 _logger.Error(e.ToString());
@@ -1186,7 +1196,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         [HttpPost]
         public async Task<IEnumerable<VendorSearchResult>> QueryVendorsByPostAsync(VendorSearchCriteria searchCriteria)
         {
-            if (searchCriteria==null)
+            if (searchCriteria == null)
             {
                 string message = "Vendor search criteria must be specified.";
                 _logger.Error(message);
@@ -1203,7 +1213,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 var vendorSearchResults = await _vendorsService.QueryVendorsByPostAsync(searchCriteria);
                 return vendorSearchResults;
-            }            
+            }
             catch (ArgumentNullException anex)
             {
                 _logger.Error(anex, anex.Message);
@@ -1277,7 +1287,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <returns>VendorDefaultTaxFormInfo DTO.</returns>
         /// <accessComments>
         /// Requires at least one of the permissions VIEW.VENDOR, CREATE.UPDATE.VOUCHER, CREATE.UPDATE.REQUISITION,
-        /// CREATE.UPDATE.PURCHASE.ORDER  and CREATE.UPDATE.VOUCHER
+        /// CREATE.UPDATE.PURCHASE.ORDER and CREATE.UPDATE.VOUCHER
         /// </accessComments>
         [HttpGet]
         public async Task<VendorDefaultTaxFormInfo> GetVendorDefaultTaxFormInfoAsync(string vendorId, string apType)

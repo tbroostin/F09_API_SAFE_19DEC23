@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -601,7 +601,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { ViewStudentChargeRole });
 
                 _studentChargeRepositoryMock.Setup(i =>
-                    i.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+                    i.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
                 _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730")).ReturnsAsync("00001");
                 _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("00001")).ReturnsAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730");
@@ -679,7 +679,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { ViewStudentChargeRole });
 
                 _studentChargeRepositoryMock.Setup(i =>
-                    i.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+                    i.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
                 _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730")).ReturnsAsync("00001");
                 _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("00001")).ReturnsAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730");
@@ -697,7 +697,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { ViewStudentChargeRole });
 
                 _studentChargeRepositoryMock.Setup(i =>
-                    i.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+                    i.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
                 _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730")).ReturnsAsync("00001");
                 _personRepositoryMock.Setup(i => i.GetPersonGuidFromIdAsync("00001")).ReturnsAsync("b371fba4-797d-4c2c-8adc-bedd6d9db730");

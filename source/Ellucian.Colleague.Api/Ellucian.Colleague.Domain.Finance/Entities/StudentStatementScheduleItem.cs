@@ -68,7 +68,10 @@ namespace Ellucian.Colleague.Domain.Finance.Entities
                     }
                     return String.Join(Environment.NewLine, meetingDays.ToArray());
                 }
-                return ToBeDeterminedText;
+                else
+                {
+                    return ToBeDeterminedText;
+                }
             }
         }
 
@@ -88,7 +91,11 @@ namespace Ellucian.Colleague.Domain.Finance.Entities
                     }
                     return String.Join(Environment.NewLine, meetingTimes.ToArray());
                 }
-                return ToBeDeterminedText;
+                else
+                {
+                    return ToBeDeterminedText;
+                }
+
             }
         }
 
@@ -239,13 +246,24 @@ namespace Ellucian.Colleague.Domain.Finance.Entities
         private string ConvertSectionDatesToString(Section section)
         {
             var dateRange = new StringBuilder();
-            dateRange.Append(section.StartDate.ToShortDateString());
+            if (section.FirstMeetingDate != null)
+            {
+                dateRange.Append(section.FirstMeetingDate.Value.ToShortDateString());
+            }
+            if (section.FirstMeetingDate == null)
+            {
+                dateRange.Append(section.StartDate.ToShortDateString());
+            }
             dateRange.Append(SectionDatesDelimiter);
-            if (section.EndDate == null)
+            if (section.EndDate == null && section.LastMeetingDate == null)
             {
                 dateRange.Append(ToBeDeterminedText);
             }
-            else
+            if (section.LastMeetingDate != null)
+            {
+                dateRange.Append(section.LastMeetingDate.Value.ToShortDateString());
+            }
+            if (section.LastMeetingDate == null) 
             {
                 dateRange.Append(section.EndDate.Value.ToShortDateString());
             }

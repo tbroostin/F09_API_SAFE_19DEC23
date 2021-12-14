@@ -1,23 +1,29 @@
 ﻿//Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using Ellucian.Colleague.Api.Controllers.ColleagueFinance;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -251,7 +257,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 Description = "description",
                 SequenceNumber = 1,
                 Amount = new AmountDtoProperty() { Currency = CurrencyCodes.USD, Value = 25 },
-                SubmittedBy = new GuidObject2() { Id= "123456" }
+                SubmittedBy = new GuidObject2() { Id = "123456" }
             };
 
             var gltDtoProperty = new GeneralLedgerTransactionDtoProperty2()
@@ -274,11 +280,11 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 Id = "0001234",
                 ProcessMode = ProcessMode.Update,
                 Transactions = new List<GeneralLedgerTransactionDtoProperty2>() { gltDtoProperty },
-                SubmittedBy = new GuidObject2() { Id= "123456" }
+                SubmittedBy = new GuidObject2() { Id = "123456" }
             };
 
             _generalLedgerTransactions = new List<GeneralLedgerTransaction2>() { _generalLedgerTransaction };
-            
+
             _response = new HttpResponse(new StringWriter());
 
             _glServiceMock.Setup(x => x.Get2Async()).ReturnsAsync(_generalLedgerTransactions);
@@ -444,7 +450,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 AccountingString = "784545",
                 Description = "description",
                 SequenceNumber = 1,
-                Amount = new AmountDtoProperty() {Currency = CurrencyCodes.USD, Value = 25}
+                Amount = new AmountDtoProperty() { Currency = CurrencyCodes.USD, Value = 25 }
             };
 
             var gltDtoProperty = new GeneralLedgerTransactionDtoProperty()
@@ -459,14 +465,14 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 TransactionNumber = "1",
                 TransactionTypeReferenceDate = DateTimeOffset.Now,
                 Type = GeneralLedgerTransactionType.ActualOpenBalance,
-                TransactionDetailLines = new List<GeneralLedgerDetailDtoProperty>() {generalLedgerDetailDtoProperty}
+                TransactionDetailLines = new List<GeneralLedgerDetailDtoProperty>() { generalLedgerDetailDtoProperty }
             };
 
             _generalLedgerTransaction = new GeneralLedgerTransaction
             {
                 Id = "0001234",
                 ProcessMode = ProcessMode.Update,
-                Transactions = new List<GeneralLedgerTransactionDtoProperty>() {gltDtoProperty}
+                Transactions = new List<GeneralLedgerTransactionDtoProperty>() { gltDtoProperty }
             };
 
             _response = new HttpResponse(new StringWriter());
@@ -669,7 +675,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             {
                 Id = "0001234",
                 ProcessMode = ProcessMode.Update,
-                SubmittedBy = new GuidObject2() { Id= "123456" },
+                SubmittedBy = new GuidObject2() { Id = "123456" },
                 Transactions = new List<GeneralLedgerTransactionDtoProperty2>() { gltDtoProperty }
             };
 
@@ -1715,7 +1721,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         }
 
         [TestMethod]
-        [ExpectedException(typeof (HttpResponseException))]
+        [ExpectedException(typeof(HttpResponseException))]
         public async Task GeneralLedgerTransactionsController_DeleteAsync_EmptyId()
         {
             await _generalLedgerTransactionsController.DeleteAsync("");
@@ -1743,7 +1749,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
             private IEnumerable<Ellucian.Colleague.Domain.ColleagueFinance.Entities.GeneralLedgerTransaction> allGeneralLedgerTransactions;
             private List<Dtos.GeneralLedgerTransaction3> generalLedgerTransactionCollection;
-            
+
             private Dtos.GeneralLedgerTransaction3 generalLedgerTransaction;
             private List<GeneralLedgerTransaction3> generalLedgerTransactions;
 
@@ -1763,7 +1769,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 loggerMock = new Mock<ILogger>();
 
                 InitializeTestData();
-                
+
                 generalLedgerTransactionsController = new GeneralLedgerTransactionsController(generalLedgerTransactionServiceMock.Object, loggerMock.Object) { Request = new HttpRequestMessage() };
                 generalLedgerTransactionsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
                 generalLedgerTransactionsController.Request = new HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
@@ -1792,14 +1798,14 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                     new Ellucian.Colleague.Domain.ColleagueFinance.Entities.GeneralLedgerTransaction(){ Id="849e6a7c-6cd4-4f98-8a73-ab0aa3627f02" }
                 };
 
-                
+
                 generalLedgerTransactionsCollection = new List<GeneralLedgerTransaction3>() {
                     new GeneralLedgerTransaction3(){ Id="2a082180-b897-46f3-8435-df25caaca921"},
                     new GeneralLedgerTransaction3(){ Id="2a082180-b897-46f3-8435-df25caaca922"},
                     new GeneralLedgerTransaction3(){ Id="2a082180-b897-46f3-8435-df25caaca923"}
                 };
 
-                
+
 
                 foreach (var source in allGeneralLedgerTransactions)
                 {
@@ -1834,9 +1840,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                     Type = GeneralLedgerTransactionType.ActualOpenBalance,
                     TransactionDetailLines = new List<GeneralLedgerDetailDtoProperty3>() { generalLedgerDetailDtoProperty }
                 };
-                
+
                 generalLedgerTransaction = new GeneralLedgerTransaction3
-                { 
+                {
                     Id = "2a082180-b897-46f3-8435-df25caaca922"
                 };
 
@@ -1954,6 +1960,90 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 await generalLedgerTransactionsController.Get3Async();
             }
 
+            //GET by id v12.1.0 v12
+            //Successful
+            //Get3Async
+            [TestMethod]
+            public async Task GeneralLedgerTransactionsController_Get3Async_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "GeneralLedgerTransactions" },
+                    { "action", "Get3Async" }
+                };
+                HttpRoute route = new HttpRoute("general-ledger-transactions", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                generalLedgerTransactionsController.Request.SetRouteData(data);
+                generalLedgerTransactionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.CreateGLPostings);
+
+                var controllerContext = generalLedgerTransactionsController.ControllerContext;
+                var actionDescriptor = generalLedgerTransactionsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                generalLedgerTransactionServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                generalLedgerTransactionServiceMock.Setup(e => e.Get3Async(It.IsAny<bool>())).ReturnsAsync(generalLedgerTransactionsCollection);
+                var generalLedgerTransactionRes = await generalLedgerTransactionsController.Get3Async();
+
+                Object filterObject;
+                generalLedgerTransactionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.CreateGLPostings));
+
+
+            }
+
+            //GET by id v12.1.0 v12
+            //Exception
+            //Get3Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GeneralLedgerTransactionsController_Get3Async_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "GeneralLedgerTransactions" },
+                    { "action", "Get3Async" }
+                };
+                HttpRoute route = new HttpRoute("general-ledger-transactions", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                generalLedgerTransactionsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = generalLedgerTransactionsController.ControllerContext;
+                var actionDescriptor = generalLedgerTransactionsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    generalLedgerTransactionServiceMock.Setup(e => e.Get3Async(It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                    generalLedgerTransactionServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view general-ledger-transactions."));
+                    await generalLedgerTransactionsController.Get3Async();
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
             #endregion
 
             #region GETBYID
@@ -2063,6 +2153,90 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 generalLedgerTransactionServiceMock.Setup(e => e.GetById3Async(It.IsAny<string>())).ThrowsAsync(new Exception());
                 await generalLedgerTransactionsController.GetById3Async("2a082180-b897-46f3-8435-df25caaca922");
             }
+
+            //GET by id v12.1.0 v12
+            //Successful
+            //GetById3Async
+            [TestMethod]
+            public async Task GeneralLedgerTransactionsController_GetById3Async_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "GeneralLedgerTransactions" },
+                    { "action", "GetById3Async" }
+                };
+                HttpRoute route = new HttpRoute("general-ledger-transactions", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                generalLedgerTransactionsController.Request.SetRouteData(data);
+                generalLedgerTransactionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.CreateGLPostings);
+
+                var controllerContext = generalLedgerTransactionsController.ControllerContext;
+                var actionDescriptor = generalLedgerTransactionsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                generalLedgerTransactionServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                generalLedgerTransactionServiceMock.Setup(x => x.GetById3Async(It.IsAny<string>())).ReturnsAsync(generalLedgerTransaction);
+                var generalLedgerTransactionRes = await generalLedgerTransactionsController.GetById3Async("0001234");
+
+                Object filterObject;
+                generalLedgerTransactionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.CreateGLPostings));
+
+
+            }
+
+            //GET by id v12.1.0 v12
+            //Exception
+            //GetById3Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GeneralLedgerTransactionsController_GetById3Async_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "GeneralLedgerTransactions" },
+                    { "action", "GetById3AsyncGetById3Async" }
+                };
+                HttpRoute route = new HttpRoute("general-ledger-transactions", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                generalLedgerTransactionsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = generalLedgerTransactionsController.ControllerContext;
+                var actionDescriptor = generalLedgerTransactionsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    generalLedgerTransactionServiceMock.Setup(e => e.GetById3Async(It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+                    generalLedgerTransactionServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view general-ledger-transactions."));
+                    await generalLedgerTransactionsController.GetById3Async("2a082180-b897-46f3-8435-df25caaca922");
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
 
             #endregion
 
@@ -2237,6 +2411,97 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 await generalLedgerTransactionsController.Create3Async(generalLedgerTransaction);
             }
 
+            //POST v12.1.0 v12
+            //Successful
+            //Create3Async
+            [TestMethod]
+            public async Task GeneralLedgerTransactionsController_Create3Async_Permissions()
+            {
+                generalLedgerTransaction = new GeneralLedgerTransaction3
+                {
+                    Id = "00000000-0000-0000-0000-000000000000"
+                };
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "GeneralLedgerTransactions" },
+                    { "action", "Create3Async" }
+                };
+                HttpRoute route = new HttpRoute("general-ledger-transactions", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                generalLedgerTransactionsController.Request.SetRouteData(data);
+                generalLedgerTransactionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.CreateGLPostings);
+
+                var controllerContext = generalLedgerTransactionsController.ControllerContext;
+                var actionDescriptor = generalLedgerTransactionsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                generalLedgerTransactionServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                generalLedgerTransactionServiceMock.Setup(x => x.Create3Async(It.IsAny<GeneralLedgerTransaction3>())).ReturnsAsync(generalLedgerTransaction);
+                var generalLedgerTransactionRes = await generalLedgerTransactionsController.Create3Async(generalLedgerTransaction);
+
+                Object filterObject;
+                generalLedgerTransactionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.CreateGLPostings));
+
+
+            }
+
+            //POST v12.1.0 v12
+            //Exception
+            //Create3Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GeneralLedgerTransactionsController_Create3Async_Invalid_Permissions()
+            {
+                generalLedgerTransaction = new GeneralLedgerTransaction3
+                {
+                    Id = "00000000-0000-0000-0000-000000000000"
+                };
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "GeneralLedgerTransactions" },
+                    { "action", "Create3Async" }
+                };
+                HttpRoute route = new HttpRoute("general-ledger-transactions", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                generalLedgerTransactionsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = generalLedgerTransactionsController.ControllerContext;
+                var actionDescriptor = generalLedgerTransactionsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    generalLedgerTransactionServiceMock.Setup(x => x.Create3Async(It.IsAny<GeneralLedgerTransaction3>())).ThrowsAsync(new PermissionsException());
+                    generalLedgerTransactionServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to update general-ledger-transactions."));
+                    await generalLedgerTransactionsController.Create3Async(generalLedgerTransaction);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
 
             #endregion
 
@@ -2267,7 +2532,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             public async Task GeneralLedgerTransactionsController_Update3Async_Valid_EmptyGUID()
             {
                 generalLedgerTransactionServiceMock.Setup(x => x.Update3Async(It.IsAny<string>(), It.IsAny<GeneralLedgerTransaction3>())).ReturnsAsync(generalLedgerTransaction);
-                
+
                 await generalLedgerTransactionsController.Update3Async("00000000-0000-0000-0000-000000000000", generalLedgerTransaction);
             }
 
@@ -2388,6 +2653,91 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 generalLedgerTransactionServiceMock.Setup(x => x.Update3Async(It.IsAny<string>(), It.IsAny<GeneralLedgerTransaction3>())).ThrowsAsync(new Exception());
                 await generalLedgerTransactionsController.Update3Async(generalLedgerTransaction.Id, generalLedgerTransaction);
             }
+
+            //PUT v12.1.0 v12
+            //Successful
+            //Update3Async
+            [TestMethod]
+            public async Task GeneralLedgerTransactionsController_Update3Async_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "GeneralLedgerTransactions" },
+                    { "action", "Update3Async" }
+                };
+                HttpRoute route = new HttpRoute("general-ledger-transactions", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                generalLedgerTransactionsController.Request.SetRouteData(data);
+                generalLedgerTransactionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.CreateGLPostings);
+
+                var controllerContext = generalLedgerTransactionsController.ControllerContext;
+                var actionDescriptor = generalLedgerTransactionsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                generalLedgerTransactionServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                generalLedgerTransactionServiceMock.Setup(x => x.Update3Async(It.IsAny<string>(), It.IsAny<GeneralLedgerTransaction3>())).ReturnsAsync(generalLedgerTransaction);
+                var generalLedgerTransactionRes = await generalLedgerTransactionsController.Update3Async(generalLedgerTransaction.Id, generalLedgerTransaction);
+
+                Object filterObject;
+                generalLedgerTransactionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.CreateGLPostings));
+
+
+            }
+
+            //PUT v12.1.0 v12
+            //Exception
+            //Update3Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GeneralLedgerTransactionsController_Update3Async_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "GeneralLedgerTransactions" },
+                    { "action", "Update3Async" }
+                };
+                HttpRoute route = new HttpRoute("general-ledger-transactions", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                generalLedgerTransactionsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = generalLedgerTransactionsController.ControllerContext;
+                var actionDescriptor = generalLedgerTransactionsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    generalLedgerTransactionServiceMock.Setup(x => x.Update3Async(It.IsAny<string>(), It.IsAny<GeneralLedgerTransaction3>())).ThrowsAsync(new PermissionsException());
+                    generalLedgerTransactionServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to update general-ledger-transactions."));
+                    await generalLedgerTransactionsController.Update3Async(generalLedgerTransaction.Id, generalLedgerTransaction);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
             #endregion
 
         }

@@ -3,6 +3,7 @@ using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Ellucian.Web.Cache;
@@ -36,6 +37,34 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
                 apiSettings = new ApiSettings("TEST") { BulkReadSize = 5000 };
                 this.readSize = ((apiSettings != null) && (apiSettings.BulkReadSize > 0)) ? apiSettings.BulkReadSize : 5000;
+                string[] personHoldsIds = new[] { "1", "2" };
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 1,
+                    CacheName = "AllStudentRestrictionsRecords",
+                    Entity = "STUDENT.RESTRICTIONS",
+                    Sublist = personHoldsIds.ToList(),
+                    TotalCount = personHoldsIds.Count(),
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                    {
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 5905,
+                            KeyCacheMin = 1,
+                            KeyCachePart = "000",
+                            KeyCacheSize = 5905
+                        },
+                        new KeyCacheInfo()
+                        {
+                            KeyCacheMax = 7625,
+                            KeyCacheMin = 5906,
+                            KeyCachePart = "001",
+                            KeyCacheSize = 1720
+                        }
+                    }
+                };
+                transManagerMock.Setup(tran => tran.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>())).ReturnsAsync(resp);
 
                 InitializeMockForInternationalParams();
 
@@ -222,34 +251,36 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 Assert.AreEqual(res.PrimaryKey, value.Value.PrimaryKey);
             }
 
-            //[TestMethod]
-            //[ExpectedException(typeof(ArgumentNullException))]
-            //public async Task PersonHoldsRepo_GetPersonHoldByPersonIdAsync_ArgumentNullException()
-            //{
-            //    var results = await personHoldRepository.GetPersonHoldsByPersonIdAsync("");               
-            //}
+            [TestMethod]
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task PersonHoldsRepo_GetPersonHoldByPersonIdAsync_PersonKeyNull_ArgumentNullException()
+            {
+                Collection<StudentRestrictions> studentHolds = new Collection<StudentRestrictions>()
+                {
+                    new StudentRestrictions()
+                        { Recordkey = "1", StrStudent = "1", StrComments = "Comment 1", StrEndDate = DateTime.MaxValue, StrRestriction = "Academic", StrStartDate = DateTime.MinValue },
+                    new StudentRestrictions()
+                        { Recordkey = "2", StrStudent = "1", StrComments = "Comment 2", StrEndDate = DateTime.MaxValue, StrRestriction = "Health", StrStartDate = DateTime.MinValue },
+                };
+                GuidLookupResult res = new GuidLookupResult() { Entity = "STUDENT.RESTRICTIONS", PrimaryKey = "", SecondaryKey = "" };
+                Dictionary<string, GuidLookupResult> dict = new Dictionary<string, GuidLookupResult>();
+                dict.Add("5", res);
+                dataReaderMock.Setup(i => i.SelectAsync(It.IsAny<GuidLookup[]>())).Returns<GuidLookup[]>(lookup =>
+                {
+                    return Task.FromResult(dict);
+                });
 
-            //[TestMethod]
-            //[ExpectedException(typeof(ArgumentNullException))]
-            //public async Task PersonHoldsRepo_GetPersonHoldByPersonIdAsync_PersonKeyNull_ArgumentNullException()
-            //{
-            //    Collection<StudentRestrictions> studentHolds = new Collection<StudentRestrictions>() 
-            //    {
-            //        new StudentRestrictions()
-            //            { Recordkey = "1", StrStudent = "1", StrComments = "Comment 1", StrEndDate = DateTime.MaxValue, StrRestriction = "Academic", StrStartDate = DateTime.MinValue },
-            //        new StudentRestrictions()
-            //            { Recordkey = "2", StrStudent = "1", StrComments = "Comment 2", StrEndDate = DateTime.MaxValue, StrRestriction = "Health", StrStartDate = DateTime.MinValue },
-            //    };
-            //    GuidLookupResult res = new GuidLookupResult() { Entity = "STUDENT.RESTRICTIONS", PrimaryKey = "", SecondaryKey = "" };
-            //    Dictionary<string, GuidLookupResult> dict = new Dictionary<string, GuidLookupResult>();
-            //    dict.Add("5", res);
-            //    dataReaderMock.Setup(i => i.SelectAsync(It.IsAny<GuidLookup[]>())).Returns<GuidLookup[]>(lookup =>
-            //    {
-            //        return Task.FromResult(dict);
-            //    });
+                try
+                { 
+                    var results = await personHoldRepository.GetPersonHoldsByPersonIdAsync("1");
+                }
+                catch (RepositoryException ex)
+                {
+                    Assert.AreEqual("GUID '1' has different entity, 'STUDENT.RESTRICTIONS', than expected, 'PERSON'", ex.Errors.FirstOrDefault().Message);
+                    throw ex;
+                }
 
-            //    var results = await personHoldRepository.GetPersonHoldsByPersonIdAsync("1");
-            //}
+            }
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
@@ -281,7 +312,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(RepositoryException))]
             public async Task PersonHoldRepo_UpdatePersonHoldAsync_ErrorMessges()
             {
                 PersonHoldRequest request = new PersonHoldRequest("2", "1", "Academic", new DateTimeOffset(2015, 12, 1, 0, 0, 0, new TimeSpan(1, 0, 0)), new DateTimeOffset(2015, 12, 31, 0, 0, 0, new TimeSpan(1, 0, 0)), "Y");
@@ -292,7 +323,15 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
                 transManagerMock.Setup(i => i.ExecuteAsync<UpdateRestrictionRequest, UpdateRestrictionResponse>(It.IsAny<UpdateRestrictionRequest>())).ReturnsAsync(response);
 
-                var result = await personHoldRepository.UpdatePersonHoldAsync(request);
+                try
+                {
+                    var result = await personHoldRepository.UpdatePersonHoldAsync(request);
+                }
+                catch (RepositoryException ex)
+                {
+                    Assert.AreEqual("1 ErrorMsg", ex.Errors.FirstOrDefault().Message);
+                    throw ex;
+                }
             }
 
             [TestMethod]

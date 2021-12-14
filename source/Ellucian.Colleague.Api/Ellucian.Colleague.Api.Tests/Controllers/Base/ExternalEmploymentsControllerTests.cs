@@ -1,5 +1,7 @@
-﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,14 +9,18 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using Ellucian.Colleague.Api.Controllers.Base;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -602,6 +608,182 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 externalEmploymentServiceMock.Setup(x => x.GetExternalEmploymentsByGuidAsync(It.IsAny<string>())).Throws<Exception>();
                 await externalEmploymentsController.GetExternalEmploymentsByGuidAsync("");
             }
+
+            //Permissions
+
+            //Success
+            // Get 10
+            //GetExternalEmploymentsAsync
+
+            [TestMethod]
+            public async Task ExternalEmploymentsController_GetExternalEmploymentsAsync_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "ExternalEmployments" },
+                    { "action", "GetExternalEmploymentsAsync" }
+                };
+                HttpRoute route = new HttpRoute("external-employments", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                externalEmploymentsController.Request.SetRouteData(data);
+                externalEmploymentsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(BasePermissionCodes.ViewAnyExternalEmployments);
+
+                var controllerContext = externalEmploymentsController.ControllerContext;
+                var actionDescriptor = externalEmploymentsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                var tuple = new Tuple<IEnumerable<Dtos.ExternalEmployments>, int>(externalEmploymentDtos, 4);
+                externalEmploymentServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                externalEmploymentServiceMock.Setup(ci => ci.GetExternalEmploymentsAsync(offset, limit, false)).ReturnsAsync(tuple);
+                var externalEmployments = await externalEmploymentsController.GetExternalEmploymentsAsync(new Paging(limit, offset));
+
+                Object filterObject;
+                externalEmploymentsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewAnyExternalEmployments));
+            }
+
+            //Exception
+            //Get 10
+            //GetExternalEmploymentsAsync
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task ExternalEmploymentsController_GetExternalEmploymentsAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "ExternalEmployments" },
+                    { "action", "GetExternalEmploymentsAsync" }
+                };
+                HttpRoute route = new HttpRoute("external-employments", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                externalEmploymentsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = externalEmploymentsController.ControllerContext;
+                var actionDescriptor = externalEmploymentsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                    var tuple = new Tuple<IEnumerable<Dtos.ExternalEmployments>, int>(externalEmploymentDtos, 5);
+
+                    externalEmploymentServiceMock.Setup(x => x.GetExternalEmploymentsAsync(offset, limit, It.IsAny<bool>())).Throws<PermissionsException>();
+                    externalEmploymentServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view external-employments."));
+                    await externalEmploymentsController.GetExternalEmploymentsAsync(new Paging(limit, offset));
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+            //Success
+            // Get By Id 10
+            //GetExternalEmploymentsByGuidAsync
+
+            [TestMethod]
+            public async Task ExternalEmploymentsController_GetExternalEmploymentsByGuidAsync_Permissions()
+            {
+                var id = "bbd216fb-0fc5-4f44-ae45-42d3cdd1e89a";
+                var externalEmployment = externalEmploymentDtos.FirstOrDefault(i => i.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "ExternalEmployments" },
+                    { "action", "GetExternalEmploymentsByGuidAsync" }
+                };
+                HttpRoute route = new HttpRoute("external-employments", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                externalEmploymentsController.Request.SetRouteData(data);
+                externalEmploymentsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(BasePermissionCodes.ViewAnyExternalEmployments);
+
+                var controllerContext = externalEmploymentsController.ControllerContext;
+                var actionDescriptor = externalEmploymentsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                var tuple = new Tuple<IEnumerable<Dtos.ExternalEmployments>, int>(externalEmploymentDtos, 5);
+                externalEmploymentServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                externalEmploymentServiceMock.Setup(ci => ci.GetExternalEmploymentsByGuidAsync(id)).ReturnsAsync(externalEmployment);
+                var actual = await externalEmploymentsController.GetExternalEmploymentsByGuidAsync(id);
+
+                Object filterObject;
+                externalEmploymentsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewAnyExternalEmployments));
+            }
+
+            //Exception
+            //Get By Id 10
+            //GetExternalEmploymentsByGuidAsync
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task ExternalEmploymentsController_GetExternalEmploymentsByGuidAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "ExternalEmployments" },
+                    { "action", "GetExternalEmploymentsByGuidAsync" }
+                };
+                HttpRoute route = new HttpRoute("external-employments", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                externalEmploymentsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = externalEmploymentsController.ControllerContext;
+                var actionDescriptor = externalEmploymentsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                    var tuple = new Tuple<IEnumerable<Dtos.ExternalEmployments>, int>(externalEmploymentDtos, 5);
+
+                    externalEmploymentServiceMock.Setup(x => x.GetExternalEmploymentsByGuidAsync(It.IsAny<string>())).Throws<PermissionsException>();
+                    externalEmploymentServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view external-employments."));
+                    await externalEmploymentsController.GetExternalEmploymentsByGuidAsync("1234");
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
         }
     }
 }

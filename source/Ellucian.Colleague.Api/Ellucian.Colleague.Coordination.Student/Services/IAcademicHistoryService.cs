@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Student.Entities;
 using System;
 using System.Collections.Generic;
@@ -58,9 +58,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// Also returns list of invalid academic credits Ids that are missing from STUDENT.ACAD.CRED file.
         /// </summary>
         /// <param name="criteria">Criteria that contains a list of sections and some other options</param>
+        /// <param name="useCache">Use cached course section data when retrieving academic credit records of specified section(s)</param>
         /// <returns><see cref="AcademicCreditsWithInvalidKeys">AcademicCreditsWithInvalidKeys</see> Dtos</returns>
-        Task<Dtos.Student.AcademicCreditsWithInvalidKeys> QueryAcademicCreditsWithInvalidKeysAsync(Dtos.Student.AcademicCreditQueryCriteria criteria);
+        Task<Dtos.Student.AcademicCreditsWithInvalidKeys> QueryAcademicCreditsWithInvalidKeysAsync(Dtos.Student.AcademicCreditQueryCriteria criteria, bool useCache = true);
 
-
+        Task<Ellucian.Colleague.Dtos.Student.AcademicHistory4> GetAcademicHistory5Async(string studentId, bool bestFit = false, bool filter = true, string term = null, bool includeDrops = false);
     }
 }

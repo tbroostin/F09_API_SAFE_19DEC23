@@ -1,22 +1,29 @@
-﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+
 using Ellucian.Colleague.Api.Controllers.HumanResources;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 {
@@ -219,6 +226,177 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             var result = await empLeaveTransController.GetEmployeeLeaveTransactionsByGuidAsync(guid);
             Assert.IsNotNull(result);
         }
+
+
+        //Permissions Tests
+
+        //Success
+        //Get 11
+        //GetEmployeeLeaveTransactionsAsync
+        [TestMethod]
+        public async Task empLeaveTransController_GetEmployeeLeaveTransactionsAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "EmployeeLeaveTransactions" },
+                { "action", "GetEmployeeLeaveTransactionsAsync" }
+            };
+            HttpRoute route = new HttpRoute("employee-leave-transactions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            empLeaveTransController.Request.SetRouteData(data);
+            empLeaveTransController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.ViewEmployeeLeaveTransactions);
+
+            var controllerContext = empLeaveTransController.ControllerContext;
+            var actionDescriptor = empLeaveTransController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            empLeaveTransServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            empLeaveTransServiceMock.Setup(s => s.GetEmployeeLeaveTransactionsAsync(It.IsAny<int>(), It.IsAny<int>(), bypassCache)).ReturnsAsync(tupleResult);
+            var result = await empLeaveTransController.GetEmployeeLeaveTransactionsAsync(paging);
+
+            Object filterObject;
+            empLeaveTransController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewEmployeeLeaveTransactions));
+
+        }
+
+        //Exception
+        //Get 11
+        //GetEmployeeLeaveTransactionsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task empLeaveTransController_GetEmployeeLeaveTransactionsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "EmployeeLeaveTransactions" },
+                { "action", "GetEmployeeLeaveTransactionsAsync" }
+            };
+            HttpRoute route = new HttpRoute("employee-leave-transactions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            empLeaveTransController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = empLeaveTransController.ControllerContext;
+            var actionDescriptor = empLeaveTransController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                empLeaveTransServiceMock.Setup(s => s.GetEmployeeLeaveTransactionsAsync(It.IsAny<int>(), It.IsAny<int>(), bypassCache)).ThrowsAsync(new PermissionsException());
+                empLeaveTransServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view employee-leave-transactions."));
+                await empLeaveTransController.GetEmployeeLeaveTransactionsAsync(paging);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
+        //Success
+        //Get By Id 11
+        //GetEmployeeLeaveTransactionsByGuidAsync
+        [TestMethod]
+        public async Task empLeaveTransController_GetEmployeeLeaveTransactionsByGuidAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "EmployeeLeaveTransactions" },
+                { "action", "GetEmployeeLeaveTransactionsByGuidAsync" }
+            };
+            HttpRoute route = new HttpRoute("employee-leave-transactions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            empLeaveTransController.Request.SetRouteData(data);
+            empLeaveTransController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.ViewEmployeeLeaveTransactions);
+
+            var controllerContext = empLeaveTransController.ControllerContext;
+            var actionDescriptor = empLeaveTransController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            empLeaveTransServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            empLeaveTransServiceMock.Setup(s => s.GetEmployeeLeaveTransactionsByGuidAsync(It.IsAny<string>(), bypassCache)).ReturnsAsync(empLeaveTrans);
+            var result = await empLeaveTransController.GetEmployeeLeaveTransactionsByGuidAsync(guid);
+
+
+            Object filterObject;
+            empLeaveTransController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewEmployeeLeaveTransactions));
+
+        }
+
+
+        //Exception
+        //Get By Id 11
+        //GetEmployeeLeaveTransactionsByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task empLeaveTransController_GetEmployeeLeaveTransactionsByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "EmployeeLeaveTransactions" },
+                { "action", "GetEmployeeLeaveTransactionsByGuidAsync" }
+            };
+            HttpRoute route = new HttpRoute("employee-leave-transactions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            empLeaveTransController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = empLeaveTransController.ControllerContext;
+            var actionDescriptor = empLeaveTransController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                empLeaveTransServiceMock.Setup(s => s.GetEmployeeLeaveTransactionsByGuidAsync(It.IsAny<string>(), bypassCache)).ThrowsAsync(new PermissionsException());
+                empLeaveTransServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view employee-leave-transactions."));
+                await empLeaveTransController.GetEmployeeLeaveTransactionsByGuidAsync(guid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
 
         #endregion
 

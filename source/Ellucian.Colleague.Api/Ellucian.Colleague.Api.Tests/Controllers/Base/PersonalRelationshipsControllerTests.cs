@@ -1,5 +1,6 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
@@ -7,15 +8,19 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using Ellucian.Colleague.Api.Controllers.Base;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Tests;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -381,6 +386,177 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             var result = await personalRelationshipsController.GetPersonalRelationshipsAsync(new Web.Http.Models.Paging(It.IsAny<int>(), It.IsAny<int>()), "test");
         }
 
+        //GET v6
+        //Successful
+        //GetPersonalRelationshipsAsync
+        [TestMethod]
+        public async Task StudentMealPlansController_GetPersonalRelationshipsAsync_Permissions()
+        {
+            
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonalRelationships" },
+                    { "action", "GetPersonalRelationshipsAsync" }
+                };
+            HttpRoute route = new HttpRoute("personal-relationships", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personalRelationshipsController.Request.SetRouteData(data);
+            personalRelationshipsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyRelationship, BasePermissionCodes.UpdatePersonalRelationship });
+
+            var controllerContext = personalRelationshipsController.ControllerContext;
+            var actionDescriptor = personalRelationshipsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            personalRelationshipsServiceeMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personalRelationshipsServiceeMock.Setup(x => x.GetAllPersonalRelationshipsAsync(page.Offset, page.Limit, It.IsAny<bool>())).ReturnsAsync(personalRelationshipTuple);
+            var results = await personalRelationshipsController.GetPersonalRelationshipsAsync(page);
+
+            Object filterObject;
+            personalRelationshipsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewAnyRelationship));
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdatePersonalRelationship));
+
+
+        }
+
+        //GET v6
+        //Exception
+        //GetPersonalRelationshipsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_GetPersonalRelationshipsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonalRelationships" },
+                    { "action", "GetPersonalRelationshipsAsync" }
+                };
+            HttpRoute route = new HttpRoute("personal-relationships", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personalRelationshipsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personalRelationshipsController.ControllerContext;
+            var actionDescriptor = personalRelationshipsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                personalRelationshipsServiceeMock.Setup(i => i.GetAllPersonalRelationshipsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                personalRelationshipsServiceeMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view personal-relationships."));
+                var result = await personalRelationshipsController.GetPersonalRelationshipsAsync(new Web.Http.Models.Paging(It.IsAny<int>(), It.IsAny<int>()));
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET v6
+        //Successful
+        //GetPersonalRelationshipByIdAsync
+        [TestMethod]
+        public async Task StudentMealPlansController_GetPersonalRelationshipByIdAsync_Permissions()
+        {
+            var expected = personalRelationshipsDtos[1];
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonalRelationships" },
+                    { "action", "GetPersonalRelationshipByIdAsync" }
+                };
+            HttpRoute route = new HttpRoute("personal-relationships", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personalRelationshipsController.Request.SetRouteData(data);
+            personalRelationshipsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyRelationship, BasePermissionCodes.UpdatePersonalRelationship });
+
+            var controllerContext = personalRelationshipsController.ControllerContext;
+            var actionDescriptor = personalRelationshipsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            personalRelationshipsServiceeMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personalRelationshipsServiceeMock.Setup(x => x.GetPersonalRelationshipByIdAsync(id)).ReturnsAsync(expected);
+            var actual = await personalRelationshipsController.GetPersonalRelationshipByIdAsync(id);
+
+            Object filterObject;
+            personalRelationshipsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewAnyRelationship));
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdatePersonalRelationship));
+
+
+        }
+
+        //GET v6
+        //Exception
+        //GetPersonalRelationshipByIdAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_GetPersonalRelationshipByIdAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonalRelationships" },
+                    { "action", "GetPersonalRelationshipByIdAsync" }
+                };
+            HttpRoute route = new HttpRoute("personal-relationships", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personalRelationshipsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personalRelationshipsController.ControllerContext;
+            var actionDescriptor = personalRelationshipsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                personalRelationshipsServiceeMock.Setup(i => i.GetPersonalRelationshipByIdAsync(It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+                personalRelationshipsServiceeMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view personal-relationships."));
+                var result = await personalRelationshipsController.GetPersonalRelationshipByIdAsync("1234");
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion
 
         #region POST
@@ -706,6 +882,180 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
                 .Throws<Exception>();
             await personalRelationshipsController.GetPersonalRelationships2ByGuidAsync(expectedGuid);
         }
+
+        //GET v16.0.0
+        //Successful
+        //GetPersonalRelationships2Async
+        [TestMethod]
+        public async Task StudentMealPlansController_GetPersonalRelationships2Async_Permissions()
+        {
+            int Offset = 0;
+            int Limit = 4; 
+            var PersonalRelationshipsTuple = new Tuple<IEnumerable<Dtos.PersonalRelationships2>, int>(personalRelationshipsCollection.Take(4), personalRelationshipsCollection.Count());
+            Paging paging = new Paging(Limit, Offset);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonalRelationships" },
+                    { "action", "GetPersonalRelationships2Async" }
+                };
+            HttpRoute route = new HttpRoute("personal-relationships", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personalRelationshipsController.Request.SetRouteData(data);
+            personalRelationshipsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyRelationship, BasePermissionCodes.UpdatePersonalRelationship });
+
+            var controllerContext = personalRelationshipsController.ControllerContext;
+            var actionDescriptor = personalRelationshipsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            
+            personalRelationshipsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personalRelationshipsServiceMock.Setup(i => i.GetPersonalRelationships2Async(Offset, Limit, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(PersonalRelationshipsTuple);
+            var actuals = await personalRelationshipsController.GetPersonalRelationships2Async(paging);
+
+            Object filterObject;
+            personalRelationshipsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewAnyRelationship));
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdatePersonalRelationship));
+
+
+        }
+
+        //GET v16.0.0
+        //Exception
+        //GetPersonalRelationships2Async
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_GetPersonalRelationships2Async_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonalRelationships" },
+                    { "action", "GetPersonalRelationships2Async" }
+                };
+            HttpRoute route = new HttpRoute("personal-relationships", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personalRelationshipsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personalRelationshipsController.ControllerContext;
+            var actionDescriptor = personalRelationshipsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                personalRelationshipsServiceMock.Setup(x => x.GetPersonalRelationships2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                personalRelationshipsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view personal-relationships."));
+                await personalRelationshipsController.GetPersonalRelationships2Async(It.IsAny<Paging>());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET by id v16.0.0
+        //Successful
+        //GetPersonalRelationships2ByGuidAsync
+        [TestMethod]
+        public async Task StudentMealPlansController_GetPersonalRelationships2ByGuidAsync_Permissions()
+        {
+            var expected = personalRelationshipsCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonalRelationships" },
+                    { "action", "GetPersonalRelationships2ByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("personal-relationships", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personalRelationshipsController.Request.SetRouteData(data);
+            personalRelationshipsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyRelationship, BasePermissionCodes.UpdatePersonalRelationship });
+
+            var controllerContext = personalRelationshipsController.ControllerContext;
+            var actionDescriptor = personalRelationshipsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            personalRelationshipsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personalRelationshipsServiceMock.Setup(x => x.GetPersonalRelationships2ByGuidAsync(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
+            var actual = await personalRelationshipsController.GetPersonalRelationships2ByGuidAsync(expected.Id);
+
+            Object filterObject;
+            personalRelationshipsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewAnyRelationship));
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdatePersonalRelationship));
+
+
+        }
+
+        //GET by id v16.0.0
+        //Exception
+        //GetPersonalRelationships2ByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_GetPersonalRelationships2ByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonalRelationships" },
+                    { "action", "GetPersonalRelationships2ByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("personal-relationships", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personalRelationshipsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personalRelationshipsController.ControllerContext;
+            var actionDescriptor = personalRelationshipsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                personalRelationshipsServiceMock.Setup(x => x.GetPersonalRelationships2ByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                personalRelationshipsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view personal-relationships."));
+                await personalRelationshipsController.GetPersonalRelationships2ByGuidAsync(expectedGuid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
     }
 
     [TestClass]
@@ -970,6 +1320,174 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             Assert.AreEqual(guid, result.Id);
             Assert.AreEqual("Updated Comment", result.Comment);
         }
+
+        //PUT v16.0.0
+        //Successful
+        //PutPersonalRelationships2Async
+        [TestMethod]
+        public async Task StudentMealPlansController_PutPersonalRelationships2Async_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonalRelationships" },
+                    { "action", "PutPersonalRelationships2Async" }
+                };
+            HttpRoute route = new HttpRoute("personal-relationships", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personalRelationshipsController.Request.SetRouteData(data);
+            personalRelationshipsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter( BasePermissionCodes.UpdatePersonalRelationship );
+
+            var controllerContext = personalRelationshipsController.ControllerContext;
+            var actionDescriptor = personalRelationshipsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            personalRelationshipsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personalRelationshipsServiceMock.Setup(s => s.UpdatePersonalRelationships2Async(It.IsAny<PersonalRelationships2>())).ReturnsAsync(personalRelationships);
+            var result = await personalRelationshipsController.PutPersonalRelationships2Async(guid, new PersonalRelationships2() { Id = guid });
+
+            Object filterObject;
+            personalRelationshipsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdatePersonalRelationship));
+
+
+        }
+
+        //PUT v16.0.0
+        //Exception
+        //PutPersonalRelationships2Async
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_PutPersonalRelationships2Async_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonalRelationships" },
+                    { "action", "PutPersonalRelationships2Async" }
+                };
+            HttpRoute route = new HttpRoute("personal-relationships", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personalRelationshipsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personalRelationshipsController.ControllerContext;
+            var actionDescriptor = personalRelationshipsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                personalRelationshipsServiceMock.Setup(s => s.UpdatePersonalRelationships2Async(It.IsAny<PersonalRelationships2>())).ThrowsAsync(new PermissionsException());
+                personalRelationshipsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to update personal-relationships."));
+                await personalRelationshipsController.PutPersonalRelationships2Async(guid, new PersonalRelationships2() { });
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //POST v16.0.0
+        //Successful
+        //PostPersonalRelationships2Async
+        [TestMethod]
+        public async Task StudentMealPlansController_PostPersonalRelationships2Async_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonalRelationships" },
+                    { "action", "PostPersonalRelationships2Async" }
+                };
+            HttpRoute route = new HttpRoute("personal-relationships", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personalRelationshipsController.Request.SetRouteData(data);
+            personalRelationshipsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(BasePermissionCodes.UpdatePersonalRelationship);
+
+            var controllerContext = personalRelationshipsController.ControllerContext;
+            var actionDescriptor = personalRelationshipsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            personalRelationshipsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personalRelationshipsServiceMock.Setup(s => s.CreatePersonalRelationships2Async(It.IsAny<PersonalRelationships2>())).ReturnsAsync(personalRelationships);
+            var result = await personalRelationshipsController.PostPersonalRelationships2Async(new PersonalRelationships2() { Id = Guid.Empty.ToString() });
+
+            Object filterObject;
+            personalRelationshipsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdatePersonalRelationship));
+
+
+        }
+
+        //POST v16.0.0
+        //Exception
+        //PostPersonalRelationships2Async
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_PostPersonalRelationships2Async_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonalRelationships" },
+                    { "action", "PostPersonalRelationships2Async" }
+                };
+            HttpRoute route = new HttpRoute("personal-relationships", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personalRelationshipsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personalRelationshipsController.ControllerContext;
+            var actionDescriptor = personalRelationshipsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                personalRelationshipsServiceMock.Setup(s => s.CreatePersonalRelationships2Async(It.IsAny<PersonalRelationships2>())).ThrowsAsync(new PermissionsException());
+                personalRelationshipsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to create personal-relationships."));
+                await personalRelationshipsController.PostPersonalRelationships2Async(new PersonalRelationships2() { Id = Guid.Empty.ToString() });
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
     }
 
     [TestClass]
@@ -1086,5 +1604,89 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             personalRelationshipsServiceMock.Setup(s => s.DeletePersonalRelationshipsAsync(It.IsAny<String>())).Throws(new Exception());
             await personalRelationshipsController.DeletePersonalRelationshipsAsync(guid);
         }
+
+        //DELETE
+        //Successful
+        //DeletePersonalRelationshipsAsync
+        [TestMethod]
+        public async Task StudentMealPlansController_DeletePersonalRelationshipsAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonalRelationships" },
+                    { "action", "DeletePersonalRelationshipsAsync" }
+                };
+            HttpRoute route = new HttpRoute("personal-relationships", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personalRelationshipsController.Request.SetRouteData(data);
+            personalRelationshipsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(BasePermissionCodes.DeletePersonalRelationship);
+
+            var controllerContext = personalRelationshipsController.ControllerContext;
+            var actionDescriptor = personalRelationshipsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            personalRelationshipsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personalRelationshipsServiceMock.Setup(s => s.DeletePersonalRelationshipsAsync(It.IsAny<String>())).Returns(Task.FromResult(new TaskStatus()));
+            await personalRelationshipsController.DeletePersonalRelationshipsAsync(guid);
+
+            Object filterObject;
+            personalRelationshipsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.DeletePersonalRelationship));
+
+
+        }
+
+        //DELETE
+        //Exception
+        //DeletePersonalRelationshipsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_DeletePersonalRelationshipsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonalRelationships" },
+                    { "action", "DeletePersonalRelationshipsAsync" }
+                };
+            HttpRoute route = new HttpRoute("personal-relationships", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personalRelationshipsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personalRelationshipsController.ControllerContext;
+            var actionDescriptor = personalRelationshipsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                personalRelationshipsServiceMock.Setup(s => s.DeletePersonalRelationshipsAsync(It.IsAny<String>())).Throws(new PermissionsException());
+                personalRelationshipsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to delete personal-relationships."));
+                await personalRelationshipsController.DeletePersonalRelationshipsAsync(guid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
     }
 }

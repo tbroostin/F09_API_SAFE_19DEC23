@@ -13,6 +13,12 @@ namespace Ellucian.Colleague.Dtos.EnumProperties
     public enum EducationalInstitutionType
     {
         /// <summary>
+        /// Used when the value is not set or an invalid enumeration is used
+        /// </summary>
+        NotSet = 0,
+        
+        
+        /// <summary>
         /// private
         /// </summary>
         [EnumMember(Value = "secondarySchool")]

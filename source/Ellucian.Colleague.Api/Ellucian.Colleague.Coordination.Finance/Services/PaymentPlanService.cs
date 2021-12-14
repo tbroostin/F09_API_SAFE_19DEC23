@@ -260,7 +260,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                     // Retrieve account holder information 
                     if (billingTermEntities.Any())
                     {
-                        var accountHolder = _arRepository.GetAccountHolder(billingTermEntities[0].PersonId);
+                        var accountHolder = await _arRepository.GetAccountHolderAsync(billingTermEntities[0].PersonId);
 
                         // Evaluate account holder against any global payment plan eligibility rules
                         bool isPlanEligible = AccountHolderIsEligibleForPaymentPlanCreation(config, accountHolder);
@@ -400,7 +400,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                     // Retrieve account holder information 
                     if (billingTermEntities.Any())
                     {
-                        var accountHolder = _arRepository.GetAccountHolder(billingTermEntities[0].PersonId);
+                        var accountHolder = await _arRepository.GetAccountHolderAsync(billingTermEntities[0].PersonId);
 
                         // Evaluate account holder against any global payment plan eligibility rules
                         bool isPlanEligible = AccountHolderIsEligibleForPaymentPlanCreation(config, accountHolder);
@@ -534,7 +534,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
                 }
 
                 // Pull account holder information
-                var accountHolder = _arRepository.GetAccountHolder(personId);
+                var accountHolder = await _arRepository.GetAccountHolderAsync(personId);
 
                 // Determine account holder's payment plan eligibility
                 bool isPlanEligible = AccountHolderIsEligibleForPaymentPlanCreation(config, accountHolder);

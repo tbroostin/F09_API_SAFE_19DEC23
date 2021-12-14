@@ -44,9 +44,8 @@
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net40\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -64,10 +63,14 @@
     <Compile Include="Advisor.cs" />
     <Compile Include="AdvisorQueryCriteria.cs" />
     <Compile Include="CatalogPolicy.cs" />
-    <Compile Include="CompletedAdvisement.cs" />
+    <Compile Include="CurriculumTrack.cs" />
+    <Compile Include="CurriculumTrackQueryCriteria.cs" />
     <Compile Include="DegreePlanPreview5.cs" />
     <Compile Include="DegreePlanPreview4.cs" />
+    <Compile Include="DegreePlanPreviewCourseEvaluationResult.cs" />
+    <Compile Include="DegreePlanPreview7.cs" />
     <Compile Include="DegreePlanPreview6.cs" />
+    <Compile Include="DegreePlanPreviewCourseEvaluationStatusType.cs" />
     <Compile Include="DegreePlanRetrievalType.cs" />
     <Compile Include="DegreePlanReviewRequest.cs" />
     <Compile Include="DegreePlansSearchCriteria.cs" />
@@ -82,6 +85,7 @@
     <Compile Include="ProgramEvaluation.cs" />
     <Compile Include="ProgramEvaluation2.cs" />
     <Compile Include="ProgramEvaluation3.cs" />
+    <Compile Include="ProgramEvaluation4.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

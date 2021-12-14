@@ -12,6 +12,7 @@ using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using slf4net;
 using System.Threading.Tasks;
+using Ellucian.Dmi.Runtime;
 
 namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 {
@@ -115,7 +116,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 
                                 //for each year, build a configuration object
                                 var configurations = parameterYears.Select(year =>
-                                        BuildOfficeConfiguration(office.Id, year, officeParameters.FirstOrDefault(p => p.FopYear == year), shoppingSheetParameters.FirstOrDefault(p => p.FsspFaYear == year))
+                                        BuildOfficeConfiguration(office.Id, year, officeParameters.FirstOrDefault(p => p.FopYear == year), shoppingSheetParameters.FirstOrDefault(p => p.FsspFaYear == year), defaultSystemParameters)
                                     );
 
                                 office.AddConfigurationRange(configurations);
@@ -301,8 +302,10 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
         /// </summary>
         /// <param name="officeId">The Id of the Office for which to build Configurations</param>
         /// <param name="faOfficeParamRecords">Collection of OfficeParameter records</param>
+        /// <param name="shoppingSheetParametersRecord">Collection of ShoppingSheetParameter records</param>
+        /// <param name="faSysParams">Collection of FaSysParam records</param>
         /// <returns>A list of Financial Aid Configuration objects specific to the office code passed in.</returns>
-        private FinancialAidConfiguration BuildOfficeConfiguration(string officeId, string awardYear, FaOfficeParameters officeParametersRecord, FaShopsheetParams shoppingSheetParametersRecord)
+        private FinancialAidConfiguration BuildOfficeConfiguration(string officeId, string awardYear, FaOfficeParameters officeParametersRecord, FaShopsheetParams shoppingSheetParametersRecord, FaSysParams faSysParams)
         {
 
             if (officeParametersRecord == null && shoppingSheetParametersRecord == null)
@@ -364,6 +367,9 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 singleConfiguration.IsAwardLetterHistoryActive =
                     (!string.IsNullOrEmpty(officeParametersRecord.FopAwdLtrHistAvail) && officeParametersRecord.FopAwdLtrHistAvail.ToUpper() == "Y");
 
+                singleConfiguration.FaBlankStatusText = officeParametersRecord.FopBlankStatusText;
+                singleConfiguration.FaBlankDueDateText = officeParametersRecord.FopBlankDueDateText;
+
                 singleConfiguration.ExcludeAwardStatusCategoriesView = TranslateCodeToAwardStatusCategory(officeParametersRecord.FopExclActCatFromView).ToList();
 
                 singleConfiguration.ExcludeAwardCategoriesView = officeParametersRecord.FopExclAwdCatFromView == null ? new List<string>() : officeParametersRecord.FopExclAwdCatFromView;
@@ -410,7 +416,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 
                 singleConfiguration.AllowDeclineZeroOfAcceptedLoans =
                     (!string.IsNullOrEmpty(officeParametersRecord.FopDeclineZeroAccLoans) && officeParametersRecord.FopDeclineZeroAccLoans.ToUpper() == "Y");
-                
+
                 singleConfiguration.SuppressInstanceData =
                     (!string.IsNullOrEmpty(officeParametersRecord.FopSuppressInstanceData) && officeParametersRecord.FopSuppressInstanceData.ToUpper() == "Y");
 
@@ -428,14 +434,14 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                 singleConfiguration.PaperCopyOptionText = officeParametersRecord.FopPaperCopyOptionDesc;
 
                 singleConfiguration.ExcludeAwardStatusCategoriesFromAwardLetterAndShoppingSheet = TranslateCodeToAwardStatusCategory(officeParametersRecord.FopExclActCatFromAwdltr).ToList();
-                singleConfiguration.ExcludeAwardsFromAwardLetterAndShoppingSheet = officeParametersRecord.FopExclAwardsFromAwdltr == null ? new List<string>() 
+                singleConfiguration.ExcludeAwardsFromAwardLetterAndShoppingSheet = officeParametersRecord.FopExclAwardsFromAwdltr == null ? new List<string>()
                     : officeParametersRecord.FopExclAwardsFromAwdltr;
                 singleConfiguration.ExcludeAwardPeriodsFromAwardLetterAndShoppingSheet = officeParametersRecord.FopExclAwdPdsFromAwdltr == null ? new List<string>()
                     : officeParametersRecord.FopExclAwdPdsFromAwdltr;
                 singleConfiguration.ExcludeAwardCategoriesFromAwardLetterAndShoppingSheet = officeParametersRecord.FopExclAwdCatFromAwdltr == null ? new List<string>()
                     : officeParametersRecord.FopExclAwdCatFromAwdltr;
 
-                singleConfiguration.ShowBudgetDetailsOnAwardLetter = (!string.IsNullOrEmpty(officeParametersRecord.FopShowBudgetDetails) 
+                singleConfiguration.ShowBudgetDetailsOnAwardLetter = (!string.IsNullOrEmpty(officeParametersRecord.FopShowBudgetDetails)
                     && officeParametersRecord.FopShowBudgetDetails.ToUpper() == "Y");
                 singleConfiguration.StudentAwardLetterBudgetDetailsDescription = officeParametersRecord.FopBudgetDtlDesc;
 
@@ -446,18 +452,18 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 
                 singleConfiguration.AnnualAcceptRejectOnlyFlag =
                     (!string.IsNullOrEmpty(officeParametersRecord.FopAnnualAccrejOnly) && officeParametersRecord.FopAnnualAccrejOnly.ToUpper() == "Y");
-            
+
                 singleConfiguration.UseDefaultContact =
                     (!string.IsNullOrEmpty(officeParametersRecord.FopUseDefaultContact) && officeParametersRecord.FopUseDefaultContact.ToUpper() == "Y");
                 singleConfiguration.SuppressMaximumLoanLimits =
                     (!string.IsNullOrEmpty(officeParametersRecord.FopSupressLoanLimit) && officeParametersRecord.FopSupressLoanLimit.ToUpper() == "Y");
                 singleConfiguration.UseDocumentStatusDescription =
                     (!string.IsNullOrEmpty(officeParametersRecord.FopUseMailingCodeDesc) && officeParametersRecord.FopUseMailingCodeDesc.ToUpper() == "Y");
-            
+
                 singleConfiguration.DisplayPellLifetimeEarningsUsed =
                     (!string.IsNullOrEmpty(officeParametersRecord.FopDisplayPellLeu) && officeParametersRecord.FopDisplayPellLeu.ToUpper() == "Y");
 
-                singleConfiguration.SuppressAccountSummaryDisplay = 
+                singleConfiguration.SuppressAccountSummaryDisplay =
                     (!string.IsNullOrEmpty(officeParametersRecord.FopSuppressActSumDisplay) && officeParametersRecord.FopSuppressActSumDisplay.ToUpper() == "Y");
                 singleConfiguration.SuppressAverageAwardPackageDisplay =
                     (!string.IsNullOrEmpty(officeParametersRecord.FopSuppressAvgPkgDisplay) && officeParametersRecord.FopSuppressAvgPkgDisplay.ToUpper() == "Y");
@@ -465,6 +471,12 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                     (!string.IsNullOrEmpty(officeParametersRecord.FopSuppressAwdLtrAccept) && officeParametersRecord.FopSuppressAwdLtrAccept.ToUpper() == "Y");
                 singleConfiguration.SuppressDisbursementInfoDisplay =
                     (!string.IsNullOrEmpty(officeParametersRecord.FopSuppressDisbInfoDispl) && officeParametersRecord.FopSuppressDisbInfoDispl.ToUpper() == "Y");
+
+                //Checklist item configuration
+                singleConfiguration.ShowParentLoanInfo = (!string.IsNullOrEmpty(officeParametersRecord.FopShowChkParLoanInfo) && officeParametersRecord.FopShowChkParLoanInfo.ToUpper() == "Y");
+                singleConfiguration.ShowPlusApplicationInfo = (!string.IsNullOrEmpty(officeParametersRecord.FopShowChkPlusAppInfo) && officeParametersRecord.FopShowChkPlusAppInfo.ToUpper() == "Y");
+                singleConfiguration.ShowStudentLoanInfo = (!string.IsNullOrEmpty(officeParametersRecord.FopShowChkStuLoanInfo) && officeParametersRecord.FopShowChkStuLoanInfo.ToUpper() == "Y");
+                singleConfiguration.ShowAslaInfo = (!string.IsNullOrEmpty(officeParametersRecord.FopShowChkAslaInfo) && officeParametersRecord.FopShowChkAslaInfo.ToUpper() == "Y");
             }
 
             //shopping sheet
@@ -547,9 +559,42 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
                     OtherJobs = shoppingSheetParametersRecord.FsspOtherJobs,
                     LoanAmountTextRuleId = shoppingSheetParametersRecord.FsspLoanAmtTextRuleId,
                     EducationBenTextRuleId = shoppingSheetParametersRecord.FsspEducBenTextRuleId,
-                    NextStepsRuleId = shoppingSheetParametersRecord.FsspNextStepsRuleId
-                };      
+                    NextStepsRuleId = shoppingSheetParametersRecord.FsspNextStepsRuleId,
+                    EmployeeTuitionBenefits = shoppingSheetParametersRecord.FsspEmplPdTuitBen,
+                    DisadvantagedStudentScholarship = shoppingSheetParametersRecord.FsspScholDisStu,
+                    GraduateUndergraduateRuleId = shoppingSheetParametersRecord.FsspGrUgRuleId,
+                    SubInterestRate = shoppingSheetParametersRecord.FsspSubInterestRate,
+                    SubOriginationFee = shoppingSheetParametersRecord.FsspSubOrigFee,
+                    UnsubInterestRate = shoppingSheetParametersRecord.FsspUnsubInterestRate,
+                    UnsubOriginationFee = shoppingSheetParametersRecord.FsspUnsubOrigFee,
+                    PrivateInterestRate = shoppingSheetParametersRecord.FsspPrivInterestRate,
+                    PrivateOriginationFee = shoppingSheetParametersRecord.FsspPrivOrigFee,
+                    InstitutionInterestRate = shoppingSheetParametersRecord.FsspInstInterestRate,
+                    InstitutionOriginationFee = shoppingSheetParametersRecord.FsspInstOrigFee,
+                    GradPlusInterestRate = shoppingSheetParametersRecord.FsspGplusInterestRate,
+                    GradPlusOriginationFee = shoppingSheetParametersRecord.FsspGplusOrigFee,
+                    HRSAInterestRate = shoppingSheetParametersRecord.FsspHrsaInterestRate,
+                    HRSAOriginationFee = shoppingSheetParametersRecord.FsspHrsaOrigFee,
+                    GradPlusLoans = shoppingSheetParametersRecord.FsspGplusLoans,
+                    HrsaLoans = shoppingSheetParametersRecord.FsspHrsaLoans,
+                    PlusInterestRate = shoppingSheetParametersRecord.FsspPlusInterestRate,
+                    PlusOriginationFee = shoppingSheetParametersRecord.FsspPlusOrigFee,
+                    SchoolPaidTuitionBenefits = shoppingSheetParametersRecord.FsspSchoolPdTuitBen,
+                    TuitionRemWaiver = shoppingSheetParametersRecord.FsspTuitionRemWaiver,
+                    Assistantships = shoppingSheetParametersRecord.FsspAssistantships,
+                    IncomeShare = shoppingSheetParametersRecord.FsspIncomeShareAgreements
+                };
             }
+
+            if (faSysParams != null)
+            {
+                var faAlertText = GetMiscText(faSysParams.FspNotificationText);
+                if (faAlertText != null)
+                {
+                    singleConfiguration.FspNotificationText = faAlertText;
+                }
+            }
+
 
             return singleConfiguration;
         }
@@ -686,5 +731,18 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
             }
         }
 
+        private string GetMiscText(string miscTextId)
+        {
+            string text = String.Empty;
+            if (!string.IsNullOrEmpty(miscTextId))
+            {
+                Base.DataContracts.MiscText miscText = DataReader.ReadRecord<Base.DataContracts.MiscText>("MISC.TEXT", miscTextId);
+                if (miscText != null)
+                {
+                    text = miscText.MtxtText.Replace(DmiString._VM, ' ');
+                }
+            }
+            return text;
+        }
     }
 }

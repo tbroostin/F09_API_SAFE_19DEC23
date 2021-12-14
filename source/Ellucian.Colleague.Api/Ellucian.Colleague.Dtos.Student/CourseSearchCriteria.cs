@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 
@@ -20,13 +20,13 @@ namespace Ellucian.Colleague.Dtos.Student
         }
 
         /// <summary>
-        /// Course search first determines if there is a search keyword provided. If there is a keyword provided, the search will
+        /// Course search second determines if there is a search keyword provided and no search sujects. If there is a keyword provided, the search will
         /// be performed for that keyword.
         /// </summary>
         public string Keyword { get; set; }
 
         /// <summary>Require
-        /// If keyword is not provided, course search will determine if specific course Ids have been provided.
+        /// If Keyword or SubjectSearch are not provided, course search will determine if specific course Ids have been provided.
         /// If so it will perform the search based on the course Ids provided.
         /// </summary>
         public IEnumerable<string> CourseIds { get; set; }
@@ -144,5 +144,13 @@ namespace Ellucian.Colleague.Dtos.Student
         /// display sections that are open and waitlisted - have seats available
         /// </summary>
         public bool OpenAndWaitlistSections { get; set; }
+
+        /// <summary>
+        /// Course search first determines if there is a search subject provided. If there is are SearchSubjects, 
+        /// the search will be performed for those search subjects and also by keyword when the keyword has a value.
+        /// Search by subjects is different than other criteria when only SearchSubjects exist a search is done for those subjects
+        /// however when SearchSubjects AND the Keyword both have values, two searches will be prefromed (by SearchSubject and also by Keyword)
+        /// </summary>
+        public IEnumerable<string> SearchSubjects { get; set; }
     }
 }

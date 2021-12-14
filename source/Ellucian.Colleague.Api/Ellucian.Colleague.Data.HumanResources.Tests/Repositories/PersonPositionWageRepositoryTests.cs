@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2019 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Data.HumanResources.Repositories;
@@ -77,15 +77,16 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         public class GetPersonPositionWagesAsyncTests : PersonPositionWageRepositoryTests
         {
             public List<string> inputPersonIds;
+            public List<string> payCycleIds;
 
             public async Task<List<PersonPositionWage>> getExpected()
             {
-                return (await testDataRepository.GetPersonPositionWagesAsync(inputPersonIds)).ToList();
+                return (await testDataRepository.GetPersonPositionWagesAsync(inputPersonIds, null, payCycleIds)).ToList();
             }
 
             public async Task<List<PersonPositionWage>> getActual()
             {
-                return (await repositoryUnderTest.GetPersonPositionWagesAsync(inputPersonIds)).ToList();
+                return (await repositoryUnderTest.GetPersonPositionWagesAsync(inputPersonIds, null, payCycleIds)).ToList();
             }
 
             [TestInitialize]
@@ -128,9 +129,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                         Assert.AreEqual(expected[i].FundingSources[j].ProjectId, actual[i].FundingSources[j].ProjectId);
                     }
                     Assert.AreEqual(expected[i].EarningsTypeGroupId, actual[i].EarningsTypeGroupId);
-                    //Assert.AreEqual(expected[i].EarningsTypeGroupEntries[0].EarningsTypeGroupId, actual[i].EarningsTypeGroupEntries[0].EarningsTypeGroupId);
-                    //Assert.AreEqual(expected[i].EarningsTypeGroupEntries[0].Description, actual[i].EarningsTypeGroupEntries[0].Description);
-                    //Assert.AreEqual(expected[i].EarningsTypeGroupEntries[0].EarningsTypeId, actual[i].EarningsTypeGroupEntries[0].EarningsTypeId);
+                    
                 }
             }
 
@@ -245,8 +244,38 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 
                 var actual = await getActual();
 
-                Assert.AreEqual(5, actual.Count);
+                Assert.AreEqual(6, actual.Count);
                 Assert.AreEqual(null, actual.ElementAt(0).EarningsTypeGroupId);
+            }
+
+            [TestMethod]
+            public async Task PassInPayCycleId_ReturnsExpectedResultTest()
+            {
+                payCycleIds = new List<string>() { "MW" };
+                var expected = await getExpected();
+                var actual = await getActual();
+                CollectionAssert.AreEqual(expected, actual);
+                Assert.IsTrue(actual.All(ppw => payCycleIds.Contains(ppw.PayCycleId)));
+            }
+
+            [TestMethod]
+            public async Task PassInPayCycleIds_ReturnsExpectedResultTest()
+            {
+                payCycleIds = new List<string>() { "MW", "BM" };
+                var expected = await getExpected();
+                var actual = await getActual();
+                CollectionAssert.AreEqual(expected, actual);
+                Assert.IsTrue(actual.All(ppw => payCycleIds.Contains(ppw.PayCycleId)));
+            }
+
+            [TestMethod]
+            public async Task PassInInvalidPayCycleIds_ReturnsExpectedResultTest()
+            {
+                payCycleIds = new List<string>() { "MW1", "BM2" };
+                var expected = await getExpected();
+                var actual = await getActual();
+                CollectionAssert.AreEqual(expected, actual);
+                Assert.IsFalse(actual.Any());
             }
         }
     }

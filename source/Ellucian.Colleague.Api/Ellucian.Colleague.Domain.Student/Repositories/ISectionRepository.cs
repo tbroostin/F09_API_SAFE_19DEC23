@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -328,7 +328,7 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<IEnumerable<Section>> GetCachedSectionsAsync(IEnumerable<string> sectionIds, bool bestFit = false);
         DateTime GetChangedRegistrationSectionsCacheBuildTime();
         DateTime GetChangedInstantEnrollmentSectionsCacheBuildTime();
-        Task<IEnumerable<SectionGradeResponse>> ImportGradesAsync(SectionGrades sectionGrades, bool forceNoVerifyFlag, bool checkForLocksFlag, GradesPutCallerTypes callerTypes);
+        Task<SectionGradeSectionResponse> ImportGradesAsync(SectionGrades sectionGrades, bool forceNoVerifyFlag, bool checkForLocksFlag, GradesPutCallerTypes callerTypes, bool sendGradingCompleteEmail);
                 
         /// <summary>
         /// Get a section meeting using its record ID
@@ -526,11 +526,12 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         Task<SectionWaitlistConfig> GetSectionWaitlistConfigAsync(string sectionId);
 
         /// <summary>
-        /// Get a list of<see cref="SectionWaitlist2"/> for a given course section ID
+        /// Get a list of<see cref="SectionWaitlistStudent"/> for a given list of course section IDs
         /// </summary>
-        /// <param name="sectionId">Course section ID</param>
-        /// <returns>A list of<see cref="SectionWaitlist2"/></returns>
-        Task<IEnumerable<SectionWaitlistStudent>> GetSectionWaitlist2Async(string sectionId);
+        /// <param name="sectionId">a list Course section IDs</param>
+        /// <returns>A list of<see cref="SectionWaitlistStudent"/></returns>
+        Task<IEnumerable<SectionWaitlistStudent>> GetSectionWaitlist2Async(List<string> sectionId);
+
 
         /// <summary>
         /// Get the list of student waitlist statuses
@@ -577,6 +578,25 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// </summary>
         /// <returns></returns>
         Task<IEnumerable<Section>> GetInstantEnrollmentSectionsAsync();
+     /// <summary>
+     /// Create a Census certification record
+     /// </summary>
+     /// <param name="sectionId"></param>
+     /// <param name="censusCertificationDate"></param>
+     /// <param name="censusCertificationPosition"></param>
+     /// <param name="censusCertificationLabel"></param>
+     /// <param name="censusCertificationRecordedDate"></param>
+     /// <param name="censusCertificationRecordedTime"></param>
+     /// <param name="personId"></param>
+     /// <returns></returns>
+        Task<SectionCensusCertification> CreateSectionCensusCertificationAsync(string sectionId, DateTime? censusCertificationDate, string censusCertificationPosition, string censusCertificationLabel, DateTime? censusCertificationRecordedDate, DateTimeOffset? censusCertificationRecordedTime, string personId);
 
+        /// <summary>
+        /// Retrieves the grading status for a course section
+        /// </summary>
+        /// <param name="sectionId">Unique identifier for the course section</param>
+        /// <returns>Grading status for the specified course section</returns>
+        Task<SectionGradingStatus> GetSectionGradingStatusAsync(string sectionId);
+    
     }
 }

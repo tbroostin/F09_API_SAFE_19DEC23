@@ -41,5 +41,14 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
        /// <param name="getActiveYearsOnly">flag indicating whether to retrieve active years data only</param>
        /// <returns>A single student checklist</returns>
        Task<StudentFinancialAidChecklist> GetStudentChecklistAsync(string studentId, string year, bool getActiveYearsOnly = false);
+
+        /// <summary>
+        /// Get a parent's profile data.
+        /// </summary>
+        /// <param name="parentId">Id of the parent</param>
+        /// <param name="studentId">Id of the student</param>
+        /// <param name="useCache">True/False flag to use the cache or not</param>
+        /// <returns>Profile data for a parent</returns>
+        Task<Dtos.Base.Profile> GetMpnProfileAsync(string parentId, string studentId, bool useCache = true);
     }
 }

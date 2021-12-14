@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -61,12 +61,16 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// </summary>
         public DateTime? WaitTime { get { return _waitTime; } }
 
-
+        private DateTime? _waitListAddDate;
+        /// <summary>
+        /// Wait List Added Date
+        /// </summary>
+        public DateTime? WaitListAddDate { get { return _waitListAddDate; } }
         /// <summary>
         /// Creates a new instance of the <see cref="SectionWaitlist"/> class
         /// </summary>
         /// <param name="sectionId">Course section ID</param>
-        public SectionWaitlistStudent(string sectionId, string studentId, int? rank, int? rating, string statusCode,DateTime? statusDate,DateTime? waitTime)
+        public SectionWaitlistStudent(string sectionId, string studentId, int? rank, int? rating, string statusCode,DateTime? statusDate,DateTime? waitTime,DateTime? waitListAddDate)
         {
             if (string.IsNullOrEmpty(studentId))
             {
@@ -83,6 +87,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities
             _statusDate = statusDate;
             _waitTime = waitTime;
             _statusCode = statusCode;
+            _waitListAddDate = waitListAddDate;
         }
     }
 }

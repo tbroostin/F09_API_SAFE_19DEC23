@@ -106,14 +106,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         public async Task<List<string>> GetActiveGeneralLedgerAccounts(List<string> glAccounts)
         {
             List<string> activeGlAccounts = new List<string>();
-            string[] activeAccounts;
-            if (glAccounts != null)
-            {
+            string[] activeAccounts;            
+            if (glAccounts != null && glAccounts.Any())
+            {                
                 string [] accountsArray = glAccounts.ToArray();
                 var criteria = "WITH GL.INACTIVE EQ 'A'";
                 activeAccounts = await DataReader.SelectAsync("GL.ACCTS", accountsArray, criteria);
                 activeGlAccounts = activeAccounts.ToList();
             }
+            logger.Info("GetActiveGeneralLedgerAccounts - number of active GL accounts " + activeGlAccounts.Count());
             return activeGlAccounts;
         }
 

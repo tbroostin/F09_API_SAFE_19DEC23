@@ -1,4 +1,4 @@
-//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -19,8 +19,7 @@ using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
-using Ellucian.Web.Http;
-using Newtonsoft.Json;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -51,24 +50,25 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Student and Academic Period.
         /// </summary>
         /// <returns>StudentRegistrationEligibilities <see cref="Dtos.StudentRegistrationEligibilities"/> object representing matching studentRegistrationEligibilities</returns>
-        [HttpGet, EedmResponseFilter, FilteringFilter(IgnoreFiltering = true)]
-        [ValidateQueryStringFilter()]
-        [QueryStringFilterFilter("criteria", typeof(Dtos.StudentRegistrationEligibilities))]
+        [HttpGet, EedmResponseFilter, FilteringFilter(IgnoreFiltering = true), CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [PermissionsFilter(new string[] { StudentPermissionCodes.ViewStuRegistrationEligibility })]
+        [ValidateQueryStringFilter(), QueryStringFilterFilter("criteria", typeof(Dtos.StudentRegistrationEligibilities))]
         public async Task<Ellucian.Colleague.Dtos.StudentRegistrationEligibilities> GetStudentRegistrationEligibilitiesAsync(QueryStringFilter criteria)
         {
             string studentId = string.Empty, academicPeriodId = string.Empty;
-
-            var bypassCache = false;
-            if (Request.Headers.CacheControl != null)
-            {
-                if (Request.Headers.CacheControl.NoCache)
-                {
-                    bypassCache = true;
-                }
-            }
-            
             try
             {
+                _studentRegistrationEligibilitiesService.ValidatePermissions(GetPermissionsMetaData());
+
+                var bypassCache = false;
+                if (Request.Headers.CacheControl != null)
+                {
+                    if (Request.Headers.CacheControl.NoCache)
+                    {
+                        bypassCache = true;
+                    }
+                }
+
                 var criteriaObj = GetFilterObject<Dtos.StudentRegistrationEligibilities>(_logger, "criteria");
                 if (criteriaObj != null)
                 {
@@ -80,6 +80,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                     return new Dtos.StudentRegistrationEligibilities();
 
                 var items = await _studentRegistrationEligibilitiesService.GetStudentRegistrationEligibilitiesAsync(studentId, academicPeriodId, bypassCache);
+                if (items == null)
+                {
+                    return new Dtos.StudentRegistrationEligibilities();
+                }
 
                 AddDataPrivacyContextProperty((await _studentRegistrationEligibilitiesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
 
@@ -93,7 +97,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -122,7 +126,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired studentRegistrationEligibilities</param>
         /// <returns>A studentRegistrationEligibilities object <see cref="Dtos.StudentRegistrationEligibilities"/> in EEDM format</returns>
-        [HttpGet]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.StudentRegistrationEligibilities> GetStudentRegistrationEligibilitiesByGuidAsync(string guid)
         {
             //GET by guid is not supported for Colleague but HeDM requires full crud support.
@@ -134,7 +138,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="studentRegistrationEligibilities">DTO of the new studentRegistrationEligibilities</param>
         /// <returns>A studentRegistrationEligibilities object <see cref="Dtos.StudentRegistrationEligibilities"/> in EEDM format</returns>
-        [HttpPost]
+        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.StudentRegistrationEligibilities> PostStudentRegistrationEligibilitiesAsync([FromBody] Dtos.StudentRegistrationEligibilities studentRegistrationEligibilities)
         {
             // Create is not supported for Colleague but HeDM requires full crud support.
@@ -147,7 +151,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID of the studentRegistrationEligibilities to update</param>
         /// <param name="studentRegistrationEligibilities">DTO of the updated studentRegistrationEligibilities</param>
         /// <returns>A studentRegistrationEligibilities object <see cref="Dtos.StudentRegistrationEligibilities"/> in EEDM format</returns>
-        [HttpPut]
+        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.StudentRegistrationEligibilities> PutStudentRegistrationEligibilitiesAsync([FromUri] string guid, [FromBody] Dtos.StudentRegistrationEligibilities studentRegistrationEligibilities)
         {
             // Update is not supported for Colleague but HeDM requires full crud support.
@@ -158,7 +162,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Delete (DELETE) a studentRegistrationEligibilities
         /// </summary>
         /// <param name="guid">GUID to desired studentRegistrationEligibilities</param>
-        [HttpDelete]
+        [HttpDelete, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task DeleteStudentRegistrationEligibilitiesAsync(string guid)
         {
             // Delete is not supported for Colleague but HeDM requires full crud support.

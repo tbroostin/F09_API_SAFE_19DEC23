@@ -5,6 +5,7 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.DtoProperties;
@@ -53,11 +54,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>Collection of Grants DTO objects</returns>
         public async Task<Tuple<IEnumerable<Dtos.Grant>, int>> GetGrantsAsync(int offset, int limit, string reportingSegment = "", string fiscalYearId = "", bool bypassCache = false)
         {
-            await CheckGrantViewPermission();
-
             var grantsDtoCollection = new List<Dtos.Grant>();
+            Tuple<IEnumerable<ProjectCF>, int> grantsEntities = null;
 
-            Tuple<IEnumerable<ProjectCF>, int> grantsEntities = await _grantsRepository.GetGrantsAsync(offset, limit, reportingSegment, fiscalYearId, bypassCache);
+            try
+            {
+                grantsEntities = await _grantsRepository.GetGrantsAsync(offset, limit, reportingSegment, fiscalYearId, bypassCache);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+            }
+
             if (grantsEntities != null && grantsEntities.Item1.Any())
             {
                 foreach (var grant in grantsEntities.Item1)
@@ -65,6 +73,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     grantsDtoCollection.Add(await ConvertGrantsEntityToDtoAsync(grant, bypassCache));
                 }
             }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+
             return grantsDtoCollection.Any() ? new Tuple<IEnumerable<Grant>, int>(grantsDtoCollection, grantsEntities.Item2) :
                 new Tuple<IEnumerable<Grant>, int>(new List<Dtos.Grant>(), 0);
         }
@@ -76,11 +90,19 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>Grants DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.Grant> GetGrantsByGuidAsync(string guid, bool bypassCache = true)
         {
+            Grant grantsDto = null;
             try
             {
-                await CheckGrantViewPermission();
-
-                return await ConvertGrantsEntityToDtoAsync((await _grantsRepository.GetProjectsAsync(guid)), true);
+                // await CheckGrantViewPermission();
+                var grantsEntity = await _grantsRepository.GetProjectsAsync(guid);
+                if (grantsEntity != null)
+                {
+                    grantsDto = await ConvertGrantsEntityToDtoAsync(grantsEntity, true);
+                }
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
             }
             catch (KeyNotFoundException ex)
             {
@@ -90,6 +112,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 throw new KeyNotFoundException("Grants not found for GUID " + guid, ex);
             }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+
+            return grantsDto;
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -106,31 +135,54 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             if (string.IsNullOrEmpty(source.Title))
             {
-                throw new InvalidOperationException(string.Format("Title is required. Id: {0}", source.RecordGuid));
+                // throw new InvalidOperationException(string.Format("Title is required. Id: {0}", source.RecordGuid));
+                IntegrationApiExceptionAddError(string.Format("Title is required. Id: {0}", source.RecordGuid), "Bad.Data", source.RecordGuid, source.RecordKey);
             }
             grant.Title = source.Title;
 
             if(string.IsNullOrEmpty(source.ReferenceCode))
             {
-                throw new InvalidOperationException(string.Format("Reference code is required. Id: {0}", source.RecordGuid));
+                // throw new InvalidOperationException(string.Format("Reference code is required. Id: {0}", source.RecordGuid));
+                IntegrationApiExceptionAddError(string.Format("Reference code is required. Id: {0}", source.RecordGuid), "Bad.Data", source.RecordGuid, source.RecordKey);
             }
             grant.ReferenceCode = source.ReferenceCode;
             grant.SponsorReferenceCode = string.IsNullOrEmpty(source.SponsorReferenceCode)? null : source.SponsorReferenceCode;
             grant.ReportingSegment = string.IsNullOrEmpty(source.ReportingSegment)? null : source.ReportingSegment;
             grant.Amount = await ConvertAmountEntityToDtoAsync(source.BudgetAmount);
 
-            if(!source.StartOn.HasValue)
+            if (!source.StartOn.HasValue)
             {
-                throw new InvalidOperationException(string.Format("Start on date is required. Id: {0}", source.RecordGuid));
+                // throw new InvalidOperationException(string.Format("Start on date is required. Id: {0}", source.RecordGuid));
+                IntegrationApiExceptionAddError(string.Format("Start on date is required. Id: {0}", source.RecordGuid), "Bad.Data", source.RecordGuid, source.RecordKey);
             }
-            grant.StartOn = source.StartOn.Value;
+            else
+            {
+                grant.StartOn = source.StartOn.Value;
+            }
 
             grant.EndOn = source.EndOn.HasValue? source.EndOn : default(DateTime?);
             grant.Status = ConvertEntityStatusToDto(source.CurrentStatus);
             grant.AccountingStrings = source.AccountingStrings != null && source.AccountingStrings.Any()? source.AccountingStrings : null;
-            grant.Category = await ConvertEntityProjectTypeToDtoAsync(source.ProjectType, bypassCache); 
-            grant.ReportingPeriods = ConvertEntityReportingPeriodsToDto(source.RecordGuid, source.ReportingPeriods);
-            grant.PrincipalInvestigator = await ConvertPrincipalInvestigatorEntityToDtoAsync(source.ProjectContactPerson);           
+
+            try
+            {
+                grant.Category = await ConvertEntityProjectTypeToDtoAsync(source.ProjectType, bypassCache);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Bad.Data", source.RecordGuid, source.RecordKey);
+            }
+
+            try
+            {
+                grant.ReportingPeriods = ConvertEntityReportingPeriodsToDto(source.RecordGuid, source.ReportingPeriods);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Bad.Data", source.RecordGuid, source.RecordKey);
+            }
+
+            grant.PrincipalInvestigator = await ConvertPrincipalInvestigatorEntityToDtoAsync(source.ProjectContactPerson, source.RecordGuid, source.RecordKey);
 
             return grant;
         }
@@ -208,21 +260,28 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// </summary>
         /// <param name="source"></param>
         /// <returns></returns>
-        private async Task<GuidObject2> ConvertPrincipalInvestigatorEntityToDtoAsync(List<string> source)
+        private async Task<GuidObject2> ConvertPrincipalInvestigatorEntityToDtoAsync(List<string> source, string sourceGuid, string sourceKey)
         {
             if (source != null && source.Any())
             {
                 foreach (var id in source)
                 {
-                    var isCorporation = await _personRepository.IsCorpAsync(id);
-                    if (!isCorporation)
+                    try
                     {
-                        var guid = await _personRepository.GetPersonGuidFromIdAsync(id);
-                        if (string.IsNullOrEmpty(guid))
+                        var isCorporation = await _personRepository.IsCorpAsync(id);
+                        if (!isCorporation)
                         {
-                            throw new KeyNotFoundException(string.Format("Person not found for {0}.", source));
+                            var guid = await _personRepository.GetPersonGuidFromIdAsync(id);
+                            if (string.IsNullOrEmpty(guid))
+                            {
+                                throw new KeyNotFoundException(string.Format("Person not found for {0}.", source));
+                            }
+                            return new GuidObject2(guid);
                         }
-                        return new GuidObject2(guid);
+                    }
+                    catch (Exception)
+                    {
+                        IntegrationApiExceptionAddError(string.Format("No GUID found for person ID {0}.", id), "Bad.Data", sourceGuid, sourceKey);
                     }
                 }
             }
@@ -277,22 +336,5 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             return _projectTypes;
         }
-
-        /// <summary>
-        /// Checks persmissions.
-        /// </summary>
-        /// <param name="generalLedgerDto"></param>
-        private async Task CheckGrantViewPermission()
-        {
-            var userPermissionList = (await GetUserPermissionCodesAsync()).ToList();
-
-            // This is the overall permission code needed to create anything with this API.
-            if (!userPermissionList.Contains(ColleagueFinancePermissionCodes.ViewGrants))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view grants.");
-                throw new PermissionsException("User is not authorized to view grants.");
-            }
-        }
-
     }
 }

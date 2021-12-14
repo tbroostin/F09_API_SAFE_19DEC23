@@ -150,7 +150,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             return ChangedInstantEnrollmentSectionsCacheBuildTime;
         }
 
-        public Task<IEnumerable<SectionGradeResponse>> ImportGradesAsync(SectionGrades sectionGrades, bool forceNoVerifyFlag, bool checkForLocksFlag, GradesPutCallerTypes callerType)
+        public Task<SectionGradeSectionResponse> ImportGradesAsync(SectionGrades sectionGrades, bool forceNoVerifyFlag, bool checkForLocksFlag, GradesPutCallerTypes callerType, bool sendGradingCompleteEmail)
         {
             throw new NotImplementedException();
         }
@@ -1273,6 +1273,11 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             throw new NotImplementedException();
         }
 
+        public Task<IEnumerable<SectionWaitlistStudent>> GetSectionWaitlist2Async(List<string> sectionIds)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<SectionWaitlistConfig> GetSectionWaitlistConfigAsync(string sectionId)
         {
             throw new NotImplementedException();
@@ -1321,6 +1326,31 @@ namespace Ellucian.Colleague.Domain.Student.Tests
         }
 
         public Task<Tuple<IEnumerable<Section>, int>> GetSectionsKeyword1Async(int offset, int limit, string keyword, bool bypassCache = false, bool caseSensitive = false, bool addToCollection = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<SectionCensusCertification> CreateSectionCensusCertificationAsync(string sectionId, SectionCensusCertification sectionCensusToCertify)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<SectionCensusCertification> CreateSectionCensusCertificationAsync(string sectionId, DateTime censusCertificationDate, string censusCertificationPosition, string censusCertificationLabel, DateTime censusCertificationRecordedDate, DateTimeOffset censusCertificationRecordedTime, string personId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<SectionCensusCertification> CreateSectionCensusCertificationAsync(string sectionId, DateTime? censusCertificationDate, string censusCertificationPosition, string censusCertificationLabel, DateTime? censusCertificationRecordedDate, DateTimeOffset? censusCertificationRecordedTime, string personId)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Retrieves the grading status for a course section
+        /// </summary>
+        /// <param name="sectionId">Unique identifier for the course section</param>
+        /// <returns>Grading status for the specified course section</returns>
+        public Task<SectionGradingStatus> GetSectionGradingStatusAsync(string sectionId)
         {
             throw new NotImplementedException();
         }

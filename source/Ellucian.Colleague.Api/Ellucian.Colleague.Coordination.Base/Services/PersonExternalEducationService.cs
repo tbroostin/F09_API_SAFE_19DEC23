@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -12,7 +12,6 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Dtos.Filters;
@@ -58,7 +57,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             Ellucian.Colleague.Dtos.PersonExternalEducation personExternalEducationFilter = null, string personFilterGuid = "",
             PersonByInstitutionType personByInstitutionType = null, bool bypassCache = false)
         {
-            this.CheckViewExternalEducationPermission();
 
             var externalEducationsCollection = new List<Dtos.PersonExternalEducation>();
            
@@ -76,7 +74,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 {
                     if (personExternalEducationFilter.Person != null && !string.IsNullOrEmpty(personExternalEducationFilter.Person.Id))
                     {
-                        personId = await _personRepository.GetPersonIdForNonCorpOnly(personExternalEducationFilter.Person.Id);
+                        personId = await _personRepository.GetPersonIdFromGuidAsync(personExternalEducationFilter.Person.Id);
                         if (string.IsNullOrEmpty(personId))
                         {
                             return new Tuple<IEnumerable<Dtos.PersonExternalEducation>, int>(new List<Dtos.PersonExternalEducation>(), 0);
@@ -195,9 +193,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         public async Task<Ellucian.Colleague.Dtos.PersonExternalEducation> GetPersonExternalEducationByGuidAsync(string guid, bool bypassCache = true)
         {
 
-            this.CheckViewExternalEducationPermission();
-
-            string institutionAttendId = "";
+           string institutionAttendId = "";
             try
             {
                 institutionAttendId = await _institutionsAttendRepository.GetInstitutionsAttendIdFromGuidAsync(guid);
@@ -261,9 +257,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 throw IntegrationApiException;
             }
 
-            // verify the user has the permission to update a personExternalEducation
-            UpdateCreatePersonExternalEducationPermission();
-
             var personExternalEducationEntityId = string.Empty;
 
             // If this is an update, then get the ID associated with the incoming guid
@@ -308,37 +301,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 throw IntegrationApiException;
 
             return newDto;
-        }
-
-
-        /// <summary>
-        /// Permissions code that allows an external system to do a READ operation. This API will integrate information that 
-        /// could be deemed personal.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckViewExternalEducationPermission()
-        {
-            var hasPermission = HasPermission(BasePermissionCodes.ViewExternalEducation) || HasPermission(BasePermissionCodes.CreateExternalEducation);
-
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view person external education.");
-            }
-        }
-
-        /// <summary>
-        /// Helper method to determine if the user has permission to create/update PersonExternalEducation.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void UpdateCreatePersonExternalEducationPermission()
-        {
-            bool hasPermission = HasPermission(BasePermissionCodes.CreateExternalEducation);
-
-            // User is not allowed to create or update PersonExternalEducationCredentials without the appropriate permissions
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to create or update person external education.");
-            }
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -562,6 +524,15 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     {
                         IntegrationApiExceptionAddError(string.Format("No person was found for guid '{0}'", personExternalEducation.Person.Id), "GUID.Not.Found", personExternalEducation.Id,
                             personExternalEducationEntityId);
+                    }
+                    else
+                    {
+                        var isCorp = await _personRepository.IsCorpAsync(personId);
+                        if (isCorp)
+                        {
+                            IntegrationApiExceptionAddError(string.Format("External Education cannot be created or updated for a corporation. '{0}'", personExternalEducation.Person.Id), "Validation.Exception", personExternalEducation.Id,
+                            personExternalEducationEntityId);
+                        }
                     }
                 }
                 catch (Exception)

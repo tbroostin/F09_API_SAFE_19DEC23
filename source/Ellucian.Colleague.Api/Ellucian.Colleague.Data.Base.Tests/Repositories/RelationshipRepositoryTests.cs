@@ -438,7 +438,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         public async Task GetPersonalRelationshipById2Async_relationshipContract_Null()
         {
             dataReaderMock.Setup(i => i.ReadRecordAsync<DataContracts.Relationship>("RELATIONSHIP", It.IsAny<string>(), It.IsAny<bool>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
             await relationshipRepo.GetPersonalRelationshipById2Async("1");
         }
 
@@ -697,7 +697,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task PersonGuardinRelationships_GetAByIdAsync_DataContract_KeyNotFoundException()
         {
-            dataReaderMock.Setup(i => i.ReadRecordAsync<DataContracts.Relationship>("RELATIONSHIP", "1", It.IsAny<bool>())).ReturnsAsync(null);
+            dataReaderMock.Setup(i => i.ReadRecordAsync<DataContracts.Relationship>("RELATIONSHIP", "1", It.IsAny<bool>())).ReturnsAsync(() => null);
             var actual = await relationshipRepo.GetPersonGuardianRelationshipByIdAsync("1");
         }
 
@@ -1370,7 +1370,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         [TestMethod]
         public async Task RelationshipRepository_GetPersonalRelationshipById2Async_Empty_RelationshipId()
         {
-            dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+            dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
 
             Domain.Base.Entities.Relationship retval = null;
             try
@@ -1387,7 +1387,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         [TestMethod]
         public async Task RelationshipRepository_GetPersonalRelationshipById2Async_Empty_RelationshipEntity()
         {
-            dataReaderMock.Setup(d => d.ReadRecordAsync<DataContracts.Relationship>("RELATIONSHIP", It.IsAny<string>(), true)).ReturnsAsync(null);
+            dataReaderMock.Setup(d => d.ReadRecordAsync<DataContracts.Relationship>("RELATIONSHIP", It.IsAny<string>(), true)).ReturnsAsync(() => null);
            
             Domain.Base.Entities.Relationship retval = null;
             try

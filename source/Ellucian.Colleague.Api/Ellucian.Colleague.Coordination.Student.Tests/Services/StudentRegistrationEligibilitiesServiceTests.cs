@@ -1,4 +1,4 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 
 using System;
@@ -21,6 +21,7 @@ using Ellucian.Colleague.Domain.Student;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -181,40 +182,32 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentRegElgService_GetStudentRegistrationEligibilitiesAsync_StudentId_ArgumentNullException()
             {
                 await studentRegEligibilitiesService.GetStudentRegistrationEligibilitiesAsync(null, It.IsAny<string>(), It.IsAny<bool>());
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentRegElgService_GetStudentRegistrationEligibilitiesAsync_AcademicPeriodId_ArgumentNullException()
             {
                 await studentRegEligibilitiesService.GetStudentRegistrationEligibilitiesAsync(studentId, null, It.IsAny<bool>());
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
-            public async Task StudentRegElgService_GetStudentRegistrationEligibilitiesAsync_PersonId_ArgumentException()
+           
+            public async Task StudentRegElgService_GetStudentRegistrationEligibilitiesAsync_PersonId_Invalid()
             {
-                personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
                 await studentRegEligibilitiesService.GetStudentRegistrationEligibilitiesAsync(studentId, "AcademicPeriodId", It.IsAny<bool>());
             }
 
+           
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task StudentRegElgService_GetStudentRegistrationEligibilitiesAsync_PermissionException()
-            {
-                personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("16");
-
-                await studentRegEligibilitiesService.GetStudentRegistrationEligibilitiesAsync(studentId, "AcademicPeriodId", It.IsAny<bool>());
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
-            public async Task StudentRegElgService_GetStudentRegistrationEligibilitiesAsync_AcademicPeriod_NotValid_ArgumentException()
+            
+            public async Task StudentRegElgService_GetStudentRegistrationEligibilitiesAsync_AcademicPeriod_Invalid()
             {
                 viewStudentRegistrationEligibilitiesRequest.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewStuRegistrationEligibility));
                 personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("16");

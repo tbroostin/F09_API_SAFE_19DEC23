@@ -182,13 +182,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(RepositoryException))]
-        public async Task StudentAdvisorRelationshipsRepo_GetStudentAdvisorRelationshipsAsync_RepositoryException()
-        {
-            var results = await studentAdvisorRelationshipsRepository.GetStudentAdvisorRelationshipsAsync(0, 100, true);
-        }
-
-        [TestMethod]
         public async Task StudentAdvisorRelationshipsRepo_GetStudentAdvisorRelationshipsAsync()
         {
             dataAccessorMock.Setup(x => x.BulkReadRecordAsync<StudentAdvisement>("STUDENT.ADVISEMENT", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(studentAdvisementDataContractList);
@@ -265,20 +258,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(RepositoryException))]
-        public async Task StudentAdvisorRelationshipsRepo_GetStudentAdvisorRelationshipsAsync_NotFound()
-        {
-            string[] studentAdvismentIds = {  };
-            studentAdvisementDataContractList = null;
-            dataAccessorMock.Setup(x => x.SelectAsync("STUDENT.ADVISEMENT", 
-                "WITH STAD.STUDENT NE '' AND STAD.FACULTY NE '' AND STAD.START.DATE NE ''")).ReturnsAsync(studentAdvismentIds);
-            dataAccessorMock.Setup(x => x.BulkReadRecordAsync<StudentAdvisement>("STUDENT.ADVISEMENT", studentAdvismentIds, true)).ReturnsAsync(studentAdvisementDataContractList);
-
-            var results = await studentAdvisorRelationshipsRepository.GetStudentAdvisorRelationshipsAsync(0, 100, true);
-            Assert.IsNotNull(results);
-        }
-
-        [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public async Task StudentAdvisorRelationshipsRepo_GetStudentAdvisorRelationshipsByGuidAsync_Null()
         {
@@ -311,7 +290,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(RepositoryException))]
+        [ExpectedException(typeof(KeyNotFoundException))]
         public async Task StudentAdvisorRelationshipsRepo_GetStudentAdvisorRelationshipsByGuidAsync_NotRightEntity()
         {
             var guid = new GuidLookupResult()
@@ -370,7 +349,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 return Task.FromResult(guidLookup);
             });
 
-            dataAccessorMock.Setup(x => x.ReadRecordAsync<StudentAdvisement>("1", true)).ReturnsAsync(null);
+            dataAccessorMock.Setup(x => x.ReadRecordAsync<StudentAdvisement>("1", true)).ReturnsAsync(() => null);
 
             var results = await studentAdvisorRelationshipsRepository.GetStudentAdvisorRelationshipsByGuidAsync("1");
         }

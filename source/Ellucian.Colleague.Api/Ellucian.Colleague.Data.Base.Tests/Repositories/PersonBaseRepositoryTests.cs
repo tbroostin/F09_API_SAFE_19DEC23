@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
@@ -164,7 +164,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 {
                     contractCollection.Add(record);
                 }
-                dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.Person>("PERSON", ids, true)).ReturnsAsync(null);
+                dataReaderMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.Person>("PERSON", ids, true)).ReturnsAsync(() => null);
                 IEnumerable<PersonBase> result = await repository.GetPersonsBaseAsync(ids);
             }
 
@@ -527,7 +527,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 // Make sure a preferred name is built even if PREFERRED Hierarchy is not found.
                 dataReaderMock.Setup<Task<Ellucian.Colleague.Data.Base.DataContracts.NameAddrHierarchy>>(a =>
                     a.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.NameAddrHierarchy>("NAME.ADDR.HIERARCHY", "PREFERRED", true))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
                 var testPersonRecord = personRecords["9999998"];
                 if (testPersonRecord != null)
                 {
@@ -602,7 +602,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [TestMethod]
             public async Task GetFilteredPerson2Guids_With_Invalid_PersonFilter1()
             {
-                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
 
                 var result = await repository.GetFilteredPerson2GuidsAsync(0, 10, true, null, "1");
 
@@ -613,7 +613,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             public async Task GetFilteredPerson2Guids_With_Invalid_PersonFilter2()
             {
                 var dicResult = new Dictionary<string, GuidLookupResult>() { };
-                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
 
                 var result = await repository.GetFilteredPerson2GuidsAsync(0, 10, true, null, "1");
 
@@ -915,7 +915,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [TestMethod]
             public async Task GetFilteredPerson3Guids_With_Invalid_PersonFilter1()
             {
-                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
 
                 var result = await repository.GetFilteredPerson3GuidsAsync(0, 10, true, null, "1");
 
@@ -926,7 +926,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             public async Task GetFilteredPerson3Guids_With_Invalid_PersonFilter2()
             {
                 var dicResult = new Dictionary<string, GuidLookupResult>() { };
-                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
 
                 var result = await repository.GetFilteredPerson3GuidsAsync(0, 10, true, null, "1");
 
@@ -1789,7 +1789,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
                 transManagerMock.Setup(manager => manager
                         .ExecuteAsync<GetPersonSearchKeyListRequest, GetPersonSearchKeyListResponse>(It.IsAny<GetPersonSearchKeyListRequest>()))
-                        .ReturnsAsync(null);
+                        .ReturnsAsync(() => null);
                 List<string> personIds = (await personBaseRepository.SearchByNameForExactMatchAsync(lastName)).ToList();
                 Assert.IsNotNull(personIds);
                 Assert.AreEqual(0, personIds.Count);
@@ -2541,7 +2541,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             [TestMethod]
             public async Task GetFilteredOrganizationGuids_With_Invalid_Filter1()
             {
-                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
 
                 var result = await repository.GetFilteredOrganizationGuidsAsync(0, 10, "invalid", "", "");
 
@@ -2552,7 +2552,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             public async Task GetFilteredOrganizationGuids_With_Invalid_Filter2()
             {
                 var dicResult = new Dictionary<string, GuidLookupResult>() { };
-                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
 
                 var result = await repository.GetFilteredOrganizationGuidsAsync(0, 10, "", "invalid", "");
 

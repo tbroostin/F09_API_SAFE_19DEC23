@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.ComponentModel;
@@ -35,6 +35,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         private readonly ILogger logger;
         private readonly IColleagueFinanceTaxFormPdfService taxFormPdfService;
         private readonly ITaxFormConsentService taxFormConsentService;
+        private readonly IConfigurationService configurationService;
 
         /// <summary>
         /// Initialize the controller.
@@ -43,13 +44,15 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="logger">Logger object</param>
         /// <param name="taxFormPdfService">FormT4aPdfData service object</param>
         /// <param name="taxFormConsentService">Form T4A consent service object</param>
+        /// <param name="configurationService">Configuation service object</param>
         public ColleagueFinanceTaxFormPdfsController(IAdapterRegistry adapterRegistry, ILogger logger,
-            IColleagueFinanceTaxFormPdfService taxFormPdfService, ITaxFormConsentService taxFormConsentService)
+            IColleagueFinanceTaxFormPdfService taxFormPdfService, ITaxFormConsentService taxFormConsentService, IConfigurationService configurationService)
         {
             this.adapterRegistry = adapterRegistry;
             this.logger = logger;
             this.taxFormPdfService = taxFormPdfService;
             this.taxFormConsentService = taxFormConsentService;
+            this.configurationService = configurationService;
         }
 
         /// <summary>
@@ -72,27 +75,46 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             if (string.IsNullOrEmpty(recordId))
                 throw CreateHttpResponseException("Record ID must be specified.", HttpStatusCode.BadRequest);
 
-            var consents = await taxFormConsentService.Get2Async(personId, TaxFormTypes.FormT4A);
+            var config = await configurationService.GetTaxFormConsentConfiguration2Async(TaxFormTypes.FormT4A);
 
-            consents = consents.OrderByDescending(c => c.TimeStamp);
-            var mostRecentConsent = consents.FirstOrDefault();
-
-            // Check if the person has consented to receiving their T4A online - if not, throw exception
-            var canViewAsAdmin = await taxFormConsentService.CanViewTaxDataWithOrWithoutConsent2Async(TaxFormTypes.FormT4A);
-
-            if ((mostRecentConsent == null || !mostRecentConsent.HasConsented) && !canViewAsAdmin)
+            // if consents are hidden, don't bother evaluating them
+            if (config == null || !config.HideConsent)
             {
-                throw CreateHttpResponseException("Consent is required to view this information.", HttpStatusCode.Unauthorized);
+                logger.Debug("Using consents for T4A tax forms");
+
+                var consents = await taxFormConsentService.Get2Async(personId, TaxFormTypes.FormT4A);
+                consents = consents.OrderByDescending(c => c.TimeStamp);
+                var mostRecentConsent = consents.FirstOrDefault();
+
+                // Check if the person has consented to receiving their T4A online - if not, throw exception
+                var canViewAsAdmin = await taxFormConsentService.CanViewTaxDataWithOrWithoutConsent2Async(TaxFormTypes.FormT4A);
+
+                if ((mostRecentConsent == null || !mostRecentConsent.HasConsented) && !canViewAsAdmin)
+                {
+                    logger.Debug("Consent is required to view T4A information.");
+                    throw CreateHttpResponseException("Consent is required to view this information.", HttpStatusCode.Unauthorized);
+                }
             }
 
             string pdfTemplatePath = string.Empty;
             try
             {
                 var pdfData = await taxFormPdfService.GetFormT4aPdfDataAsync(personId, recordId);
+                if (pdfData != null && pdfData.TaxYear != null)
+                {
+                    logger.Debug("Retrieving T4A PDF for tax year '" + pdfData.TaxYear + "'");
+                }
+                else
+                {
+                    logger.Debug("No PDF data and/or tax year found.");
+                }
 
                 // Determine which PDF template to use.
                 switch (pdfData.TaxYear)
                 {
+                    case "2021":
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/ColleagueFinance/2021-T4A.rdlc");
+                        break;
                     case "2020":
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/ColleagueFinance/2020-T4A.rdlc");
                         break;
@@ -137,6 +159,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                         logger.Error(message);
                         throw new ApplicationException(message);
                 }
+                logger.Debug("Template found. Using '" + (pdfTemplatePath ?? string.Empty) + "'");
 
                 var pdfBytes = taxFormPdfService.PopulateT4aPdf(pdfData, pdfTemplatePath);
 
@@ -225,6 +248,9 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                     case "2020":
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/ColleagueFinance/2020-1099MI.rdlc");
                         break;
+                    case "2021":
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/ColleagueFinance/2021-1099MI.rdlc");
+                        break;
                     default:
                         var message = string.Format("Incorrect Tax Year {0}", pdfData.TaxYear);
                         logger.Error(message);
@@ -297,6 +323,9 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 {
                     case "2020":
                         pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/ColleagueFinance/2020-1099NEC.rdlc");
+                        break;
+                    case "2021":
+                        pdfTemplatePath = HttpContext.Current.Server.MapPath("~/Reports/ColleagueFinance/2021-1099NEC.rdlc");
                         break;
                     default:
                         var message = string.Format("Incorrect Tax Year {0}", pdfData.TaxYear);

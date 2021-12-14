@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -56,6 +56,11 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// The total encumbrances amount for revenue accounts for the cost center.
         /// </summary>
         public decimal TotalEncumbrancesRevenue { get; set; }
+
+        /// <summary>
+        /// The flag that indicates if Justification Notes should be displayed to the user.
+        /// </summary>
+        public bool ShowJustificationNotes { get; set; }
 
         /// <summary>
         /// List of GL account numbers that make up the cost center.

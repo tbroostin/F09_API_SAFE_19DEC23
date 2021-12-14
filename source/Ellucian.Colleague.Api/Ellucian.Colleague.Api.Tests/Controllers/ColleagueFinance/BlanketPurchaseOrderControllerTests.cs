@@ -1,19 +1,24 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using Ellucian.Colleague.Api.Controllers.ColleagueFinance;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -362,6 +367,175 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
              new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
             _mockBlanketPurchaseOrdersService.Setup(x => x.GetBlanketPurchaseOrdersAsync(offset, limit, It.IsAny<Dtos.BlanketPurchaseOrders>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
             var actuals = await _blanketPurchaseOrdersController.GetBlanketPurchaseOrdersAsync(page, criteriaFilter);
+        }
+
+        //GET by id v16.1.0 v16.0.0 
+        //Successful
+        //GetBlanketPurchaseOrdersByGuidAsync
+        [TestMethod]
+        public async Task BlanketPurchaseOrdersController_GetBlanketPurchaseOrdersByGuidAsync_Permissions()
+        {
+            var expected = _blanketPurchaseOrders.FirstOrDefault(po => po.Id == Guid);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "BlanketPurchaseOrders" },
+                    { "action", "GetBlanketPurchaseOrdersByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("blanket-purchase-orders", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _blanketPurchaseOrdersController.Request.SetRouteData(data);
+            _blanketPurchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewBlanketPurchaseOrders, ColleagueFinancePermissionCodes.UpdateBlanketPurchaseOrders });
+
+            var controllerContext = _blanketPurchaseOrdersController.ControllerContext;
+            var actionDescriptor = _blanketPurchaseOrdersController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _mockBlanketPurchaseOrdersService.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _mockBlanketPurchaseOrdersService.Setup(x => x.GetBlanketPurchaseOrdersByGuidAsync(It.IsAny<string>())).ReturnsAsync(expected);
+            var actual = await _blanketPurchaseOrdersController.GetBlanketPurchaseOrdersByGuidAsync(Guid);
+
+            Object filterObject;
+            _blanketPurchaseOrdersController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewBlanketPurchaseOrders));
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.UpdateBlanketPurchaseOrders));
+
+
+        }
+
+        //GET by id v16.1.0 v16.0.0 
+        //Exception
+        //GetBlanketPurchaseOrdersByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task BlanketPurchaseOrdersController_GetBlanketPurchaseOrdersByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "BlanketPurchaseOrders" },
+                    { "action", "GetBlanketPurchaseOrdersByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("blanket-purchase-orders", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _blanketPurchaseOrdersController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _blanketPurchaseOrdersController.ControllerContext;
+            var actionDescriptor = _blanketPurchaseOrdersController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _mockBlanketPurchaseOrdersService.Setup(x => x.GetBlanketPurchaseOrdersByGuidAsync(It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+                _mockBlanketPurchaseOrdersService.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view blanket-purchase-orders."));
+                var actual = await _blanketPurchaseOrdersController.GetBlanketPurchaseOrdersByGuidAsync(Guid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET v16.1.0 v16.0.0 
+        //Successful
+        //GetBlanketPurchaseOrdersAsync
+        [TestMethod]
+        public async Task BlanketPurchaseOrdersController_GetBlanketPurchaseOrdersAsync_Permissions()
+        {
+            blanketPurchaseOrdersTuple = new Tuple<IEnumerable<BlanketPurchaseOrders>, int>(_blanketPurchaseOrders, 3);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "BlanketPurchaseOrders" },
+                    { "action", "GetBlanketPurchaseOrdersAsync" }
+                };
+            HttpRoute route = new HttpRoute("blanket-purchase-orders", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _blanketPurchaseOrdersController.Request.SetRouteData(data);
+            _blanketPurchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewBlanketPurchaseOrders, ColleagueFinancePermissionCodes.UpdateBlanketPurchaseOrders });
+
+            var controllerContext = _blanketPurchaseOrdersController.ControllerContext;
+            var actionDescriptor = _blanketPurchaseOrdersController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _mockBlanketPurchaseOrdersService.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _mockBlanketPurchaseOrdersService.Setup(x => x.GetBlanketPurchaseOrdersAsync(offset, limit, It.IsAny<Dtos.BlanketPurchaseOrders>(), It.IsAny<bool>())).ReturnsAsync(blanketPurchaseOrdersTuple);
+            var actuals = await _blanketPurchaseOrdersController.GetBlanketPurchaseOrdersAsync(page, criteriaFilter);
+
+            Object filterObject;
+            _blanketPurchaseOrdersController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewBlanketPurchaseOrders));
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.UpdateBlanketPurchaseOrders));
+
+
+        }
+
+        //GET v16.1.0 v16.0.0 
+        //Exception
+        //GetBlanketPurchaseOrdersAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task BlanketPurchaseOrdersController_GetBlanketPurchaseOrdersAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "BlanketPurchaseOrders" },
+                    { "action", "GetBlanketPurchaseOrdersAsync" }
+                };
+            HttpRoute route = new HttpRoute("blanket-purchase-orders", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _blanketPurchaseOrdersController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _blanketPurchaseOrdersController.ControllerContext;
+            var actionDescriptor = _blanketPurchaseOrdersController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _mockBlanketPurchaseOrdersService.Setup(x => x.GetBlanketPurchaseOrdersAsync(offset, limit, It.IsAny<Dtos.BlanketPurchaseOrders>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException()); _mockBlanketPurchaseOrdersService.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+     .Throws(new PermissionsException("User 'npuser' does not have permission to view blanket-purchase-orders."));
+                var actuals = await _blanketPurchaseOrdersController.GetBlanketPurchaseOrdersAsync(page, criteriaFilter);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
         }
 
 
@@ -1065,6 +1239,110 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             //    Assert.AreEqual(blanketPurchaseOrders.Id, result.Id);
             //}
 
+            //POST v16.1.0 v16.0.0 
+            //Successful
+            //PostBlanketPurchaseOrdersAsync
+            [TestMethod]
+            public async Task BlanketPurchaseOrdersController_PostBlanketPurchaseOrdersAsync_Permissions()
+            {
+                blanketPurchaseOrders.OrderDetails = new List<BlanketPurchaseOrdersOrderdetails>()
+                {
+                    new BlanketPurchaseOrdersOrderdetails()
+                    {
+                        CommodityCode = new GuidObject2(Guid.NewGuid().ToString()),
+                        AdditionalAmount = new Dtos.DtoProperties.Amount2DtoProperty()
+                        {
+                            Currency = CurrencyIsoCode.USD,
+                            Value = 1m
+                        },
+                        Description = "Description",
+                        Amount = new Dtos.DtoProperties.Amount2DtoProperty()
+                        {
+                            Currency = CurrencyIsoCode.USD,
+                            Value = 5m
+                        }
+                    }
+                };
+                blanketPurchaseOrders.Id = Guid.Empty.ToString();
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "BlanketPurchaseOrders" },
+                    { "action", "PostBlanketPurchaseOrdersAsync" }
+                };
+                HttpRoute route = new HttpRoute("blanket-purchase-orders", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                blanketPurchaseOrdersController.Request.SetRouteData(data);
+                blanketPurchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.UpdateBlanketPurchaseOrders);
+
+                var controllerContext = blanketPurchaseOrdersController.ControllerContext;
+                var actionDescriptor = blanketPurchaseOrdersController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                blanketPurchaseOrderServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                blanketPurchaseOrderServiceMock.Setup(s => s.PostBlanketPurchaseOrdersAsync(It.IsAny<BlanketPurchaseOrders>())).ReturnsAsync(blanketPurchaseOrders);
+                var result = await blanketPurchaseOrdersController.PostBlanketPurchaseOrdersAsync(blanketPurchaseOrders);
+
+                Object filterObject;
+                blanketPurchaseOrdersController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.UpdateBlanketPurchaseOrders));
+
+
+            }
+
+            //POST v16.1.0 v16.0.0 
+            //Exception
+            //PostBlanketPurchaseOrdersAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task BlanketPurchaseOrdersController_PostBlanketPurchaseOrdersAsync_Invalid_Permissions()
+            {
+                blanketPurchaseOrders.Id = Guid.Empty.ToString();
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "BlanketPurchaseOrders" },
+                    { "action", "PostBlanketPurchaseOrdersAsync" }
+                };
+                HttpRoute route = new HttpRoute("blanket-purchase-orders", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                blanketPurchaseOrdersController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = blanketPurchaseOrdersController.ControllerContext;
+                var actionDescriptor = blanketPurchaseOrdersController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    blanketPurchaseOrderServiceMock.Setup(s => s.PostBlanketPurchaseOrdersAsync(It.IsAny<BlanketPurchaseOrders>())).ThrowsAsync(new PermissionsException());
+                    blanketPurchaseOrderServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view blanket-purchase-orders."));
+                    await blanketPurchaseOrdersController.PostBlanketPurchaseOrdersAsync(blanketPurchaseOrders);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
         }
 
         [TestClass]
@@ -1154,7 +1432,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 // and we are now issueing an error if it exist in the payload.
                 vendor = new BlanketPurchaseOrdersVendor()
                 {
-                    ExistingVendor = new Dtos.DtoProperties.PurchaseOrdersExistingVendorDtoProperty() {
+                    ExistingVendor = new Dtos.DtoProperties.PurchaseOrdersExistingVendorDtoProperty()
+                    {
                         Vendor = new GuidObject2("1adc2629-e8a7-410e-b4df-572d02822f8b")
                     },
                     ManualVendorDetails = new ManualVendorDetailsDtoProperty()
@@ -1184,7 +1463,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                     PaymentTerms = new GuidObject2("1adc2629-e8a7-410e-b4df-572d02822f8b"),
                     Classification = new GuidObject2("1adc2629-e8a7-410e-b4df-572d02822f8b"),
                     SubmittedBy = new GuidObject2("1adc2629-e8a7-410e-b4df-572d02822f8b"),
-                    
+
                 };
             }
 
@@ -1280,7 +1559,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
                 await blanketPurchaseOrdersController.PutBlanketPurchaseOrdersAsync(guid, blanketPurchaseOrders);
             }
-            
+
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
             public async Task BPOController_PutBPOAsync_ArgumentNullException_When_PO_ManualVendor_Country_Not_CAN_AND_USA()
@@ -1385,7 +1664,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             [ExpectedException(typeof(HttpResponseException))]
             public async Task BPOController_PutBPOAsync_ArgumentNullException_When_PO_LineItems_UnitOfMeasure_Null()
             {
-               // blanketPurchaseOrders.LineItems.FirstOrDefault().UnitOfMeasure.Id = null;
+                // blanketPurchaseOrders.LineItems.FirstOrDefault().UnitOfMeasure.Id = null;
 
                 await blanketPurchaseOrdersController.PutBlanketPurchaseOrdersAsync(guid, blanketPurchaseOrders);
             }
@@ -1583,7 +1862,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             [ExpectedException(typeof(HttpResponseException))]
             public async Task BPOController_PutBPOAsync_ArgumentNullException_When_PO_LineItems_UnitPrice_Null()
             {
-               // blanketPurchaseOrders.LineItems.FirstOrDefault().UnitPrice = null;
+                // blanketPurchaseOrders.LineItems.FirstOrDefault().UnitPrice = null;
 
                 await blanketPurchaseOrdersController.PutBlanketPurchaseOrdersAsync(guid, blanketPurchaseOrders);
             }
@@ -1610,7 +1889,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                         {
                             Currency = CurrencyIsoCode.USD,
                             Value = 1m
-                        },                       
+                        },
                         Description = "Description",
                         Amount = new Dtos.DtoProperties.Amount2DtoProperty()
                         {
@@ -1780,6 +2059,109 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
             //    Assert.IsNotNull(result);
             //}
+
+            //PUT v16.1.0 v16.0.0 
+            //Successful
+            //GetBlanketPurchaseOrdersAsync
+            [TestMethod]
+            public async Task BlanketPurchaseOrdersController_GetBlanketPurchaseOrdersAsync_Permissions()
+            {
+                blanketPurchaseOrders.OrderDetails = new List<BlanketPurchaseOrdersOrderdetails>()
+                {
+                    new BlanketPurchaseOrdersOrderdetails()
+                    {
+                        CommodityCode = new GuidObject2(Guid.NewGuid().ToString()),
+                        AdditionalAmount = new Dtos.DtoProperties.Amount2DtoProperty()
+                        {
+                            Currency = CurrencyIsoCode.USD,
+                            Value = 1m
+                        },
+                        Description = "Description",
+                        Amount = new Dtos.DtoProperties.Amount2DtoProperty()
+                        {
+                            Currency = CurrencyIsoCode.USD,
+                            Value = 5m
+                        }
+                    }
+                };
+                blanketPurchaseOrders.Id = null;
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "BlanketPurchaseOrders" },
+                    { "action", "GetBlanketPurchaseOrdersAsync" }
+                };
+                HttpRoute route = new HttpRoute("blanket-purchase-orders", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                blanketPurchaseOrdersController.Request.SetRouteData(data);
+                blanketPurchaseOrdersController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.UpdateBlanketPurchaseOrders);
+
+                var controllerContext = blanketPurchaseOrdersController.ControllerContext;
+                var actionDescriptor = blanketPurchaseOrdersController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                blanketPurchaseOrderServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                blanketPurchaseOrderServiceMock.Setup(s => s.PutBlanketPurchaseOrdersAsync(It.IsAny<string>(), It.IsAny<BlanketPurchaseOrders>())).ReturnsAsync(blanketPurchaseOrders);
+                var result = await blanketPurchaseOrdersController.PutBlanketPurchaseOrdersAsync(guid, blanketPurchaseOrders);
+
+                Object filterObject;
+                blanketPurchaseOrdersController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.UpdateBlanketPurchaseOrders));
+
+
+            }
+
+            //PUT v16.1.0 v16.0.0 
+            //Exception
+            //GetBlanketPurchaseOrdersAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task BlanketPurchaseOrdersController_GetBlanketPurchaseOrdersAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "BlanketPurchaseOrders" },
+                    { "action", "GetBlanketPurchaseOrdersAsync" }
+                };
+                HttpRoute route = new HttpRoute("blanket-purchase-orders", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                blanketPurchaseOrdersController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = blanketPurchaseOrdersController.ControllerContext;
+                var actionDescriptor = blanketPurchaseOrdersController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    blanketPurchaseOrderServiceMock.Setup(s => s.PutBlanketPurchaseOrdersAsync(It.IsAny<string>(), It.IsAny<BlanketPurchaseOrders>())).ThrowsAsync(new PermissionsException());
+                    blanketPurchaseOrderServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view blanket-purchase-orders."));
+                    await blanketPurchaseOrdersController.PutBlanketPurchaseOrdersAsync(guid, blanketPurchaseOrders);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
         }
     }
 

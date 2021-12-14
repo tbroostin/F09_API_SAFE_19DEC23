@@ -153,7 +153,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [ExpectedException(typeof(ArgumentException))]
             public async Task PersonGuardianRelationshipService_GetAll_KeyNotFoundException()
             {
-                _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                _personRepositoryMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 await _personGuardianRelationshipService.GetPersonGuardianRelationshipsAllAndFilterAsync(offset, limit, "A");
             }
 
@@ -205,7 +205,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task PersonGuardianRelationshipService_GetById_GuardianRelations_Null_KeyNotFoundException()
             {
-                _relationshipRepositoryMock.Setup(i => i.GetDefaultGuardianRelationshipTypesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+                _relationshipRepositoryMock.Setup(i => i.GetDefaultGuardianRelationshipTypesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
                 var actual = await _personGuardianRelationshipService.GetPersonGuardianRelationshipByIdAsync("1234");
             }
 

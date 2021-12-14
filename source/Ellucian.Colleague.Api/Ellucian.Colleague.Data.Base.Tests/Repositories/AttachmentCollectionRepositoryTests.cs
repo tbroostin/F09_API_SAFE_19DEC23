@@ -440,7 +440,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
                 transManagerMock.Setup(accessor =>
                     accessor.ExecuteAsync<UpdateAttachmentCollectionsRequest, UpdateAttachmentCollectionsResponse>
-                    (It.IsAny<UpdateAttachmentCollectionsRequest>())).ReturnsAsync(null);
+                    (It.IsAny<UpdateAttachmentCollectionsRequest>())).ReturnsAsync(() => null);
 
                 try
                 {
@@ -558,7 +558,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
                 transManagerMock.Setup(accessor =>
                     accessor.ExecuteAsync<UpdateAttachmentCollectionsRequest, UpdateAttachmentCollectionsResponse>
-                    (It.IsAny<UpdateAttachmentCollectionsRequest>())).ReturnsAsync(null);
+                    (It.IsAny<UpdateAttachmentCollectionsRequest>())).ReturnsAsync(() => null);
 
                 try
                 {

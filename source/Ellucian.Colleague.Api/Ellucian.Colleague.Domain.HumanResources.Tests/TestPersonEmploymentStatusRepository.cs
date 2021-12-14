@@ -89,7 +89,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
         };
 
 
-        public IEnumerable<PersonEmploymentStatus> GetPersonEmploymentStatuses(IEnumerable<string> personIds)
+        public IEnumerable<PersonEmploymentStatus> GetPersonEmploymentStatuses(IEnumerable<string> personIds, DateTime? lookupStartDate = null)
         {
             var records = personEmploymentStatusRecords.Where(p => personIds.Contains(p.personId));
 
@@ -98,20 +98,23 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             {
                 if (record != null)
                 {
-                    try
+                    if (!lookupStartDate.HasValue || (record.endDate == null || record.endDate >= lookupStartDate.Value))
                     {
-                        entities.Add(BuildPersonEmploymentStatus(record));
+                        try
+                        {
+                            entities.Add(BuildPersonEmploymentStatus(record));
+                        }
+                        catch (Exception) { }
                     }
-                    catch (Exception) { }
                 }
             }
 
             return entities;
         }
 
-        public async Task<IEnumerable<PersonEmploymentStatus>> GetPersonEmploymentStatusesAsync(IEnumerable<string> personIds, DateTime? startDate = null)
+        public async Task<IEnumerable<PersonEmploymentStatus>> GetPersonEmploymentStatusesAsync(IEnumerable<string> personIds, DateTime? lookupStartDate = null)
         {
-            return await Task.FromResult(GetPersonEmploymentStatuses(personIds));
+            return await Task.FromResult(GetPersonEmploymentStatuses(personIds, lookupStartDate));
         }
 
         public IEnumerable<string> personIdsUsedInTestData

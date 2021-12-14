@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -195,8 +195,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 gradeList = new List<Domain.Student.Entities.Grade>()
             {
-                new Domain.Student.Entities.Grade("progguid1", "ProgCode1", "A", "1",  "Prog description", "grd1"),
-                      };
+                new Domain.Student.Entities.Grade("progguid1", "ProgCode1", "A", "1",  "Prog description 1", "grd1"),
+                new Domain.Student.Entities.Grade("progguid2", "ProgCode2", "A", "2",  "Prog description 2", "grd2"),
+                new Domain.Student.Entities.Grade("progguid3", "ProgCode3", "A", "3",  "Prog description 3", "grd3"),
+                new Domain.Student.Entities.Grade("progguid4", "ProgCode4", "A", "4",  "Prog description 4", "grd4"),
+                new Domain.Student.Entities.Grade("progguid5", "ProgCode5", "A", "5",  "Prog description 5", "grd5"),
+                new Domain.Student.Entities.Grade("progguid6", "ProgCode6", "A", "6",  "Prog description 6", "grd6"),
+                };
 
                 sectionGradeTypeList = new List<Domain.Student.Entities.SectionGradeType>()
             {
@@ -462,34 +467,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                     throw;
                 }
             }
-
-
-            [TestMethod]
-            [ExpectedException(typeof(IntegrationApiException))]
-            public async Task StudentUnverifiedGradesService_GetStudentUnverifiedGradesByGuidAsync_NoPermission()
-            {
-                curntUserFactory = new CurrentUserSetup.StudentUserFactory();
-                _studentUnverifiedGradesService = new StudentUnverifiedGradesService(_referenceRepositoryMock.Object, _personRepositoryMock.Object,
-                    _gradeRepoMock.Object, _sectionRepositoryMock.Object, _studentUnverifiedGradesRepositoryMock.Object, _sectionRegistrationRepositoryMock.Object,
-                    _adapterRegistryMock.Object, curntUserFactory, _roleRepositoryMock.Object, baseConfigurationRepository, _loggerMock.Object);
-
-                Domain.Student.Entities.StudentUnverifiedGrades entity = _studentUnverifiedGradesCollection.First();
-                var expected = _dtoStudentUnverifiedGradesList.FirstOrDefault(x => x.Id == entity.Guid);
-
-                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradeByGuidAsync(It.IsAny<string>())).ReturnsAsync(entity);
-
-                try
-                {
-                    await _studentUnverifiedGradesService.GetStudentUnverifiedGradesByGuidAsync("99");
-                }
-                catch (IntegrationApiException ex)
-                {
-                    Assert.IsNotNull(ex.Errors);
-                    Assert.AreEqual("User 'Samwise' is not authorized to view student-unverified-grades.", ex.Errors[0].Message);
-                    throw;
-                }
-            }
-
+       
             #endregion
 
             #region StudentUnverifiedGradesSubmissions PUT/POST Validations
@@ -566,23 +544,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             #region StudentUnverifiedGradesSubmissions PUT
 
-            [TestMethod]
-            [ExpectedException(typeof(IntegrationApiException))]
-            public async Task StudentUnverifiedGradesService_Put_PermissionsException()
-            {
-                try
-                {
-                    await _studentUnverifiedGradesService.UpdateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
-                }
-                catch (IntegrationApiException ex)
-                {
-                    Assert.IsNotNull(ex.Errors);
-                    Assert.AreEqual("User 'ILP' is not authorized to create student-unverified-grades-submissions.", ex.Errors[0].Message);
-                    Assert.AreEqual("Access.Denied", ex.Errors[0].Code);
-                    throw;
-                }
-            }
-
+           
             [TestMethod]
             [ExpectedException(typeof(IntegrationApiException))]
             public async Task StudentUnverifiedGradesService_Put_InvalidId()
@@ -787,23 +749,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             #endregion
 
             #region StudentUnverifiedGradesSubmissions POST
-
-            [TestMethod]
-            [ExpectedException(typeof(IntegrationApiException))]
-            public async Task StudentUnverifiedGradesService_Post_PermissionsException()
-            {
-                try
-                {
-                    await _studentUnverifiedGradesService.CreateStudentUnverifiedGradesSubmissionsAsync(_studentUnverifiedGradesSubmissions);
-                }
-                catch (IntegrationApiException ex)
-                {
-                    Assert.IsNotNull(ex.Errors);
-                    Assert.AreEqual("User 'ILP' is not authorized to create student-unverified-grades-submissions.", ex.Errors[0].Message);
-                    Assert.AreEqual("Access.Denied", ex.Errors[0].Code);
-                    throw;
-                }
-            }
 
             [TestMethod]
             [ExpectedException(typeof(IntegrationApiException))]
@@ -1084,13 +1029,114 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradesIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(expectedEntity.StudentCourseSecId);
                 _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentAcadCredGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(_studentUnverifiedGradesSubmissions.SectionRegistration.Id);
                 _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradeByGuidAsync(It.IsAny<string>())).ReturnsAsync(expectedEntity);
+                expectedEntity.FinalGrade = null;
                 expectedEntity.MidtermGrade1 = "ProgCode1";
                 var actual = await _studentUnverifiedGradesService.GetStudentUnverifiedGradesSubmissionsByGuidAsync(_studentUnverifiedGradesSubmissions.Id);
 
                 Assert.AreEqual(_studentUnverifiedGradesSubmissions.Id, actual.Id);
                 Assert.AreEqual(_studentUnverifiedGradesSubmissions.SectionRegistration.Id, actual.SectionRegistration.Id);
-                Assert.AreEqual(_studentUnverifiedGradesSubmissions.Grade.Grade.Id, actual.Grade.Grade.Id);
+                Assert.AreEqual("progguid1", actual.Grade.Grade.Id);
             }
+
+            [TestMethod]
+            public async Task StudentUnverifiedGradesService_GetId_Midterm2()
+            {
+                var expectedEntity = _studentUnverifiedGradesCollection.FirstOrDefault(x => x.Guid == StudentUnverifiedGradesGuid);
+                var expectedDto = _dtoStudentUnverifiedGradesList.FirstOrDefault(x => x.Id == StudentUnverifiedGradesGuid);
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradesIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(expectedEntity.StudentCourseSecId);
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentAcadCredGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(_studentUnverifiedGradesSubmissions.SectionRegistration.Id);
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradeByGuidAsync(It.IsAny<string>())).ReturnsAsync(expectedEntity);
+                expectedEntity.FinalGrade = null; 
+                expectedEntity.MidtermGrade2 = "ProgCode2";
+                var actual = await _studentUnverifiedGradesService.GetStudentUnverifiedGradesSubmissionsByGuidAsync(_studentUnverifiedGradesSubmissions.Id);
+
+                Assert.AreEqual(_studentUnverifiedGradesSubmissions.Id, actual.Id);
+                Assert.AreEqual(_studentUnverifiedGradesSubmissions.SectionRegistration.Id, actual.SectionRegistration.Id);
+                Assert.AreEqual("progguid2", actual.Grade.Grade.Id);
+            }
+
+            [TestMethod]
+            public async Task StudentUnverifiedGradesService_GetId_Midterm3()
+            {
+                var expectedEntity = _studentUnverifiedGradesCollection.FirstOrDefault(x => x.Guid == StudentUnverifiedGradesGuid);
+                var expectedDto = _dtoStudentUnverifiedGradesList.FirstOrDefault(x => x.Id == StudentUnverifiedGradesGuid);
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradesIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(expectedEntity.StudentCourseSecId);
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentAcadCredGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(_studentUnverifiedGradesSubmissions.SectionRegistration.Id);
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradeByGuidAsync(It.IsAny<string>())).ReturnsAsync(expectedEntity);
+                expectedEntity.FinalGrade = null;
+                expectedEntity.MidtermGrade2 = "ProgCode3";
+                var actual = await _studentUnverifiedGradesService.GetStudentUnverifiedGradesSubmissionsByGuidAsync(_studentUnverifiedGradesSubmissions.Id);
+
+                Assert.AreEqual(_studentUnverifiedGradesSubmissions.Id, actual.Id);
+                Assert.AreEqual(_studentUnverifiedGradesSubmissions.SectionRegistration.Id, actual.SectionRegistration.Id);
+                Assert.AreEqual("progguid3", actual.Grade.Grade.Id);
+            }
+
+            [TestMethod]
+            public async Task StudentUnverifiedGradesService_GetId_Midterm4()
+            {
+                var expectedEntity = _studentUnverifiedGradesCollection.FirstOrDefault(x => x.Guid == StudentUnverifiedGradesGuid);
+                var expectedDto = _dtoStudentUnverifiedGradesList.FirstOrDefault(x => x.Id == StudentUnverifiedGradesGuid);
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradesIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(expectedEntity.StudentCourseSecId);
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentAcadCredGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(_studentUnverifiedGradesSubmissions.SectionRegistration.Id);
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradeByGuidAsync(It.IsAny<string>())).ReturnsAsync(expectedEntity);
+                expectedEntity.FinalGrade = null;
+                expectedEntity.MidtermGrade2 = "ProgCode4";
+                var actual = await _studentUnverifiedGradesService.GetStudentUnverifiedGradesSubmissionsByGuidAsync(_studentUnverifiedGradesSubmissions.Id);
+
+                Assert.AreEqual(_studentUnverifiedGradesSubmissions.Id, actual.Id);
+                Assert.AreEqual(_studentUnverifiedGradesSubmissions.SectionRegistration.Id, actual.SectionRegistration.Id);
+                Assert.AreEqual("progguid4", actual.Grade.Grade.Id);
+            }
+
+            [TestMethod]
+            public async Task StudentUnverifiedGradesService_GetId_Midterm5()
+            {
+                var expectedEntity = _studentUnverifiedGradesCollection.FirstOrDefault(x => x.Guid == StudentUnverifiedGradesGuid);
+                var expectedDto = _dtoStudentUnverifiedGradesList.FirstOrDefault(x => x.Id == StudentUnverifiedGradesGuid);
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradesIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(expectedEntity.StudentCourseSecId);
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentAcadCredGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(_studentUnverifiedGradesSubmissions.SectionRegistration.Id);
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradeByGuidAsync(It.IsAny<string>())).ReturnsAsync(expectedEntity);
+                expectedEntity.FinalGrade = null;
+                expectedEntity.MidtermGrade2 = "ProgCode5";
+                var actual = await _studentUnverifiedGradesService.GetStudentUnverifiedGradesSubmissionsByGuidAsync(_studentUnverifiedGradesSubmissions.Id);
+
+                Assert.AreEqual(_studentUnverifiedGradesSubmissions.Id, actual.Id);
+                Assert.AreEqual(_studentUnverifiedGradesSubmissions.SectionRegistration.Id, actual.SectionRegistration.Id);
+                Assert.AreEqual("progguid5", actual.Grade.Grade.Id);
+            }
+
+            [TestMethod]
+            public async Task StudentUnverifiedGradesService_GetId_Midterm6()
+            {
+                var expectedEntity = _studentUnverifiedGradesCollection.FirstOrDefault(x => x.Guid == StudentUnverifiedGradesGuid);
+                var expectedDto = _dtoStudentUnverifiedGradesList.FirstOrDefault(x => x.Id == StudentUnverifiedGradesGuid);
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradesIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(expectedEntity.StudentCourseSecId);
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentAcadCredGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(_studentUnverifiedGradesSubmissions.SectionRegistration.Id);
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradeByGuidAsync(It.IsAny<string>())).ReturnsAsync(expectedEntity);
+                expectedEntity.FinalGrade = null;
+                expectedEntity.MidtermGrade2 = "ProgCode6";
+                var actual = await _studentUnverifiedGradesService.GetStudentUnverifiedGradesSubmissionsByGuidAsync(_studentUnverifiedGradesSubmissions.Id);
+
+                Assert.AreEqual(_studentUnverifiedGradesSubmissions.Id, actual.Id);
+                Assert.AreEqual(_studentUnverifiedGradesSubmissions.SectionRegistration.Id, actual.SectionRegistration.Id);
+                Assert.AreEqual("progguid6", actual.Grade.Grade.Id);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
+            public async Task StudentUnverifiedGradesService_GetId_Midterm7_invalid()
+            {
+                var expectedEntity = _studentUnverifiedGradesCollection.FirstOrDefault(x => x.Guid == StudentUnverifiedGradesGuid);
+                var expectedDto = _dtoStudentUnverifiedGradesList.FirstOrDefault(x => x.Id == StudentUnverifiedGradesGuid);
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradesIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync(expectedEntity.StudentCourseSecId);
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentAcadCredGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(_studentUnverifiedGradesSubmissions.SectionRegistration.Id);
+                _studentUnverifiedGradesRepositoryMock.Setup(x => x.GetStudentUnverifiedGradeByGuidAsync(It.IsAny<string>())).ReturnsAsync(expectedEntity);
+                expectedEntity.FinalGrade = null;
+                expectedEntity.MidtermGrade2 = "ProgCode7";
+                await _studentUnverifiedGradesService.GetStudentUnverifiedGradesSubmissionsByGuidAsync(_studentUnverifiedGradesSubmissions.Id);
+            }
+
             #endregion
         }
     }

@@ -81,5 +81,50 @@ namespace Ellucian.Colleague.Api.Controllers
                 throw CreateHttpResponseException(e.Message);
             }
         }
+
+        /// <summary>
+        /// This retrieves student's academic standings.
+        /// </summary>
+        /// <param name="studentId">Student Id</param>
+        /// <returns>List of Student's Academic Standings</returns>
+        ///<accessComments>
+        /// Student Academic Standings can be retrieved only if:
+        /// 1. A Student is accessing its own data.
+        /// 3. An Advisor with any of the following codes is accessing the student's data if the student is not assigned advisee.
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 4. An Advisor with any of the following codes is accessing the student's data if the student is assigned advisee.
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        ///</accessComments>
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.Student.StudentStanding>> GetStudentAcademicStandingsAsync(string studentId)
+        {
+            if (string.IsNullOrWhiteSpace(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Student Id passed to retrieve student's academic standing cannot be null or empty");
+            }
+
+            try
+            {
+                IEnumerable<Ellucian.Colleague.Dtos.Student.StudentStanding> studentAcademicStandings = await _studentStandingService.GetStudentAcademicStandingsAsync(studentId);
+                return studentAcademicStandings;
+            }
+            catch (PermissionsException pex)
+            {
+                string message = "A user needs to be self or an advisor in order to view student's academic standings";
+                _logger.Error(pex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception e)
+            {
+                string message = "An exception occured while retrieving student's academic standings for student with id- " + studentId;
+                _logger.Error(e, message);
+                throw CreateHttpResponseException(e.Message, HttpStatusCode.BadRequest);
+            }
+        }
     }
 }

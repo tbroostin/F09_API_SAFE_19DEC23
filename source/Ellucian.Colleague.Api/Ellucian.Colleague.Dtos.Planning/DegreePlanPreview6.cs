@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Colleague.Dtos.Student.DegreePlans;
 
@@ -24,5 +24,6 @@ namespace Ellucian.Colleague.Dtos.Planning
         /// Contains the student's academic history
         /// </summary>
         public AcademicHistory4 AcademicHistory { get; set; }
+
     }
 }

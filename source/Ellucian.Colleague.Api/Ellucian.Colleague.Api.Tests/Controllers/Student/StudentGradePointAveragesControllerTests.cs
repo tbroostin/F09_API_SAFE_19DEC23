@@ -4,19 +4,24 @@ using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -184,6 +189,93 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             await _studentGradePointAveragesController.GetStudentGradePointAveragesAsync(paging, queryStringFilter, queryStringFilter);
         }
 
+        //GET v1.0.0
+        //Successful
+        //GetStudentGradePointAveragesAsync
+        [TestMethod]
+        public async Task StudentGradePointAveragesController_GetStudentGradePointAveragesAsync_Permissions()
+        {
+
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentGradePointAverages" },
+                    { "action", "GetStudentGradePointAveragesAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-grade-point-averages", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _studentGradePointAveragesController.Request.SetRouteData(data);
+            _studentGradePointAveragesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentGradePointAverages);
+
+            var controllerContext = _studentGradePointAveragesController.ControllerContext;
+            var actionDescriptor = _studentGradePointAveragesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var tuple = new Tuple<IEnumerable<Dtos.StudentGradePointAverages>, int>(_studentGradePointAveragesCollection, 1);
+
+            _studentGradePointAveragesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _studentGradePointAveragesServiceMock.Setup(x => x.GetStudentGradePointAveragesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.StudentGradePointAverages>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            var studentGradePointAverages = await _studentGradePointAveragesController.GetStudentGradePointAveragesAsync(new Paging(10, 0), new QueryStringFilter("criteria", "{'student':{'id':'123'}}"), new QueryStringFilter("gradeDate", "{'gradeDate':{'id':'123'}}"));
+
+            Object filterObject;
+            _studentGradePointAveragesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentGradePointAverages));
+
+
+        }
+
+        //GET v1.0.0
+        //Exception
+        //GetStudentGradePointAveragesAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentGradePointAveragesController_GetStudentGradePointAveragesAsync_Invalid_Permissions()
+        {
+            var paging = new Paging(100, 0);
+            var queryStringFilter = new QueryStringFilter("", "");
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentGradePointAverages" },
+                    { "action", "GetStudentGradePointAveragesAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-grade-point-averages", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _studentGradePointAveragesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _studentGradePointAveragesController.ControllerContext;
+            var actionDescriptor = _studentGradePointAveragesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                
+                _studentGradePointAveragesServiceMock.Setup(x => x.GetStudentGradePointAveragesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.StudentGradePointAverages>(), It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                _studentGradePointAveragesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view student-grade-point-averages."));
+                await _studentGradePointAveragesController.GetStudentGradePointAveragesAsync(paging, queryStringFilter, queryStringFilter);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
         #endregion
 
         #region GETBYID
@@ -202,7 +294,89 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             Assert.IsNotNull(result);
         }
 
+        //GET by id v1.0.0
+        //Successful
+        //GetStudentGradePointAveragesByGuidAsync
+        [TestMethod]
+        public async Task StudentMealPlansController_GetStudentGradePointAveragesByGuidAsync_Permissions()
+        {
+            var expected = _studentGradePointAveragesCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
 
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonalRelationships" },
+                    { "action", "GetStudentGradePointAveragesByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("personal-relationships", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _studentGradePointAveragesController.Request.SetRouteData(data);
+            _studentGradePointAveragesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentGradePointAverages);
+
+            var controllerContext = _studentGradePointAveragesController.ControllerContext;
+            var actionDescriptor = _studentGradePointAveragesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            _studentGradePointAveragesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            _studentGradePointAveragesServiceMock.Setup(rec => rec.GetStudentGradePointAveragesByGuidAsync(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
+            var result = await _studentGradePointAveragesController.GetStudentGradePointAveragesByGuidAsync(expected.Id);
+
+            Object filterObject;
+            _studentGradePointAveragesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentGradePointAverages));
+
+
+        }
+
+        //GET by id v1.0.0
+        //Exception
+        //GetStudentGradePointAveragesByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonalRelationshipsController_GetStudentGradePointAveragesByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonalRelationships" },
+                    { "action", "GetStudentGradePointAveragesByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("personal-relationships", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            _studentGradePointAveragesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = _studentGradePointAveragesController.ControllerContext;
+            var actionDescriptor = _studentGradePointAveragesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                _studentGradePointAveragesServiceMock.Setup(i => i.GetStudentGradePointAveragesByGuidAsync(It.IsAny<string>(), false)).ThrowsAsync(new PermissionsException());
+                _studentGradePointAveragesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view personal-relationships."));
+                var result = await _studentGradePointAveragesController.GetStudentGradePointAveragesByGuidAsync(It.IsAny<string>());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
         #endregion
 
         #region PUT

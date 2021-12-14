@@ -12,7 +12,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
     public interface IAccountsPayableInvoicesRepository : IEthosExtended
     {
         Task<Tuple<IEnumerable<AccountsPayableInvoices>, int>> GetAccountsPayableInvoices2Async(int offset, int limit, string invoiceNumber);
-        Task<AccountsPayableInvoices> GetAccountsPayableInvoicesByGuidAsync(string guid, bool allowVoid);
+        Task<AccountsPayableInvoices> GetAccountsPayableInvoicesByGuidAsync(string guid, bool allowInProgress);
         Task<AccountsPayableInvoices> UpdateAccountsPayableInvoicesAsync(AccountsPayableInvoices accountsPayableInvoicesEntity);
         Task<AccountsPayableInvoices> CreateAccountsPayableInvoicesAsync(AccountsPayableInvoices accountsPayableInvoicesEntity);
         Task<string> GetAccountsPayableInvoicesIdFromGuidAsync(string guid);

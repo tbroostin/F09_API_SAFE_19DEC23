@@ -28,10 +28,6 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         /// <returns></returns>
         Task<FixedAssets> GetFixedAssetByIdAsync(string guid);
 
-        /// <summary>
-        /// Gets host country.
-        /// </summary>
-        /// <returns></returns>
-        Task<string> GetHostCountryAsync();
+       
     }
 }

@@ -1,4 +1,5 @@
-﻿//Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
+using Ellucian.App.Config.Storage.Service.Client;
 using Ellucian.Colleague.Api.Client;
 using Ellucian.Colleague.Api.Models;
 using Ellucian.Colleague.Api.Utility;
@@ -160,6 +161,13 @@ namespace Ellucian.Colleague.Api.Controllers
                     AppConfigUtility.StorageServiceClient.PostConfigurationAsync(
                         configObject.Namespace, configObject.ConfigData, username,
                         configObject.ConfigVersion, configObject.ProductId, configObject.ProductVersion).GetAwaiter().GetResult();
+
+                    // after submitting a new snapshot, set the lastrestoredchecksum to this new snapshot's checksum.
+                    // This must be done to avoid a looping situation where instances keep performing merges
+                    // in lock step with each other due to lastrestoredchecksum file containing an older checksum, when 
+                    // there are changes that are repeated (e.g. logging toggled on/off).
+                    var currentChecksum = Utilities.GetMd5ChecksumString(configObject.ConfigData);
+                    Utilities.SetLastRestoredChecksum(currentChecksum);
                 }
                 catch(Exception e)
                 {

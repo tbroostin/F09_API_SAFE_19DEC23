@@ -19,7 +19,7 @@ namespace Ellucian.Colleague.Dtos
         /// <summary>
         /// A Globally Unique ID (GUID)
         /// </summary>
-        [JsonProperty("id")]
+        [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
         public string Id { get; set; }
 
         /// <summary>

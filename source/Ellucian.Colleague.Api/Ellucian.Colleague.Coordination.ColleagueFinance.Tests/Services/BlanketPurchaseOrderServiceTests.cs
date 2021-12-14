@@ -9,6 +9,7 @@ using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance.Tests;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
+using Ellucian.Data.Colleague;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
@@ -392,7 +393,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private Mock<IGeneralLedgerUserRepository> mockGeneralLedgerUserRepository;
         private Mock<IPersonRepository> mockPersonRepository;
         private Mock<IAccountFundsAvailableRepository> mockaccountFundAvailableRepository;
+        private Mock<IVendorsRepository> mockVendorsRepository;
         private Mock<IColleagueFinanceReferenceDataRepository> mockColleagueFinanceReferenceDataRepository = new Mock<IColleagueFinanceReferenceDataRepository>();
+        private Mock<IReferenceDataRepository> mockReferenceDataRepository = new Mock<IReferenceDataRepository>();
 
         private Mock<IRoleRepository> roleRepositoryMock;
         private IRoleRepository roleRepository;
@@ -418,6 +421,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             mockGeneralLedgerUserRepository = new Mock<IGeneralLedgerUserRepository>();
             mockPersonRepository = new Mock<IPersonRepository>();
             mockaccountFundAvailableRepository = new Mock<IAccountFundsAvailableRepository>();
+            mockVendorsRepository = new Mock<IVendorsRepository>();
 
             // Create permission domain entities for viewing the blanket purchase order.
             permissionViewBlanketPurchaseOrder = new Domain.Entities.Permission(ColleagueFinancePermissionCodes.ViewBlanketPurchaseOrder);
@@ -747,7 +751,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             bpo.Vendor.ExistingVendor.Vendor = new Dtos.GuidObject2("");
             Domain.ColleagueFinance.Entities.BlanketPurchaseOrder entity = await testBlanketPurchaseOrderRepository.GetBlanketPurchaseOrdersByGuidAsync("b18288c0-cca7-45b1-a310-39e376db0c3d");
             mockBlanketPurchaseOrderRepository.Setup(repo => repo.CreateBlanketPurchaseOrdersAsync(It.IsAny<BlanketPurchaseOrder>())).ReturnsAsync(entity);
-            mockBlanketPurchaseOrderRepository.Setup(repo => repo.GetBlanketPurchaseOrdersIdFromGuidAsync(Guid.Empty.ToString())).ReturnsAsync("");
+            mockVendorsRepository.Setup(r => r.GetVendorIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("");
             await service2.PostBlanketPurchaseOrdersAsync(bpo);
         }
 
@@ -812,7 +816,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 new FundsAvailable("11-01-01-00-40000-54005"){ AvailableStatus = FundsAvailableStatus.Override }
             };
             mockaccountFundAvailableRepository.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(fundsAvailable);
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(fundsAvailable);
             mockColleagueFinanceReferenceDataRepository.Setup(repo => repo.GetAccountsPayableSourcesAsync(It.IsAny<bool>())).ReturnsAsync(acctPayableSources);
 
             var result = await service2.PostBlanketPurchaseOrdersAsync(bpo);
@@ -846,15 +850,19 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             mockBlanketPurchaseOrderRepository.Setup(repo => repo.CreateBlanketPurchaseOrdersAsync(It.IsAny<BlanketPurchaseOrder>())).ReturnsAsync(entity);
             mockBlanketPurchaseOrderRepository.Setup(repo => repo.GetBlanketPurchaseOrdersIdFromGuidAsync(Guid.Empty.ToString())).ReturnsAsync("1");
             mockBlanketPurchaseOrderRepository.Setup(repo => repo.GetBlanketPurchaseOrdersIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
+            mockVendorsRepository.Setup(vr => vr.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("1");
+            mockVendorsRepository.Setup(vr => vr.GetVendorIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
             mockColleagueFinanceReferenceDataRepository.Setup(repo => repo.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(commodityCodes);
             mockColleagueFinanceReferenceDataRepository.Setup(repo => repo.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(commodityUnitTypes);
             mockPersonRepository.Setup(repo => repo.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("b18288c0-cca7-45b1-a310-39e376db0c3d");
+            GuidLookupResult guidLookupResult1 = new GuidLookupResult() { Entity = "ADDRESS", PrimaryKey = "1" };
+            mockReferenceDataRepository.Setup(r => r.GetGuidLookupResultFromGuidAsync(It.IsAny<string>())).ReturnsAsync(guidLookupResult1);
             List<FundsAvailable> fundsAvailable = new List<FundsAvailable>()
             {
                 new FundsAvailable("11-01-01-00-40000-54005"){ AvailableStatus = FundsAvailableStatus.Override }
             };
             mockaccountFundAvailableRepository.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(fundsAvailable);
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(fundsAvailable);
             mockColleagueFinanceReferenceDataRepository.Setup(repo => repo.GetAccountsPayableSourcesAsync(It.IsAny<bool>())).ReturnsAsync(acctPayableSources);
 
             var result = await service2.PostBlanketPurchaseOrdersAsync(bpo);
@@ -892,12 +900,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             mockColleagueFinanceReferenceDataRepository.Setup(repo => repo.GetCommodityCodesAsync(It.IsAny<bool>())).ReturnsAsync(commodityCodes);
             mockColleagueFinanceReferenceDataRepository.Setup(repo => repo.GetCommodityUnitTypesAsync(It.IsAny<bool>())).ReturnsAsync(commodityUnitTypes);
             mockPersonRepository.Setup(repo => repo.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("b18288c0-cca7-45b1-a310-39e376db0c3d");
+            mockVendorsRepository.Setup(vr => vr.GetVendorIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1");
+            mockVendorsRepository.Setup(vr => vr.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("1");
             List<FundsAvailable> fundsAvailable = new List<FundsAvailable>()
             {
                 new FundsAvailable("11-01-01-00-40000-54005"){ AvailableStatus = FundsAvailableStatus.Override }
             };
             mockaccountFundAvailableRepository.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(fundsAvailable);
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(fundsAvailable);
             mockColleagueFinanceReferenceDataRepository.Setup(repo => repo.GetAccountsPayableSourcesAsync(It.IsAny<bool>())).ReturnsAsync(acctPayableSources);
 
             var result = await service2.PutBlanketPurchaseOrdersAsync("", bpo);
@@ -957,7 +967,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 new FundsAvailable("11-01-01-00-40000-54005"){ AvailableStatus = FundsAvailableStatus.Override }
             };
             mockaccountFundAvailableRepository.Setup(repo => repo.CheckAvailableFundsAsync(It.IsAny<List<FundsAvailable>>(), It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(fundsAvailable);
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>())).ReturnsAsync(fundsAvailable);
             mockColleagueFinanceReferenceDataRepository.Setup(repo => repo.GetAccountsPayableSourcesAsync(It.IsAny<bool>())).ReturnsAsync(acctPayableSources);
 
             var result = await service2.PutBlanketPurchaseOrdersAsync("", bpo);
@@ -997,7 +1007,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task PutBlanketPurchaseOrdersAsync_KeyNotFoundException()
         {
             glUserRoleViewPermissions.AddPermission(permissionPutPostBlanketPurchaseOrder);
@@ -1256,8 +1266,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             referenceDataRepositoryMock.Setup(rdr => rdr.GetCountryCodesAsync(false)).ReturnsAsync(countries);
 
             var buyerRepository = new Mock<IBuyerRepository>();
-            var vendorsRepository = new Mock<IVendorsRepository>();
-            vendorsRepository.Setup(vr => vr.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("cc4ff1f8-95ef-4e0d-9f75-e8f29d49234f");
+            //var vendorsRepository = new Mock<IVendorsRepository>();
+           mockVendorsRepository.Setup(vr => vr.GetVendorGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("cc4ff1f8-95ef-4e0d-9f75-e8f29d49234f");
 
             var configurationRepository = new Mock<IConfigurationRepository>();
             var accountFundAvailableRepository = new Mock<IAccountFundsAvailableRepository>();
@@ -1271,18 +1281,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
             // Set up the current user with a subset of projects and set up the service.
             service = new BlanketPurchaseOrderService(testBlanketPurchaseOrderRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository,
-                colleagueFinanceReferenceDataRepository, referenceDataRepository, buyerRepository.Object, vendorsRepository.Object,
+                colleagueFinanceReferenceDataRepository, referenceDataRepository, buyerRepository.Object, mockVendorsRepository.Object,
                 configurationRepository.Object, adapterRegistry.Object, currentUserFactory, accountFundAvailableRepository.Object,
                 personRepository.Object, roleRepository, loggerObject);
 
             service2 = new BlanketPurchaseOrderService(mockBlanketPurchaseOrderRepository.Object, mockGlConfigurationRepository.Object, mockGeneralLedgerUserRepository.Object,
-                mockColleagueFinanceReferenceDataRepository.Object, referenceDataRepository, buyerRepository.Object, vendorsRepository.Object,
+                mockColleagueFinanceReferenceDataRepository.Object, referenceDataRepository, buyerRepository.Object, mockVendorsRepository.Object,
                 configurationRepository.Object, adapterRegistry.Object, currentUserFactory, mockaccountFundAvailableRepository.Object,
                 mockPersonRepository.Object, roleRepository, loggerObject);
 
             // Build a service for a user that has no permissions.
             serviceForNoPermission = new BlanketPurchaseOrderService(testBlanketPurchaseOrderRepository, testGeneralLedgerConfigurationRepository, testGeneralLedgerUserRepository,
-                colleagueFinanceReferenceDataRepository, referenceDataRepository, buyerRepository.Object, vendorsRepository.Object,
+                colleagueFinanceReferenceDataRepository, referenceDataRepository, buyerRepository.Object, mockVendorsRepository.Object,
                 configurationRepository.Object, adapterRegistry.Object, noPermissionsUser, accountFundAvailableRepository.Object,
                 personRepository.Object, roleRepository, loggerObject);
 

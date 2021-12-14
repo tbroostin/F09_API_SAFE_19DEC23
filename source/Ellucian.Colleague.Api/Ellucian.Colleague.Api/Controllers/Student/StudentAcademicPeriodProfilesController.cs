@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -21,10 +21,9 @@ using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http;
 using System.Net;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System.Web.Http.ModelBinding;
 using Ellucian.Web.Http.ModelBinding;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -54,7 +53,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Retrieves an Student Academic Period Profiles by ID.
         /// </summary>
         /// <returns>An <see cref="StudentAcademicPeriodProfiles">StudentAcademicPeriodProfiles</see>object.</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewStudentAcademicPeriodProfile)]
         public async Task<StudentAcademicPeriodProfiles> GetStudentAcademicPeriodProfileByGuidAsync(string id)
         {
             var bypassCache = false;
@@ -68,6 +67,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _studentAcademicPeriodProfilesService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties((await _studentAcademicPeriodProfilesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)),
                     await _studentAcademicPeriodProfilesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(), new List<string>() { id }));
 
@@ -76,7 +76,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -112,7 +112,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="person">Id (GUID) A reference to link a student to the common HEDM persons entity</param>     
         /// <param name="academicPeriod">Id (GUID) A term within an academic year (for example, Semester).</param>
         /// <returns>List of StudentAcademicPeriodProfiles <see cref="StudentAcademicPeriodProfiles"/> objects representing matching Student Academic Period Profiles</returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(StudentPermissionCodes.ViewStudentAcademicPeriodProfile)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 50), EedmResponseFilter]
         [ValidateQueryStringFilter(new string[] { "person", "academicPeriod" }, false, true)]
         public async Task<IHttpActionResult> GetStudentAcademicPeriodProfilesAsync(Paging page, [FromUri] string person = "", [FromUri] string academicPeriod = "")
@@ -127,6 +127,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _studentAcademicPeriodProfilesService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(50, 0);
@@ -142,7 +143,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             { 
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -172,7 +173,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         ///  <param name="page">page</param>
         /// <param name="criteria"> - JSON formatted selection criteria.  Can contain:</param>
         /// <returns>List of StudentAcademicPeriodProfiles <see cref="StudentAcademicPeriodProfiles"/> objects representing matching Student Academic Period Profiles</returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(StudentPermissionCodes.ViewStudentAcademicPeriodProfile)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 50), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.StudentAcademicPeriodProfiles))]
@@ -188,6 +189,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _studentAcademicPeriodProfilesService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(50, 0);
@@ -217,7 +219,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException e)
             {

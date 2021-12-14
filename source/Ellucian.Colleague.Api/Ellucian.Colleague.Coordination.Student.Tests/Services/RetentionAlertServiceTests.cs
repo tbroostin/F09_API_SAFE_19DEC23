@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using Moq;
 using System;
 using slf4net;
@@ -89,6 +89,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private ICurrentUserFactory currentUserFactory;
             private Mock<IRoleRepository> roleRepoMock;
             private IRoleRepository roleRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository _personBaseRepository;
 
             private Mock<IRetentionAlertRepository> retentionAlertRepositoryMock;
             private IRetentionAlertRepository retentionAlertRepository;
@@ -106,6 +108,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 configurationRepository = configurationRepositoryMock.Object;
                 roleRepoMock = new Mock<IRoleRepository>();
                 roleRepo = roleRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                _personBaseRepository = personBaseRepoMock.Object;
 
                 retentionAlertRepositoryMock = new Mock<IRetentionAlertRepository>();
                 retentionAlertRepository = retentionAlertRepositoryMock.Object;
@@ -123,7 +127,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
 
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
             }
 
             [TestCleanup]
@@ -181,6 +185,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private ICurrentUserFactory currentUserFactory;
             private Mock<IRoleRepository> roleRepoMock;
             private IRoleRepository roleRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository _personBaseRepository;
 
             private Mock<IRetentionAlertRepository> retentionAlertRepositoryMock;
             private IRetentionAlertRepository retentionAlertRepository;
@@ -198,6 +204,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 configurationRepository = configurationRepositoryMock.Object;
                 roleRepoMock = new Mock<IRoleRepository>();
                 roleRepo = roleRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                _personBaseRepository = personBaseRepoMock.Object;
 
                 retentionAlertRepositoryMock = new Mock<IRetentionAlertRepository>();
                 retentionAlertRepository = retentionAlertRepositoryMock.Object;
@@ -215,7 +223,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
 
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
             }
 
             [TestCleanup]
@@ -265,6 +273,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private ICurrentUserFactory currentUserFactory;
             private Mock<IRoleRepository> roleRepoMock;
             private IRoleRepository roleRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository _personBaseRepository;
 
             private Mock<IRetentionAlertRepository> retentionAlertRepositoryMock;
             private IRetentionAlertRepository retentionAlertRepository;
@@ -282,6 +292,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 configurationRepository = configurationRepositoryMock.Object;
                 roleRepoMock = new Mock<IRoleRepository>();
                 roleRepo = roleRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                _personBaseRepository = personBaseRepoMock.Object;
 
                 retentionAlertRepositoryMock = new Mock<IRetentionAlertRepository>();
                 retentionAlertRepository = retentionAlertRepositoryMock.Object;
@@ -299,7 +311,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
 
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
             }
 
             [TestCleanup]
@@ -354,6 +366,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private ICurrentUserFactory currentUserFactory;
             private Mock<IRoleRepository> roleRepoMock;
             private IRoleRepository roleRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository _personBaseRepository;
 
             private Mock<IRetentionAlertRepository> retentionAlertRepositoryMock;
             private IRetentionAlertRepository retentionAlertRepository;
@@ -371,6 +385,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 configurationRepository = configurationRepositoryMock.Object;
                 roleRepoMock = new Mock<IRoleRepository>();
                 roleRepo = roleRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                _personBaseRepository = personBaseRepoMock.Object;
 
                 retentionAlertRepositoryMock = new Mock<IRetentionAlertRepository>();
                 retentionAlertRepository = retentionAlertRepositoryMock.Object;
@@ -388,7 +404,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
 
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
             }
 
             [TestCleanup]
@@ -441,6 +457,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private ICurrentUserFactory currentUserFactory;
             private Mock<IRoleRepository> roleRepoMock;
             private IRoleRepository roleRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository _personBaseRepository;
 
             private Mock<IRetentionAlertRepository> retentionAlertRepositoryMock;
             private IRetentionAlertRepository retentionAlertRepository;
@@ -461,6 +479,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 configurationRepository = configurationRepositoryMock.Object;
                 roleRepoMock = new Mock<IRoleRepository>();
                 roleRepo = roleRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                _personBaseRepository = personBaseRepoMock.Object;
 
                 retentionAlertRepositoryMock = new Mock<IRetentionAlertRepository>();
                 retentionAlertRepository = retentionAlertRepositoryMock.Object;
@@ -503,7 +523,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
             }
 
             [TestCleanup]
@@ -562,6 +582,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private ICurrentUserFactory currentUserFactory;
             private Mock<IRoleRepository> roleRepoMock;
             private IRoleRepository roleRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository _personBaseRepository;
 
             private Mock<IRetentionAlertRepository> retentionAlertRepositoryMock;
             private IRetentionAlertRepository retentionAlertRepository;
@@ -581,6 +603,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 configurationRepository = configurationRepositoryMock.Object;
                 roleRepoMock = new Mock<IRoleRepository>();
                 roleRepo = roleRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                _personBaseRepository = personBaseRepoMock.Object;
 
                 retentionAlertRepositoryMock = new Mock<IRetentionAlertRepository>();
                 retentionAlertRepository = retentionAlertRepositoryMock.Object;
@@ -612,7 +636,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
 
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
             }
 
             [TestCleanup]
@@ -681,6 +705,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private ICurrentUserFactory currentUserFactory;
             private Mock<IRoleRepository> roleRepoMock;
             private IRoleRepository roleRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository _personBaseRepository;
 
             private Mock<IRetentionAlertRepository> retentionAlertRepositoryMock;
             private IRetentionAlertRepository retentionAlertRepository;
@@ -700,6 +726,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 configurationRepository = configurationRepositoryMock.Object;
                 roleRepoMock = new Mock<IRoleRepository>();
                 roleRepo = roleRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                _personBaseRepository = personBaseRepoMock.Object;
 
                 retentionAlertRepositoryMock = new Mock<IRetentionAlertRepository>();
                 retentionAlertRepository = retentionAlertRepositoryMock.Object;
@@ -731,7 +759,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
 
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
             }
 
             [TestCleanup]
@@ -794,6 +822,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private ICurrentUserFactory currentUserFactory;
             private Mock<IRoleRepository> roleRepoMock;
             private IRoleRepository roleRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository _personBaseRepository;
 
             private Mock<IRetentionAlertRepository> retentionAlertRepositoryMock;
             private IRetentionAlertRepository retentionAlertRepository;
@@ -814,6 +844,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 configurationRepository = configurationRepositoryMock.Object;
                 roleRepoMock = new Mock<IRoleRepository>();
                 roleRepo = roleRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                _personBaseRepository = personBaseRepoMock.Object;
 
                 retentionAlertRepositoryMock = new Mock<IRetentionAlertRepository>();
                 retentionAlertRepository = retentionAlertRepositoryMock.Object;
@@ -863,7 +895,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
             }
 
             [TestCleanup]
@@ -921,6 +953,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private ICurrentUserFactory currentUserFactory;
             private Mock<IRoleRepository> roleRepoMock;
             private IRoleRepository roleRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository _personBaseRepository;
 
             private Mock<IRetentionAlertRepository> retentionAlertRepositoryMock;
             private IRetentionAlertRepository retentionAlertRepository;
@@ -940,6 +974,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 configurationRepository = configurationRepositoryMock.Object;
                 roleRepoMock = new Mock<IRoleRepository>();
                 roleRepo = roleRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                _personBaseRepository = personBaseRepoMock.Object;
 
                 retentionAlertRepositoryMock = new Mock<IRetentionAlertRepository>();
                 retentionAlertRepository = retentionAlertRepositoryMock.Object;
@@ -982,7 +1018,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
             }
 
             [TestCleanup]
@@ -1038,6 +1074,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private ICurrentUserFactory currentUserFactory;
             private Mock<IRoleRepository> roleRepoMock;
             private IRoleRepository roleRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository _personBaseRepository;
 
             private Mock<IRetentionAlertRepository> retentionAlertRepositoryMock;
             private IRetentionAlertRepository retentionAlertRepository;
@@ -1057,6 +1095,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 configurationRepository = configurationRepositoryMock.Object;
                 roleRepoMock = new Mock<IRoleRepository>();
                 roleRepo = roleRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                _personBaseRepository = personBaseRepoMock.Object;
 
                 retentionAlertRepositoryMock = new Mock<IRetentionAlertRepository>();
                 retentionAlertRepository = retentionAlertRepositoryMock.Object;
@@ -1130,7 +1170,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
             }
 
             [TestCleanup]
@@ -1199,6 +1239,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private ICurrentUserFactory currentUserFactory;
             private Mock<IRoleRepository> roleRepoMock;
             private IRoleRepository roleRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository _personBaseRepository;
 
             private Mock<IRetentionAlertRepository> retentionAlertRepositoryMock;
             private IRetentionAlertRepository retentionAlertRepository;
@@ -1218,6 +1260,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 configurationRepository = configurationRepositoryMock.Object;
                 roleRepoMock = new Mock<IRoleRepository>();
                 roleRepo = roleRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                _personBaseRepository = personBaseRepoMock.Object;
 
                 retentionAlertRepositoryMock = new Mock<IRetentionAlertRepository>();
                 retentionAlertRepository = retentionAlertRepositoryMock.Object;
@@ -1234,7 +1278,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.RetentionAlertPermissions, Ellucian.Colleague.Dtos.Student.RetentionAlertPermissions>()).Returns(permissionDtoAdapter);
 
                 currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
             }
 
             [TestCleanup]
@@ -1281,6 +1325,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private ICurrentUserFactory currentUserFactory;
             private Mock<IRoleRepository> roleRepoMock;
             private IRoleRepository roleRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository _personBaseRepository;
 
             private Mock<IRetentionAlertRepository> retentionAlertRepositoryMock;
             private IRetentionAlertRepository retentionAlertRepository;
@@ -1298,6 +1344,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 configurationRepository = configurationRepositoryMock.Object;
                 roleRepoMock = new Mock<IRoleRepository>();
                 roleRepo = roleRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                _personBaseRepository = personBaseRepoMock.Object;
 
                 retentionAlertRepositoryMock = new Mock<IRetentionAlertRepository>();
                 retentionAlertRepository = retentionAlertRepositoryMock.Object;
@@ -1362,7 +1410,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 retentionAlertRepositoryMock.Setup(repo => repo.AddRetentionAlertCaseNoteAsync("1", It.IsAny<RetentionAlertWorkCaseNote>())).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertWorkCaseActionResponse = await retentionAlertService.AddRetentionAlertCaseNoteAsync("1", actionDto);
 
@@ -1388,7 +1436,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 retentionAlertRepositoryMock.Setup(repo => repo.AddRetentionAlertCaseNoteAsync("1", It.IsAny<RetentionAlertWorkCaseNote>())).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertWorkCaseActionResponse = await retentionAlertService.AddRetentionAlertCaseNoteAsync("1", actionDto);
 
@@ -1420,7 +1468,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 retentionAlertRepositoryMock.Setup(repo => repo.AddRetentionAlertCaseCommCodeAsync("1", It.IsAny<RetentionAlertWorkCaseCommCode>())).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertWorkCaseActionResponse = await retentionAlertService.AddRetentionAlertCaseCommCodeAsync("1", actionDto);
 
@@ -1446,7 +1494,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 retentionAlertRepositoryMock.Setup(repo => repo.AddRetentionAlertCaseCommCodeAsync("1", It.IsAny<RetentionAlertWorkCaseCommCode>())).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertWorkCaseActionResponse = await retentionAlertService.AddRetentionAlertCaseCommCodeAsync("1", actionDto);
 
@@ -1479,7 +1527,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 retentionAlertRepositoryMock.Setup(repo => repo.AddRetentionAlertCaseTypeAsync("1", It.IsAny<RetentionAlertWorkCaseType>())).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertWorkCaseActionResponse = await retentionAlertService.AddRetentionAlertCaseTypeAsync("1", actionDto);
 
@@ -1505,7 +1553,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 retentionAlertRepositoryMock.Setup(repo => repo.AddRetentionAlertCaseTypeAsync("1", It.IsAny<RetentionAlertWorkCaseType>())).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertWorkCaseActionResponse = await retentionAlertService.AddRetentionAlertCaseTypeAsync("1", actionDto);
 
@@ -1537,7 +1585,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 retentionAlertRepositoryMock.Setup(repo => repo.ChangeRetentionAlertCasePriorityAsync("1", It.IsAny<RetentionAlertWorkCasePriority>())).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertWorkCaseActionResponse = await retentionAlertService.ChangeRetentionAlertCasePriorityAsync("1", actionDto);
 
@@ -1563,7 +1611,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 retentionAlertRepositoryMock.Setup(repo => repo.ChangeRetentionAlertCasePriorityAsync("1", It.IsAny<RetentionAlertWorkCasePriority>())).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertWorkCaseActionResponse = await retentionAlertService.ChangeRetentionAlertCasePriorityAsync("1", actionDto);
 
@@ -1597,7 +1645,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 retentionAlertRepositoryMock.Setup(repo => repo.CloseRetentionAlertCaseAsync("1", It.IsAny<RetentionAlertWorkCaseClose>())).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertWorkCaseActionResponse = await retentionAlertService.CloseRetentionAlertCaseAsync("1", actionDto);
 
@@ -1623,7 +1671,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 retentionAlertRepositoryMock.Setup(repo => repo.CloseRetentionAlertCaseAsync("1", It.IsAny<RetentionAlertWorkCaseClose>())).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertWorkCaseActionResponse = await retentionAlertService.CloseRetentionAlertCaseAsync("1", actionDto);
 
@@ -1660,7 +1708,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 retentionAlertRepositoryMock.Setup(repo => repo.SendRetentionAlertWorkCaseMailAsync("1", It.IsAny<RetentionAlertWorkCaseSendMail>())).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertWorkCaseActionResponse = await retentionAlertService.SendRetentionAlertWorkCaseMailAsync("1", sendMailDto);
 
@@ -1686,7 +1734,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 retentionAlertRepositoryMock.Setup(repo => repo.SendRetentionAlertWorkCaseMailAsync("1", It.IsAny<RetentionAlertWorkCaseSendMail>())).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertWorkCaseActionResponse = await retentionAlertService.SendRetentionAlertWorkCaseMailAsync("1", sendMailDto);
 
@@ -1710,7 +1758,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 retentionAlertRepositoryMock.Setup(repo => repo.AddRetentionAlertCaseReminderAsync("1", It.IsAny<RetentionAlertWorkCaseSetReminder>())).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertWorkCaseActionResponse = await retentionAlertService.AddRetentionAlertCaseReminderAsync("1", dto);
             }
@@ -1740,7 +1788,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 retentionAlertRepositoryMock.Setup(repo => repo.AddRetentionAlertCaseReminderAsync("1", It.IsAny<RetentionAlertWorkCaseSetReminder>())).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertWorkCaseActionResponse = await retentionAlertService.AddRetentionAlertCaseReminderAsync("1", dto);
             }
@@ -1775,7 +1823,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 retentionAlertRepositoryMock.Setup(repo => repo.AddRetentionAlertCaseReminderAsync("1", It.IsAny<RetentionAlertWorkCaseSetReminder>())).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertWorkCaseActionResponse = await retentionAlertService.AddRetentionAlertCaseReminderAsync("1", dto);
 
@@ -1802,7 +1850,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 retentionAlertRepositoryMock.Setup(repo => repo.ManageRetentionAlertCaseRemindersAsync("1", It.IsAny<RetentionAlertWorkCaseManageReminders>())).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertWorkCaseActionResponse = await retentionAlertService.ManageRetentionAlertCaseRemindersAsync(null, null);
 
@@ -1826,7 +1874,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 retentionAlertRepositoryMock.Setup(repo => repo.SendRetentionAlertWorkCaseMailAsync("1", It.IsAny<RetentionAlertWorkCaseSendMail>())).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertWorkCaseActionResponse = await retentionAlertService.ManageRetentionAlertCaseRemindersAsync("1", dto);
 
@@ -1866,7 +1914,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 retentionAlertRepositoryMock.Setup(repo => repo.ManageRetentionAlertCaseRemindersAsync("1", It.IsAny<RetentionAlertWorkCaseManageReminders>())).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertWorkCaseActionResponse = await retentionAlertService.ManageRetentionAlertCaseRemindersAsync("1", dto);
 
@@ -1913,7 +1961,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 };
 
                 retentionAlertRepositoryMock.Setup(repo => repo.ManageRetentionAlertCaseRemindersAsync(It.IsAny<string>(), It.IsAny<RetentionAlertWorkCaseManageReminders>())).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertWorkCaseActionResponse = await retentionAlertService.ManageRetentionAlertCaseRemindersAsync("1", dto);
 
@@ -1957,7 +2005,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 });
 
                 retentionAlertRepositoryMock.Setup(r => r.GetRetentionAlertCaseCategoryOrgRolesAsync(caseCategoryIds)).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertCaseCategoryOrgRolesResponse = await retentionAlertService.GetRetentionAlertCaseCategoryOrgRolesAsync(caseCategoryIds);
 
@@ -2023,7 +2071,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
 
                 retentionAlertRepositoryMock.Setup(r => r.GetRetentionAlertCaseCategoryOrgRolesAsync(caseCategoryIds)).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertCaseCategoryOrgRolesResponse = await retentionAlertService.GetRetentionAlertCaseCategoryOrgRolesAsync(caseCategoryIds);
 
@@ -2089,7 +2137,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 });
 
                 retentionAlertRepositoryMock.Setup(r => r.GetRetentionAlertCaseCategoryOrgRolesAsync(caseCategoryIds)).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertCaseCategoryOrgRolesResponse = await retentionAlertService.GetRetentionAlertCaseCategoryOrgRolesAsync(caseCategoryIds);                
             }
@@ -2139,7 +2187,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 });
 
                 retentionAlertRepositoryMock.Setup(r => r.GetRetentionAlertCaseCategoryOrgRolesAsync(caseCategoryIds)).ReturnsAsync(response);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var retentionAlertCaseCategoryOrgRolesResponse = await retentionAlertService.GetRetentionAlertCaseCategoryOrgRolesAsync(caseCategoryIds);
             }
@@ -2162,6 +2210,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private ICurrentUserFactory currentUserFactory;
             private Mock<IRoleRepository> roleRepoMock;
             private IRoleRepository roleRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository _personBaseRepository;
 
             private Mock<IRetentionAlertRepository> retentionAlertRepositoryMock;
             private IRetentionAlertRepository retentionAlertRepository;
@@ -2174,6 +2224,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 adapterRegistryMock = new Mock<IAdapterRegistry>();
                 adapterRegistry = adapterRegistryMock.Object;
                 logger = new Mock<ILogger>().Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                _personBaseRepository = personBaseRepoMock.Object;
 
                 studentRepositoryMock = new Mock<IStudentRepository>();
                 studentRepository = studentRepositoryMock.Object;
@@ -2246,7 +2298,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
 
                 retentionAlertRepositoryMock.Setup(r => r.GetRetentionAlertCaseOwnerSummaryAsync("")).ReturnsAsync(groupOfCaseSummary);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var response = await retentionAlertService.GetRetentionAlertCaseOwnerSummaryAsync(null);
 
@@ -2264,7 +2316,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
 
                 retentionAlertRepositoryMock.Setup(r => r.GetRetentionAlertCaseOwnerSummaryAsync("")).ReturnsAsync(groupOfCaseSummary);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var response = await retentionAlertService.GetRetentionAlertCaseOwnerSummaryAsync("");
             }
@@ -2286,7 +2338,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.RetentionAlertGroupOfCases, Ellucian.Colleague.Dtos.Student.RetentionAlertGroupOfCases>()).Returns(caseCategoryOrgRolesAdapter);
 
                 retentionAlertRepositoryMock.Setup(r => r.GetRetentionAlertCaseOwnerSummaryAsync("1")).ReturnsAsync(groupOfCaseSummary);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var response = await retentionAlertService.GetRetentionAlertCaseOwnerSummaryAsync("1");
 
@@ -2335,6 +2387,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private ICurrentUserFactory currentUserFactory;
             private Mock<IRoleRepository> roleRepoMock;
             private IRoleRepository roleRepo;
+            private Mock<IPersonBaseRepository> personBaseRepoMock;
+            private IPersonBaseRepository _personBaseRepository;
 
             private Mock<IRetentionAlertRepository> retentionAlertRepositoryMock;
             private IRetentionAlertRepository retentionAlertRepository;
@@ -2353,6 +2407,8 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 configurationRepository = configurationRepositoryMock.Object;
                 roleRepoMock = new Mock<IRoleRepository>();
                 roleRepo = roleRepoMock.Object;
+                personBaseRepoMock = new Mock<IPersonBaseRepository>();
+                _personBaseRepository = personBaseRepoMock.Object;
 
                 retentionAlertRepositoryMock = new Mock<IRetentionAlertRepository>();
                 retentionAlertRepository = retentionAlertRepositoryMock.Object;
@@ -2406,7 +2462,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.RetentionAlertGroupOfCases, Ellucian.Colleague.Dtos.Student.RetentionAlertGroupOfCases>()).Returns(caseCategoryOrgRolesAdapter);
                 
                 retentionAlertRepositoryMock.Setup(r => r.SetRetentionAlertEmailPreferenceAsync(It.IsAny<string>(), It.IsAny<RetentionAlertSendEmailPreference>())).ReturnsAsync(preference);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var response = await retentionAlertService.SetRetentionAlertEmailPreferenceAsync(null, null);
 
@@ -2429,7 +2485,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.RetentionAlertGroupOfCases, Ellucian.Colleague.Dtos.Student.RetentionAlertGroupOfCases>()).Returns(caseCategoryOrgRolesAdapter);
 
                 retentionAlertRepositoryMock.Setup(r => r.SetRetentionAlertEmailPreferenceAsync(It.IsAny<string>(), It.IsAny<RetentionAlertSendEmailPreference>())).ReturnsAsync(preference);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var response = await retentionAlertService.SetRetentionAlertEmailPreferenceAsync("", null);
 
@@ -2452,7 +2508,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Base.Entities.RetentionAlertGroupOfCases, Ellucian.Colleague.Dtos.Student.RetentionAlertGroupOfCases>()).Returns(caseCategoryOrgRolesAdapter);
 
                 retentionAlertRepositoryMock.Setup(r => r.SetRetentionAlertEmailPreferenceAsync(It.IsAny<string>(), It.IsAny<RetentionAlertSendEmailPreference>())).ReturnsAsync(preference);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var response = await retentionAlertService.SetRetentionAlertEmailPreferenceAsync("1", null);
 
@@ -2487,7 +2543,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 adapterRegistryMock.Setup(x => x.GetAdapter<Dtos.Student.RetentionAlertSendEmailPreference, RetentionAlertSendEmailPreference>()).Returns(adapterDtoToEntity);
 
                 retentionAlertRepositoryMock.Setup(r => r.SetRetentionAlertEmailPreferenceAsync(It.IsAny<string>(), It.IsAny<RetentionAlertSendEmailPreference>())).ReturnsAsync(preferenceEntity);
-                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, logger, retentionAlertRepository);
+                retentionAlertService = new RetentionAlertService(adapterRegistry, referenceDataRepository, studentRepository, configurationRepository, currentUserFactory, roleRepo, _personBaseRepository, logger, retentionAlertRepository);
 
                 var response = await retentionAlertService.SetRetentionAlertEmailPreferenceAsync("1", preferenceDto);
 

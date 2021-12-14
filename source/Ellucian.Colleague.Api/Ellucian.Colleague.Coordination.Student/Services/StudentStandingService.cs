@@ -76,6 +76,49 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
+        /// Get Student Academic standings
+        /// </summary>
+        /// <param name="studentId">Student Id</param>
+        /// <returns>List of Student Academic Standings</returns>
+        public async Task<IEnumerable<Dtos.Student.StudentStanding>> GetStudentAcademicStandingsAsync(string studentId)
+        {
+            List<Dtos.Student.StudentStanding> studentAcademicStandingsDto = new List<Dtos.Student.StudentStanding>();
+            if (string.IsNullOrWhiteSpace(studentId))
+            {
+                throw new ArgumentNullException("studentId", "Student Id must be provided in order to retrieve student's academic standings");
+            }
+
+            if (!UserIsSelf(studentId) && !(await UserIsAdvisorAsync(studentId)))
+            {
+                var message = "Current user is not the student to request academic standings or current user is advisor or faculty but doesn't have appropriate permissions and therefore cannot access it.";
+                logger.Error(message);
+                throw new PermissionsException(message);
+            }
+            try
+            {
+                IEnumerable<Ellucian.Colleague.Domain.Student.Entities.StudentStanding> studentAcademicStandingEntity = await _studentStandingRepository.GetAsync(new List<string>(){studentId }); ;
+                if (studentAcademicStandingEntity != null && studentAcademicStandingEntity.Any())
+                {
+                    var studentAcademicLevelEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.StudentStanding, Dtos.Student.StudentStanding>();
+                    foreach (var studentAcadStandingEntity in studentAcademicStandingEntity)
+                    {
+                        studentAcademicStandingsDto.Add(studentAcademicLevelEntityToDtoAdapter.MapToType(studentAcadStandingEntity));
+                    }
+                }
+                else
+                {
+                    logger.Warn("Repository call to retrieve student's academic standings returns null or empty entity");
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, string.Format("Couldn't retrieve student academic standings for student {0}", studentId));
+                throw;
+            }
+            return studentAcademicStandingsDto;
+        }
+
+        /// <summary>
         /// Get the student standings for a set of students, filtered by term and with the current flag set.
         /// </summary>
         /// <param name="studentIds">Collection of student ids to get standings for</param>

@@ -209,7 +209,21 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         string topLevelBlockId = reqBlock.Recordkey;
                         Requirement r = topBlocks[topLevelBlockId];
                         r.MinSubRequirements = reqBlock.AcrbMinNoSubblocks;
-                        r.Exclusions = reqBlock.AcrbExclReqmtTypes;
+                        //adding exclustion types with flags
+                        if (reqBlock.AcrbExclusionsEntityAssociation != null)
+                        {
+                            foreach (var reqExcl in reqBlock.AcrbExclusionsEntityAssociation)
+                            {
+                                if (reqExcl != null)
+                                {
+                                    r.RequirementExclusions.Add(new RequirementBlockExclusion(reqExcl.AcrbExclReqmtTypesAssocMember, !string.IsNullOrEmpty(reqExcl.AcrbExclFirstOnlyFlagsAssocMember) && reqExcl.AcrbExclFirstOnlyFlagsAssocMember.ToUpper() == "Y" ? true : false));
+                                }
+                            }
+                        }
+                        else
+                        {
+                            logger.Info("Exclusion entity association is null for the requirement with id:" + reqBlock.Recordkey);
+                        }
                         r.ExtraCourseDirective = (await GetDegreeAuditParametersAsync()).ExtraCourseHandling;
 
                         await AddSVToBlockBaseAsync(r, reqBlock, grades, printTextAsEntered);
@@ -659,12 +673,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                            // UseLowGrade is true unless it is specifically N - so null, empty and Y are all true.
                            return new DegreeAuditParameters(extraCourses, !string.IsNullOrEmpty(daDefaults.DaRelatedCoursesFlag) && daDefaults.DaRelatedCoursesFlag.ToUpper() == "Y" ? true : false,
                                !string.IsNullOrEmpty(daDefaults.DaIncludeFailures) && daDefaults.DaIncludeFailures.ToUpper() == "N" ? false : true,
-                               !string.IsNullOrEmpty(daDefaults.DaDefaultSortOverride) && daDefaults.DaDefaultSortOverride.ToUpper() == "Y" ? true : false);
+                               !string.IsNullOrEmpty(daDefaults.DaDefaultSortOverride) && daDefaults.DaDefaultSortOverride.ToUpper() == "Y" ? true : false, 
+                               !string.IsNullOrEmpty(daDefaults.DaExcludeCmplRplGpaFlag) && daDefaults.DaExcludeCmplRplGpaFlag.ToUpper()=="Y" ? true:false);
                        }
                        else
                        {
                            // Create parameters using the defaults
-                           return new DegreeAuditParameters(ExtraCourses.Apply, false, true, false);
+                           return new DegreeAuditParameters(ExtraCourses.Apply, false, true, false, false);
                        }
                    }, Level1CacheTimeoutValue);
 

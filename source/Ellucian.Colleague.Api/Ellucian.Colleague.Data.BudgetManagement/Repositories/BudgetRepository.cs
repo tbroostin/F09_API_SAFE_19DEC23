@@ -36,36 +36,39 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
 
         private Ellucian.Data.Colleague.DataContracts.IntlParams _internationalParameters;
         private string _hostCountry;
+        RepositoryException exception = null;
 
         public async Task<Tuple<IEnumerable<BudgetWork>, int>> GetBudgetPhaseLineItemsAsync(int offset,
-            int limit, string budgetPhaseId, string accountingStringComponentValue,  bool bypassCache = false)
+            int limit, string budgetPhaseId, string accountingStringComponentValue, bool bypassCache = false)
         {
             var budgetWorkCollection = new List<BudgetWork>();
             int totalRecords = 0;
             var criteria = "WITH BU.LOCATION EQ 'O'";
             var accountingStringCriteria = string.Empty;
+            var budgetWorkRecordKeyValue = new Dictionary<string, Collection<DataContracts.BudWork>>();
 
             if (!string.IsNullOrEmpty(budgetPhaseId))
             {
-                criteria = string.Concat(criteria, " AND WITH BUDGET.ID EQ '" , budgetPhaseId, "'");
+                criteria = string.Concat(criteria, " AND WITH BUDGET.ID EQ '", budgetPhaseId, "'");
             }
             if (!string.IsNullOrEmpty(accountingStringComponentValue))
             {
                 accountingStringCriteria = string.Format("WITH BW.EXPENSE.ACCT EQ '{0}'", accountingStringComponentValue);
             }
 
-            var budgetIds = await DataReader.SelectAsync("BUDGET", criteria);
-            if ((budgetIds == null || !budgetIds.Any()))
-            {
-                return new Tuple<IEnumerable<BudgetWork>, int>(null, 0);
-            }
             try
             {
+                var budgetIds = await DataReader.SelectAsync("BUDGET", criteria);
+                if ((budgetIds == null || !budgetIds.Any()))
+                {
+                    return new Tuple<IEnumerable<BudgetWork>, int>(null, 0);
+                }
+
                 var budgetWorkIds = new List<string>();
                 foreach (var budgetId in budgetIds)
                 {
                     var bwkFileName = string.Format("BWK.{0}", budgetId);
-                    var bwkFileIds = await DataReader.SelectAsync(bwkFileName, accountingStringCriteria);                   
+                    var bwkFileIds = await DataReader.SelectAsync(bwkFileName, accountingStringCriteria);
                     budgetWorkIds.AddRange(bwkFileIds.Select(ids => string.Concat(bwkFileName, "*", ids)));
                 }
 
@@ -80,20 +83,32 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                 //                   file3*record1
                 // so we need a new collection that groups the file name, and contains a sublist
                 // or records associated with that filename
-                      
+
                 var groups = subListIds.Select(x => x.Split('*'))
                    .GroupBy(x => x[0])
                    .ToDictionary(x => x.Key, x => x.Select(g => g[1]).Distinct().ToList());
 
-                var budgetWorkRecordKeyValue = new Dictionary<string, Collection<DataContracts.BudWork>>();
-
+         
                 foreach (var group in groups)
                 {
                     budgetWorkRecordKeyValue.Add(group.Key,
                         await DataReader.BulkReadRecordAsync<DataContracts.BudWork>(group.Key,
                         group.Value.ToArray()));
                 }
-                foreach (var budgetWorkRecords in budgetWorkRecordKeyValue)
+            }
+            catch (Exception ex)
+            {
+
+                if (exception == null)
+                    exception = new RepositoryException();
+
+                exception.AddError(new RepositoryError("Bad.Data", "Error occurred while getting budget work records: " + ex.Message));
+                throw exception;
+            }
+
+            foreach (var budgetWorkRecords in budgetWorkRecordKeyValue)
+            {
+                try
                 {
                     if (!string.IsNullOrEmpty(budgetWorkRecords.Key) && (budgetWorkRecords.Value != null))
                     {
@@ -105,22 +120,43 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                         }
                         foreach (var record in budgetWorkRecords.Value)
                         {
-                            var budgetWork = new BudgetWork(record.RecordGuid, record.Recordkey);
-                            budgetWork.BudgetPhase = budgetPhase;
-                            budgetWork.AccountingStringComponentValue = record.BwExpenseAcct;
-                            budgetWork.LineAmount = record.BwLineAmt;
-                            budgetWork.Comments = record.BwNotes;
-                            budgetWork.HostCountry = await BuildHostCountry();
-                            budgetWorkCollection.Add(budgetWork);
+
+                            if (string.IsNullOrEmpty(record.RecordGuid))
+                            {
+                                if (exception == null)
+                                    exception = new RepositoryException();
+
+                                exception.AddError(new RepositoryError("GUID.Not.Found", string.Concat("Unable to find the GUID for budget-phase-line-items: fileName: "
+                                    , budgetWorkRecord[0], ".instance: ", budgetWorkRecord[0], ".", budgetWorkRecord[1]))
+                                    { SourceId = record.Recordkey } );
+                 
+                            }
+                            else
+                            {
+                                var budgetWork = new BudgetWork(record.RecordGuid, record.Recordkey);
+                                budgetWork.BudgetPhase = budgetPhase;
+                                budgetWork.AccountingStringComponentValue = record.BwExpenseAcct;
+                                budgetWork.LineAmount = record.BwLineAmt;
+                                budgetWork.Comments = record.BwNotes;
+                                budgetWork.HostCountry = await BuildHostCountry();
+                                budgetWorkCollection.Add(budgetWork);
+                            }
                         }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Error occurred while getting budget work records.", ex);
-            }
+                catch (Exception ex)
+                {
 
+                    if (exception == null)
+                        exception = new RepositoryException();
+
+                    exception.AddError(new RepositoryError("Bad.Data", "Error occurred while getting budget work records: " + ex.Message));
+                }
+            }
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
             return new Tuple<IEnumerable<BudgetWork>, int>(budgetWorkCollection, totalRecords);
         }
 
@@ -193,7 +229,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
             }
             catch (Exception ex)
             {
-                throw new Exception("Error occurred while getting budget records.", ex);
+                throw new Exception(string.Concat("Error occurred while getting budget records.  ",ex.Message), ex);
             }
 
 
@@ -209,12 +245,12 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
             var budgetId = await GetBudgetPhasesIdFromGuidAsync(guid);
             if (string.IsNullOrEmpty(budgetId))
             {
-                throw new KeyNotFoundException(string.Format("No budget phase was found for guid {0}.", guid));
+                throw new KeyNotFoundException(string.Format("No budget-phases was found for GUID {0}.", guid));
             }
             var budgetRecord = await DataReader.ReadRecordAsync<DataContracts.Budget>("BUDGET", budgetId);
             if (budgetRecord == null)
             {
-                throw new KeyNotFoundException(string.Format("No budget phase was found for guid {0}.", guid));
+                throw new KeyNotFoundException(string.Format("No budget-phases was found for GUID {0}.", guid));
             }
             if (budgetRecord.BuLocation != "O")
             {
@@ -259,17 +295,35 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
             {
                 throw new ArgumentNullException("Guid is required.");
             }
-            var recordInfo = await GetRecordInfoFromGuidAsync(guid);
-            if (recordInfo == null)
+
+            var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
+            if (idDict == null || idDict.Count == 0)
             {
                 throw new KeyNotFoundException("BudgetPhaseLineItem not found for GUID " + guid);
             }
+
+            var foundEntry = idDict.FirstOrDefault();
+
+           
+            if (foundEntry.Value == null)
+            {
+                throw new KeyNotFoundException("BudgetPhaseLineItem not found for GUID " + guid);
+            }
+
+            var recordInfo = foundEntry.Value;
+
+            if (!recordInfo.Entity.StartsWith("BWK", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new RepositoryException(string.Format("GUID '{0}' has different entity, {1}, than expected.", guid, recordInfo.Entity));
+            }
+
 
             var budgetWorkRecord = await DataReader.ReadRecordAsync<DataContracts.BudWork>(recordInfo.Entity, recordInfo.PrimaryKey, true);
             if (budgetWorkRecord == null)
             {
                 throw new KeyNotFoundException("BudgetPhaseLineItem not found for GUID " + guid);
             }
+
 
             var budgetPhaseId = recordInfo.Entity.Split(new char[] { '.' }, 2)[1];
 
@@ -303,7 +357,37 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                 throw new ArgumentException(ex.Message);
             }
         }
-        
+
+
+        /// <summary>
+        /// Gets a dictionary of guids for Budget records.
+        /// </summary>
+        /// <param name="budgetIds"></param>
+        /// <returns></returns>
+        public async Task<IDictionary<string, string>> GetBudgetGuidCollectionAsync(IEnumerable<string> budgetIds)
+        {
+            Dictionary<string, string> dict = new Dictionary<string, string>();
+
+            if (budgetIds != null && budgetIds.Any())
+            {
+                var budgetGuidLookup = budgetIds
+                   .Where(s => !string.IsNullOrWhiteSpace(s))
+                   .Distinct().ToList()
+                   .ConvertAll(gl => new RecordKeyLookup("BUDGET", gl, false)).ToArray();
+                var recordKeyLookupResults = await DataReader.SelectAsync(budgetGuidLookup);
+                foreach (var recordKeyLookupResult in recordKeyLookupResults)
+                {
+                    var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                    if (!dict.ContainsKey(splitKeys[1]))
+                    {
+                        dict.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
+                    }
+                }
+            }
+
+            return dict;
+        }
+
         public async Task<string> GetBudgetCodesGuidFromIdAsync(string id)
         {
             try
@@ -330,13 +414,13 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
             var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
             if (idDict == null || idDict.Count == 0)
             {
-                throw new KeyNotFoundException("Budget phases GUID " + guid + " not found.");
+                throw new KeyNotFoundException(string.Format("No budget-phases was found for GUID {0}.", guid));
             }
 
             var foundEntry = idDict.FirstOrDefault();
             if (foundEntry.Value == null)
             {
-                throw new KeyNotFoundException("Budget phases GUID " + guid + " lookup failed.");
+                throw new KeyNotFoundException(string.Format("No budget-phases was found for GUID {0}.", guid));
             }
 
             if (foundEntry.Value.Entity != "BUDGET")

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using AutoMapper;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Data.Base;
@@ -135,6 +135,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             private IStudentReferenceDataRepository studentReferenceRepo;
             private Mock<IStudentConfigurationRepository> configRepoMock;
             private IStudentConfigurationRepository configRepo;
+            private Mock<IFacultyRepository> facultyRepoMock;
+            private IFacultyRepository facultyRepo;
             private Mock<IAdapterRegistry> adapterRegistryMock;
             private IAdapterRegistry adapterRegistry;
             private CourseService courseService;
@@ -385,6 +387,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             private ICourseRepository courseRepo;
             private Mock<ITermRepository> termRepoMock;
             private ITermRepository termRepo;
+            private Mock<IFacultyRepository> facultyRepoMock;
+            private IFacultyRepository facultyRepo;
             private Mock<IRuleRepository> ruleRepoMock;
             private IRuleRepository ruleRepo;
             private Mock<IRoleRepository> roleRepoMock;
@@ -631,6 +635,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             private ICourseRepository courseRepo;
             private Mock<ITermRepository> termRepoMock;
             private ITermRepository termRepo;
+            private Mock<IFacultyRepository> facultyRepoMock;
+            private IFacultyRepository facultyRepo;
             private Mock<IRuleRepository> ruleRepoMock;
             private IRuleRepository ruleRepo;
             private Mock<ISectionRepository> sectionRepoMock;
@@ -1420,9 +1426,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var criteria = new CourseSearchCriteria() { StartsAtTime = startsAtTime };
 
                 // Act - call course search
-                #pragma warning disable 618
+#pragma warning disable 618
                 var coursePage = await courseService.SearchAsync(criteria, Int16.MaxValue, 1);
-                #pragma warning restore 618
+#pragma warning restore 618
 
                 // Verify that the sections included take place during the specified time span
                 foreach (var item in coursePage.CurrentPageItems)
@@ -1456,9 +1462,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var criteria = new CourseSearchCriteria() { EndsByTime = endsByTime };
 
                 // Act - call course search
-                #pragma warning disable 618
+#pragma warning disable 618
                 var coursePage = await courseService.SearchAsync(criteria, Int16.MaxValue, 1);
-                #pragma warning restore 618
+#pragma warning restore 618
 
                 // Verify that the sections included take place during the specified time span
                 foreach (var item in coursePage.CurrentPageItems)
@@ -1494,9 +1500,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var criteria = new CourseSearchCriteria() { StartsAtTime = startsAtTime, EndsByTime = endsByTime };
 
                 // Act - call course search
-                #pragma warning disable 618
+#pragma warning disable 618
                 var coursePage = await courseService.SearchAsync(criteria, Int16.MaxValue, 1);
-                #pragma warning restore 618
+#pragma warning restore 618
 
                 // Verify that the sections included take place during the specified time span
                 foreach (var item in coursePage.CurrentPageItems)
@@ -1565,6 +1571,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task OnlineCategoryFilterIsEmpty()
             {
+                allSections.ToList()[0].OnlineCategory = Domain.Student.Entities.OnlineCategory.Online;
+                allSections.ToList()[1].OnlineCategory = Domain.Student.Entities.OnlineCategory.Hybrid;
+                allSections.ToList()[2].OnlineCategory = Domain.Student.Entities.OnlineCategory.NotOnline;
                 // Arrange - Set up course search criteria to get all sections without regard for online category
                 var criteria = new CourseSearchCriteria() { OnlineCategories = new List<string>() };
 
@@ -1587,6 +1596,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task OnlineCategoryFilterIsOnline()
             {
+                allSections.ToList()[0].OnlineCategory = Domain.Student.Entities.OnlineCategory.Online;
                 // Arrange - Set up course search criteria to get sections that have online instruction only
                 var onlineCategory = Domain.Student.Entities.OnlineCategory.Online.ToString();
                 var criteria = new CourseSearchCriteria() { OnlineCategories = new List<string>() { onlineCategory } };
@@ -1635,6 +1645,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task OnlineCategoryFilterIsHybrid()
             {
+                allSections.ToList()[0].OnlineCategory = Domain.Student.Entities.OnlineCategory.Hybrid;
                 // Arrange - Set up course search criteria to get sections that have online instruction only
                 var onlineCategory = Domain.Student.Entities.OnlineCategory.Hybrid.ToString();
                 var criteria = new CourseSearchCriteria() { OnlineCategories = new List<string>() { onlineCategory } };
@@ -1659,6 +1670,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task InvalidOnlineCategoryFilterIgnored()
             {
+                allSections.ToList()[0].OnlineCategory = Domain.Student.Entities.OnlineCategory.Hybrid;
                 // Arrange - Set up course search criteria to get sections that have online instruction only
                 var onlineCategory = Domain.Student.Entities.OnlineCategory.Hybrid.ToString();
                 var criteria = new CourseSearchCriteria() { OnlineCategories = new List<string>() { onlineCategory, "xyz" } };
@@ -1683,6 +1695,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task OnlineCategoryFilterIsOnlineAndHybrid()
             {
+                allSections.ToList()[0].OnlineCategory = Domain.Student.Entities.OnlineCategory.Hybrid;
+                allSections.ToList()[1].OnlineCategory = Domain.Student.Entities.OnlineCategory.Online;
                 // Arrange - Set up course search criteria to get sections that have online instruction only
                 var hybridOnlineCategory = Domain.Student.Entities.OnlineCategory.Hybrid.ToString();
                 var onlineOnlineCategory = Domain.Student.Entities.OnlineCategory.Online.ToString();
@@ -2023,6 +2037,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             private ICourseRepository courseRepo;
             private Mock<ITermRepository> termRepoMock;
             private ITermRepository termRepo;
+            private Mock<IFacultyRepository> facultyRepoMock;
+            private IFacultyRepository facultyRepo;
             private Mock<IRuleRepository> ruleRepoMock;
             private IRuleRepository ruleRepo;
             private Mock<IRoleRepository> roleRepoMock;
@@ -2584,6 +2600,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             private ICourseRepository courseRepo;
             private Mock<ITermRepository> termRepoMock;
             private ITermRepository termRepo;
+            private Mock<IFacultyRepository> facultyRepoMock;
+            private IFacultyRepository facultyRepo;
             private Mock<IRuleRepository> ruleRepoMock;
             private IRuleRepository ruleRepo;
             private Mock<IRoleRepository> roleRepoMock;
@@ -2747,11 +2765,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         Mock<IRequirementRepository> requirementRepositoryMock;
         Mock<ISectionRepository> sectionRepositoryMock;
         Mock<ITermRepository> termRepositoryMock;
+        Mock<ITermRepository> facultyRepoMock;
         Mock<IRuleRepository> ruleRepositoryMock;
         Mock<IStudentConfigurationRepository> studentConfigurationRepositoryMock;
         Mock<IRoleRepository> roleRepositoryMock;
         Mock<ILogger> loggerMock;
         Mock<IColleagueTransactionFactory> transFactoryMock;
+
 
         ICurrentUserFactory curntUserFactory;
         CourseService courseService;
@@ -3245,513 +3265,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
     }
 
     [TestClass]
-    public class CourseService_PostCourses2Async : CurrentUserSetup
-    {
-        Mock<IAdapterRegistry> adapterRegistryMock;
-        Mock<ICourseRepository> courseRepositoryMock;
-        Mock<IReferenceDataRepository> referenceDataRepositoryMock;
-        Mock<IStudentReferenceDataRepository> studentReferenceDataRepositoryMock;
-        Mock<IRequirementRepository> requirementRepositoryMock;
-        Mock<ISectionRepository> sectionRepositoryMock;
-        Mock<ITermRepository> termRepositoryMock;
-        Mock<IRuleRepository> ruleRepositoryMock;
-        Mock<IStudentConfigurationRepository> studentConfigurationRepositoryMock;
-        Mock<IRoleRepository> roleRepositoryMock;
-        Mock<ILogger> loggerMock;
-        Mock<IColleagueTransactionFactory> transFactoryMock;
-
-        ICurrentUserFactory curntUserFactory;
-        CourseService courseService;
-
-        List<Dtos.Course2> allDtoCourses = new List<Dtos.Course2>();
-        List<Ellucian.Colleague.Dtos.Credit2> credits;
-
-        IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Course> allEntityCourses;
-        IEnumerable<Ellucian.Colleague.Domain.Student.Entities.GradeScheme> allGradeScheme;
-        IEnumerable<Ellucian.Colleague.Domain.Student.Entities.AcademicDepartment> academicDepartments;
-        IEnumerable<Ellucian.Colleague.Domain.Base.Entities.Department> allDepartments;
-        IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Subject> allSubjects;
-
-        ICollection<Domain.Student.Entities.CourseLevel> courseLevelCollection = new List<Domain.Student.Entities.CourseLevel>();
-        ICollection<Domain.Student.Entities.InstructionalMethod> instructionalMethodCollection = new List<Domain.Student.Entities.InstructionalMethod>();
-        ICollection<Domain.Student.Entities.AcademicLevel> academicLevelCollection = new List<Domain.Student.Entities.AcademicLevel>();
-        ICollection<Domain.Student.Entities.CreditCategory> creditCategoryCollection = new List<Domain.Student.Entities.CreditCategory>();
-
-        private IConfigurationRepository baseConfigurationRepository;
-        private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
-
-        string code;
-        string description;
-        ExternalMapping externalMapping;
-        ExternalMappingItem item1;
-        ExternalMappingItem item2;
-        ExternalMappingItem item3;
-        ExternalMappingItem item4;
-
-        [TestInitialize]
-        public async void Initialize()
-        {
-            adapterRegistryMock = new Mock<IAdapterRegistry>();
-            courseRepositoryMock = new Mock<ICourseRepository>();
-            referenceDataRepositoryMock = new Mock<IReferenceDataRepository>();
-            studentReferenceDataRepositoryMock = new Mock<IStudentReferenceDataRepository>();
-            requirementRepositoryMock = new Mock<IRequirementRepository>();
-            sectionRepositoryMock = new Mock<ISectionRepository>();
-            termRepositoryMock = new Mock<ITermRepository>();
-            ruleRepositoryMock = new Mock<IRuleRepository>();
-            studentConfigurationRepositoryMock = new Mock<IStudentConfigurationRepository>();
-            roleRepositoryMock = new Mock<IRoleRepository>();
-            loggerMock = new Mock<ILogger>();
-            transFactoryMock = new Mock<IColleagueTransactionFactory>();
-
-            baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
-            baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
-
-            curntUserFactory = new CurrentUserSetup.ThirdPartyUserFactory();
-            allEntityCourses = new TestCourseRepository().GetAsync().Result.Take(41);
-            allSubjects = new TestSubjectRepository().Get();
-
-            await BuildMocksForCourseCreateUpdate();
-
-            Mapper.CreateMap<Ellucian.Colleague.Domain.Student.Entities.Course, Ellucian.Colleague.Dtos.Course2>();
-            foreach (var course in allEntityCourses)
-            {
-                Ellucian.Colleague.Dtos.Course2 target = Mapper.Map<Domain.Student.Entities.Course, Ellucian.Colleague.Dtos.Course2>(course);
-                allDtoCourses.Add(target);
-            }
-
-            courseService = new CourseService
-                                (
-                                    adapterRegistryMock.Object, courseRepositoryMock.Object, referenceDataRepositoryMock.Object,
-                                    studentReferenceDataRepositoryMock.Object, requirementRepositoryMock.Object, sectionRepositoryMock.Object,
-                                    termRepositoryMock.Object, ruleRepositoryMock.Object, studentConfigurationRepositoryMock.Object, baseConfigurationRepository,
-                                    curntUserFactory, roleRepositoryMock.Object, loggerMock.Object
-                                );
-        }
-
-        private async Task BuildMocksForCourseCreateUpdate()
-        {
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetSubjectsAsync()).Returns(Task.FromResult(allSubjects));
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetSubjectsAsync(true)).Returns(Task.FromResult(allSubjects));
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetSubjectsAsync(false)).Returns(Task.FromResult(allSubjects));
-
-            code = "LDM.SUBJECTS";
-            description = "Mapping of Subjects to Departments";
-            externalMapping = new ExternalMapping(code, description);
-            item1 = new ExternalMappingItem("ACCT") { NewCode = "BUSN" };
-            item2 = new ExternalMappingItem("AVIA") { NewCode = "AUTO" };
-            item3 = new ExternalMappingItem("COMP") { NewCode = "MATH" };
-            item4 = new ExternalMappingItem("HIST") { NewCode = "HIST" };
-
-            externalMapping.AddItem(item1);
-            externalMapping.AddItem(item2);
-            externalMapping.AddItem(item3);
-            externalMapping.AddItem(item4);
-            studentConfigurationRepositoryMock.Setup(scr => scr.GetCurriculumConfigurationAsync())
-                .ReturnsAsync(new Domain.Student.Entities.CurriculumConfiguration()
-                {
-                    SubjectDepartmentMapping = externalMapping,
-                    DefaultAcademicLevelCode = "UG",
-                    DefaultCourseLevelCode = "UG",
-                    ApproverId = "123",
-                    ApprovingAgencyId = "123",
-                    CourseActiveStatusCode = "A",
-                    CourseInactiveStatusCode = "C"
-                });
-
-
-            var creditCategoryOne = new Dtos.CreditIdAndTypeProperty();
-            creditCategoryOne.Detail = new GuidObject2() { Id = "9c3b805d-cfe6-483b-86c3-4c20562f8c15" };
-            creditCategoryOne.CreditType = CreditCategoryType2.Institutional;
-
-            var creditCategoryTwo = new Dtos.CreditIdAndTypeProperty();
-            creditCategoryTwo.Detail = new GuidObject2() { Id = "0736a2d4-7733-4e0d-bfc0-0fe92a165c97" };
-            creditCategoryTwo.CreditType = CreditCategoryType2.Institutional;
-
-            credits = new List<Ellucian.Colleague.Dtos.Credit2>()
-                            { new Ellucian.Colleague.Dtos.Credit2() { CreditCategory = creditCategoryOne },
-                                new Ellucian.Colleague.Dtos.Credit2() { CreditCategory = creditCategoryTwo }
-                            };
-
-            courseLevelCollection.Add(new Domain.Student.Entities.CourseLevel("19f6e2cd-1e5f-4485-9b27-60d4f4e4b1ff", "100", "First Yr"));
-            courseLevelCollection.Add(new Domain.Student.Entities.CourseLevel("73244057-D1EC-4094-A0B7-DE602533E3A6", "200", "Second Year"));
-            courseLevelCollection.Add(new Domain.Student.Entities.CourseLevel("1df164eb-8178-4321-a9f7-24f12d3991d8", "300", "Third Year"));
-            courseLevelCollection.Add(new Domain.Student.Entities.CourseLevel("4aa187ae-6d22-4b10-a2e2-1304ebc18176", "400", "Third Year"));
-            courseLevelCollection.Add(new Domain.Student.Entities.CourseLevel("d9f42a0f-39de-44bc-87af-517619141bde", "500", "Third Year"));
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseLevelsAsync()).ReturnsAsync(courseLevelCollection);
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseLevelsAsync(true)).ReturnsAsync(courseLevelCollection);
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetCourseLevelsAsync(false)).ReturnsAsync(courseLevelCollection);
-
-            instructionalMethodCollection.Add(new Domain.Student.Entities.InstructionalMethod("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "LG", "LG", false));
-            instructionalMethodCollection.Add(new Domain.Student.Entities.InstructionalMethod("73244057-D1EC-4094-A0B7-DE602533E3A6", "30", "30", true));
-            instructionalMethodCollection.Add(new Domain.Student.Entities.InstructionalMethod("1df164eb-8178-4321-a9f7-24f12d3991d8", "04", "04", false));
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetInstructionalMethodsAsync()).ReturnsAsync(instructionalMethodCollection);
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetInstructionalMethodsAsync(true)).ReturnsAsync(instructionalMethodCollection);
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetInstructionalMethodsAsync(false)).ReturnsAsync(instructionalMethodCollection);
-
-            academicLevelCollection.Add(new Domain.Student.Entities.AcademicLevel("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "CE", "Continuing Education"));
-            academicLevelCollection.Add(new Domain.Student.Entities.AcademicLevel("73244057-D1EC-4094-A0B7-DE602533E3A6", "GR", "Graduate"));
-            academicLevelCollection.Add(new Domain.Student.Entities.AcademicLevel("1df164eb-8178-4321-a9f7-24f12d3991d8", "UG", "Undergraduate"));
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync()).ReturnsAsync(academicLevelCollection);
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync(true)).ReturnsAsync(academicLevelCollection);
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicLevelsAsync(false)).ReturnsAsync(academicLevelCollection);
-
-            allGradeScheme = await new TestStudentReferenceDataRepository().GetGradeSchemesAsync();
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetGradeSchemesAsync()).ReturnsAsync(allGradeScheme);
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetGradeSchemesAsync(true)).ReturnsAsync(allGradeScheme);
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetGradeSchemesAsync(false)).ReturnsAsync(allGradeScheme);
-
-            allDepartments = new TestDepartmentRepository().Get();
-            referenceDataRepositoryMock.Setup(repo => repo.DepartmentsAsync()).ReturnsAsync(allDepartments);
-            referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(true)).ReturnsAsync(allDepartments);
-            referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(false)).ReturnsAsync(allDepartments);
-            academicDepartments = new List<Ellucian.Colleague.Domain.Student.Entities.AcademicDepartment>()
-                                        {
-                                            new Ellucian.Colleague.Domain.Student.Entities.AcademicDepartment("f84e8e9d-1254-4331-a0a5-04d494a6eaa8", "HIST", "History", true)
-                                        };
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicDepartmentsAsync()).ReturnsAsync(academicDepartments);
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicDepartmentsAsync(true)).ReturnsAsync(academicDepartments);
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetAcademicDepartmentsAsync(false)).ReturnsAsync(academicDepartments);
-
-            creditCategoryCollection.Add(new Domain.Student.Entities.CreditCategory("9C3B805D-CFE6-483B-86C3-4C20562F8C15", "I", "Institutional", Domain.Student.Entities.CreditType.Institutional));
-            creditCategoryCollection.Add(new Domain.Student.Entities.CreditCategory("73244057-D1EC-4094-A0B7-DE602533E3A6", "C", "Continuing Education", Domain.Student.Entities.CreditType.ContinuingEducation));
-            creditCategoryCollection.Add(new Domain.Student.Entities.CreditCategory("1df164eb-8178-4321-a9f7-24f12d3991d8", "T", "Transfer Credit", Domain.Student.Entities.CreditType.Transfer));
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetCreditCategoriesAsync()).ReturnsAsync(creditCategoryCollection);
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetCreditCategoriesAsync(true)).ReturnsAsync(creditCategoryCollection);
-            studentReferenceDataRepositoryMock.Setup(repo => repo.GetCreditCategoriesAsync(false)).ReturnsAsync(creditCategoryCollection);
-        }
-
-        [TestCleanup]
-        public void Cleanup()
-        {
-            courseService = null;
-            allEntityCourses = null;
-            allDtoCourses = null;
-            allGradeScheme = null;
-            allGradeScheme = null;
-            credits = null;
-            academicDepartments = null;
-            allDepartments = null;
-            allSubjects = null;
-            courseLevelCollection = null;
-            instructionalMethodCollection = null;
-            code = null;
-            description = null;
-            externalMapping = null;
-            item1 = null;
-            item2 = null;
-            item3 = null;
-            item4 = null;
-        }
-
-        [TestMethod]
-        public async Task CourseService_CreateCourse2Async()
-        {
-            var entityCourse = new TestCourseRepository().Hist100;
-            var newEntityCourseForCreate = BuildCourseForCreate(entityCourse);
-
-            createUpdateCourseRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateAndUpdateCourse));
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createUpdateCourseRole });
-
-            courseRepositoryMock.Setup(c => c.GetCourseByGuidAsync(newEntityCourseForCreate.Guid))
-                 .ReturnsAsync(newEntityCourseForCreate);
-
-            var result = await courseService.GetCourseByGuid2Async(newEntityCourseForCreate.Guid);
-            // result.Credits = credits;
-            result.InstructionMethods.Add(new Dtos.GuidObject2("9c3b805d-cfe6-483b-86c3-4c20562f8c15"));
-
-            courseRepositoryMock.Setup(crm => crm.CreateCourseAsync(It.IsAny<Ellucian.Colleague.Domain.Student.Entities.Course>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(newEntityCourseForCreate);
-
-            //Act
-            var resultCreate = await courseService.CreateCourse2Async(result);
-            //Assert
-            Assert.AreEqual(result.Id, newEntityCourseForCreate.Guid);
-        }
-
-        [TestMethod]
-        public async Task CourseService_CreateCourse2Async_GUID_Reqd()
-        {
-            var entityCourse = new TestCourseRepository().Hist100;
-            var newEntityCourseForCreate = BuildCourseForCreate(entityCourse);
-
-            createUpdateCourseRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateAndUpdateCourse));
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createUpdateCourseRole });
-
-            courseRepositoryMock.Setup(c => c.GetCourseByGuidAsync(newEntityCourseForCreate.Guid))
-                 .ReturnsAsync(newEntityCourseForCreate);
-
-            var result = await courseService.GetCourseByGuid2Async(newEntityCourseForCreate.Guid);
-            // result.Credits = credits;
-            result.InstructionMethods.Add(new Dtos.GuidObject2("9c3b805d-cfe6-483b-86c3-4c20562f8c15"));
-
-            result.Id = Guid.Empty.ToString();
-
-            courseRepositoryMock.Setup(crm => crm.CreateCourseAsync(It.IsAny<Ellucian.Colleague.Domain.Student.Entities.Course>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(newEntityCourseForCreate);
-
-            //Act
-            var resultCreate = await courseService.CreateCourse2Async(result);
-            //Assert
-            Assert.AreEqual(newEntityCourseForCreate.Guid, resultCreate.Id);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
-        public async Task CourseService_CreateCourse2Async_ArgumentException_Empty_Id()
-        {
-            createUpdateCourseRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateAndUpdateCourse));
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createUpdateCourseRole });
-
-            Dtos.Course2 courseDto = new Dtos.Course2();
-            courseDto.Id = string.Empty;
-            courseDto.Title = "Some title";
-            courseDto.Subject.Id = "234";
-            courseDto.Number = "100";
-            courseDto.EffectiveStartDate = DateTime.Now;
-
-            await courseService.CreateCourse2Async(courseDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
-        public async Task CourseService_CreateCourse2Async_ArgumentException_Empty_Title()
-        {
-            createUpdateCourseRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateAndUpdateCourse));
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createUpdateCourseRole });
-
-            Dtos.Course2 courseDto = new Dtos.Course2();
-            courseDto.Id = "123";
-            courseDto.Title = string.Empty;
-            courseDto.Subject.Id = "234";
-            courseDto.Number = "100";
-            courseDto.EffectiveStartDate = DateTime.Now;
-
-            await courseService.CreateCourse2Async(courseDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
-        public async Task CourseService_CreateCourse2Async_ArgumentException_Empty_SubjectId()
-        {
-            createUpdateCourseRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateAndUpdateCourse));
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createUpdateCourseRole });
-
-            Dtos.Course2 courseDto = new Dtos.Course2();
-            courseDto.Id = "123";
-            courseDto.Title = "Some Title";
-            courseDto.Subject.Id = string.Empty;
-            courseDto.Number = "100";
-            courseDto.EffectiveStartDate = DateTime.Now;
-
-            await courseService.CreateCourse2Async(courseDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
-        public async Task CourseService_CreateCourse2Async_ArgumentException_Empty_Number()
-        {
-            createUpdateCourseRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateAndUpdateCourse));
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createUpdateCourseRole });
-
-            Dtos.Course2 courseDto = new Dtos.Course2();
-            courseDto.Id = "123";
-            courseDto.Title = "Some Title";
-            courseDto.Subject.Id = "569";
-            courseDto.Number = string.Empty;
-            courseDto.EffectiveStartDate = DateTime.Now;
-
-            await courseService.CreateCourse2Async(courseDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
-        public async Task CourseService_CreateCourse2Async_ArgumentException_Default_EffectiveStartDate()
-        {
-            createUpdateCourseRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateAndUpdateCourse));
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createUpdateCourseRole });
-
-            Dtos.Course2 courseDto = new Dtos.Course2();
-            courseDto.Id = "123";
-            courseDto.Title = "Some Title";
-            courseDto.Subject.Id = "569";
-            courseDto.Number = "100";
-            courseDto.EffectiveStartDate = default(DateTime);
-
-            await courseService.CreateCourse2Async(courseDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
-        public async Task CourseService_CreateCourse2Async_ArgumentException_Default_EffectiveEndDate()
-        {
-            createUpdateCourseRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateAndUpdateCourse));
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createUpdateCourseRole });
-
-            Dtos.Course2 courseDto = new Dtos.Course2();
-            courseDto.Id = "123";
-            courseDto.Title = "Some Title";
-            courseDto.Subject.Id = "569";
-            courseDto.Number = "100";
-            courseDto.EffectiveEndDate = null;
-
-            await courseService.CreateCourse2Async(courseDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
-        public async Task CourseService_CreateCourse2Async_ArgumentException_AcadLevels()
-        {
-            createUpdateCourseRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateAndUpdateCourse));
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createUpdateCourseRole });
-
-            Dtos.Course2 courseDto = new Dtos.Course2();
-            courseDto.Id = "123";
-            courseDto.Title = "Some Title";
-            courseDto.Subject.Id = "569";
-            courseDto.Number = "100";
-            courseDto.EffectiveStartDate = DateTime.Now;
-            courseDto.AcademicLevels = new List<GuidObject2>() { new GuidObject2("blah") };
-            await courseService.CreateCourse2Async(courseDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
-        public async Task CourseService_CreateCourse2Async_ArgumentException_CourseLevelsNull()
-        {
-            createUpdateCourseRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateAndUpdateCourse));
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createUpdateCourseRole });
-
-            Dtos.Course2 courseDto = new Dtos.Course2();
-            courseDto.Id = "123";
-            courseDto.Title = "Some Title";
-            courseDto.Subject.Id = "569";
-            courseDto.Number = "100";
-            courseDto.EffectiveStartDate = DateTime.Now;
-            courseDto.CourseLevels = new List<GuidObject2>() { new GuidObject2("blah") };
-            await courseService.CreateCourse2Async(courseDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
-        public async Task CourseService_CreateCourse2Async_ArgumentException_OwningOrganizations()
-        {
-            createUpdateCourseRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateAndUpdateCourse));
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createUpdateCourseRole });
-
-            Dtos.Course2 courseDto = new Dtos.Course2();
-            courseDto.Id = "123";
-            courseDto.Title = "Some Title";
-            courseDto.Subject.Id = "569";
-            courseDto.Number = "100";
-            courseDto.EffectiveStartDate = DateTime.Now;
-            courseDto.OwningOrganizations = new List<Dtos.OfferingOrganization2>() { new Dtos.OfferingOrganization2() { Organization = new GuidObject2(Guid.NewGuid().ToString()) } };
-
-            await courseService.CreateCourse2Async(courseDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
-        public async Task CourseService_CreateCourse2Async_ArgumentException_InstructionalMethodCodes()
-        {
-            createUpdateCourseRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateAndUpdateCourse));
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createUpdateCourseRole });
-
-            Dtos.Course2 courseDto = new Dtos.Course2();
-            courseDto.Id = "123";
-            courseDto.Title = "Some Title";
-            courseDto.Subject.Id = "569";
-            courseDto.Number = "100";
-            courseDto.EffectiveStartDate = DateTime.Now;
-            courseDto.InstructionMethods = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2() { Id = Guid.NewGuid().ToString() } };
-            await courseService.CreateCourse2Async(courseDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
-        public async Task CourseService_CreateCourse2Async_ArgumentException_InstructionalMethodCodesNull()
-        {
-            createUpdateCourseRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateAndUpdateCourse));
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createUpdateCourseRole });
-
-            Dtos.Course2 courseDto = new Dtos.Course2();
-            courseDto.Id = "123";
-            courseDto.Title = "Some Title";
-            courseDto.Subject.Id = "569";
-            courseDto.Number = "100";
-            courseDto.EffectiveStartDate = DateTime.Now;
-            courseDto.InstructionMethods = new List<GuidObject2>() { new GuidObject2("blah") };
-            await courseService.CreateCourse2Async(courseDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
-        public async Task CourseService_CreateCourse2Async_ArgumentException_GradeSchemeCode()
-        {
-            createUpdateCourseRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateAndUpdateCourse));
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createUpdateCourseRole });
-
-            Dtos.Course2 courseDto = new Dtos.Course2();
-            courseDto.Id = "123";
-            courseDto.Title = "Some Title";
-            courseDto.Subject.Id = "569";
-            courseDto.Number = "100";
-            courseDto.EffectiveStartDate = DateTime.Now;
-            courseDto.GradeSchemes = new List<Dtos.GuidObject2>() { new Dtos.GuidObject2() { Id = Guid.NewGuid().ToString() } };
-            await courseService.CreateCourse2Async(courseDto);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
-        public async Task CourseService_CreateCourse2Async_ArgumentException_CreditCategory()
-        {
-            createUpdateCourseRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateAndUpdateCourse));
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createUpdateCourseRole });
-
-            Dtos.Course2 courseDto = new Dtos.Course2();
-            courseDto.Id = "123";
-            courseDto.Title = "Some Title";
-            courseDto.Subject.Id = "569";
-            courseDto.Number = "100";
-            courseDto.EffectiveStartDate = DateTime.Now;
-            courseDto.Credits = null;
-            await courseService.CreateCourse2Async(courseDto);
-        }
-        private Domain.Student.Entities.Course BuildCourseForCreate(Domain.Student.Entities.Course entityCourse)
-        {
-            Ellucian.Colleague.Domain.Student.Entities.Course course = new Ellucian.Colleague.Domain.Student.Entities.Course
-                ("", entityCourse.Title, null, entityCourse.Departments, entityCourse.SubjectCode, entityCourse.Number, entityCourse.AcademicLevelCode,
-                entityCourse.CourseLevelCodes, 3.0m, 1.0m, entityCourse.CourseApprovals);
-            // GUID
-            course.Guid = entityCourse.Guid;
-
-            // DescriptionSearch
-            course.Description = entityCourse.Description;
-
-
-            course.LocationCodes = entityCourse.LocationCodes;
-            // Max credits
-            course.MaximumCredits = 4.0m;
-
-            // Variable Credit Increment
-            course.VariableCreditIncrement = 1.0m;
-
-            // Start/End date
-            course.StartDate = entityCourse.StartDate;
-            course.EndDate = entityCourse.EndDate;
-
-            // Topic Code
-            course.TopicCode = "TopicCode";
-
-            // Add course types
-            course.AddType("TYPEA");
-
-            // Add local credit type - the local string value of the credit type.
-            course.LocalCreditType = "I";
-
-            return course;
-        }
-    }
-
-    [TestClass]
     public class CourseService_PostCourses3Async : CurrentUserSetup
     {
         Mock<IAdapterRegistry> adapterRegistryMock;
@@ -3858,7 +3371,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             studentConfigurationRepositoryMock.Setup(scr => scr.GetCurriculumConfigurationAsync())
                 .ReturnsAsync(new Domain.Student.Entities.CurriculumConfiguration()
                 {
-                    SubjectDepartmentMapping = externalMapping,
                     DefaultAcademicLevelCode = "UG",
                     DefaultCourseLevelCode = "UG",
                     ApproverId = "123",
@@ -4418,7 +3930,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             studentConfigurationRepositoryMock.Setup(scr => scr.GetCurriculumConfigurationAsync())
                 .ReturnsAsync(new Domain.Student.Entities.CurriculumConfiguration()
                 {
-                    SubjectDepartmentMapping = externalMapping,
                     DefaultAcademicLevelCode = "UG",
                     DefaultCourseLevelCode = "UG",
                     ApproverId = "123",
@@ -4509,47 +4020,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             item4 = null;
         }
 
-        [TestMethod]
-        public async Task CourseService_UpdateCourse2Async()
-        {
-            var entityCourse = new TestCourseRepository().Hist100;
-            var newEntityCourseForCreate = BuildCourseForCreate(entityCourse);
-
-            createUpdateCourseRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Student.StudentPermissionCodes.CreateAndUpdateCourse));
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { createUpdateCourseRole });
-
-            courseRepositoryMock.Setup(c => c.GetCourseByGuidAsync(newEntityCourseForCreate.Guid))
-                 .ReturnsAsync(newEntityCourseForCreate);
-
-            var result = await courseService.GetCourseByGuid2Async(newEntityCourseForCreate.Guid);
-            // result.Credits = credits;
-            result.InstructionMethods.Add(new Dtos.GuidObject2("9c3b805d-cfe6-483b-86c3-4c20562f8c15"));
-
-            courseRepositoryMock.Setup(crm => crm.UpdateCourseAsync(It.IsAny<Ellucian.Colleague.Domain.Student.Entities.Course>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(newEntityCourseForCreate);
-
-            //Act
-            var resultCreate = await courseService.UpdateCourse2Async(result);
-            //Assert
-            Assert.AreEqual(result.Id, newEntityCourseForCreate.Guid);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public async Task CourseService_UpdateCourse2Async_ArgumentNullException()
-        {
-            await courseService.UpdateCourse2Async(null);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
-        public async Task CourseService_UpdateCourse2Async_KeyNotFoundException()
-        {
-            var result = new Dtos.Course2();
-            result.Id = string.Empty;
-            //Act
-            await courseService.UpdateCourse2Async(result);
-        }
-
+  
 
         private Domain.Student.Entities.Course BuildCourseForCreate(Domain.Student.Entities.Course entityCourse)
         {
@@ -4691,7 +4162,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             studentConfigurationRepositoryMock.Setup(scr => scr.GetCurriculumConfigurationAsync())
                 .ReturnsAsync(new Domain.Student.Entities.CurriculumConfiguration()
                 {
-                    SubjectDepartmentMapping = externalMapping,
                     DefaultAcademicLevelCode = "UG",
                     DefaultCourseLevelCode = "UG",
                     ApproverId = "123",
@@ -5677,7 +5147,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             studentConfigurationRepositoryMock.Setup(scr => scr.GetCurriculumConfigurationAsync())
                 .ReturnsAsync(new Domain.Student.Entities.CurriculumConfiguration()
                 {
-                    SubjectDepartmentMapping = externalMapping,
                     DefaultAcademicLevelCode = "UG",
                     DefaultCourseLevelCode = "UG",
                     ApproverId = "123",
@@ -6250,7 +5719,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             studentConfigurationRepositoryMock.Setup(scr => scr.GetCurriculumConfigurationAsync())
                 .ReturnsAsync(new Domain.Student.Entities.CurriculumConfiguration()
                 {
-                    SubjectDepartmentMapping = externalMapping,
                     DefaultAcademicLevelCode = "UG",
                     DefaultCourseLevelCode = "UG",
                     ApproverId = "123",
@@ -6538,7 +6006,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             currConfiguration = new Domain.Student.Entities.CurriculumConfiguration()
             {
-                SubjectDepartmentMapping = externalMapping,
                 DefaultAcademicLevelCode = "UG",
                 DefaultCourseLevelCode = "UG",
                 ApproverId = "123",
@@ -7177,9 +6644,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(IntegrationApiException))]
         public async Task CourseService_UpdateCourse5Async_OwnershipPercentageZero()
         {
+
             var entityCourse = new TestCourseRepository().Hist100;
             var newEntityCourseForCreate = BuildCourseForCreate(entityCourse);
 
@@ -7190,20 +6657,23 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                  .ReturnsAsync(newEntityCourseForCreate);
 
             var result = await courseService.GetCourseByGuid5Async(newEntityCourseForCreate.Guid);
+            // result.Credits = credits;
+            result.InstructionalMethodDetails.Add(new InstructionalMethodDetail()
+            {
+                InstructionalMethod = new Dtos.GuidObject2("9c3b805d-cfe6-483b-86c3-4c20562f8c15"),
+                InstructionalDeliveryMethod = new GuidObject2("9c3b805d-cfe6-483b-86c3-4c20562f8c15")
+            });
             result.OwningInstitutionUnits = new List<OwningInstitutionUnit>() { new OwningInstitutionUnit()
             { InstitutionUnit = new GuidObject2(Guid.NewGuid().ToString()), OwnershipPercentage = 0 } };
 
-            try
-            {
-                var resultCreate = await courseService.UpdateCourse5Async(result, false);
-            }
-            catch (IntegrationApiException ex)
-            {
-                Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.HttpStatusCode);
-                Assert.AreEqual("Validation.Exception", ex.Errors[0].Code);
-                Assert.AreEqual("Ownership Percentage is a required field when Owning Organizations are defined.", ex.Errors[0].Message);
-                throw ex;
-            }
+            courseRepositoryMock.Setup(crm => crm.UpdateCourseAsync(It.IsAny<Ellucian.Colleague.Domain.Student.Entities.Course>(), It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(newEntityCourseForCreate);
+
+            //Act
+            var resultCreate = await courseService.UpdateCourse5Async(result, false);
+            //Assert
+            Assert.AreEqual(result.Id, newEntityCourseForCreate.Guid);
+            Assert.AreEqual(result.OwningInstitutionUnits[0].OwnershipPercentage, 0);
         }
 
         [TestMethod]
@@ -7477,7 +6947,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 new Credit3() { CreditCategory = null, Measure = CreditMeasure2.CEU }
             };
 
-            try { await courseService.UpdateCourse5Async(result, false);
+            try
+            {
+                await courseService.UpdateCourse5Async(result, false);
             }
             catch (IntegrationApiException ex)
             {
@@ -8086,7 +7558,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             currConfiguration = new Domain.Student.Entities.CurriculumConfiguration()
             {
-                SubjectDepartmentMapping = externalMapping,
                 DefaultAcademicLevelCode = "UG",
                 DefaultCourseLevelCode = "UG",
                 ApproverId = "123",
@@ -8129,7 +7600,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             currConfiguration = new Domain.Student.Entities.CurriculumConfiguration()
             {
-                SubjectDepartmentMapping = externalMapping,
                 DefaultAcademicLevelCode = "UG",
                 DefaultCourseLevelCode = "UG",
                 ApproverId = "123",
@@ -8172,7 +7642,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             currConfiguration = new Domain.Student.Entities.CurriculumConfiguration()
             {
-                SubjectDepartmentMapping = externalMapping,
                 DefaultAcademicLevelCode = "UG",
                 DefaultCourseLevelCode = "UG",
                 ApproverId = "123",
@@ -8218,7 +7687,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             currConfiguration = new Domain.Student.Entities.CurriculumConfiguration()
             {
-                SubjectDepartmentMapping = externalMapping,
                 DefaultAcademicLevelCode = "UG",
                 DefaultCourseLevelCode = "UG",
                 ApproverId = "123",
@@ -8264,7 +7732,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             currConfiguration = new Domain.Student.Entities.CurriculumConfiguration()
             {
-                SubjectDepartmentMapping = externalMapping,
                 DefaultAcademicLevelCode = "UG",
                 DefaultCourseLevelCode = "UG",
                 ApproverId = "123",
@@ -8313,7 +7780,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             currConfiguration = new Domain.Student.Entities.CurriculumConfiguration()
             {
-                SubjectDepartmentMapping = externalMapping,
                 DefaultAcademicLevelCode = "UG",
                 DefaultCourseLevelCode = "UG",
                 ApproverId = "123",
@@ -8363,7 +7829,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             currConfiguration = new Domain.Student.Entities.CurriculumConfiguration()
             {
-                SubjectDepartmentMapping = externalMapping,
                 DefaultAcademicLevelCode = "UG",
                 DefaultCourseLevelCode = "UG",
                 ApproverId = "123",
@@ -8414,7 +7879,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             currConfiguration = new Domain.Student.Entities.CurriculumConfiguration()
             {
-                SubjectDepartmentMapping = externalMapping,
                 DefaultAcademicLevelCode = "UG",
                 DefaultCourseLevelCode = "UG",
                 ApproverId = "123",
@@ -8464,7 +7928,6 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             currConfiguration = new Domain.Student.Entities.CurriculumConfiguration()
             {
-                SubjectDepartmentMapping = externalMapping,
                 DefaultAcademicLevelCode = "UG",
                 DefaultCourseLevelCode = "UG",
                 ApproverId = "123",
@@ -9106,7 +8569,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
             ruleRepoMock.Setup(repo => repo.ExecuteAsync<Ellucian.Colleague.Domain.Student.Entities.Course>(It.IsAny<IEnumerable<RuleRequest<Ellucian.Colleague.Domain.Student.Entities.Course>>>()))
                 .ReturnsAsync(ruleResults)
-                .Callback<List<RuleRequest<Ellucian.Colleague.Domain.Student.Entities.Course>>>(r => ruleReqList = r);
+                .Callback<IEnumerable<RuleRequest<Ellucian.Colleague.Domain.Student.Entities.Course>>>(r => ruleReqList = r);
             // Mock Adapter 
             adapterRegistryMock = new Mock<IAdapterRegistry>();
             adapterRegistry = adapterRegistryMock.Object;
@@ -9138,7 +8601,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         }
 
         [TestMethod]
-        public async Task ReturnsCoursesForRequirementAndSubrequirement()
+        public async Task ReturnsCoursesForRequirementAndSubrequirementAndGroup()
         {
             foreach (var req in allRequirements)
             {
@@ -9481,7 +8944,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
             ruleRepoMock.Setup(repo => repo.ExecuteAsync<Ellucian.Colleague.Domain.Student.Entities.Course>(It.IsAny<IEnumerable<RuleRequest<Ellucian.Colleague.Domain.Student.Entities.Course>>>()))
                 .ReturnsAsync(ruleResults)
-                .Callback<List<RuleRequest<Ellucian.Colleague.Domain.Student.Entities.Course>>>(r => ruleReqList = r);
+                .Callback<IEnumerable<RuleRequest<Ellucian.Colleague.Domain.Student.Entities.Course>>>(r => ruleReqList = r);
 
             foreach (var req in allRequirements)
             {
@@ -10385,7 +9848,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             Assert.AreEqual(courseEntity.TermYearlyCycle, course2Dto.TermYearlyCycle);
             Assert.AreEqual(courseEntity.TermSessionCycle, course2Dto.TermSessionCycle);
             Assert.AreEqual(courseEntity.LocationCodes.Count(), course2Dto.LocationCodes.Count());
-
+            Assert.IsFalse(course2Dto.ShowDropRoster);
         }
 
         [TestMethod]
@@ -10505,8 +9968,43 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                     Assert.AreEqual(courseEntity.YearsOffered, course2Dto.YearsOffered);
                     Assert.AreEqual(courseEntity.TermsOffered, course2Dto.TermsOffered);
                     Assert.AreEqual(courseEntity.LocationCodes.Count(), course2Dto.LocationCodes.Count());
+                    Assert.IsFalse(course2Dto.ShowDropRoster);
                 }
             }
+        }
+
+        [TestMethod]
+        public async Task ShowDropRoster_True()
+        {
+            allCourses.ElementAt(8).ShowDropRoster = true;
+
+            // Arrange
+            var courseIdList = new List<string>() { "186" }; //index 
+            var courseEntities = allCourses.Where(c => courseIdList.Contains(c.Id));
+            courseRepoMock.Setup(repo => repo.GetAsync(courseIdList)).Returns(Task.FromResult(courseEntities));
+
+            // Act
+            var criteria = new CourseQueryCriteria() { CourseIds = courseIdList };
+            var courseDto = (await courseService.GetCourses2Async(criteria)).FirstOrDefault();
+
+            Assert.IsTrue(courseDto.ShowDropRoster);
+        }
+
+        [TestMethod]
+        public async Task ShowDropRoster_False()
+        {
+            allCourses.ElementAt(8).ShowDropRoster = false;
+
+            // Arrange
+            var courseIdList = new List<string>() { "186" }; //index 
+            var courseEntities = allCourses.Where(c => courseIdList.Contains(c.Id));
+            courseRepoMock.Setup(repo => repo.GetAsync(courseIdList)).Returns(Task.FromResult(courseEntities));
+
+            // Act
+            var criteria = new CourseQueryCriteria() { CourseIds = courseIdList };
+            var courseDto = (await courseService.GetCourses2Async(criteria)).FirstOrDefault();
+
+            Assert.IsFalse(courseDto.ShowDropRoster);
         }
 
         [TestMethod]
@@ -10625,7 +10123,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             configurationRepoMock = new Mock<IStudentConfigurationRepository>();
             configurationRepo = configurationRepoMock.Object;
-            configurationRepoMock.Setup(repo => repo.GetCourseCatalogConfigurationAsync()).ReturnsAsync(new Domain.Student.Entities.CourseCatalogConfiguration(new DateTime?(new DateTime(2012, 2, 3)), new DateTime?(new DateTime(2014, 2, 3))));
+            configurationRepoMock.Setup(repo => repo.GetCourseCatalogConfiguration2Async()).ReturnsAsync(new Domain.Student.Entities.CourseCatalogConfiguration(new DateTime?(new DateTime(2012, 2, 3)), new DateTime?(new DateTime(2014, 2, 3))));
 
 
             roleRepoMock = new Mock<IRoleRepository>();
@@ -10919,7 +10417,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             newList.AddRange(primaryMeetingSections);
             sectionRepoMock.Setup(repo => repo.GetRegistrationSectionsAsync(regTerms)).Returns(Task.FromResult(newList.AsEnumerable()));
-         
+
             var criteria = new CourseSearchCriteria() { StartsAtTime = "09:00 AM", EndsByTime = "11:00 AM" };
             // Act - call course search
             var coursePage = await courseService.Search2Async(criteria, Int16.MaxValue, 1);
@@ -10938,8 +10436,8 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             List<Ellucian.Colleague.Domain.Student.Entities.Section> primaryMeetingSections = (await (new TestSectionRepository().BuildSectionsWithPrimarySectionMeetingsAsync())).ToList();
             sectionRepoMock.Setup(repo => repo.GetRegistrationSectionsAsync(regTerms)).Returns(Task.FromResult(primaryMeetingSections.AsEnumerable()));
             // Arrange - filter sections using time range
-          
-            var criteria = new CourseSearchCriteria() { StartsAtTime = "09:00 AM", EndsByTime = "12:00 PM"};
+
+            var criteria = new CourseSearchCriteria() { StartsAtTime = "09:00 AM", EndsByTime = "12:00 PM" };
             // Act - call course search
             var coursePage = await courseService.Search2Async(criteria, Int16.MaxValue, 1);
             Assert.IsTrue(coursePage.CurrentPageItems.SelectMany(c => c.MatchingSectionIds).Contains("999-SEC-WITH-PRIM-MTNGS"));
@@ -10978,7 +10476,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             sectionStartAt8am.UpdatePrimarySectionMeetings(new List<Ellucian.Colleague.Domain.Student.Entities.SectionMeeting>() { mp3 });
             sectionStartAt8am.FirstMeetingDate = sectionStartAt8am.StartDate.AddDays(15);
             sectionStartAt8am.LastMeetingDate = sectionStartAt8am.EndDate;
-            newList.Add(sectionStartAt8am); 
+            newList.Add(sectionStartAt8am);
             newList.Add(allSections.ToList()[1]); //no meetings
             newList.Add(allSections.ToList()[2]);//no meetings
             newList.Add(allSections.ToList()[3]); // 9-9:50 am
@@ -11004,7 +10502,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             Assert.IsTrue(coursePage.CurrentPageItems.SelectMany(c => c.MatchingSectionIds).Contains("998-SEC-WITH-PRIM-MTNGS"));
             Assert.IsFalse(coursePage.CurrentPageItems.SelectMany(c => c.MatchingSectionIds).Contains(allSections.ToList()[4].Id));//shuld not have section that starts t 1am
             Assert.AreEqual(2, coursePage.CurrentPageItems.Count());
-            Assert.AreEqual(6,coursePage.CurrentPageItems.SelectMany(c => c.MatchingSectionIds).Count());
+            Assert.AreEqual(6, coursePage.CurrentPageItems.SelectMany(c => c.MatchingSectionIds).Count());
 
         }
 
@@ -11540,6 +11038,9 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         [TestMethod]
         public async Task CriteriaHasKeywordOnly_ReturnsSections_Filters_Day_Location()
         {
+            allSections.ToList()[0].OnlineCategory= Domain.Student.Entities.OnlineCategory.Hybrid;
+            allSections.ToList()[1].OnlineCategory = Domain.Student.Entities.OnlineCategory.NotOnline;
+            allSections.ToList()[2].OnlineCategory = Domain.Student.Entities.OnlineCategory.Online;
             SectionSearchCriteria searchcriteria = new SectionSearchCriteria();
             searchcriteria.Keyword = "History";
             SectionPage sectionPage = await courseService.SectionSearchAsync(searchcriteria, int.MaxValue, 0);
@@ -11698,11 +11199,11 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             // Arrange -- Set up search criteria and page info then execute the section search
 
             SectionSearchCriteria searchcriteria = new SectionSearchCriteria();
-            searchcriteria.Subjects = new List<string>() {"ACCT","ART" };
+            searchcriteria.Subjects = new List<string>() { "ACCT", "ART" };
 
             // Act
             SectionPage sectionPage = await courseService.SectionSearchAsync(searchcriteria, int.MaxValue, 0);
-            int acctSections=allSections.Where(s => s.Subject == "ACCT").Count();
+            int acctSections = allSections.Where(s => s.Subject == "ACCT").Count();
             int artSections = allSections.Where(s => s.Subject == "ART").Count();
 
             // Validate
@@ -11827,7 +11328,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
         }
 
-      
+
         [TestMethod]
         public async Task SectionSearchAsync_StartAtTimeEndsByTimeFilter_WithOnlyPrimarySectionMeetings()
         {
@@ -11903,9 +11404,28 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             Assert.AreEqual(6, coursePage.CurrentPageItems.Count());
 
         }
+
+        [TestMethod]
+        public async Task SectionSearchAsync_Returns_Null_ActiveStudentIds()
+        {
+            // Arrange -- Set up search criteria and page info then execute the section search
+
+            SectionSearchCriteria searchcriteria = new SectionSearchCriteria();
+            searchcriteria.Subjects = new List<string>() { "ACCT", "ART" };
+
+            // Act
+            SectionPage sectionPage = await courseService.SectionSearchAsync(searchcriteria, int.MaxValue, 0);
+            int acctSections = allSections.Where(s => s.Subject == "ACCT").Count();
+            int artSections = allSections.Where(s => s.Subject == "ART").Count();
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(acctSections + artSections, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual(2, sectionPage.Subjects.Count());
+            Assert.IsNull(sectionPage.CurrentPageItems.ToList()[0].ActiveStudentIds);
+            Assert.IsNull(sectionPage.CurrentPageItems.ToList()[1].ActiveStudentIds);
+        }
     }
 
-   
+
     [TestClass]
     public class SectionsSearchSorting : Search3
     {
@@ -11927,31 +11447,48 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             adapterRegistryMock.Setup(reg => reg.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionRequisite, Dtos.Student.SectionRequisite>()).Returns(sectionRequisiteAdapter);
             SectionEntity section1 = new SectionEntity("100", "84", "01", DateTime.Today, 0, null, "spanish 300", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("MDLL") }, new List<string>() { "300" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Ellucian.Colleague.Domain.Student.Entities.SectionStatus.Active, "N", DateTime.Today) });
             SectionEntity section2 = new SectionEntity("101", "110", "01", DateTime.Today, 0, null, "biology 100", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("BIOL") }, new List<string>() { "100" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Ellucian.Colleague.Domain.Student.Entities.SectionStatus.Active, "N", DateTime.Today) });
-            SectionEntity section3 = new SectionEntity("102", "333", "01", DateTime.Today, 0, null, "math 152", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("MATH") }, new List<string>() { "100" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Ellucian.Colleague.Domain.Student.Entities.SectionStatus.Active, "N", DateTime.Today) });
+            SectionEntity section3 = new SectionEntity("102", "333", "01", DateTime.Today, 0, null, "math 152", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("MATH") }, new List<string>() { "100" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Ellucian.Colleague.Domain.Student.Entities.SectionStatus.Active, "N", DateTime.Today) }, allowWaitlist: true);
             SectionEntity section4 = new SectionEntity("103", "155", "01", DateTime.Today, 0, null, "poli 100", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("POLI") }, new List<string>() { "100" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Ellucian.Colleague.Domain.Student.Entities.SectionStatus.Active, "N", DateTime.Today) });
             SectionEntity section5 = new SectionEntity("104", "139", "01", DateTime.Today, 0, null, "history 100", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("HIST") }, new List<string>() { "100" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Ellucian.Colleague.Domain.Student.Entities.SectionStatus.Active, "N", DateTime.Today) });
             SectionEntity section6 = new SectionEntity("105", "156", "01", DateTime.Today, 0, null, "psycology 100", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("PSYC") }, new List<string>() { "100" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Ellucian.Colleague.Domain.Student.Entities.SectionStatus.Active, "N", DateTime.Today) });
             SectionEntity section7 = new SectionEntity("106", "187", "01", DateTime.Today, 0, null, "engl 102", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("ENGL") }, new List<string>() { "100" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Ellucian.Colleague.Domain.Student.Entities.SectionStatus.Active, "N", DateTime.Today) });
-            SectionEntity section8 = new SectionEntity("107", "139", "02", DateTime.Today, 0, null, "history 100", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("HIST") }, new List<string>() { "100" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Ellucian.Colleague.Domain.Student.Entities.SectionStatus.Active, "N", DateTime.Today) });
+            SectionEntity section8 = new SectionEntity("107", "139", "02", DateTime.Today, 0, null, "history 100", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("HIST") }, new List<string>() { "100" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Ellucian.Colleague.Domain.Student.Entities.SectionStatus.Active, "N", DateTime.Today) }, allowWaitlist: true);
 
-            section1.NumberOnWaitlist = 5;
-            section2.NumberOnWaitlist = 0;
+            //modify sections seats here 
+
+            //make HIST-100-02 , MATH-152 as waitlisted
+            section8.WaitlistMaximum = 2;
+            section8.NumberOnWaitlist = 1;
+            section8.SectionCapacity = 1;
+            section8.AddActiveStudent("111");
+
+            section3.WaitlistMaximum = 4;
             section3.NumberOnWaitlist = 3;
-            section4.NumberOnWaitlist = null;
+            section3.SectionCapacity = 1;
+            section3.AddActiveStudent("111");
+
+            //make HIST-100-01 and SPAN-300 as closed
             section5.NumberOnWaitlist = 2;
+            section5.SectionCapacity = 0;
+
+            section1.SectionCapacity = 2;
+            section1.AddActiveStudent("222");
+            section1.AddActiveStudent("333");
+            section1.NumberOnWaitlist = 5;
+            section1.WaitlistMaximum = 5;
+
+            //all other open
+            section2.NumberOnWaitlist = 0;
+            section4.NumberOnWaitlist = null;
             section6.NumberOnWaitlist = 0;
             section7.NumberOnWaitlist = 0;
-            section8.NumberOnWaitlist = 1;
 
-
-            section1.SectionCapacity = 20;
             section2.SectionCapacity = 20;
             section3.SectionCapacity = 13;
             section4.SectionCapacity = 15;
-            section5.SectionCapacity = 0;
             section6.SectionCapacity = 22;
             section7.SectionCapacity = 30;
-            section8.SectionCapacity = null;
+
 
 
             section1.Location = "NW";
@@ -12012,26 +11549,31 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             Assert.AreEqual("SPAN-300", sections[7].CourseName);
         }
 
-
         [TestMethod]
+
         public async Task StatusAscendingSortOrder()
         {
             SectionSearchCriteria searchcriteria = new SectionSearchCriteria();
             searchcriteria.SortOn = CatalogSortType.Status;
             searchcriteria.SortDirection = CatalogSortDirection.Ascending;
-            // Act
+
             SectionPage sectionPage = await courseService.SectionSearchAsync(searchcriteria, int.MaxValue, 0);
             List<Dtos.Student.Section3> sections = sectionPage.CurrentPageItems.ToList();
-            //status sorting is on waitlisted. if waitlested is 0 then status is open otherwise status is waitlistedd
+            //status sorting is in order of Open, Waitlisted, Closed with with 0,1,2 weightage on AvailabilityStatus due to Enum definition- SectionAvailabilityStatusType
             Assert.IsNotNull(sectionPage);
+
             Assert.AreEqual(8, sectionPage.CurrentPageItems.Count());
+            //open
             Assert.AreEqual("BIOL-100", sections[0].CourseName);
             Assert.AreEqual("ENGL-100", sections[1].CourseName);
             Assert.AreEqual("POLI-100", sections[2].CourseName);
             Assert.AreEqual("PSYC-100", sections[3].CourseName);
-            Assert.AreEqual("HIST-100-01", sections[4].CourseName + "-" + sections[4].Number);
-            Assert.AreEqual("HIST-100-02", sections[5].CourseName + "-" + sections[5].Number);
-            Assert.AreEqual("MATH-152", sections[6].CourseName);
+            //waitlisted
+            Assert.AreEqual("HIST-100-02", sections[4].CourseName + "-" + sections[4].Number);
+            Assert.AreEqual("MATH-152", sections[5].CourseName);
+
+            //closed
+            Assert.AreEqual("HIST-100-01", sections[6].CourseName + "-" + sections[6].Number);
             Assert.AreEqual("SPAN-300", sections[7].CourseName);
         }
 
@@ -12048,10 +11590,13 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             Assert.IsNotNull(sectionPage);
             Assert.AreEqual(8, sectionPage.CurrentPageItems.Count());
 
+            //closed
             Assert.AreEqual("HIST-100-01", sections[0].CourseName + "-" + sections[0].Number);
-            Assert.AreEqual("HIST-100-02", sections[1].CourseName + "-" + sections[1].Number);
-            Assert.AreEqual("MATH-152", sections[2].CourseName);
-            Assert.AreEqual("SPAN-300", sections[3].CourseName);
+            Assert.AreEqual("SPAN-300", sections[1].CourseName);
+            //waitlisted
+            Assert.AreEqual("HIST-100-02", sections[2].CourseName + "-" + sections[2].Number);
+            Assert.AreEqual("MATH-152", sections[3].CourseName);
+            //open
             Assert.AreEqual("BIOL-100", sections[4].CourseName);
             Assert.AreEqual("ENGL-100", sections[5].CourseName);
             Assert.AreEqual("POLI-100", sections[6].CourseName);
@@ -12069,12 +11614,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             //status sorting is on seats available
             Assert.IsNotNull(sectionPage);
             Assert.AreEqual(8, sectionPage.CurrentPageItems.Count());
-            Assert.AreEqual("HIST-100-02", sections[0].CourseName + "-" + sections[0].Number);
-            Assert.AreEqual("HIST-100-01", sections[1].CourseName + "-" + sections[1].Number);
-            Assert.AreEqual("MATH-152", sections[2].CourseName);
-            Assert.AreEqual("POLI-100", sections[3].CourseName);
-            Assert.AreEqual("BIOL-100", sections[4].CourseName);
-            Assert.AreEqual("SPAN-300", sections[5].CourseName);
+            Assert.AreEqual("HIST-100-01", sections[0].CourseName + "-" + sections[0].Number);
+            Assert.AreEqual("HIST-100-02", sections[1].CourseName + "-" + sections[1].Number);
+            Assert.AreEqual("SPAN-300", sections[2].CourseName);
+            Assert.AreEqual("MATH-152", sections[3].CourseName);
+            Assert.AreEqual("POLI-100", sections[4].CourseName);
+            Assert.AreEqual("BIOL-100", sections[5].CourseName);
             Assert.AreEqual("PSYC-100", sections[6].CourseName);
             Assert.AreEqual("ENGL-100", sections[7].CourseName);
         }
@@ -12091,13 +11636,12 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             //status sorting is on waitlisted. if waitlested is 0 then status is open otherwise status is waitlistedd
             Assert.IsNotNull(sectionPage);
             Assert.AreEqual(8, sectionPage.CurrentPageItems.Count());
-
-            Assert.AreEqual("HIST-100-02", sections[7].CourseName + "-" + sections[7].Number);
-            Assert.AreEqual("HIST-100-01", sections[6].CourseName + "-" + sections[6].Number);
-            Assert.AreEqual("MATH-152", sections[5].CourseName);
-            Assert.AreEqual("POLI-100", sections[4].CourseName);
+            Assert.AreEqual("HIST-100-01", sections[5].CourseName + "-" + sections[5].Number);
+            Assert.AreEqual("HIST-100-02", sections[6].CourseName + "-" + sections[6].Number);
+            Assert.AreEqual("SPAN-300", sections[7].CourseName);
+            Assert.AreEqual("MATH-152", sections[4].CourseName);
+            Assert.AreEqual("POLI-100", sections[3].CourseName);
             Assert.AreEqual("BIOL-100", sections[2].CourseName);
-            Assert.AreEqual("SPAN-300", sections[3].CourseName);
             Assert.AreEqual("PSYC-100", sections[1].CourseName);
             Assert.AreEqual("ENGL-100", sections[0].CourseName);
         }
@@ -12217,7 +11761,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             };
 
             // Set up section repository response
-          //  sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(It.IsAny<IEnumerable<string>>(), false)).Returns(Task.FromResult<IEnumerable<Domain.Student.Entities.Section>>(sectionCollection));
+            //  sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(It.IsAny<IEnumerable<string>>(), false)).Returns(Task.FromResult<IEnumerable<Domain.Student.Entities.Section>>(sectionCollection));
 
             // Set up student configuration repo response
             var ieConfig = new Domain.Student.Entities.InstantEnrollment.InstantEnrollmentConfiguration(Domain.Student.Entities.InstantEnrollment.AddNewStudentProgramBehavior.Any,
@@ -12229,7 +11773,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 "US",
                 true,
                 "CEUSER", null, false, demographicFields);
-            foreach(var subj in allSubjects)
+            foreach (var subj in allSubjects)
             {
                 ieConfig.AddSubjectCodeToDisplayInCatalog(subj.Code);
             }
@@ -12250,6 +11794,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
 
             };
+          
             sectionRepoMock.Setup(repo => repo.GetInstantEnrollmentSectionsAsync()).Returns(Task.FromResult(sections.AsEnumerable()));
             CourseService.ClearInstantEnrollmentIndex();
         }
@@ -12287,7 +11832,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             Assert.AreEqual("MAIN", sectionPage.Locations.ToList()[2].Value);
             Assert.AreEqual(1, sectionPage.Locations.ToList()[2].Count);
             Assert.AreEqual(false, sectionPage.Locations.ToList()[2].Selected);
-          
+
             Assert.AreEqual(0, sectionPage.Faculty.Count());
             Assert.AreEqual(0, sectionPage.DaysOfWeek.Count());
             Assert.AreEqual(2, sectionPage.TopicCodes.Count()); // T1, null
@@ -12386,7 +11931,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
         [TestMethod]
         public async Task CriteriaHasKeyword_NoSectionsforTheKW_IEHaveSections()
         {
-             InstantEnrollmentCourseSearchCriteria searchcriteria = new InstantEnrollmentCourseSearchCriteria();
+            InstantEnrollmentCourseSearchCriteria searchcriteria = new InstantEnrollmentCourseSearchCriteria();
             searchcriteria.Keyword = "xyz";
             SectionPage sectionPage = await courseService.InstantEnrollmentSearchAsync(searchcriteria, int.MaxValue, 0);
 
@@ -12394,7 +11939,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             Assert.IsNotNull(sectionPage);
             Assert.AreEqual(0, sectionPage.CurrentPageItems.Count());
             //filters are  empty
-            Assert.AreEqual(0,sectionPage.Locations.Count());
+            Assert.AreEqual(0, sectionPage.Locations.Count());
             Assert.AreEqual(0, sectionPage.Faculty.Count());
             Assert.AreEqual(0, sectionPage.DaysOfWeek.Count());
             Assert.AreEqual(0, sectionPage.TopicCodes.Count());
@@ -12584,7 +12129,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             //data setup DANC-100 course have CD location but there the correspoding section does not have CD location as well as no other 
             //section have CD location
             InstantEnrollmentCourseSearchCriteria searchcriteria = new InstantEnrollmentCourseSearchCriteria();
-            searchcriteria.TopicCodes = new List<string>() { "T2","T3" };
+            searchcriteria.TopicCodes = new List<string>() { "T2", "T3" };
             SectionPage sectionPage = await courseService.InstantEnrollmentSearchAsync(searchcriteria, int.MaxValue, 0);
             //should get all the sections that are returned from IE repository
             Assert.IsNotNull(sectionPage);
@@ -12616,6 +12161,1279 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             Assert.IsNotNull(sectionPage);
             Assert.AreEqual(3, sectionPage.CurrentPageItems.Count());
         }
+        [TestMethod]
+        public async Task SectionsforTheKW_ActiveStudentIds_IsNull()
+        {
+            List<Domain.Student.Entities.Section> sections = new List<Domain.Student.Entities.Section>() {
+                new Domain.Student.Entities.Section("1", "139", "01", DateTime.Today.AddDays(-5), 3m, null, "Sec 1", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("CE") }, new List<string>() {"100" }, "CE", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, Domain.Student.Entities.SectionStatusIntegration.Open, "A", DateTime.Today.AddDays(-3)) }),
+                new Domain.Student.Entities.Section("2", "139", "02", DateTime.Today.AddDays(-5), 3m, null, "Sec 2", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("CE") }, new List<string>() {"100" }, "CE", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, Domain.Student.Entities.SectionStatusIntegration.Open, "A", DateTime.Today.AddDays(-3)) }),
+                new Domain.Student.Entities.Section("3", "139", "03", DateTime.Today.AddDays(-5), 3m, null, "Sec 3", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("CE") }, new List<string>() {"100" }, "CE", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, Domain.Student.Entities.SectionStatusIntegration.Open, "A", DateTime.Today.AddDays(-3)) }),
+                new Domain.Student.Entities.Section("new-sec-ie-1", "139", "04", DateTime.Today.AddDays(-5), 3m, null, "Crocheting", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("CE") }, new List<string>() {"100" }, "CE", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, Domain.Student.Entities.SectionStatusIntegration.Open, "A", DateTime.Today.AddDays(-3)) }),
+            };
+
+            sections[3].AddActiveStudent("101");
+            sections[3].AddActiveStudent("102");
+            sections[3].AddActiveStudent("103");
+            sectionRepoMock.Setup(repo => repo.GetInstantEnrollmentSectionsAsync()).Returns(Task.FromResult(sections.AsEnumerable()));
+
+            InstantEnrollmentCourseSearchCriteria searchcriteria = new InstantEnrollmentCourseSearchCriteria();
+            searchcriteria.Keyword = "crocheting";
+            SectionPage sectionPage = await courseService.InstantEnrollmentSearchAsync(searchcriteria, int.MaxValue, 0);
+            //should get all the sections that are returned from IE repository
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(1, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual("new-sec-ie-1", ((Dtos.Student.Section3)sectionPage.CurrentPageItems.ToList()[0]).Id);
+            //entity have student ids but dto does not have
+            Assert.AreEqual(3, sections[3].ActiveStudentIds.Count);
+            Assert.IsNull(((Dtos.Student.Section3)sectionPage.CurrentPageItems.ToList()[0]).ActiveStudentIds);
+        }
 
     }
+
+    [TestClass]
+    public class SectionSearch2Async : Search3
+    {
+        [TestInitialize]
+        public new async void Initialize()
+        {
+            base.Initialize();
+
+            //mock adapter
+            var sectionAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.Section, Dtos.Student.Section4>(adapterRegistry, logger);
+            adapterRegistryMock.Setup(reg => reg.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Section, Dtos.Student.Section4>()).Returns(sectionAdapter);
+            //mock adapter
+            var sectionMeetingAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionMeeting, Dtos.Student.SectionMeeting2>(adapterRegistry, logger);
+            adapterRegistryMock.Setup(reg => reg.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionMeeting, Dtos.Student.SectionMeeting2>()).Returns(sectionMeetingAdapter);
+
+            //mock adapter
+            var sectionRequisiteAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionRequisite, Dtos.Student.SectionRequisite>(adapterRegistry, logger);
+            adapterRegistryMock.Setup(reg => reg.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionRequisite, Dtos.Student.SectionRequisite>()).Returns(sectionRequisiteAdapter);
+
+        }
+
+        [TestMethod]
+        public async Task CriteriaIsNull()
+        {
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(null, int.MaxValue, 0);
+            //should return an empty section page
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(0, sectionPage.CurrentPageItems.Count());
+            //filters are null
+            Assert.IsNull(sectionPage.Locations);
+            Assert.IsNull(sectionPage.Faculty);
+            Assert.IsNull(sectionPage.DaysOfWeek);
+            Assert.IsNull(sectionPage.TopicCodes);
+            Assert.IsNull(sectionPage.CourseTypes);
+            Assert.IsNull(sectionPage.Terms);
+            Assert.IsNull(sectionPage.OnlineCategories);
+            Assert.IsNull(sectionPage.OpenSections);
+            Assert.IsNull(sectionPage.OpenAndWaitlistSections);
+            Assert.AreEqual(0, sectionPage.EarliestTime);
+            Assert.AreEqual(0, sectionPage.LatestTime);
+        }
+
+
+        //when criteria is not null but has ONLY keyword, courses or section id. 
+        [TestMethod]
+        public async Task SectionSearch_CriteriaOnlyHasCourseIds()
+        {
+            SectionSearchCriteria2 searchcriteria = new SectionSearchCriteria2() { CourseIds = new List<string>() { "7272", "10003" }, SectionIds = new List<string>() { "166", "167", "168" } };
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(searchcriteria, int.MaxValue, 0);
+            //should return an empty section page
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(21, sectionPage.CurrentPageItems.Count());
+            //filters are not null
+            Assert.AreEqual(6, sectionPage.Faculty.Count());
+            Assert.AreEqual(3, sectionPage.Terms.Count());
+        }
+
+
+        //when criteria provided but repository has no sections 
+        [TestMethod]
+        public async Task CriteriaIsNotNull_NoSectionsReturnedFromRepository()
+        {
+            // Arrange -- Mock section repository so that no registration sections are found
+            sectionRepoMock.Setup(repo => repo.GetRegistrationSectionsAsync(regTerms)).Returns(Task.FromResult<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section>>(new List<Ellucian.Colleague.Domain.Student.Entities.Section>()));
+            sectionRepoMock.Setup(repo => repo.GetCourseSectionsCachedAsync(It.IsAny<List<string>>(), regTerms)).Returns(Task.FromResult<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section>>(new List<Ellucian.Colleague.Domain.Student.Entities.Section>()));
+            SectionSearchCriteria2 searchcriteria = new SectionSearchCriteria2();
+            searchcriteria.Keyword = "History";
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(searchcriteria, int.MaxValue, 0);
+
+            //should get no sections returned
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(0, sectionPage.CurrentPageItems.Count());
+            //filters are empty
+            Assert.AreEqual(0, sectionPage.Locations.Count());
+            Assert.AreEqual(0, sectionPage.Faculty.Count());//36,48,45,49,46,50
+            Assert.AreEqual(0, sectionPage.DaysOfWeek.Count());
+            Assert.AreEqual(0, sectionPage.TopicCodes.Count());//T1, null
+            Assert.AreEqual(0, sectionPage.Terms.Count());//2012/FA
+            Assert.AreEqual(0, sectionPage.OnlineCategories.Count());
+            Assert.AreEqual(0, sectionPage.OpenSections.Count);
+            Assert.AreEqual(0, sectionPage.OpenAndWaitlistSections.Count);
+            Assert.AreEqual(0, sectionPage.EarliestTime);
+            Assert.AreEqual(0, sectionPage.LatestTime);
+        }
+
+        //when sections from repo have sections that matched few sections with kword 
+        [TestMethod]
+        public async Task CriteriaHasKeywordOnly_ReturnsSections_Filters_Day_Location()
+        {
+            allSections.ToList()[0].OnlineCategory = Domain.Student.Entities.OnlineCategory.Hybrid;
+            allSections.ToList()[1].OnlineCategory = Domain.Student.Entities.OnlineCategory.NotOnline;
+            allSections.ToList()[2].OnlineCategory = Domain.Student.Entities.OnlineCategory.Online;
+            SectionSearchCriteria2 searchcriteria = new SectionSearchCriteria2();
+            searchcriteria.Keyword = "History";
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(searchcriteria, int.MaxValue, 0);
+            //should get all the sections that are returned from  repository
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(75, sectionPage.CurrentPageItems.Count());
+
+            //filters are not empty
+            Assert.AreEqual(2, sectionPage.Locations.Count());
+            Assert.AreEqual(6, sectionPage.Faculty.Count());//36,48,45,49,46,50
+            Assert.AreEqual(5, sectionPage.DaysOfWeek.Count());
+            Assert.AreEqual(3, sectionPage.TopicCodes.Count());//T1, null
+            Assert.AreEqual(3, sectionPage.Terms.Count());//2012/FA
+            Assert.AreEqual(3, sectionPage.OnlineCategories.Count());
+            Assert.AreEqual(75, sectionPage.OpenSections.Count);
+            Assert.AreEqual(75, sectionPage.OpenAndWaitlistSections.Count);
+            Assert.AreEqual(0, sectionPage.EarliestTime);
+            Assert.AreEqual(0, sectionPage.LatestTime);
+            // Verify counts and values in some of the filters
+            Assert.AreEqual(18, ((Dtos.Base.Filter)sectionPage.DaysOfWeek.ToList()[1]).Count);
+            Assert.AreEqual("4", ((Dtos.Base.Filter)sectionPage.DaysOfWeek.ToList()[1]).Value);
+            Assert.AreEqual(30, ((Dtos.Base.Filter)sectionPage.DaysOfWeek.ToList()[2]).Count);
+            Assert.AreEqual("1", ((Dtos.Base.Filter)sectionPage.DaysOfWeek.ToList()[2]).Value);
+            Assert.AreEqual(13, ((Dtos.Base.Filter)sectionPage.Locations.ToList()[0]).Count);
+            Assert.AreEqual("NW", ((Dtos.Base.Filter)sectionPage.Locations.ToList()[0]).Value);
+            Assert.AreEqual(9, ((Dtos.Base.Filter)sectionPage.Locations.ToList()[1]).Count);
+            Assert.AreEqual("MAIN", ((Dtos.Base.Filter)sectionPage.Locations.ToList()[1]).Value);
+        }
+
+        //when filter result does not return any sections. sections from repository have sections but keyword doesn't give any sections
+        [TestMethod]
+        public async Task CriteriaHasKeyword_NoSectionsMatchTheKW()
+        {
+            SectionSearchCriteria2 searchcriteria = new SectionSearchCriteria2();
+            searchcriteria.Keyword = "xyz";
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(searchcriteria, int.MaxValue, 0);
+            //should get all the sections that are returned 
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(0, sectionPage.CurrentPageItems.Count());
+            //filters are empty
+            Assert.AreEqual(0, sectionPage.Locations.Count());
+            Assert.AreEqual(0, sectionPage.Faculty.Count());//36,48,45,49,46,50
+            Assert.AreEqual(0, sectionPage.DaysOfWeek.Count());
+            Assert.AreEqual(0, sectionPage.TopicCodes.Count());//T1, null
+            Assert.AreEqual(0, sectionPage.Terms.Count());//2012/FA
+            Assert.AreEqual(0, sectionPage.OnlineCategories.Count());
+            Assert.AreEqual(0, sectionPage.OpenSections.Count);
+            Assert.AreEqual(0, sectionPage.OpenAndWaitlistSections.Count);
+            Assert.AreEqual(0, sectionPage.EarliestTime);
+            Assert.AreEqual(0, sectionPage.LatestTime);
+        }
+
+        [TestMethod]
+        public async Task SectionSearchAsync_CourseTypeFilters_Validated()
+        {
+            // Arrange -- Set up search criteria and page info then execute the section search
+
+            SectionSearchCriteria2 searchcriteria = new SectionSearchCriteria2();
+            searchcriteria.Keyword = "Hist";
+
+            // Act
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(searchcriteria, int.MaxValue, 0);
+
+            // Validate
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(66, sectionPage.CurrentPageItems.Count());
+
+            //Course Type filter is not empty and has correct counts
+            Assert.AreEqual(2, sectionPage.CourseTypes.Count());
+
+            // Verify counts and values in some of the filters
+            Assert.AreEqual(27, ((Dtos.Base.Filter)sectionPage.CourseTypes.ToList()[0]).Count);
+            Assert.AreEqual("STND", ((Dtos.Base.Filter)sectionPage.CourseTypes.ToList()[0]).Value);
+            Assert.AreEqual(27, ((Dtos.Base.Filter)sectionPage.CourseTypes.ToList()[1]).Count);
+            Assert.AreEqual("WR", ((Dtos.Base.Filter)sectionPage.CourseTypes.ToList()[1]).Value);
+        }
+
+        [TestMethod]
+        public async Task SectionSearchAsync_CourseLevelFilters_Validated()
+        {
+            // Arrange -- Set up search criteria and page info then execute the section search
+
+            SectionSearchCriteria2 searchcriteria = new SectionSearchCriteria2();
+            searchcriteria.Keyword = "Hist";
+
+            // Act
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(searchcriteria, int.MaxValue, 0);
+
+            // Validate
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(66, sectionPage.CurrentPageItems.Count());
+
+            //Course Type filter is not empty and has correct counts
+            Assert.AreEqual(4, sectionPage.CourseLevels.Count());
+
+            // Verify counts and values in some of the filters
+            Assert.AreEqual(27, ((Dtos.Base.Filter)sectionPage.CourseLevels.ToList()[0]).Count);
+            Assert.AreEqual("100", ((Dtos.Base.Filter)sectionPage.CourseLevels.ToList()[0]).Value);
+            Assert.AreEqual(18, ((Dtos.Base.Filter)sectionPage.CourseLevels.ToList()[1]).Count);
+            Assert.AreEqual("200", ((Dtos.Base.Filter)sectionPage.CourseLevels.ToList()[1]).Value);
+            Assert.AreEqual(9, ((Dtos.Base.Filter)sectionPage.CourseLevels.ToList()[2]).Count);
+            Assert.AreEqual("300", ((Dtos.Base.Filter)sectionPage.CourseLevels.ToList()[2]).Value);
+        }
+
+        [TestMethod]
+        public async Task SectionSearchAsync_AcademicLevelFilters_Validated()
+        {
+            // Arrange -- Set up search criteria and page info then execute the section search
+
+            SectionSearchCriteria2 searchcriteria = new SectionSearchCriteria2();
+            searchcriteria.Keyword = "Hist";
+
+            // Act
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(searchcriteria, int.MaxValue, 0);
+
+            // Validate
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(66, sectionPage.CurrentPageItems.Count());
+
+            //Course Type filter is not empty and has correct counts
+            Assert.AreEqual(1, sectionPage.AcademicLevels.Count());
+
+            // Verify counts and values in some of the filters
+            Assert.AreEqual(66, ((Dtos.Base.Filter)sectionPage.AcademicLevels.ToList()[0]).Count);
+            Assert.AreEqual("UG", ((Dtos.Base.Filter)sectionPage.AcademicLevels.ToList()[0]).Value);
+        }
+
+        [TestMethod]
+        public async Task SectionSearchAsync_FacultyFilters_Validated()
+        {
+            // Arrange -- Set up search criteria and page info then execute the section search
+
+            SectionSearchCriteria2 searchcriteria = new SectionSearchCriteria2();
+            searchcriteria.Keyword = "Hist";
+
+            // Act
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(searchcriteria, int.MaxValue, 0);
+
+            // Validate
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(66, sectionPage.CurrentPageItems.Count());
+
+            //Faculty filter is not empty and has correct counts
+            Assert.AreEqual(6, sectionPage.Faculty.Count());
+
+            // Verify counts and values in some of the filters
+            Assert.AreEqual(21, ((Dtos.Base.Filter)sectionPage.Faculty.ToList()[0]).Count);
+            Assert.AreEqual("0000036", ((Dtos.Base.Filter)sectionPage.Faculty.ToList()[0]).Value);
+            Assert.AreEqual(21, ((Dtos.Base.Filter)sectionPage.Faculty.ToList()[1]).Count);
+            Assert.AreEqual("0000048", ((Dtos.Base.Filter)sectionPage.Faculty.ToList()[1]).Value);
+        }
+
+        [TestMethod]
+        public async Task SectionSearchAsync_SubjectsFilters_Validated()
+        {
+            // Arrange -- Set up search criteria and page info then execute the section search
+
+            SectionSearchCriteria2 searchcriteria = new SectionSearchCriteria2();
+            searchcriteria.Subjects = new List<string>() { "ACCT", "ART" };
+
+            // Act
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(searchcriteria, int.MaxValue, 0);
+            int acctSections = allSections.Where(s => s.Subject == "ACCT").Count();
+            int artSections = allSections.Where(s => s.Subject == "ART").Count();
+
+            // Validate
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(acctSections + artSections, sectionPage.CurrentPageItems.Count());
+
+            //Faculty filter is not empty and has correct counts
+            Assert.AreEqual(2, sectionPage.Subjects.Count());
+
+            // Verify counts and values in some of the filters
+            Assert.AreEqual(acctSections, ((Dtos.Base.Filter)sectionPage.Subjects.ToList()[0]).Count);
+            Assert.AreEqual("ACCT", ((Dtos.Base.Filter)sectionPage.Subjects.ToList()[0]).Value);
+            Assert.AreEqual(true, ((Dtos.Base.Filter)sectionPage.Subjects.ToList()[0]).Selected);
+            Assert.AreEqual(artSections, ((Dtos.Base.Filter)sectionPage.Subjects.ToList()[1]).Count);
+            Assert.AreEqual("ART", ((Dtos.Base.Filter)sectionPage.Subjects.ToList()[1]).Value);
+            Assert.AreEqual(true, ((Dtos.Base.Filter)sectionPage.Subjects.ToList()[1]).Selected);
+        }
+
+        [TestMethod]
+        public async Task SectionSearchAsync_TimeOfDayFilter_WithPrimarySectionMeetings()
+        {
+
+            //update few sections to have PrimarySectionMeetings
+            List<Ellucian.Colleague.Domain.Student.Entities.Section> primaryMeetingSections = (await (new TestSectionRepository().BuildSectionsWithPrimarySectionMeetingsAsync())).ToList();
+            List<Ellucian.Colleague.Domain.Student.Entities.Section> newList = new List<Ellucian.Colleague.Domain.Student.Entities.Section>();
+
+            //add few sections that have section.Meetings AND NO PrimaryscetionMeetings
+            newList.Add(allSections.ToList()[0]); //no meetings
+            newList.Add(allSections.ToList()[1]); //no meetings
+            newList.Add(allSections.ToList()[2]);//no meetings
+            newList.Add(allSections.ToList()[3]); // 9-9:50 am
+            newList.Add(allSections.ToList()[4]);//1am - 1:50am 
+            newList.Add(allSections.ToList()[5]); //have 2 meetings- 11-11:50 am  and second with start time & end time  null
+
+
+
+            newList.AddRange(primaryMeetingSections);
+            sectionRepoMock.Setup(repo => repo.GetRegistrationSectionsAsync(regTerms)).Returns(Task.FromResult(newList.AsEnumerable()));
+            // Arrange - filter sections using time range
+            var earliestTimeSpan = new TimeSpan(09, 00, 00);
+            var latestTimeSpan = new TimeSpan(11, 00, 00);
+            var criteria = new SectionSearchCriteria2() { EarliestTime = (int)earliestTimeSpan.TotalMinutes, LatestTime = (int)latestTimeSpan.TotalMinutes };
+            // Act - call course search
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(criteria, Int16.MaxValue, 1);
+            Assert.IsTrue(sectionPage.CurrentPageItems.Select(c => c.Id).Contains("4"));
+            Assert.IsTrue(sectionPage.CurrentPageItems.Select(c => c.Id).Contains("999-SEC-WITH-PRIM-MTNGS"));
+            Assert.IsFalse(sectionPage.CurrentPageItems.Select(c => c.Id).Contains("997-SEC-WITH-PRIM-MTNGS"));
+            Assert.AreEqual(2, sectionPage.CurrentPageItems.Count());
+
+
+
+            // Verify that the sections included take place during the specified time span
+            // Get each section found for this course
+            var courseSections = (from sectionId in sectionPage.CurrentPageItems.Select(c => c.Id)
+                                  join sec in newList
+                                  on sectionId equals sec.Id into joinSections
+                                  from section in joinSections
+                                  select section).ToList();
+            var timeCollection = (from sec in courseSections
+                                  from mtg in sec.Meetings
+                                  select new { mtg.StartTime, mtg.EndTime, sec.Id }).Union
+                                 (from sec in courseSections
+                                  from mtg in sec.PrimarySectionMeetings
+                                  select new { mtg.StartTime, mtg.EndTime, sec.Id });
+            foreach (var mtgTime in timeCollection)
+            {
+                // If no start/end time given, don't try to compare against the criteria earliest/latest time
+                if (mtgTime.StartTime != null)
+                {
+                    DateTimeOffset startTime = mtgTime.StartTime.GetValueOrDefault();
+                    Assert.IsTrue(startTime.DateTime.TimeOfDay.TotalMinutes >= criteria.EarliestTime);
+                }
+                if (mtgTime.EndTime != null)
+                {
+                    DateTimeOffset endTime = mtgTime.EndTime.GetValueOrDefault();
+                    Assert.IsTrue(endTime.DateTime.TimeOfDay.TotalMinutes <= criteria.LatestTime);
+                }
+            }
+        }
+
+        [TestMethod]
+        public async Task SectionSearchAsync_TimeOFDayFilter_WithOnlyPrimarySectionMeetings()
+        {
+
+            //update few sections to have PrimarySectionMeetings
+            List<Ellucian.Colleague.Domain.Student.Entities.Section> primaryMeetingSections = (await (new TestSectionRepository().BuildSectionsWithPrimarySectionMeetingsAsync())).ToList();
+            sectionRepoMock.Setup(repo => repo.GetRegistrationSectionsAsync(regTerms)).Returns(Task.FromResult(primaryMeetingSections.AsEnumerable()));
+            // Arrange - filter sections using time range
+            var earliestTimeSpan = new TimeSpan(09, 00, 00);
+            var latestTimeSpan = new TimeSpan(12, 00, 00);
+            var criteria = new SectionSearchCriteria2() { EarliestTime = (int)earliestTimeSpan.TotalMinutes, LatestTime = (int)latestTimeSpan.TotalMinutes };
+            // Act - call course search
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(criteria, Int16.MaxValue, 1);
+            Assert.IsTrue(sectionPage.CurrentPageItems.Select(c => c.Id).Contains("999-SEC-WITH-PRIM-MTNGS"));
+            Assert.IsTrue(sectionPage.CurrentPageItems.Select(c => c.Id).Contains("997-SEC-WITH-PRIM-MTNGS"));
+
+
+            // Verify that the sections included take place during the specified time span
+            // Get each section found for this course
+            var courseSections = (from sectionId in sectionPage.CurrentPageItems.Select(c => c.Id)
+                                  join sec in primaryMeetingSections
+                                  on sectionId equals sec.Id into joinSections
+                                  from section in joinSections
+                                  select section).ToList();
+            var timeCollection = (from sec in courseSections
+                                  from mtg in sec.PrimarySectionMeetings
+                                  select new { mtg.StartTime, mtg.EndTime, sec.Id });
+
+            foreach (var mtgTime in timeCollection)
+            {
+                // If no start/end time given, don't try to compare against the criteria earliest/latest time
+                if (mtgTime.StartTime != null)
+                {
+                    DateTimeOffset startTime = mtgTime.StartTime.GetValueOrDefault();
+                    Assert.IsTrue(startTime.DateTime.TimeOfDay.TotalMinutes >= criteria.EarliestTime);
+                }
+                if (mtgTime.EndTime != null)
+                {
+                    DateTimeOffset endTime = mtgTime.EndTime.GetValueOrDefault();
+                    Assert.IsTrue(endTime.DateTime.TimeOfDay.TotalMinutes <= criteria.LatestTime);
+                }
+            }
+        }
+
+
+        [TestMethod]
+        public async Task SectionSearchAsync_StartAtTimeEndsByTimeFilter_WithOnlyPrimarySectionMeetings()
+        {
+
+            //update few sections to have PrimarySectionMeetings
+            List<Ellucian.Colleague.Domain.Student.Entities.Section> primaryMeetingSections = (await (new TestSectionRepository().BuildSectionsWithPrimarySectionMeetingsAsync())).ToList();
+            sectionRepoMock.Setup(repo => repo.GetRegistrationSectionsAsync(regTerms)).Returns(Task.FromResult(primaryMeetingSections.AsEnumerable()));
+            // Arrange - filter sections using time range
+
+            var criteria = new SectionSearchCriteria2() { StartsAtTime = "09:00 AM", EndsByTime = "12:00 PM" };
+            // Act - call course search
+            var coursePage = await courseService.SectionSearch2Async(criteria, Int16.MaxValue, 1);
+            Assert.IsTrue(coursePage.CurrentPageItems.Select(c => c.Id).Contains("999-SEC-WITH-PRIM-MTNGS"));
+            Assert.IsTrue(coursePage.CurrentPageItems.Select(c => c.Id).Contains("997-SEC-WITH-PRIM-MTNGS"));
+            Assert.AreEqual(2, coursePage.CurrentPageItems.Count());
+
+
+        }
+
+        [TestMethod]
+        public async Task SectionSearchAsync_WhenTODAndStartAtAndEndAtTimesAreProvided()
+        {
+
+            //update few sections to have PrimarySectionMeetings
+            //primary section meeting times are:
+            /*
+             * Section- 999-SEC with 2 meeting times - 9:10am- 10am and  9:10 to 9:50am
+             * section - 998-SEC with 1pm -1:50pm
+             * section -997-SEC with 11:00am - 11:50am
+             */
+            List<Ellucian.Colleague.Domain.Student.Entities.Section> primaryMeetingSections = (await (new TestSectionRepository().BuildSectionsWithPrimarySectionMeetingsAsync())).ToList();
+            List<Ellucian.Colleague.Domain.Student.Entities.Section> newList = new List<Ellucian.Colleague.Domain.Student.Entities.Section>();
+            //modifying a section from the collection to have start time of 8
+            Ellucian.Colleague.Domain.Student.Entities.Section sectionStartAt8am = allSections.ToList()[0];
+            //set meeting times on section
+            string guid = Guid.NewGuid().ToString();
+            Ellucian.Colleague.Domain.Student.Entities.SectionMeeting mp3 = new Ellucian.Colleague.Domain.Student.Entities.SectionMeeting("something new", sectionStartAt8am.Id, "LEC", null, null, "W")
+            {
+                Guid = guid,
+                StartTime = new DateTimeOffset(new DateTime(2012, 8, 9, 08, 00, 00)),
+                EndTime = new DateTimeOffset(new DateTime(2012, 8, 9, 10, 50, 00)),
+                Days = new List<DayOfWeek>() { DayOfWeek.Tuesday, DayOfWeek.Thursday }
+            };
+
+
+            sectionStartAt8am.UpdatePrimarySectionMeetings(new List<Ellucian.Colleague.Domain.Student.Entities.SectionMeeting>() { mp3 });
+            sectionStartAt8am.FirstMeetingDate = sectionStartAt8am.StartDate.AddDays(15);
+            sectionStartAt8am.LastMeetingDate = sectionStartAt8am.EndDate;
+            newList.Add(sectionStartAt8am); //no meetings
+            newList.Add(allSections.ToList()[1]); //no meetings
+            newList.Add(allSections.ToList()[2]);//no meetings
+            newList.Add(allSections.ToList()[3]); // 9-9:50 am
+            newList.Add(allSections.ToList()[4]);//1am - 1:50am 
+            newList.Add(allSections.ToList()[5]); //have 2 meetings- 11-11:50 am  and second with start time & end time  null
+            newList.AddRange(primaryMeetingSections);
+
+            sectionRepoMock.Setup(repo => repo.GetRegistrationSectionsAsync(regTerms)).Returns(Task.FromResult(newList.AsEnumerable()));
+            var earliestTimeSpan = new TimeSpan(08, 00, 00);
+            var latestTimeSpan = new TimeSpan(12, 00, 00);
+            var criteria = new SectionSearchCriteria2() { EarliestTime = (int)earliestTimeSpan.TotalMinutes, LatestTime = (int)latestTimeSpan.TotalMinutes };
+
+            criteria.StartsAtTime = "09:00 AM";
+            criteria.EndsByTime = "02:00 PM";
+            //sections retrieved will be from 8am to 2pm
+            // Act - call course search
+            var coursePage = await courseService.SectionSearch2Async(criteria, Int16.MaxValue, 1);
+            Assert.IsTrue(coursePage.CurrentPageItems.Select(c => c.Id).Contains("4"));
+            Assert.IsTrue(coursePage.CurrentPageItems.Select(c => c.Id).Contains("6"));
+            Assert.IsTrue(coursePage.CurrentPageItems.Select(c => c.Id).Contains("1"));
+            Assert.IsTrue(coursePage.CurrentPageItems.Select(c => c.Id).Contains("999-SEC-WITH-PRIM-MTNGS"));
+            Assert.IsTrue(coursePage.CurrentPageItems.Select(c => c.Id).Contains("997-SEC-WITH-PRIM-MTNGS"));
+            Assert.IsTrue(coursePage.CurrentPageItems.Select(c => c.Id).Contains("998-SEC-WITH-PRIM-MTNGS"));
+            Assert.AreEqual(6, coursePage.CurrentPageItems.Count());
+
+        }
+
+        [TestMethod]
+        public async Task SectionSearchAsync_Returns_Null_ActiveStudentIds()
+        {
+            // Arrange -- Set up search criteria and page info then execute the section search
+
+            SectionSearchCriteria2 searchcriteria = new SectionSearchCriteria2();
+            searchcriteria.Subjects = new List<string>() { "ACCT", "ART" };
+
+            // Act
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(searchcriteria, int.MaxValue, 0);
+            int acctSections = allSections.Where(s => s.Subject == "ACCT").Count();
+            int artSections = allSections.Where(s => s.Subject == "ART").Count();
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(acctSections + artSections, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual(2, sectionPage.Subjects.Count());
+            Assert.IsNull(sectionPage.CurrentPageItems.ToList()[0].ActiveStudentIds);
+            Assert.IsNull(sectionPage.CurrentPageItems.ToList()[1].ActiveStudentIds);
+        }
+    }
+
+    [TestClass]
+    public class SectionsSearch2Sorting : Search3
+    {
+        List<Ellucian.Colleague.Domain.Student.Entities.Section> sectionsEntity = new List<Ellucian.Colleague.Domain.Student.Entities.Section>();
+        [TestInitialize]
+        public async void Initialize()
+        {
+
+            base.Initialize();
+            //mock adapter
+            var sectionAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.Section, Dtos.Student.Section4>(adapterRegistry, logger);
+            adapterRegistryMock.Setup(reg => reg.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Section, Dtos.Student.Section4>()).Returns(sectionAdapter);
+            //mock adapter
+            var sectionMeetingAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionMeeting, Dtos.Student.SectionMeeting2>(adapterRegistry, logger);
+            adapterRegistryMock.Setup(reg => reg.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionMeeting, Dtos.Student.SectionMeeting2>()).Returns(sectionMeetingAdapter);
+
+            var sectionSortAdapter = new AutoMapperAdapter< Dtos.Student.CatalogSortType2, Ellucian.Colleague.Domain.Student.Entities.CatalogSortType>(adapterRegistry, logger);
+            adapterRegistryMock.Setup(reg => reg.GetAdapter<Dtos.Student.CatalogSortType2, Ellucian.Colleague.Domain.Student.Entities.CatalogSortType>()).Returns(sectionSortAdapter);
+
+
+            var sectionDirectionAdapter = new AutoMapperAdapter<Dtos.Student.CatalogSortDirection, Ellucian.Colleague.Domain.Student.Entities.CatalogSortDirection>(adapterRegistry, logger);
+            adapterRegistryMock.Setup(reg => reg.GetAdapter<Dtos.Student.CatalogSortDirection, Ellucian.Colleague.Domain.Student.Entities.CatalogSortDirection>()).Returns(sectionDirectionAdapter);
+
+            //mock adapter
+            var sectionRequisiteAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionRequisite, Dtos.Student.SectionRequisite>(adapterRegistry, logger);
+            adapterRegistryMock.Setup(reg => reg.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionRequisite, Dtos.Student.SectionRequisite>()).Returns(sectionRequisiteAdapter);
+            SectionEntity section1 = new SectionEntity("100", "84", "01", DateTime.Today, 0, null, "spanish 300", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("MDLL") }, new List<string>() { "300" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Ellucian.Colleague.Domain.Student.Entities.SectionStatus.Active, "N", DateTime.Today) });
+            SectionEntity section2 = new SectionEntity("101", "110", "01", DateTime.Today, 0, null, "biology 100", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("BIOL") }, new List<string>() { "100" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Ellucian.Colleague.Domain.Student.Entities.SectionStatus.Active, "N", DateTime.Today) });
+            SectionEntity section3 = new SectionEntity("102", "333", "01", DateTime.Today, 0, null, "math 152", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("MATH") }, new List<string>() { "100" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Ellucian.Colleague.Domain.Student.Entities.SectionStatus.Active, "N", DateTime.Today) }, allowWaitlist: true);
+            SectionEntity section4 = new SectionEntity("103", "155", "01", DateTime.Today, 0, null, "poli 100", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("POLI") }, new List<string>() { "100" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Ellucian.Colleague.Domain.Student.Entities.SectionStatus.Active, "N", DateTime.Today) });
+            SectionEntity section5 = new SectionEntity("104", "139", "01", DateTime.Today, 0, null, "history 100", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("HIST") }, new List<string>() { "100" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Ellucian.Colleague.Domain.Student.Entities.SectionStatus.Active, "N", DateTime.Today) });
+            SectionEntity section6 = new SectionEntity("105", "156", "01", DateTime.Today, 0, null, "psycology 100", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("PSYC") }, new List<string>() { "100" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Ellucian.Colleague.Domain.Student.Entities.SectionStatus.Active, "N", DateTime.Today) });
+            SectionEntity section7 = new SectionEntity("106", "187", "01", DateTime.Today, 0, null, "engl 102", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("ENGL") }, new List<string>() { "100" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Ellucian.Colleague.Domain.Student.Entities.SectionStatus.Active, "N", DateTime.Today) });
+            SectionEntity section8 = new SectionEntity("107", "139", "02", DateTime.Today, 0, null, "history 100", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("HIST") }, new List<string>() { "100" }, "UG", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Ellucian.Colleague.Domain.Student.Entities.SectionStatus.Active, "N", DateTime.Today) }, allowWaitlist: true);
+
+            //modify sections seats here 
+
+            //make HIST-100-02 , MATH-152 as waitlisted
+            section8.WaitlistMaximum = 2;
+            section8.NumberOnWaitlist = 1;
+            section8.SectionCapacity = 1;
+            section8.AddActiveStudent("111");
+
+            section3.WaitlistMaximum = 4;
+            section3.NumberOnWaitlist = 3;
+            section3.SectionCapacity = 1;
+            section3.AddActiveStudent("111");
+
+            //make HIST-100-01 and SPAN-300 as closed
+            section5.NumberOnWaitlist = 2;
+            section5.SectionCapacity = 0;
+
+            section1.SectionCapacity = 2;
+            section1.AddActiveStudent("222");
+            section1.AddActiveStudent("333");
+            section1.NumberOnWaitlist = 5;
+            section1.WaitlistMaximum = 5;
+
+            //all other open
+            section2.NumberOnWaitlist = 0;
+            section4.NumberOnWaitlist = null;
+            section6.NumberOnWaitlist = 0;
+            section7.NumberOnWaitlist = 0;
+
+            section2.SectionCapacity = 20;
+            section3.SectionCapacity = 13;
+            section4.SectionCapacity = 15;
+            section6.SectionCapacity = 22;
+            section7.SectionCapacity = 30;
+
+
+
+            section1.Location = "NW";
+            section2.Location = "MAIN";
+            section3.Location = "DT";
+            section4.Location = "SC";
+            section5.Location = null;
+            section6.Location = string.Empty;
+            section7.Location = "NW";
+            section8.Location = "DT";
+
+
+            section1.CourseName = "SPAN-300";
+            section2.CourseName = "BIOL-100";
+            section3.CourseName = "MATH-152";
+            section4.CourseName = "POLI-100";
+            section5.CourseName = "HIST-100";
+            section6.CourseName = "PSYC-100";
+            section7.CourseName = "ENGL-100";
+            section8.CourseName = "HIST-100";
+
+
+            sectionsEntity.Add(section1);
+            sectionsEntity.Add(section2);
+            sectionsEntity.Add(section3);
+            sectionsEntity.Add(section4);
+            sectionsEntity.Add(section5);
+            sectionsEntity.Add(section6);
+            sectionsEntity.Add(section7);
+            sectionsEntity.Add(section8);
+
+
+            sectionRepoMock.Setup(repo => repo.GetRegistrationSectionsAsync(regTerms)).Returns(Task.FromResult(sectionsEntity.AsEnumerable()));
+            courseService = new CourseService(adapterRegistryMock.Object, courseRepoMock.Object, referenceRepo,
+           studentReferenceRepo, requirementsRepo, sectionRepoMock.Object, termRepoMock.Object,
+           ruleRepoMock.Object, configurationRepo, baseConfigurationRepository, userFactory, roleRepo, logger);
+
+        }
+
+        [TestMethod]
+        public async Task NoSortOrder()
+        {
+            SectionSearchCriteria2 searchcriteria = new SectionSearchCriteria2();
+            // Act
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(searchcriteria, int.MaxValue, 0);
+
+            List<Dtos.Student.Section4> sections = sectionPage.CurrentPageItems.ToList();
+            //normal sorting is on subject and then on number
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(8, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual("BIOL-100", sections[0].CourseName);
+            Assert.AreEqual("ENGL-100", sections[1].CourseName);
+            Assert.AreEqual("HIST-100-01", sections[2].CourseName + "-" + sections[2].Number);
+            Assert.AreEqual("HIST-100-02", sections[3].CourseName + "-" + sections[3].Number);
+            Assert.AreEqual("MATH-152", sections[4].CourseName);
+            Assert.AreEqual("POLI-100", sections[5].CourseName);
+            Assert.AreEqual("PSYC-100", sections[6].CourseName);
+            Assert.AreEqual("SPAN-300", sections[7].CourseName);
+        }
+
+        [TestMethod]
+
+        public async Task StatusAscendingSortOrder()
+        {
+            SectionSearchCriteria2 searchcriteria = new SectionSearchCriteria2();
+            searchcriteria.SortOn = CatalogSortType2.Status;
+            searchcriteria.SortDirection = CatalogSortDirection.Ascending;
+
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(searchcriteria, int.MaxValue, 0);
+            List<Dtos.Student.Section4> sections = sectionPage.CurrentPageItems.ToList();
+            //status sorting is in order of Open, Waitlisted, Closed with with 0,1,2 weightage on AvailabilityStatus due to Enum definition- SectionAvailabilityStatusType
+            Assert.IsNotNull(sectionPage);
+
+            Assert.AreEqual(8, sectionPage.CurrentPageItems.Count());
+            //open
+            Assert.AreEqual("BIOL-100", sections[0].CourseName);
+            Assert.AreEqual("ENGL-100", sections[1].CourseName);
+            Assert.AreEqual("POLI-100", sections[2].CourseName);
+            Assert.AreEqual("PSYC-100", sections[3].CourseName);
+            //waitlisted
+            Assert.AreEqual("HIST-100-02", sections[4].CourseName + "-" + sections[4].Number);
+            Assert.AreEqual("MATH-152", sections[5].CourseName);
+
+            //closed
+            Assert.AreEqual("HIST-100-01", sections[6].CourseName + "-" + sections[6].Number);
+            Assert.AreEqual("SPAN-300", sections[7].CourseName);
+        }
+
+        [TestMethod]
+        public async Task StatusDescendingSortOrder()
+        {
+            SectionSearchCriteria2 searchcriteria = new SectionSearchCriteria2();
+            searchcriteria.SortOn = CatalogSortType2.Status;
+            searchcriteria.SortDirection = CatalogSortDirection.Descending;
+            // Act
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(searchcriteria, int.MaxValue, 0);
+            List<Dtos.Student.Section4> sections = sectionPage.CurrentPageItems.ToList();
+            //status sorting is on waitlisted. if waitlested is 0 then status is open otherwise status is waitlistedd
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(8, sectionPage.CurrentPageItems.Count());
+
+            //closed
+            Assert.AreEqual("HIST-100-01", sections[0].CourseName + "-" + sections[0].Number);
+            Assert.AreEqual("SPAN-300", sections[1].CourseName);
+            //waitlisted
+            Assert.AreEqual("HIST-100-02", sections[2].CourseName + "-" + sections[2].Number);
+            Assert.AreEqual("MATH-152", sections[3].CourseName);
+            //open
+            Assert.AreEqual("BIOL-100", sections[4].CourseName);
+            Assert.AreEqual("ENGL-100", sections[5].CourseName);
+            Assert.AreEqual("POLI-100", sections[6].CourseName);
+            Assert.AreEqual("PSYC-100", sections[7].CourseName);
+        }
+        [TestMethod]
+        public async Task SeatsAvailableAscendingSortOrder()
+        {
+            SectionSearchCriteria2 searchcriteria = new SectionSearchCriteria2();
+            searchcriteria.SortOn = CatalogSortType2.SeatsAvailable;
+            searchcriteria.SortDirection = CatalogSortDirection.Ascending;
+            // Act
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(searchcriteria, int.MaxValue, 0);
+            List<Dtos.Student.Section4> sections = sectionPage.CurrentPageItems.ToList();
+            //status sorting is on seats available
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(8, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual("HIST-100-01", sections[0].CourseName + "-" + sections[0].Number);
+            Assert.AreEqual("HIST-100-02", sections[1].CourseName + "-" + sections[1].Number);
+            Assert.AreEqual("SPAN-300", sections[2].CourseName);
+            Assert.AreEqual("MATH-152", sections[3].CourseName);
+            Assert.AreEqual("POLI-100", sections[4].CourseName);
+            Assert.AreEqual("BIOL-100", sections[5].CourseName);
+            Assert.AreEqual("PSYC-100", sections[6].CourseName);
+            Assert.AreEqual("ENGL-100", sections[7].CourseName);
+        }
+
+        [TestMethod]
+        public async Task SeatsAvailableDescendingSortOrder()
+        {
+            SectionSearchCriteria2 searchcriteria = new SectionSearchCriteria2();
+            searchcriteria.SortOn = CatalogSortType2.SeatsAvailable;
+            searchcriteria.SortDirection = CatalogSortDirection.Descending;
+            // Act
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(searchcriteria, int.MaxValue, 0);
+            List<Dtos.Student.Section4> sections = sectionPage.CurrentPageItems.ToList();
+            //status sorting is on waitlisted. if waitlested is 0 then status is open otherwise status is waitlistedd
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(8, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual("HIST-100-01", sections[5].CourseName + "-" + sections[5].Number);
+            Assert.AreEqual("HIST-100-02", sections[6].CourseName + "-" + sections[6].Number);
+            Assert.AreEqual("SPAN-300", sections[7].CourseName);
+            Assert.AreEqual("MATH-152", sections[4].CourseName);
+            Assert.AreEqual("POLI-100", sections[3].CourseName);
+            Assert.AreEqual("BIOL-100", sections[2].CourseName);
+            Assert.AreEqual("PSYC-100", sections[1].CourseName);
+            Assert.AreEqual("ENGL-100", sections[0].CourseName);
+        }
+
+        [TestMethod]
+        public async Task LocationAscendingSortOrder()
+        {
+            SectionSearchCriteria2 searchcriteria = new SectionSearchCriteria2();
+            searchcriteria.SortOn = CatalogSortType2.Location;
+            searchcriteria.SortDirection = CatalogSortDirection.Ascending;
+            // Act
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(searchcriteria, int.MaxValue, 0);
+            List<Dtos.Student.Section4> sections = sectionPage.CurrentPageItems.ToList();
+            //status sorting is on seats available
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(8, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual("HIST-100-01", sections[0].CourseName + "-" + sections[0].Number);
+            Assert.AreEqual("PSYC-100", sections[1].CourseName);
+            Assert.AreEqual("HIST-100-02", sections[2].CourseName + "-" + sections[2].Number);
+            Assert.AreEqual("MATH-152", sections[3].CourseName);
+            Assert.AreEqual("BIOL-100", sections[4].CourseName);
+            Assert.AreEqual("ENGL-100", sections[5].CourseName);
+            Assert.AreEqual("SPAN-300", sections[6].CourseName);
+            Assert.AreEqual("POLI-100", sections[7].CourseName);
+        }
+
+        [TestMethod]
+        public async Task LocationDescendingSortOrder()
+        {
+            SectionSearchCriteria2 searchcriteria = new SectionSearchCriteria2();
+            searchcriteria.SortOn = CatalogSortType2.Location;
+            searchcriteria.SortDirection = CatalogSortDirection.Descending;
+            // Act
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(searchcriteria, int.MaxValue, 0);
+            List<Dtos.Student.Section4> sections = sectionPage.CurrentPageItems.ToList();
+            //status sorting is on waitlisted. if waitlested is 0 then status is open otherwise status is waitlistedd
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(8, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual("HIST-100-01", sections[7].CourseName + "-" + sections[7].Number);
+            Assert.AreEqual("PSYC-100", sections[6].CourseName);
+            Assert.AreEqual("HIST-100-02", sections[4].CourseName + "-" + sections[4].Number);
+            Assert.AreEqual("MATH-152", sections[5].CourseName);
+            Assert.AreEqual("BIOL-100", sections[3].CourseName);
+            Assert.AreEqual("ENGL-100", sections[1].CourseName);
+            Assert.AreEqual("SPAN-300", sections[2].CourseName);
+            Assert.AreEqual("POLI-100", sections[0].CourseName);
+
+        }
+
+        [TestMethod]
+        public async Task SectionNameAscendingSortOrder()
+        {
+            SectionSearchCriteria2 searchcriteria = new SectionSearchCriteria2();
+            searchcriteria.SortOn = CatalogSortType2.SectionName;
+            searchcriteria.SortDirection = CatalogSortDirection.Ascending;
+            // Act
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(searchcriteria, int.MaxValue, 0);
+            List<Dtos.Student.Section4> sections = sectionPage.CurrentPageItems.ToList();
+            //status sorting is on seats available
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(8, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual("BIOL-100", sections[0].CourseName);
+            Assert.AreEqual("ENGL-100", sections[1].CourseName);
+            Assert.AreEqual("HIST-100-01", sections[2].CourseName + "-" + sections[2].Number);
+            Assert.AreEqual("HIST-100-02", sections[3].CourseName + "-" + sections[3].Number);
+            Assert.AreEqual("MATH-152", sections[4].CourseName);
+            Assert.AreEqual("POLI-100", sections[5].CourseName);
+            Assert.AreEqual("PSYC-100", sections[6].CourseName);
+            Assert.AreEqual("SPAN-300", sections[7].CourseName);
+
+        }
+
+        [TestMethod]
+        public async Task SectionNameDescendingSortOrder()
+        {
+            SectionSearchCriteria2 searchcriteria = new SectionSearchCriteria2();
+            searchcriteria.SortOn = CatalogSortType2.SectionName;
+            searchcriteria.SortDirection = CatalogSortDirection.Descending;
+            // Act
+            SectionPage2 sectionPage = await courseService.SectionSearch2Async(searchcriteria, int.MaxValue, 0);
+            List<Dtos.Student.Section4> sections = sectionPage.CurrentPageItems.ToList();
+            //status sorting is on waitlisted. if waitlested is 0 then status is open otherwise status is waitlistedd
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(8, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual("SPAN-300", sections[0].CourseName);
+            Assert.AreEqual("PSYC-100", sections[1].CourseName);
+            Assert.AreEqual("POLI-100", sections[2].CourseName);
+            Assert.AreEqual("MATH-152", sections[3].CourseName);
+            Assert.AreEqual("HIST-100-02", sections[4].CourseName + "-" + sections[4].Number);
+            Assert.AreEqual("HIST-100-01", sections[5].CourseName + "-" + sections[5].Number);
+            Assert.AreEqual("ENGL-100", sections[6].CourseName);
+            Assert.AreEqual("BIOL-100", sections[7].CourseName);
+        }
+    }
+
+    [TestClass]
+    public class InstantEnrollmentSearch2Async : Search3
+    {
+        private Domain.Student.Entities.InstantEnrollment.InstantEnrollmentConfiguration ieConfig;
+
+        [TestInitialize]
+        public new void Initialize()
+        {
+            base.Initialize();
+            //var section1 = allSections.Where(s => s.Id == "1").First();
+            //var section2 = allSections.Where(s => s.Id == "2").First();
+            //var section3 = allSections.Where(s => s.Id == "3").First();
+            //var sectionCollection = new List<Domain.Student.Entities.Section>() { section1, section2, section3 };
+
+            var demographicFields = new List<DemographicField>()
+            {
+                null, // Nulls should be handled gracefully
+                new DemographicField("FIRST_NAME", "First Name", DemographicFieldRequirement.Required),
+                new DemographicField("MIDDLE_NAME","Middle Name",DemographicFieldRequirement.Optional),
+                new DemographicField("LAST_NAME","Last Name",DemographicFieldRequirement.Required),
+            };
+
+            // Set up section repository response
+            //  sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(It.IsAny<IEnumerable<string>>(), false)).Returns(Task.FromResult<IEnumerable<Domain.Student.Entities.Section>>(sectionCollection));
+
+            // Set up student configuration repo response
+            var ieConfig = new Domain.Student.Entities.InstantEnrollment.InstantEnrollmentConfiguration(Domain.Student.Entities.InstantEnrollment.AddNewStudentProgramBehavior.Any,
+                new List<Domain.Student.Entities.InstantEnrollment.AcademicProgramOption>()
+                {
+                    new Domain.Student.Entities.InstantEnrollment.AcademicProgramOption("CE.SYSTEMASSIGNED", DateTime.Today.Year.ToString())
+                },
+                "BANK",
+                "US",
+                true,
+                "CEUSER", null, false, demographicFields);
+            foreach (var subj in allSubjects)
+            {
+                ieConfig.AddSubjectCodeToDisplayInCatalog(subj.Code);
+            }
+            configurationRepoMock.Setup(repo => repo.GetInstantEnrollmentConfigurationAsync()).ReturnsAsync(ieConfig);
+
+            //mock adapter
+            var sectionAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.Section, Dtos.Student.Section4>(adapterRegistry, logger);
+            adapterRegistryMock.Setup(reg => reg.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Section, Dtos.Student.Section4>()).Returns(sectionAdapter);
+
+            //mock section repo - GetInstantEnrollmentSections
+            //139 - HIST course(no location) 122- is  DANC-100 (CD location) course  110- is BIOL-100 course (MAIN location)
+            List<Domain.Student.Entities.Section> sections = new List<Domain.Student.Entities.Section>() {
+                new Domain.Student.Entities.Section("1", "139", "01", DateTime.Today.AddDays(-5), 3m, null, "Sec 1", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("CE") }, new List<string>() {"100" }, "CE", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, Domain.Student.Entities.SectionStatusIntegration.Open, "A", DateTime.Today.AddDays(-3)) }) { TopicCode = "T1" },
+                new Domain.Student.Entities.Section("2", "139", "02", DateTime.Today.AddDays(-5), 3m, null, "Sec 2", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("CE") }, new List<string>() {"100" }, "CE", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, Domain.Student.Entities.SectionStatusIntegration.Open, "A", DateTime.Today.AddDays(-3)) }) { Location = "SC" },
+                new Domain.Student.Entities.Section("3", "139", "03", DateTime.Today.AddDays(-5), 3m, null, "Sec 3", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("CE") }, new List<string>() {"100" }, "CE", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, Domain.Student.Entities.SectionStatusIntegration.Open, "A", DateTime.Today.AddDays(-3)) }),
+                new Domain.Student.Entities.Section("4", "122", "01", DateTime.Today.AddDays(-5), 3m, null, "Sec 1 dance", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("CE") }, new List<string>() {"100" }, "CE", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, Domain.Student.Entities.SectionStatusIntegration.Open, "A", DateTime.Today.AddDays(-3)) }) { Location = "MAIN" },
+                new Domain.Student.Entities.Section("5", "110", "01", DateTime.Today.AddDays(-5), 3m, null, "Sec 1 biology", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("CE") }, new List<string>() {"100" }, "CE", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, Domain.Student.Entities.SectionStatusIntegration.Open, "A", DateTime.Today.AddDays(-3)) }),
+
+
+            };
+
+            sectionRepoMock.Setup(repo => repo.GetInstantEnrollmentSectionsAsync()).Returns(Task.FromResult(sections.AsEnumerable()));
+            CourseService.ClearInstantEnrollmentIndex();
+        }
+
+        [TestCleanup]
+        public new void Cleanup()
+        {
+            base.Cleanup();
+        }
+
+        //when criteria for IE is null
+        [TestMethod]
+        public async Task CriteriaIsNull()
+        {
+            SectionPage2 sectionPage = await courseService.InstantEnrollmentSearch2Async(null, int.MaxValue, 0);
+            //should get all the sections that are returned from IE repository
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(5, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual("1", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[0]).Id);
+            Assert.AreEqual("2", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[1]).Id);
+            Assert.AreEqual("3", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[2]).Id);
+            Assert.AreEqual("4", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[3]).Id);
+            Assert.AreEqual("5", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[4]).Id);
+            //filters are not empty
+            Assert.AreEqual(3, sectionPage.Locations.Count()); // SC, null, MAIN
+
+            Assert.AreEqual(null, sectionPage.Locations.ToList()[0].Value);
+            Assert.AreEqual(3, sectionPage.Locations.ToList()[0].Count);
+            Assert.AreEqual(false, sectionPage.Locations.ToList()[0].Selected);
+
+            Assert.AreEqual("SC", sectionPage.Locations.ToList()[1].Value);
+            Assert.AreEqual(1, sectionPage.Locations.ToList()[1].Count);
+            Assert.AreEqual(false, sectionPage.Locations.ToList()[1].Selected);
+
+            Assert.AreEqual("MAIN", sectionPage.Locations.ToList()[2].Value);
+            Assert.AreEqual(1, sectionPage.Locations.ToList()[2].Count);
+            Assert.AreEqual(false, sectionPage.Locations.ToList()[2].Selected);
+
+            Assert.AreEqual(0, sectionPage.Faculty.Count());
+            Assert.AreEqual(0, sectionPage.DaysOfWeek.Count());
+            Assert.AreEqual(2, sectionPage.TopicCodes.Count()); // T1, null
+            Assert.AreEqual(1, sectionPage.Terms.Count());
+            Assert.AreEqual(1, sectionPage.OnlineCategories.Count());
+            Assert.AreEqual(5, sectionPage.OpenSections.Count);
+            Assert.AreEqual(5, sectionPage.OpenAndWaitlistSections.Count);
+            Assert.AreEqual(0, sectionPage.EarliestTime);
+            Assert.AreEqual(0, sectionPage.LatestTime);
+        }
+        //when criteria is null and repository also have null sections for IE
+        [TestMethod]
+        public async Task CriteriaIsNull_And_IESectionsAlsoNull()
+        {
+            IEnumerable<Domain.Student.Entities.Section> sections = null;
+            sectionRepoMock.Setup(repo => repo.GetInstantEnrollmentSectionsAsync()).Returns(Task.FromResult(sections.AsEnumerable()));
+
+            SectionPage2 sectionPage = await courseService.InstantEnrollmentSearch2Async(null, int.MaxValue, 0);
+            //should get all the sections that are returned from IE repository
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(0, sectionPage.CurrentPageItems.Count());
+            //filters are empty
+            Assert.AreEqual(0, sectionPage.Locations.Count());
+            Assert.AreEqual(0, sectionPage.Faculty.Count());
+            Assert.AreEqual(0, sectionPage.DaysOfWeek.Count());
+            Assert.AreEqual(0, sectionPage.TopicCodes.Count());
+            Assert.AreEqual(0, sectionPage.Terms.Count());
+            Assert.AreEqual(0, sectionPage.OnlineCategories.Count());
+            Assert.IsNull(sectionPage.OpenSections.Value);
+            Assert.IsNull(sectionPage.OpenAndWaitlistSections.Value);
+            Assert.AreEqual(0, sectionPage.EarliestTime);
+            Assert.AreEqual(0, sectionPage.LatestTime);
+            //These filters are null because IE doens' need those filters
+            Assert.IsNull(sectionPage.Subjects);
+            Assert.IsNull(sectionPage.AcademicLevels);
+            Assert.IsNull(sectionPage.CourseLevels);
+            Assert.IsNull(sectionPage.CourseTypes);
+        }
+        //when criteria doesn't have any search criteria and is not null
+        [TestMethod]
+        public async Task CriteriaIsNotNull_WithNoCriteria()
+        {
+            InstantEnrollmentCourseSearchCriteria searchcriteria = new InstantEnrollmentCourseSearchCriteria();
+            SectionPage2 sectionPage = await courseService.InstantEnrollmentSearch2Async(searchcriteria, int.MaxValue, 0);
+            //should get all the sections that are returned from IE repository
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(5, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual("1", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[0]).Id);
+            Assert.AreEqual("2", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[1]).Id);
+            Assert.AreEqual("3", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[2]).Id);
+            Assert.AreEqual("4", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[3]).Id);
+            Assert.AreEqual("5", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[4]).Id);
+            //filters are not empty
+            Assert.AreEqual(3, sectionPage.Locations.Count()); // SC, null, MAIN
+            Assert.AreEqual(0, sectionPage.Faculty.Count());
+            Assert.AreEqual(0, sectionPage.DaysOfWeek.Count());
+            Assert.AreEqual(2, sectionPage.TopicCodes.Count()); // T1, null
+            Assert.AreEqual(1, sectionPage.Terms.Count());//2012/FA
+            Assert.AreEqual(1, sectionPage.OnlineCategories.Count());
+            Assert.AreEqual(5, sectionPage.OpenSections.Count);
+            Assert.AreEqual(5, sectionPage.OpenAndWaitlistSections.Count);
+            Assert.AreEqual(0, sectionPage.EarliestTime);
+            Assert.AreEqual(0, sectionPage.LatestTime);
+        }
+        //when criteria provided but repository have no sections for IE
+        [TestMethod]
+        public async Task CriteriaIsNotNull_WithNoCriteria_IESectionsAreNull()
+        {
+            IEnumerable<Domain.Student.Entities.Section> sections = null;
+            sectionRepoMock.Setup(repo => repo.GetInstantEnrollmentSectionsAsync()).Returns(Task.FromResult(sections));
+
+            InstantEnrollmentCourseSearchCriteria searchcriteria = new InstantEnrollmentCourseSearchCriteria();
+            SectionPage2 sectionPage = await courseService.InstantEnrollmentSearch2Async(searchcriteria, int.MaxValue, 0);
+            //should get all the sections that are returned from IE repository
+            Assert.IsNotNull(sectionPage);
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(0, sectionPage.CurrentPageItems.Count());
+            //filters are empty
+            Assert.AreEqual(0, sectionPage.Locations.Count());
+            Assert.AreEqual(0, sectionPage.Faculty.Count());
+            Assert.AreEqual(0, sectionPage.DaysOfWeek.Count());
+            Assert.AreEqual(0, sectionPage.TopicCodes.Count());
+            Assert.AreEqual(0, sectionPage.Terms.Count());
+            Assert.AreEqual(0, sectionPage.OnlineCategories.Count());
+            Assert.IsNull(sectionPage.OpenSections.Value);
+            Assert.IsNull(sectionPage.OpenAndWaitlistSections.Value);
+            Assert.AreEqual(0, sectionPage.EarliestTime);
+            Assert.AreEqual(0, sectionPage.LatestTime);
+            //These filters are null because IE doens' need those filters
+            Assert.IsNull(sectionPage.Subjects);
+            Assert.IsNull(sectionPage.AcademicLevels);
+            Assert.IsNull(sectionPage.CourseLevels);
+            Assert.IsNull(sectionPage.CourseTypes);
+        }
+        //when sections from repository have sections but keyword doesn't give any sections
+        [TestMethod]
+        public async Task CriteriaHasKeyword_NoSectionsforTheKW_IEHaveSections()
+        {
+            InstantEnrollmentCourseSearchCriteria searchcriteria = new InstantEnrollmentCourseSearchCriteria();
+            searchcriteria.Keyword = "xyz";
+            SectionPage2 sectionPage = await courseService.InstantEnrollmentSearch2Async(searchcriteria, int.MaxValue, 0);
+
+            //should get all the sections that are returned from IE repository
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(0, sectionPage.CurrentPageItems.Count());
+            //filters are  empty
+            Assert.AreEqual(0, sectionPage.Locations.Count());
+            Assert.AreEqual(0, sectionPage.Faculty.Count());
+            Assert.AreEqual(0, sectionPage.DaysOfWeek.Count());
+            Assert.AreEqual(0, sectionPage.TopicCodes.Count());
+            Assert.AreEqual(0, sectionPage.Terms.Count());
+            Assert.AreEqual(0, sectionPage.OnlineCategories.Count());
+            Assert.IsNull(sectionPage.OpenSections.Value);
+            Assert.IsNull(sectionPage.OpenAndWaitlistSections.Value);
+            Assert.AreEqual(0, sectionPage.EarliestTime);
+            Assert.AreEqual(0, sectionPage.LatestTime);
+            //These filters are null because IE doens' need those filters
+            Assert.IsNull(sectionPage.Subjects);
+            Assert.IsNull(sectionPage.AcademicLevels);
+            Assert.IsNull(sectionPage.CourseLevels);
+            Assert.IsNull(sectionPage.CourseTypes);
+        }
+        //when sections from repo have sections that matched few sections with keyword 
+        [TestMethod]
+        public async Task CriteriaHasKeyword_MoreSectionsforTheKW_IEHaveSections()
+        {
+            InstantEnrollmentCourseSearchCriteria searchcriteria = new InstantEnrollmentCourseSearchCriteria();
+            searchcriteria.Keyword = "Sec";
+            SectionPage2 sectionPage = await courseService.InstantEnrollmentSearch2Async(searchcriteria, int.MaxValue, 0);
+            //should get all the sections that are returned from IE repository
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(5, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual("1", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[0]).Id);
+            Assert.AreEqual("2", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[1]).Id);
+            Assert.AreEqual("3", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[2]).Id);
+            Assert.AreEqual("5", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[3]).Id);
+            Assert.AreEqual("4", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[4]).Id);
+            //filters are not empty
+            Assert.AreEqual(3, sectionPage.Locations.Count()); // SC, null, MAIN
+            Assert.AreEqual(0, sectionPage.Faculty.Count());
+            Assert.AreEqual(0, sectionPage.DaysOfWeek.Count());
+            Assert.AreEqual(2, sectionPage.TopicCodes.Count()); // T1, null
+            Assert.AreEqual(1, sectionPage.Terms.Count());//2012/FA
+            Assert.AreEqual(1, sectionPage.OnlineCategories.Count());
+            Assert.AreEqual(5, sectionPage.OpenSections.Count);
+            Assert.AreEqual(5, sectionPage.OpenAndWaitlistSections.Count);
+            Assert.AreEqual(0, sectionPage.EarliestTime);
+            Assert.AreEqual(0, sectionPage.LatestTime);
+        }
+        //when sections from repo have more sections than  matched with sections with kword 
+        [TestMethod]
+        public async Task SectionsforTheKW_IEHaveMoreSections()
+        {
+            List<Domain.Student.Entities.Section> sections = new List<Domain.Student.Entities.Section>() {
+                new Domain.Student.Entities.Section("1", "139", "01", DateTime.Today.AddDays(-5), 3m, null, "Sec 1", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("CE") }, new List<string>() {"100" }, "CE", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, Domain.Student.Entities.SectionStatusIntegration.Open, "A", DateTime.Today.AddDays(-3)) }),
+                new Domain.Student.Entities.Section("2", "139", "02", DateTime.Today.AddDays(-5), 3m, null, "Sec 2", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("CE") }, new List<string>() {"100" }, "CE", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, Domain.Student.Entities.SectionStatusIntegration.Open, "A", DateTime.Today.AddDays(-3)) }),
+                new Domain.Student.Entities.Section("3", "139", "03", DateTime.Today.AddDays(-5), 3m, null, "Sec 3", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("CE") }, new List<string>() {"100" }, "CE", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, Domain.Student.Entities.SectionStatusIntegration.Open, "A", DateTime.Today.AddDays(-3)) }),
+                new Domain.Student.Entities.Section("new-sec-ie-1", "139", "04", DateTime.Today.AddDays(-5), 3m, null, "Crocheting", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("CE") }, new List<string>() {"100" }, "CE", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, Domain.Student.Entities.SectionStatusIntegration.Open, "A", DateTime.Today.AddDays(-3)) }),
+            };
+            sectionRepoMock.Setup(repo => repo.GetInstantEnrollmentSectionsAsync()).Returns(Task.FromResult(sections.AsEnumerable()));
+
+            InstantEnrollmentCourseSearchCriteria searchcriteria = new InstantEnrollmentCourseSearchCriteria();
+            searchcriteria.Keyword = "crocheting";
+            SectionPage2 sectionPage = await courseService.InstantEnrollmentSearch2Async(searchcriteria, int.MaxValue, 0);
+            //should get all the sections that are returned from IE repository
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(1, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual("new-sec-ie-1", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[0]).Id);
+        }
+        //when sections from repo have sections that doesn't match with kword
+        [TestMethod]
+        public async Task SectionsforTheKW_NotMatchWithIESections()
+        {
+            // Set up section repository response
+            InstantEnrollmentCourseSearchCriteria searchcriteria = new InstantEnrollmentCourseSearchCriteria();
+            searchcriteria.Keyword = "crocheting";
+            SectionPage2 sectionPage = await courseService.InstantEnrollmentSearch2Async(searchcriteria, int.MaxValue, 0);
+            //should get all the sections that are returned from IE repository
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(0, sectionPage.CurrentPageItems.Count());
+        }
+        //when sections from repo have sections that do not match with section ids in criteria
+        [TestMethod]
+        public async Task SectionIdsIncriteria_NotInIESections()
+        {
+            var section1 = allSections.Where(s => s.Id == "1").First();
+            var section2 = allSections.Where(s => s.Id == "2").First();
+            var section3 = allSections.Where(s => s.Id == "3").First();
+
+            var sectionCollection = new List<Domain.Student.Entities.Section>() { section1, section2, section3 };
+            // Set up section repository response
+            sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(new List<string>() { "1", "2", "3" }, false)).Returns(Task.FromResult<IEnumerable<Domain.Student.Entities.Section>>(sectionCollection));
+
+            InstantEnrollmentCourseSearchCriteria searchcriteria = new InstantEnrollmentCourseSearchCriteria();
+            searchcriteria.SectionIds = new List<string>() { "new-sec-ie-1" };
+            SectionPage2 sectionPage = await courseService.InstantEnrollmentSearch2Async(searchcriteria, int.MaxValue, 0);
+            Assert.AreEqual(0, sectionPage.CurrentPageItems.Count());
+
+        }
+        //when sections from repo have sections that matched with section ids in criteria
+        [TestMethod]
+        public async Task SectionIdsInCriteria_AllInIESections()
+        {
+            var section1 = allSections.Where(s => s.Id == "1").First();
+            var section2 = allSections.Where(s => s.Id == "2").First();
+            var sectionCollection = new List<Domain.Student.Entities.Section>() { section1, section2 };
+            // Set up section repository response
+            sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(new List<string>() { "1", "2" }, false)).Returns(Task.FromResult<IEnumerable<Domain.Student.Entities.Section>>(sectionCollection));
+            InstantEnrollmentCourseSearchCriteria searchcriteria = new InstantEnrollmentCourseSearchCriteria();
+            searchcriteria.SectionIds = new List<string>() { "1", "2" };
+            SectionPage2 sectionPage = await courseService.InstantEnrollmentSearch2Async(searchcriteria, int.MaxValue, 0);
+            Assert.AreEqual(2, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual("1", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[0]).Id);
+            Assert.AreEqual("2", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[1]).Id);
+
+        }
+        //when sections from repo have few sections that matches with section ids in criteria and few do not
+        [TestMethod]
+        public async Task SectionIdsInCriteria_FewInIESections()
+        {
+            var section1 = allSections.Where(s => s.Id == "2").First();
+            var sectionCollection = new List<Domain.Student.Entities.Section>() { section1 };
+            // Set up section repository response
+            sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(new List<string>() { "2" }, false)).Returns(Task.FromResult<IEnumerable<Domain.Student.Entities.Section>>(sectionCollection));
+            InstantEnrollmentCourseSearchCriteria searchcriteria = new InstantEnrollmentCourseSearchCriteria();
+            searchcriteria.SectionIds = new List<string>() { "2", "new-sec-ie-1" };
+            SectionPage2 sectionPage = await courseService.InstantEnrollmentSearch2Async(searchcriteria, int.MaxValue, 0);
+            Assert.AreEqual(1, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual("2", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[0]).Id);
+
+        }
+        //Test case on filters
+        //location filter on section and courses but only sections returned
+        //when a location filter is on section as well as course but course and section are not related
+        [TestMethod]
+        public async Task Location_InSection_InCourse_OnlySectionAppears()
+        {
+            //data setup - criteira = MAIN. this location is on course 110 BIOL-100 and is on section 4 for DANC-100.  
+            //oNLY danc-100 SECTION appears even though course is valid IE course.
+            //BIOL-100 COURSE have section 5 which does not have any location
+            InstantEnrollmentCourseSearchCriteria searchcriteria = new InstantEnrollmentCourseSearchCriteria();
+            searchcriteria.Locations = new List<string>() { "MAIN" };
+            SectionPage2 sectionPage = await courseService.InstantEnrollmentSearch2Async(searchcriteria, int.MaxValue, 0);
+            //should get all the sections that are returned from IE repository
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(1, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual("4", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[0]).Id);
+            Assert.AreEqual(1, sectionPage.Locations.Count());
+            Assert.AreEqual("MAIN", sectionPage.Locations.ToList()[0].Value);
+            Assert.AreEqual(true, sectionPage.Locations.ToList()[0].Selected);
+            Assert.AreEqual(1, sectionPage.Locations.ToList()[0].Count);
+        }
+
+        //when a course have location but section does not
+        [TestMethod]
+        public async Task Location_InCourse_NotInSection()
+        {
+            //data setup DANC-100 course have CD location but there the correspoding section does not have CD location as well as no other 
+            //section have CD location
+            InstantEnrollmentCourseSearchCriteria searchcriteria = new InstantEnrollmentCourseSearchCriteria();
+            searchcriteria.Locations = new List<string>() { "CD" };
+            SectionPage2 sectionPage = await courseService.InstantEnrollmentSearch2Async(searchcriteria, int.MaxValue, 0);
+            //should get all the sections that are returned from IE repository
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(0, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual(0, sectionPage.Locations.Count());
+
+        }
+
+        //topic codes on section and courses but only sections returned
+        [TestMethod]
+        public async Task TopicCode_InSection_InCourse_OnlySectionAppears()
+        {
+            //data setup - criteira = MAIN. this location is on course 110 BIOL-100 and is on section 4 for DANC-100.  
+            //oNLY danc-100 SECTION appears even though course is valid IE course.
+            //BIOL-100 COURSE have section 5 which does not have any location
+            InstantEnrollmentCourseSearchCriteria searchcriteria = new InstantEnrollmentCourseSearchCriteria();
+            searchcriteria.TopicCodes = new List<string>() { "T1" };
+            SectionPage2 sectionPage = await courseService.InstantEnrollmentSearch2Async(searchcriteria, int.MaxValue, 0);
+            //should get all the sections that are returned from IE repository
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(1, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual("1", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[0]).Id);
+            Assert.AreEqual(1, sectionPage.TopicCodes.Count());
+            Assert.AreEqual("T1", sectionPage.TopicCodes.ToList()[0].Value);
+            Assert.AreEqual(true, sectionPage.TopicCodes.ToList()[0].Selected);
+            Assert.AreEqual(1, sectionPage.TopicCodes.ToList()[0].Count);
+        }
+
+        //when a course have location but section does not
+        [TestMethod]
+        public async Task TopicCode_InCourse_NotInSection()
+        {
+            //data setup DANC-100 course have CD location but there the correspoding section does not have CD location as well as no other 
+            //section have CD location
+            InstantEnrollmentCourseSearchCriteria searchcriteria = new InstantEnrollmentCourseSearchCriteria();
+            searchcriteria.TopicCodes = new List<string>() { "T2", "T3" };
+            SectionPage2 sectionPage = await courseService.InstantEnrollmentSearch2Async(searchcriteria, int.MaxValue, 0);
+            //should get all the sections that are returned from IE repository
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(0, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual(0, sectionPage.TopicCodes.Count());
+
+        }
+        //SEARCH on coursid when it is not on valid sections
+        [TestMethod]
+        public async Task CourseId_Valid_ButNoInNijaSections()
+        {
+            //data setup- DANC-102 with id 7438 is not in any of the sections
+            InstantEnrollmentCourseSearchCriteria searchcriteria = new InstantEnrollmentCourseSearchCriteria();
+            searchcriteria.CourseIds = new List<string>() { "7438" };
+            SectionPage2 sectionPage = await courseService.InstantEnrollmentSearch2Async(searchcriteria, int.MaxValue, 0);
+            //should get all the sections that are returned from IE repository
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(0, sectionPage.CurrentPageItems.Count());
+        }
+        //search on coursids where it is vlid course but there is no section with that courseid
+        [TestMethod]
+        public async Task CourseId_Valid_AlsoInNijaSections()
+        {
+            //data setup- HIST-100 with id 139 is in 3 valid sections
+            InstantEnrollmentCourseSearchCriteria searchcriteria = new InstantEnrollmentCourseSearchCriteria();
+            searchcriteria.CourseIds = new List<string>() { "139" };
+            SectionPage2 sectionPage = await courseService.InstantEnrollmentSearch2Async(searchcriteria, int.MaxValue, 0);
+            //should get all the sections that are returned from IE repository
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(3, sectionPage.CurrentPageItems.Count());
+        }
+        [TestMethod]
+        public async Task SectionsforTheKW_ActiveStudentIds_IsNull()
+        {
+            List<Domain.Student.Entities.Section> sections = new List<Domain.Student.Entities.Section>() {
+                new Domain.Student.Entities.Section("1", "139", "01", DateTime.Today.AddDays(-5), 3m, null, "Sec 1", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("CE") }, new List<string>() {"100" }, "CE", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, Domain.Student.Entities.SectionStatusIntegration.Open, "A", DateTime.Today.AddDays(-3)) }),
+                new Domain.Student.Entities.Section("2", "139", "02", DateTime.Today.AddDays(-5), 3m, null, "Sec 2", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("CE") }, new List<string>() {"100" }, "CE", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, Domain.Student.Entities.SectionStatusIntegration.Open, "A", DateTime.Today.AddDays(-3)) }),
+                new Domain.Student.Entities.Section("3", "139", "03", DateTime.Today.AddDays(-5), 3m, null, "Sec 3", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("CE") }, new List<string>() {"100" }, "CE", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, Domain.Student.Entities.SectionStatusIntegration.Open, "A", DateTime.Today.AddDays(-3)) }),
+                new Domain.Student.Entities.Section("new-sec-ie-1", "139", "04", DateTime.Today.AddDays(-5), 3m, null, "Crocheting", "IN", new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("CE") }, new List<string>() {"100" }, "CE", new List<Domain.Student.Entities.SectionStatusItem>() { new Domain.Student.Entities.SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, Domain.Student.Entities.SectionStatusIntegration.Open, "A", DateTime.Today.AddDays(-3)) }),
+            };
+
+            sections[3].AddActiveStudent("101");
+            sections[3].AddActiveStudent("102");
+            sections[3].AddActiveStudent("103");
+            sectionRepoMock.Setup(repo => repo.GetInstantEnrollmentSectionsAsync()).Returns(Task.FromResult(sections.AsEnumerable()));
+
+            InstantEnrollmentCourseSearchCriteria searchcriteria = new InstantEnrollmentCourseSearchCriteria();
+            searchcriteria.Keyword = "crocheting";
+            SectionPage2 sectionPage = await courseService.InstantEnrollmentSearch2Async(searchcriteria, int.MaxValue, 0);
+            //should get all the sections that are returned from IE repository
+            Assert.IsNotNull(sectionPage);
+            Assert.AreEqual(1, sectionPage.CurrentPageItems.Count());
+            Assert.AreEqual("new-sec-ie-1", ((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[0]).Id);
+            //entity have student ids but dto does not have
+            Assert.AreEqual(3, sections[3].ActiveStudentIds.Count);
+            Assert.IsNull(((Dtos.Student.Section4)sectionPage.CurrentPageItems.ToList()[0]).ActiveStudentIds);
+        }
+
+    }
+
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Dtos.Base;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -14,8 +14,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// Creates or updates the proxy permissions for a proxy subject
         /// </summary>
         /// <param name="assignment">A proxy permission assignment object</param>
+        /// <param name="useEmployeeGroups">Optional parameter used to differentiate between employee proxy and person proxy</param>
         /// <returns>A collection of proxy access permissions</returns>
-        Task<IEnumerable<ProxyAccessPermission>> PostUserProxyPermissionsAsync(ProxyPermissionAssignment assignment);
+        Task<IEnumerable<ProxyAccessPermission>> PostUserProxyPermissionsAsync(ProxyPermissionAssignment assignment, bool useEmployeeGroups = false);
 
         /// <summary>
         /// Gets the proxy configuration
@@ -27,8 +28,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// Gets a collection of proxy access permissions, by user, for the supplied person
         /// </summary>
         /// <param name="id">The identifier of the entity of interest</param>
+        /// <param name="useEmployeeGroups">Optional parameter to used differentiate between employee proxy and person proxy</param>
         /// <returns>A collection of proxy access permissions, by user, for the supplied person</returns>
-        Task<IEnumerable<Dtos.Base.ProxyUser>> GetUserProxyPermissionsAsync(string id);
+        Task<IEnumerable<Dtos.Base.ProxyUser>> GetUserProxyPermissionsAsync(string id, bool useEmployeeGroups = false);
 
 
         /// <summary>

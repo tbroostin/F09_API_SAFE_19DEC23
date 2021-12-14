@@ -1,10 +1,9 @@
-﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Dtos;
@@ -70,8 +69,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Collection of FinancialAidApplications DTO objects</returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidApplication>, int>> GetAsync(int offset, int limit, Dtos.FinancialAidApplication filterDto, bool bypassCache = false)
         {
-            CheckViewFinancialAidApplicationsPermission();
-
             try
             {
 
@@ -177,8 +174,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>FinancialAidApplications DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.FinancialAidApplication> GetByIdAsync(string id, bool bypassCache = true)
         {
-            CheckViewFinancialAidApplicationsPermission();
-
             try
             {
                 // Get the student financial aid awards domain entity from the repository
@@ -987,22 +982,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     earnedNoncustodialParent2Income.Currency = Dtos.EnumProperties.CurrencyCodes.USD;
                     financialAidApplicationDto.NoncustodialParentsIncome.secondParentEarnedIncome = earnedNoncustodialParent2Income;
                 }
-            }
-        }
-
-        /// <summary>
-        /// Helper method to determine if the user has permission to view Student FinancialAidAwards.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckViewFinancialAidApplicationsPermission()
-        {
-            bool hasPermission = HasPermission(StudentPermissionCodes.ViewFinancialAidApplications);
-
-            // User is not allowed to read FinancialAidApplications without the appropriate permissions
-            if (!hasPermission)
-            {
-                IntegrationApiExceptionAddError( string.Format( "User {0} is not authorized to view financial-aid-applications.", CurrentUser.UserId), "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden );
-                throw IntegrationApiException;
             }
         }
     }

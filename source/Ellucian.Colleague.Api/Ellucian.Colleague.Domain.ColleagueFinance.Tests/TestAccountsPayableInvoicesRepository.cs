@@ -514,5 +514,10 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         {
             throw new NotImplementedException();
         }
+
+        public Task<IEnumerable<VoucherSummary>> QueryVoucherSummariesAsync(ProcurementDocumentFilterCriteria criteria)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

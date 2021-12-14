@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 
@@ -38,6 +38,13 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Status code of the waitlisted student
         /// </summary>
         public String StatusCode { get; set; }
-
+        /// <summary>
+        /// Date when student is added to waitlist
+        /// </summary>
+        public DateTime? WaitListAddDate { get; set; }
+        /// <summary>
+        /// Wait time
+        /// </summary>
+        public DateTime? WaitTime { get; set; }
     }
 }

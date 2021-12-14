@@ -536,7 +536,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
                     invoiceNumber = vouchersArray[i, 9];
                     requestorName = vouchersArray[i, 18];
 
-                    var voucherSummary = new VoucherSummary(voucherId, invoiceNumber, vendorName, date);
+                    var voucherSummary = new VoucherSummary(voucherId, vendorName, date);
 
                     voucherSummary.Status = voucherStatus;
                     voucherSummary.VendorId = vendorId;
@@ -608,6 +608,18 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         {
             return await Task.Run(() => vouchers.Where(x => x.InvoiceNumber == invoiceNo
             && x.VendorId == vendorId));
+        }
+
+        public async Task<IEnumerable<VoucherSummary>> QueryVoucherSummariesAsync(ProcurementDocumentFilterCriteria criteria)
+        {
+            if (criteria != null && criteria.VendorIds != null && criteria.VendorIds.Any())
+            {
+                return await Task.Run(() => voucherSummaryList.Where(x => x.VendorId == criteria.VendorIds.FirstOrDefault()));
+            }
+            else
+            {
+                return await Task.Run(() => voucherSummaryList);
+            }
         }
     }
 }

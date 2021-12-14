@@ -104,6 +104,20 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             throw new NotImplementedException();
         }
 
+        public Task<OutsideAward> GetOutsideAwardsByAwardIdAsync(string awardId)
+        {
+            foreach(var record in outsideAwardRecords)
+            {
+                if (record.recordId == awardId)
+                {
+                    var outsideAward = new OutsideAward(record.recordId, record.studentId, record.awardYear, record.awardName,
+                    record.awardType, record.awardAmount, record.fundingSource);
+                    return Task.FromResult(outsideAward);
+                }
+            }
+            return null;
+        }
+
         public Task<OutsideAward> UpdateOutsideAwardAsync(OutsideAward outsideAward)
         {
            // throw new NotImplementedException();

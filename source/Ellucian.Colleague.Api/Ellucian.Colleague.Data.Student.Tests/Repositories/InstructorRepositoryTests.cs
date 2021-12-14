@@ -174,7 +174,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task InstructorRepository_GetInstructorByIdAsync_DataContract_Null_KeyNotFoundException()
         {
-            dataAccessorMock.Setup(i => i.ReadRecordAsync<DataContracts.Faculty>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+            dataAccessorMock.Setup(i => i.ReadRecordAsync<DataContracts.Faculty>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
             var results = await _instructorRepository.GetInstructorByIdAsync("b87c4f7a-cc3a-4bdf-ab21-eb826da4e3cc");
         }
 

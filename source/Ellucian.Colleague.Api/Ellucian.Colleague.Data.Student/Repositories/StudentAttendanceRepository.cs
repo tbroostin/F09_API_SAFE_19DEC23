@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates
 
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
@@ -230,7 +230,19 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             var request = new UpdateStudentAttendanceRequest();
             request.SectionId = sectionAttendanceToUpdate.SectionId;
-            request.CalendarSchedulesId = sectionAttendanceToUpdate.MeetingInstance.Id;
+
+            // set either the meeting instance id or the meeting date (sections with ad hoc meetings will not have a meeting instance id)
+            if (!string.IsNullOrEmpty(sectionAttendanceToUpdate.MeetingInstance.Id))
+            {
+                request.CalendarSchedulesId = sectionAttendanceToUpdate.MeetingInstance.Id;
+                request.MeetingDate = null;
+            }
+            else
+            {
+                request.MeetingDate = sectionAttendanceToUpdate.MeetingInstance.MeetingDate;
+                request.CalendarSchedulesId = null;
+            }
+
             request.StudentAttendances = new List<StudentAttendances>();
 
             foreach (var attendance in sectionAttendanceToUpdate.StudentAttendances)
@@ -253,10 +265,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 response = await transactionInvoker.ExecuteAsync<UpdateStudentAttendanceRequest, UpdateStudentAttendanceResponse>(request);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 string err = "Update Attendance: Attendance Information not updated for STUDENT.COURSE.SEC " + sectionAttendanceToUpdate.SectionId;
-                logger.Error(err);
+                logger.Error(ex, err);
                 throw new ApplicationException(err);
             }
 
@@ -310,7 +322,16 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     if (!string.IsNullOrEmpty(courseSecId))
                     {
-                        var updatedAttendance = studentAttendances.Where(sa => sa.StudentCourseSectionId == courseSecId && sectionAttendanceToUpdate.MeetingInstance.BelongsToStudentAttendance(sa)).FirstOrDefault();
+                        StudentAttendance updatedAttendance = null;
+                        if (!string.IsNullOrEmpty(sectionAttendanceToUpdate.MeetingInstance.Id))
+                        {
+                            updatedAttendance = studentAttendances.Where(sa => sa.StudentCourseSectionId == courseSecId && sectionAttendanceToUpdate.MeetingInstance.BelongsToStudentAttendance(sa)).FirstOrDefault();
+                        }
+                        else
+                        {
+                            updatedAttendance = studentAttendances.Where(sa => sa.StudentCourseSectionId == courseSecId && sectionAttendanceToUpdate.MeetingInstance.MeetingDate == sa.MeetingDate).FirstOrDefault();
+                        }
+
                         if (updatedAttendance != null)
                         {
                             sectionAttendanceResponse.AddUpdatedStudentAttendance(updatedAttendance);
@@ -318,7 +339,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         else
                         {
                             sectionAttendanceResponse.AddStudentCourseSectionsWithDeletedAttendance(courseSecId);
-                            logger.Info(string.Format("Update Attendance: Attendance updated for Student Course Sec {0} for {1} {2}-{3}." + Environment.NewLine +
+                            logger.Debug(string.Format("Update Attendance: Attendance updated for Student Course Sec {0} for {1} {2}-{3}." + Environment.NewLine +
                                 "Unable to build student attendance for this section meeting for one of the following reasons:" + Environment.NewLine +
                                 "- student does not have any attendance data for {0} for {1} {2}-{3}, meaning it is not stored in the database" + Environment.NewLine +
                                 "- there was an error retrieving attendance data for Student Course Sec {0} for {1} {2}-{3}.",

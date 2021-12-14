@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
@@ -21,6 +21,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         protected TestColleagueFinanceWebConfigurationsRepository expectedRepository;
         private CfwebDefaults cfWebDefaultsDataContract;
         private PurDefaults purDefaultsDataContract;
+        private CfDocAttachParms cfDocAttachParmsDataContract;
 
         [TestInitialize]
         public void Initialize()
@@ -40,15 +41,26 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             this.cfWebDefaultsDataContract.CfwebCkrApprovalFlag = "Y";
             this.cfWebDefaultsDataContract.CfwebCkrAllowMiscVendor = "Y";
             this.cfWebDefaultsDataContract.CfwebCkrApType = "AP2";
-            this.cfWebDefaultsDataContract.CfwebCkrGlRequired= "Y";
+            this.cfWebDefaultsDataContract.CfwebCkrGlRequired = "Y";
             this.cfWebDefaultsDataContract.CfwebCkrReqInvoiceNo = "N";
             this.cfWebDefaultsDataContract.CfwebTaxCodes = new List<string> { "GS", "PS", "FL1" };
+            this.cfWebDefaultsDataContract.CfwebApTypes = new List<string> { "AP", "AP2", "AP3" };
+            this.cfWebDefaultsDataContract.CfwebCkrApTypes = new List<string> { "CAD", "EUR", "AP" };
             this.purDefaultsDataContract = new PurDefaults();
             this.purDefaultsDataContract.PurShipToCode = "MC";
             this.purDefaultsDataContract.PurReqApprovalNeededFlag = "N";
             this.purDefaultsDataContract.PurPoApprovalNeededFlag = "A";
+            this.cfDocAttachParmsDataContract = new CfDocAttachParms()
+            {
+                CfDocAttachVoucherCol = "VOUCHERS",
+                CfDocAttachPoCol = "PORDERS",
+                CfDocAttachReqCol = "REQS",
+                CfDocAttachVoucherReqd = "Y",
+                CfDocAttachPoReqd = "Y",
+                CfDocAttachReqReqd = "Y",
+                Recordkey = "101"
+            };
         }
-
 
         [TestCleanup]
         public void TestCleanup()
@@ -56,6 +68,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             colleagueFinanceWebConfigurationsRepository = null;
             expectedRepository = null;
         }
+
         [TestMethod]
         public void GetColleagueFinanceWebConfigurations_ValidDefaultEmailType()
         {
@@ -64,6 +77,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.IsNotNull(cfWebDefaultsActual.Result.DefaultEmailType);
             Assert.AreEqual(cfWebDefaultsExpected.Result.DefaultEmailType, cfWebDefaultsActual.Result.DefaultEmailType);
         }
+
+        [TestMethod]
         public void GetColleagueFinanceWebConfigurations_InvalidDefaultEmailType()
         {
             var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
@@ -82,14 +97,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.IsNotNull(cfWebDefaultsActual.Result.DefaultAPTypeCode);
             Assert.AreEqual(cfWebDefaultsExpected.Result.DefaultAPTypeCode, cfWebDefaultsActual.Result.DefaultAPTypeCode);
         }
+
+        [TestMethod]
         public void GetColleagueFinanceWebConfigurations_InvalidDefaultAPTypeCode()
         {
             var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
-            cfWebDefaultsExpected.Result.DefaultAPTypeCode = "";
             cfWebDefaultsDataContract.CfwebApType = "";
             var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
-            Assert.AreEqual(cfWebDefaultsActual.Result.DefaultAPTypeCode, string.Empty);
-            Assert.AreEqual(cfWebDefaultsExpected.Result.DefaultAPTypeCode, cfWebDefaultsActual.Result.DefaultEmailType);
+            Assert.AreEqual(cfWebDefaultsActual.Result.DefaultAPTypeCode, null);
         }
 
         [TestMethod]
@@ -137,7 +152,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         {
             var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
             cfWebDefaultsExpected.Result.CfWebReqGlRequired = false;
-            cfWebDefaultsDataContract.CfwebReqGlRequired = "";            
+            cfWebDefaultsDataContract.CfwebReqGlRequired = "";
             var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
             Assert.IsFalse(cfWebDefaultsActual.Result.CfWebReqGlRequired);
             Assert.AreEqual(cfWebDefaultsExpected.Result.CfWebReqGlRequired, cfWebDefaultsActual.Result.CfWebReqGlRequired);
@@ -182,6 +197,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.IsNotNull(cfWebDefaultsActual.Result.CfWebReqDesiredDays);
             Assert.AreEqual(cfWebDefaultsExpected.Result.CfWebReqDesiredDays, cfWebDefaultsActual.Result.CfWebReqDesiredDays);
         }
+
         [TestMethod]
         public void GetColleagueFinanceWebConfigurations_InvalidCfWebReqDesiredDays()
         {
@@ -201,7 +217,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.IsNotNull(cfWebDefaultsActual.Result.CfWebPoGlRequired);
             Assert.AreEqual(cfWebDefaultsExpected.Result.CfWebPoGlRequired, cfWebDefaultsActual.Result.CfWebPoGlRequired);
         }
-
 
         [TestMethod]
         public void GetColleagueFinanceWebConfigurations_ValidCfwebPoGlRequired_No()
@@ -265,7 +280,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(cfWebDefaultsExpected.Result.RequestPaymentDefaults.GlRequiredForVoucher, cfWebDefaultsActual.Result.RequestPaymentDefaults.GlRequiredForVoucher);
         }
 
-
         [TestMethod]
         public void GetColleagueFinanceWebConfigurations_ValidCfwebCkrGlRequired_No()
         {
@@ -327,14 +341,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.IsNotNull(cfWebDefaultsActual.Result.RequestPaymentDefaults.DefaultAPTypeCode);
             Assert.AreEqual(cfWebDefaultsExpected.Result.RequestPaymentDefaults.DefaultAPTypeCode, cfWebDefaultsActual.Result.RequestPaymentDefaults.DefaultAPTypeCode);
         }
+
+        [TestMethod]
         public void GetColleagueFinanceWebConfigurations_InvalidVoucherDefaultAPTypeCode()
         {
             var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
-            cfWebDefaultsExpected.Result.RequestPaymentDefaults.DefaultAPTypeCode = "";
             cfWebDefaultsDataContract.CfwebCkrApType = "";
             var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
-            Assert.AreEqual(cfWebDefaultsActual.Result.RequestPaymentDefaults.DefaultAPTypeCode, string.Empty);
-            Assert.AreEqual(cfWebDefaultsExpected.Result.RequestPaymentDefaults.DefaultAPTypeCode, cfWebDefaultsActual.Result.RequestPaymentDefaults.DefaultAPTypeCode);
+            Assert.AreEqual(cfWebDefaultsActual.Result.RequestPaymentDefaults.DefaultAPTypeCode, null);
         }
 
         [TestMethod]
@@ -344,6 +358,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
             Assert.AreEqual(cfWebDefaultsExpected.Result.PurchasingDefaults.IsRequisitionApprovalNeeded, cfWebDefaultsActual.Result.PurchasingDefaults.IsRequisitionApprovalNeeded);
         }
+
+        [TestMethod]
         public void GetColleagueFinanceWebConfigurations_InvalidRequisitionApprovalNeeded()
         {
             var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
@@ -353,8 +369,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(cfWebDefaultsExpected.Result.PurchasingDefaults.IsRequisitionApprovalNeeded, cfWebDefaultsActual.Result.PurchasingDefaults.IsRequisitionApprovalNeeded);
         }
 
-
-
         [TestMethod]
         public void GetColleagueFinanceWebConfigurations_ValidPoApprovalNeeded()
         {
@@ -362,6 +376,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
             Assert.AreEqual(cfWebDefaultsExpected.Result.PurchasingDefaults.IsPOApprovalNeeded, cfWebDefaultsActual.Result.PurchasingDefaults.IsPOApprovalNeeded);
         }
+
         public void GetColleagueFinanceWebConfigurations_InvalidPoApprovalNeeded()
         {
             var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
@@ -371,7 +386,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(cfWebDefaultsExpected.Result.PurchasingDefaults.IsPOApprovalNeeded, cfWebDefaultsActual.Result.PurchasingDefaults.IsPOApprovalNeeded);
         }
 
-
         [TestMethod]
         public void GetColleagueFinanceWebConfigurations_ValidVoucherApprovalNeeded()
         {
@@ -379,6 +393,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
             Assert.AreEqual(cfWebDefaultsExpected.Result.RequestPaymentDefaults.IsVoucherApprovalNeeded, cfWebDefaultsActual.Result.RequestPaymentDefaults.IsVoucherApprovalNeeded);
         }
+
+        [TestMethod]
         public void GetColleagueFinanceWebConfigurations_InvalidVoucherApprovalNeeded()
         {
             var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
@@ -388,8 +404,189 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             Assert.AreEqual(cfWebDefaultsExpected.Result.RequestPaymentDefaults.IsVoucherApprovalNeeded, cfWebDefaultsActual.Result.RequestPaymentDefaults.IsVoucherApprovalNeeded);
         }
 
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_CfDocAttachParmsIsUnAssigned()
+        {
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.CfDocAttachParms>("CF.PARMS", "CF.DOC.ATTACH.PARMS", true)).Returns(() =>
+            {
+                return Task.FromResult(new CfDocAttachParms() { });
+            });
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.AreEqual(null, cfWebDefaultsActual.Result.VoucherAttachmentCollectionId);
+            Assert.AreEqual(null, cfWebDefaultsActual.Result.PurchaseOrderAttachmentCollectionId);
+            Assert.AreEqual(null, cfWebDefaultsActual.Result.RequisitionAttachmentCollectionId);
+        }
 
-     
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_CfDocAttachParm_VouchersValid()
+        {
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.CfDocAttachParms>("CF.PARMS", "CF.DOC.ATTACH.PARMS", true)).Returns(() =>
+            {
+                return Task.FromResult(new CfDocAttachParms()
+                {
+                    CfDocAttachVoucherCol = "VOUCHERS"
+                });
+            });
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.AreEqual("VOUCHERS", cfWebDefaultsActual.Result.VoucherAttachmentCollectionId);
+            Assert.AreEqual(null, cfWebDefaultsActual.Result.PurchaseOrderAttachmentCollectionId);
+            Assert.AreEqual(null, cfWebDefaultsActual.Result.RequisitionAttachmentCollectionId);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_VouAttachmentRequiredIsY()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsTrue(cfWebDefaultsActual.Result.AreVoucherAttachmentsRequired);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.AreVoucherAttachmentsRequired, cfWebDefaultsActual.Result.AreVoucherAttachmentsRequired);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_VouAttachmentRequiredIsN()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.AreVoucherAttachmentsRequired = false;
+            cfDocAttachParmsDataContract.CfDocAttachVoucherReqd = "N";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.AreEqual(cfWebDefaultsExpected.Result.AreVoucherAttachmentsRequired, cfWebDefaultsActual.Result.AreVoucherAttachmentsRequired);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_VouAttachmentRequiredIsEmpty()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.AreVoucherAttachmentsRequired = false;
+            cfDocAttachParmsDataContract.CfDocAttachVoucherReqd = "";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.AreEqual(cfWebDefaultsExpected.Result.AreVoucherAttachmentsRequired, cfWebDefaultsActual.Result.AreVoucherAttachmentsRequired);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_CfDocAttachParm_PurchaseOrdersValid()
+        {
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.CfDocAttachParms>("CF.PARMS", "CF.DOC.ATTACH.PARMS", true)).Returns(() =>
+            {
+                return Task.FromResult(new CfDocAttachParms()
+                {
+                    CfDocAttachPoCol = "PORDERS"
+                });
+            });
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.AreEqual("PORDERS", cfWebDefaultsActual.Result.PurchaseOrderAttachmentCollectionId);
+            Assert.AreEqual(null, cfWebDefaultsActual.Result.VoucherAttachmentCollectionId);
+            Assert.AreEqual(null, cfWebDefaultsActual.Result.RequisitionAttachmentCollectionId);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_PoAttachmentRequiredIsY()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsTrue(cfWebDefaultsActual.Result.ArePurchaseOrderAttachmentsRequired);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.ArePurchaseOrderAttachmentsRequired, cfWebDefaultsActual.Result.ArePurchaseOrderAttachmentsRequired);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_PoAttachmentRequiredIsN()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.ArePurchaseOrderAttachmentsRequired = false;
+            cfDocAttachParmsDataContract.CfDocAttachPoReqd = "N";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.AreEqual(cfWebDefaultsExpected.Result.ArePurchaseOrderAttachmentsRequired, cfWebDefaultsActual.Result.ArePurchaseOrderAttachmentsRequired);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_PoAttachmentRequiredIsEmpty()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.ArePurchaseOrderAttachmentsRequired = false;
+            cfDocAttachParmsDataContract.CfDocAttachPoReqd = "";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.AreEqual(cfWebDefaultsExpected.Result.ArePurchaseOrderAttachmentsRequired, cfWebDefaultsActual.Result.ArePurchaseOrderAttachmentsRequired);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_CfDocAttachParm_RequisitionsValid()
+        {
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.CfDocAttachParms>("CF.PARMS", "CF.DOC.ATTACH.PARMS", true)).Returns(() =>
+            {
+                return Task.FromResult(new CfDocAttachParms()
+                {
+                    CfDocAttachReqCol = "REQUISITIONS"
+                });
+            });
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.AreEqual("REQUISITIONS", cfWebDefaultsActual.Result.RequisitionAttachmentCollectionId);
+            Assert.AreEqual(null, cfWebDefaultsActual.Result.VoucherAttachmentCollectionId);
+            Assert.AreEqual(null, cfWebDefaultsActual.Result.PurchaseOrderAttachmentCollectionId);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_ReqAttachmentRequiredIsY()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsTrue(cfWebDefaultsActual.Result.AreRequisitionAttachmentsRequired);
+            Assert.AreEqual(cfWebDefaultsExpected.Result.AreRequisitionAttachmentsRequired, cfWebDefaultsActual.Result.AreRequisitionAttachmentsRequired);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_ReqAttachmentRequiredIsN()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.AreRequisitionAttachmentsRequired = false;
+            cfDocAttachParmsDataContract.CfDocAttachReqReqd = "N";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.AreEqual(cfWebDefaultsExpected.Result.AreRequisitionAttachmentsRequired, cfWebDefaultsActual.Result.AreRequisitionAttachmentsRequired);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_ReqAttachmentRequiredIsEmpty()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            cfWebDefaultsExpected.Result.AreRequisitionAttachmentsRequired = false;
+            cfDocAttachParmsDataContract.CfDocAttachReqReqd = "";
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.AreEqual(cfWebDefaultsExpected.Result.AreRequisitionAttachmentsRequired, cfWebDefaultsActual.Result.AreRequisitionAttachmentsRequired);
+        }
+        //
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_Valid_PUWP_RestrictToAPTypeCodes()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsNotNull(cfWebDefaultsActual.Result.RestrictToListedApTypeCodes);
+            CollectionAssert.AreEqual(cfWebDefaultsExpected.Result.RestrictToListedApTypeCodes.ToList(), cfWebDefaultsActual.Result.RestrictToListedApTypeCodes.ToList());
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_Empty_PUWP_RestrictToAPTypeCodes()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            this.cfWebDefaultsDataContract.CfwebApTypes = new List<string> { };
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.AreEqual(cfWebDefaultsActual.Result.RestrictToListedApTypeCodes, null);
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_Valid_RPYP_RestrictToAPTypeCodes()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.IsNotNull(cfWebDefaultsActual.Result.RestrictToListedApTypeCodes);
+            CollectionAssert.AreEqual(cfWebDefaultsExpected.Result.RequestPaymentDefaults.RestrictToListedApTypeCodes.ToList(), cfWebDefaultsActual.Result.RequestPaymentDefaults.RestrictToListedApTypeCodes.ToList());
+        }
+
+        [TestMethod]
+        public void GetColleagueFinanceWebConfigurations_Empty_RPYP_RestrictToAPTypeCodes()
+        {
+            var cfWebDefaultsExpected = expectedRepository.GetColleagueFinanceWebConfigurations();
+            this.cfWebDefaultsDataContract.CfwebCkrApTypes = new List<string> { };
+            var cfWebDefaultsActual = colleagueFinanceWebConfigurationsRepository.GetColleagueFinanceWebConfigurations();
+            Assert.AreEqual(cfWebDefaultsActual.Result.RequestPaymentDefaults.RestrictToListedApTypeCodes, null);
+        }
 
         private ColleagueFinanceWebConfigurationsRepository BuildMockColleagueFinanceWebConfigurationsRepository()
         {
@@ -400,6 +597,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.PurDefaults>("CF.PARMS", "PUR.DEFAULTS", true)).Returns(() =>
             {
                 return Task.FromResult(purDefaultsDataContract);
+            });
+
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.CfDocAttachParms>("CF.PARMS", "CF.DOC.ATTACH.PARMS", true)).Returns(() =>
+            {
+                return Task.FromResult(cfDocAttachParmsDataContract);
             });
 
             ColleagueFinanceWebConfigurationsRepository repository = new ColleagueFinanceWebConfigurationsRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);

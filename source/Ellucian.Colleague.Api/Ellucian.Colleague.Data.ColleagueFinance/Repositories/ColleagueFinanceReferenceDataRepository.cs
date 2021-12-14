@@ -1,7 +1,8 @@
-﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.Entities;
@@ -26,6 +27,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class ColleagueFinanceReferenceDataRepository : BaseColleagueRepository, IColleagueFinanceReferenceDataRepository
     {
+        const string AllAccountingStringComponentValuesCache = "AllAccountingStringComponentValues";
+
+        const int ColleagueFinanceReferenceDataCacheTimeout = 20; // Clear from cache every 20 minutes
+
         public ColleagueFinanceReferenceDataRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
         {
@@ -276,7 +281,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             string guid = string.Empty;
             if (string.IsNullOrEmpty(code))
                 return guid;
-            var allCodesCache = await GetAccountsPayableSourcesAsync(false);
+            IEnumerable<AccountsPayableSources> allCodesCache = null;
+            try
+            {
+                allCodesCache = await GetAccountsPayableSourcesAsync(false);
+            }
+            catch
+            {
+                throw new RepositoryException(string.Concat("No Guid found, Entity:'AP.TYPES', Record ID:'", code, "'"));
+            }
             AccountsPayableSources codeCache = null;
             if (allCodesCache != null && allCodesCache.Any())
             {
@@ -339,6 +352,57 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         }
 
         /// <summary>
+        /// Get guid for AssetCategories code
+        /// </summary>
+        /// <param name="code">AssetCategories code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetAssetCategoriesGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            IEnumerable<Domain.ColleagueFinance.Entities.AssetCategories> allCodesCache = null;
+            try
+            {
+                allCodesCache = await GetAssetCategoriesAsync(false);
+            }
+            catch
+            {
+                throw new RepositoryException(string.Concat("No Guid found, Entity:'ASSET.CATEGORIES', Record ID:'", code, "'"));
+            }
+            Domain.ColleagueFinance.Entities.AssetCategories codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetAssetCategoriesAsync(true);
+                if (allCodesNoCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ASSET.CATEGORIES', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ASSET.CATEGORIES', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ASSET.CATEGORIES', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
+
+        /// <summary>
         /// Gets all assett categories.
         /// </summary>
         /// <param name="bypassCache"></param>
@@ -350,6 +414,56 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     ? cl.Recordkey : cl.AsctDesc)), bypassCache: bypassCache);
         }
 
+        /// <summary>
+        /// Get guid for AssetTypes code
+        /// </summary>
+        /// <param name="code">AssetTypes code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetAssetTypesGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            IEnumerable<Domain.ColleagueFinance.Entities.AssetTypes> allCodesCache = null;
+            try
+            {
+                allCodesCache = await GetAssetTypesAsync(false);
+            }
+            catch
+            {
+                throw new RepositoryException(string.Concat("No Guid found, Entity:'ASSET.TYPES', Record ID:'", code, "'"));
+            }
+            Domain.ColleagueFinance.Entities.AssetTypes codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetAssetTypesAsync(true);
+                if (allCodesNoCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ASSET.TYPES', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ASSET.TYPES', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'ASSET.TYPES', Record ID:'", code, "'"));
+            }
+            return guid;
+
+        }
 
         /// <summary>
         /// Gets all asset types.
@@ -1888,17 +2002,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var fiscalPeriodIntgRecords = await DataReader.BulkReadRecordAsync<DataContracts.FiscalPeriodsIntg>("FISCAL.PERIODS.INTG", "BY FPI.FISCAL.YEAR BY FPI.FISCAL.PERIOD");
 
             var dataContract = await DataReader.ReadRecordAsync<Fiscalyr>("ACCOUNT.PARAMETERS", "FISCAL.YEAR", true);
-            if (dataContract == null)
-            {
-                throw new ConfigurationException("Fiscal year data is not set up.");
-            }
+            
 
-            if (!dataContract.FiscalStartMonth.HasValue)
+            if (dataContract != null && !dataContract.FiscalStartMonth.HasValue)
             {
                 throw new ConfigurationException("Fiscal year start month must have a value.");
             }
 
-            if (dataContract.FiscalStartMonth < 1 || dataContract.FiscalStartMonth > 12)
+            if (dataContract != null && (dataContract.FiscalStartMonth < 1 || dataContract.FiscalStartMonth > 12))
             {
                 throw new ConfigurationException("Fiscal year start month must be in between 1 and 12.");
             }
@@ -1974,36 +2085,31 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
 
             var genLdgrRecords = await DataReader.BulkReadRecordAsync<DataContracts.GenLdgr>("GEN.LDGR", " WITH GEN.LDGR.TYPE NE 'CONTROL'");
-
-            if (genLdgrRecords == null || genLdgrRecords.Count <= 0)
-                throw new ConfigurationException("No fiscal years have been set up.");
+                
             var dataContract = await DataReader.ReadRecordAsync<Fiscalyr>("ACCOUNT.PARAMETERS", "FISCAL.YEAR", true);
 
-            if (dataContract == null)
-            {
-                throw new ConfigurationException("Fiscal year data is not set up.");
-            }
-
-            if (!dataContract.FiscalStartMonth.HasValue)
+            if (dataContract != null && !dataContract.FiscalStartMonth.HasValue)
             {
                 throw new ConfigurationException("Fiscal year start month must have a value.");
             }
 
-            if (dataContract.FiscalStartMonth < 1 || dataContract.FiscalStartMonth > 12)
+            if (dataContract != null && (dataContract.FiscalStartMonth < 1 || dataContract.FiscalStartMonth > 12))
             {
                 throw new ConfigurationException("Fiscal year start month must be in between 1 and 12.");
             }
-
-            foreach (var genLdgrRecord in genLdgrRecords)
+            if (genLdgrRecords != null && genLdgrRecords.Any())
             {
-                var fiscalYear = new Domain.ColleagueFinance.Entities.FiscalYear(genLdgrRecord.RecordGuid, genLdgrRecord.Recordkey);
-                fiscalYear.Title = genLdgrRecord.GenLdgrDescription;
-                fiscalYear.Status = genLdgrRecord.GenLdgrStatus;
-                fiscalYear.HostCorpId = defaultCorpId;
-                fiscalYear.InstitutionName = institutionName;
-                fiscalYear.FiscalStartMonth = dataContract.FiscalStartMonth;
-                fiscalYear.CurrentFiscalYear = dataContract.CurrentFiscalYear;
-                fiscalYearsEntities.Add(fiscalYear);
+                foreach (var genLdgrRecord in genLdgrRecords)
+                {
+                    var fiscalYear = new Domain.ColleagueFinance.Entities.FiscalYear(genLdgrRecord.RecordGuid, genLdgrRecord.Recordkey);
+                    fiscalYear.Title = genLdgrRecord.GenLdgrDescription;
+                    fiscalYear.Status = genLdgrRecord.GenLdgrStatus;
+                    fiscalYear.HostCorpId = defaultCorpId;
+                    fiscalYear.InstitutionName = institutionName;
+                    fiscalYear.FiscalStartMonth = dataContract.FiscalStartMonth;
+                    fiscalYear.CurrentFiscalYear = dataContract.CurrentFiscalYear;
+                    fiscalYearsEntities.Add(fiscalYear);
+                }
             }
             return fiscalYearsEntities;
         }
@@ -2349,8 +2455,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <summary>
         /// Gets accounting string component values V15.
         /// </summary>
-        /// <param name="Offset"></param>
-        /// <param name="Limit"></param>
+        /// <param name="offset"></param>
+        /// <param name="limit"></param>
         /// <param name="component"></param>
         /// <param name="transactionStatus"></param>
         /// <param name="typeAccount"></param>
@@ -2360,7 +2466,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <param name="effectiveOn"></param>
         /// <param name="ignoreCache"></param>
         /// <returns></returns>
-        public async Task<Tuple<IEnumerable<AccountingStringComponentValues>, int>> GetAccountingStringComponentValues3Async(int Offset, int Limit, string component,
+        public async Task<Tuple<IEnumerable<AccountingStringComponentValues>, int>> GetAccountingStringComponentValues3Async(int offset, int limit, string component,
            string typeAccount, string status, IEnumerable<string> grants, DateTime? effectiveOn)
         {
             List<AccountingStringComponentValues> glAccounts = new List<AccountingStringComponentValues>();
@@ -2375,6 +2481,23 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             string glcriteria = string.Empty;
             string prCriteria = string.Empty;
             string criteria = string.Empty;
+            string[] subList = null;
+
+            string accountingStringComponentValuesCache = CacheSupport.BuildCacheKey(AllAccountingStringComponentValuesCache, component, typeAccount, status, grants, 
+                    effectiveOn != null && effectiveOn.HasValue ? effectiveOn : null);
+
+            var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                accountingStringComponentValuesCache,
+                "",
+                offset,
+                limit,
+                ColleagueFinanceReferenceDataCacheTimeout,
+                async () => {
 
             /*
                 Notes: 
@@ -2388,23 +2511,23 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     effectiveOn: Look at glAccount.GlAcctsAddDate, glAccount.GlAcctsChgdate, project.PrjStartDate, project.PrjEndDate
             */
             #region component, either GL.ACCT or PROJECT or BOTH
-            if(!string.IsNullOrEmpty(component))
+            if (!string.IsNullOrEmpty(component))
             {
                 if(component.Equals("GL.ACCT", StringComparison.OrdinalIgnoreCase))
                 {
                     glLimitingKeys = await DataReader.SelectAsync("GL.ACCTS", string.Empty);
                     if(glLimitingKeys == null || !glLimitingKeys.Any())
                     {
-                        return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
-                    }
+                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                            }
                 }
                 else if (component.Equals("PROJECT", StringComparison.OrdinalIgnoreCase))
                 {
                     prLimitingKeys = await DataReader.SelectAsync("PROJECTS", string.Empty);
                     if (prLimitingKeys == null || !prLimitingKeys.Any())
                     {
-                        return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
-                    }
+                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                            }
                 }
             }
             else
@@ -2414,8 +2537,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 //If both collections are empty then return empty set.
                 if ((glLimitingKeys == null || !glLimitingKeys.Any()) && (prLimitingKeys == null || !prLimitingKeys.Any()))
                 {
-                    return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
-                }
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
             }
             #endregion
 
@@ -2437,157 +2560,174 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 //If both collections are empty then return empty set.
                 if ((glLimitingKeys == null || !glLimitingKeys.Any()) && (prLimitingKeys == null || !prLimitingKeys.Any()))
                 {
-                    return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
-                }
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
 
             }
-            #endregion
+                    #endregion
 
-            #region type.account
-            //TO DO: come back to it later
-            if (!string.IsNullOrEmpty(typeAccount))
-            {
-                var glClassDef = await DataReader.ReadRecordAsync<DataContracts.Glclsdef>("ACCOUNT.PARAMETERS", "GL.CLASS.DEF", true);
-                int startPos = glClassDef.GlClassLocation.ElementAt(0).GetValueOrDefault() - 1;
-                int length = glClassDef.GlClassLocation.ElementAt(1).GetValueOrDefault();
+                    #region type.account
+                    //TO DO: come back to it later
+                    if (!string.IsNullOrEmpty(typeAccount))
+                    {
+                        var glClassDef = await DataReader.ReadRecordAsync<DataContracts.Glclsdef>("ACCOUNT.PARAMETERS", "GL.CLASS.DEF", true);
+                        int startPos = glClassDef.GlClassLocation.ElementAt(0).GetValueOrDefault() - 1;
+                        int length = glClassDef.GlClassLocation.ElementAt(1).GetValueOrDefault();
 
-                switch (typeAccount)
-                {
-                    case "asset":
-                        if (glClassDef.GlClassAssetValues != null && glClassDef.GlClassAssetValues.Any())
+                        switch (typeAccount)
                         {
-                            prLimitingKeys = null;
-                            glLimitingKeys = glLimitingKeys
-                                .Where(k => !string.IsNullOrEmpty(k) && glClassDef.GlClassAssetValues.Contains(k.Substring(startPos, length)))
-                                .Select(i => i).ToArray();
+                            case "asset":
+                                if (glClassDef.GlClassAssetValues != null && glClassDef.GlClassAssetValues.Any())
+                                {
+                                    prLimitingKeys = null;
+                                    glLimitingKeys = glLimitingKeys
+                                        .Where(k => !string.IsNullOrEmpty(k) && glClassDef.GlClassAssetValues.Contains(k.Substring(startPos, length)))
+                                        .Select(i => i).ToArray();
+                                }
+                                else
+                                {
+                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                }
+                                break;
+                            case "liability":
+                                if (glClassDef.GlClassLiabilityValues != null && glClassDef.GlClassLiabilityValues.Any())
+                                {
+                                    prLimitingKeys = null;
+                                    glLimitingKeys = glLimitingKeys
+                                        .Where(k => !string.IsNullOrEmpty(k) && glClassDef.GlClassLiabilityValues.Contains(k.Substring(startPos, length)))
+                                        .Select(i => i).ToArray();
+                                }
+                                else
+                                {
+                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                }
+                                break;
+                            case "fundBalance":
+                                if (glClassDef.GlClassFundBalValues != null && glClassDef.GlClassFundBalValues.Any())
+                                {
+                                    prLimitingKeys = null;
+                                    glLimitingKeys = glLimitingKeys
+                                        .Where(k => !string.IsNullOrEmpty(k) && glClassDef.GlClassFundBalValues.Contains(k.Substring(startPos, length)))
+                                        .Select(i => i).ToArray();
+                                }
+                                else
+                                {
+                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                }
+                                break;
+                            case "revenue":
+                                if (glClassDef.GlClassRevenueValues != null && glClassDef.GlClassRevenueValues.Any())
+                                {
+                                    prLimitingKeys = null;
+                                    glLimitingKeys = glLimitingKeys
+                                        .Where(k => !string.IsNullOrEmpty(k) && glClassDef.GlClassRevenueValues.Contains(k.Substring(startPos, length)))
+                                        .Select(i => i).ToArray();
+                                }
+                                else
+                                {
+                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                }
+                                break;
+                            case "expense":
+                                if (glClassDef.GlClassExpenseValues != null && glClassDef.GlClassExpenseValues.Any())
+                                {
+                                    glLimitingKeys = glLimitingKeys
+                                        .Where(k => !string.IsNullOrEmpty(k) && glClassDef.GlClassExpenseValues.Contains(k.Substring(startPos, length)))
+                                        .Select(i => i).ToArray();
+                                }
+                                else
+                                {
+                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                }
+                                break;
+                            default:
+                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
                         }
-                        else
-                        {
-                            return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
-                        }
-                        break;
-                    case "liability":
-                        if (glClassDef.GlClassLiabilityValues != null && glClassDef.GlClassLiabilityValues.Any())
-                        {
-                            prLimitingKeys = null;
-                            glLimitingKeys = glLimitingKeys
-                                .Where(k => !string.IsNullOrEmpty(k) && glClassDef.GlClassLiabilityValues.Contains(k.Substring(startPos, length)))
-                                .Select(i => i).ToArray();
-                        }
-                        else
-                        {
-                            return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
-                        }
-                        break;
-                    case "fundBalance":
-                        if (glClassDef.GlClassFundBalValues != null && glClassDef.GlClassFundBalValues.Any())
-                        {
-                            prLimitingKeys = null;
-                            glLimitingKeys = glLimitingKeys
-                                .Where(k => !string.IsNullOrEmpty(k) && glClassDef.GlClassFundBalValues.Contains(k.Substring(startPos, length)))
-                                .Select(i => i).ToArray();
-                        }
-                        else
-                        {
-                            return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
-                        }
-                        break;
-                    case "revenue":
-                        if (glClassDef.GlClassRevenueValues != null && glClassDef.GlClassRevenueValues.Any())
-                        {
-                            prLimitingKeys = null;
-                            glLimitingKeys = glLimitingKeys
-                                .Where(k => !string.IsNullOrEmpty(k) && glClassDef.GlClassRevenueValues.Contains(k.Substring(startPos, length)))
-                                .Select(i => i).ToArray();
-                        }
-                        else
-                        {
-                            return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
-                        }
-                        break;
-                    case "expense":
-                        if (glClassDef.GlClassExpenseValues != null && glClassDef.GlClassExpenseValues.Any())
-                        {
-                            glLimitingKeys = glLimitingKeys
-                                .Where(k => !string.IsNullOrEmpty(k) && glClassDef.GlClassExpenseValues.Contains(k.Substring(startPos, length)))
-                                .Select(i => i).ToArray();
-                        }
-                        else
-                        {
-                            return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
-                        }
-                        break;
-                    default:
-                        return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
-                }
-            }
-            #endregion
+                    }
+                    #endregion
 
-            #region grants
-            if (grants != null && grants.Any())
-            {
-                //GL.ACCT
-                glcriteria = "WITH GL.PROJECTS.ID EQ '?'";
-                //PROJECT
-                prCriteria = "WITH PROJECTS.ID EQ '?'";
-                glLimitingKeys = await DataReader.SelectAsync("GL.ACCTS", glcriteria, grants.ToArray());
-                prLimitingKeys = await DataReader.SelectAsync("PROJECTS",prCriteria, grants.ToArray());
-                //If both collections are empty then return empty set.
-                if ((glLimitingKeys == null || !glLimitingKeys.Any()) && (prLimitingKeys == null || !prLimitingKeys.Any()))
-                {
-                    return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
-                }
-            }
-            #endregion
+                    #region grants
+                    if (grants != null && grants.Any())
+                    {                     
+                        glcriteria = "WITH GL.PROJECTS.ID EQ '" + (string.Join(" ", grants.ToArray())).Replace(" ", "' '") + "'";
+                        prCriteria = "WITH PROJECTS.ID EQ '" + (string.Join(" ", grants.ToArray())).Replace(" ", "' '") + "'";
 
-            #region effectiveOn
-            if (effectiveOn.HasValue)
-            {
-                var date = await GetUnidataFormattedDate(effectiveOn.Value.ToShortDateString());
-                //GL.ACCT
-                glcriteria = string.Format("WITH GL.ACCTS.ADD.DATE <= '{0}' AND ((GL.INACTIVE EQ 'A' OR GL.INACTIVE EQ '') OR GL.INACTIVE EQ 'I' OR GL.ACCTS.CHGDATE >= '{0}')", date);
-                //PROJECT
-                prCriteria = string.Format("WITH PRJ.START.DATE <= '{0}' AND (PRJ.END.DATE EQ '' OR PRJ.END.DATE >= '{0}')", date);
-                glLimitingKeys = await DataReader.SelectAsync("GL.ACCTS", glLimitingKeys, glcriteria);
-                prLimitingKeys = await DataReader.SelectAsync("PROJECTS", prLimitingKeys, prCriteria);
-                //If both collections are empty then return empty set.
-                if ((glLimitingKeys == null || !glLimitingKeys.Any()) && (prLimitingKeys == null || !prLimitingKeys.Any()))
-                {
-                    return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
-                }
-            }
-            #endregion
+                        glLimitingKeys = await DataReader.SelectAsync("GL.ACCTS", glLimitingKeys, glcriteria);
+                        prLimitingKeys = await DataReader.SelectAsync("PROJECTS", prLimitingKeys, prCriteria);
 
-            //here combine the keys to get the total count.
-            if (glLimitingKeys != null && glLimitingKeys.Any())
-            {
-                foreach (var glKey in glLimitingKeys)
-                {
-                    combinedIds.Add(string.Concat("GL*", glKey));
-                }
-            }
-            if (prLimitingKeys != null && prLimitingKeys.Any())
-            {
-                foreach (var prKey in prLimitingKeys)
-                {
-                    combinedIds.Add(string.Concat("PR*", prKey));
-                }
-            }
+                        //If both collections are empty then return empty set.
+                        if ((glLimitingKeys == null || !glLimitingKeys.Any()) && (prLimitingKeys == null || !prLimitingKeys.Any()))
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+                    }
+                    #endregion
 
-            if (!combinedIds.Any())
+                    #region effectiveOn
+                    if (effectiveOn.HasValue)
+                    {
+                        var date = await GetUnidataFormattedDate(effectiveOn.Value.ToShortDateString());
+                        //GL.ACCT
+                        glcriteria = string.Format("WITH GL.ACCTS.ADD.DATE <= '{0}' AND ((GL.INACTIVE EQ 'A' OR GL.INACTIVE EQ '') OR GL.INACTIVE EQ 'I' OR GL.ACCTS.CHGDATE >= '{0}')", date);
+                        //PROJECT
+                        prCriteria = string.Format("WITH PRJ.START.DATE <= '{0}' AND (PRJ.END.DATE EQ '' OR PRJ.END.DATE >= '{0}')", date);
+                        glLimitingKeys = await DataReader.SelectAsync("GL.ACCTS", glLimitingKeys, glcriteria);
+                        prLimitingKeys = await DataReader.SelectAsync("PROJECTS", prLimitingKeys, prCriteria);
+                        //If both collections are empty then return empty set.
+                        if ((glLimitingKeys == null || !glLimitingKeys.Any()) && (prLimitingKeys == null || !prLimitingKeys.Any()))
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+                    }
+                    #endregion
+
+                    //here combine the keys to get the total count.
+                    if (glLimitingKeys != null && glLimitingKeys.Any())
+                    {
+                        foreach (var glKey in glLimitingKeys)
+                        {
+                            combinedIds.Add(string.Concat("GL*", glKey));
+                        }
+                    }
+                    if (prLimitingKeys != null && prLimitingKeys.Any())
+                    {
+                        foreach (var prKey in prLimitingKeys)
+                        {
+                            combinedIds.Add(string.Concat("PR*", prKey));
+                        }
+                    }
+
+                    if (!combinedIds.Any())
+                    {
+                        return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                    }
+
+                    CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
+                    {
+                        limitingKeys = combinedIds.Distinct().ToList(),
+                    };
+
+                    return requirements;
+
+                });
+
+            if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
             {
                 return new Tuple<IEnumerable<AccountingStringComponentValues>, int>(new List<AccountingStringComponentValues>(), 0);
             }
+            
+            subList = keyCache.Sublist.ToArray();
 
-            totalCount = combinedIds.Count();
+            totalCount = keyCache.TotalCount.Value;
+            //totalCount = combinedIds.Count();
 
             //sort & page
-            combinedIds.Sort();
-            var sublist = combinedIds.Skip(Offset).Take(Limit);
+            // combinedIds.Sort();
+            //var sublist = combinedIds.Skip(Offset).Take(Limit);
 
             //Get the ids used in bulk read.
-            glIds = sublist.Where(i => !string.IsNullOrEmpty(i) && i.Split('*')[0].Equals("GL", StringComparison.OrdinalIgnoreCase)).Select(k => k.Split('*')[1]).ToArray();
-            prIds = sublist.Where(i => !string.IsNullOrEmpty(i) && i.Split('*')[0].Equals("PR", StringComparison.OrdinalIgnoreCase)).Select(k => k.Split('*')[1]).ToArray();
+            glIds = subList.Where(i => !string.IsNullOrEmpty(i) && i.Split('*')[0].Equals("GL", StringComparison.OrdinalIgnoreCase)).Select(k => k.Split('*')[1]).ToArray();
+            prIds = subList.Where(i => !string.IsNullOrEmpty(i) && i.Split('*')[0].Equals("PR", StringComparison.OrdinalIgnoreCase)).Select(k => k.Split('*')[1]).ToArray();
 
             //component, either GL.ACCT or PROJECT
             switch (component)
@@ -2927,14 +3067,23 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 //get the Status
                 if (fiscalYearDataContract != null && glAccount.MemosEntityAssociation != null && glAccount.MemosEntityAssociation.Any())
                 {
-                    string fiscalYearStatus = glAccount.MemosEntityAssociation.FirstOrDefault(x => x.AvailFundsControllerAssocMember == fiscalYearDataContract.CfCurrentFiscalYear).GlFreezeFlagsAssocMember;
-                    if ((fiscalYearStatus == "O" || fiscalYearStatus == "I") && glAccount.GlInactive == "A")
-                    {
-                        newASCV.Status = "available";
-                    }
-                    else if (glAccount.GlInactive == "I" || fiscalYearStatus == "F")
+                    var fiscalYearStatus = glAccount.MemosEntityAssociation.FirstOrDefault(x => x.AvailFundsControllerAssocMember == fiscalYearDataContract.CfCurrentFiscalYear);
+                    if (fiscalYearStatus == null)
                     {
                         newASCV.Status = "unavailable";
+                    }
+                    else
+                    {
+                        string glFFA = fiscalYearStatus.GlFreezeFlagsAssocMember;
+
+                        if ((glFFA == "O" || glFFA == "I") && glAccount.GlInactive == "A")
+                        {
+                            newASCV.Status = "available";
+                        }
+                        else if (glAccount.GlInactive == "I" || glFFA == "F")
+                        {
+                            newASCV.Status = "unavailable";
+                        }
                     }
                 }
             }

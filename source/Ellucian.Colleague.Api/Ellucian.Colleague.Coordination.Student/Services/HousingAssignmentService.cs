@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -210,7 +210,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.HousingAssignment>, int>> GetHousingAssignmentsAsync(int offset, int limit, Dtos.HousingAssignment criteriaFilter, bool bypassCache = false)
         {
 
-                CheckViewHousingAssignmentPermissions();
+                //CheckViewHousingAssignmentPermissions();
                 string person = string.Empty, term = string.Empty, status = string.Empty, startDate = string.Empty, endDate = string.Empty;
             if (criteriaFilter != null)
             {
@@ -301,7 +301,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             try
             {
-                CheckViewHousingAssignmentPermissions();
+                //CheckViewHousingAssignmentPermissions();
 
                     var housingAssignmentEntity = await _housingAssignmentRepository.GetHousingAssignmentByGuidAsync(guid);
 
@@ -329,7 +329,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             try
             {
-                CheckCreateUpdateHousingAssignmentPermissions();
+                //CheckCreateUpdateHousingAssignmentPermissions();
 
                 _housingAssignmentRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -364,7 +364,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var housingAssignmentId = await _housingAssignmentRepository.GetHousingAssignmentKeyAsync(housingAssignmentDto.Id);
                 if (!string.IsNullOrEmpty(housingAssignmentId))
                 {
-                    CheckCreateUpdateHousingAssignmentPermissions();
+                    //CheckCreateUpdateHousingAssignmentPermissions();
 
                     _housingAssignmentRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -1297,7 +1297,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<HousingAssignment2>, int>> GetHousingAssignments2Async(int offset, int limit, HousingAssignment2 criteriaFilter, bool bypassCache = false)
         {
-            CheckViewHousingAssignmentPermissions2();
+            //CheckViewHousingAssignmentPermissions2();
             string person = string.Empty, term = string.Empty, status = string.Empty, startDate = string.Empty, endDate = string.Empty;
             if (criteriaFilter != null)
             {
@@ -1404,7 +1404,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns></returns>
         public async Task<HousingAssignment2> GetHousingAssignmentByGuid2Async(string id, bool bypassCache = false)
         {
-            CheckViewHousingAssignmentPermissions2();
+            //CheckViewHousingAssignmentPermissions2();
 
             try
             {
@@ -1445,7 +1445,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var housingAssignmentId = await _housingAssignmentRepository.GetHousingAssignmentKeyAsync(housingAssignmentDto.Id);
                 if (!string.IsNullOrEmpty(housingAssignmentId))
                 {
-                    CheckCreateUpdateHousingAssignmentPermissions2();
+                    //CheckCreateUpdateHousingAssignmentPermissions2();
 
                     _housingAssignmentRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -1486,7 +1486,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             try
             {
-                CheckCreateUpdateHousingAssignmentPermissions2();
+               //CheckCreateUpdateHousingAssignmentPermissions2();
 
                 _housingAssignmentRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 

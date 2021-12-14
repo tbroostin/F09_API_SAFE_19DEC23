@@ -96,7 +96,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [TestMethod]
             public async Task BuyerRepository_GetBuyersAsync_NullResults()
             {
-                dataAccessorMock.Setup(repo => repo.SelectAsync("STAFF", string.Empty)).ReturnsAsync(null);
+                dataAccessorMock.Setup(repo => repo.SelectAsync("STAFF", string.Empty)).ReturnsAsync(() => null);
                 var results = await buyerRepository.GetBuyersAsync(offset, limit, It.IsAny<bool>());
                 Assert.IsNull(results.Item1);
             }
@@ -150,7 +150,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             public async Task BuyerRepository_GetBuyerByIdAsync_StaffRecordNull_KeyNotFoundException()
             {
                 dataAccessorMock.Setup(i => i.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Staff>("STAFF", It.IsAny<string>(), It.IsAny<bool>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
                 var results = await buyerRepository.GetBuyerAsync(guid);
             }
 

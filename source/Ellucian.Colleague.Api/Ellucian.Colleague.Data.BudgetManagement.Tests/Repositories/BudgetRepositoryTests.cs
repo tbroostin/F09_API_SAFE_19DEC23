@@ -139,7 +139,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Tests.Repositories
                   .Returns(Task.FromResult(new Dictionary<string, GuidLookupResult>() { { "KEY", new GuidLookupResult() { Entity = "BUDGET", PrimaryKey = "KEY" } } }));
 
                 dataReaderMock.Setup(d => d.ReadRecordAsync<DataContracts.Budget>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
-                              .ReturnsAsync(null);
+                              .ReturnsAsync(() => null);
 
                 await budgetRepository.GetBudgetPhasesAsync(_budgetCollection.FirstOrDefault().RecordGuid);
             }
@@ -304,7 +304,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Tests.Repositories
                   .Returns(Task.FromResult(new Dictionary<string, GuidLookupResult>() { { "KEY", new GuidLookupResult() { Entity = "BUDGET", PrimaryKey = "KEY" } } }));
 
                 dataReaderMock.Setup(d => d.ReadRecordAsync<DataContracts.Budget>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
-                              .ReturnsAsync(null);
+                              .ReturnsAsync(() => null);
 
                 await budgetRepository.GetBudgetCodesAsync(_budgetCollection.FirstOrDefault().RecordGuid);
             }
@@ -421,7 +421,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Tests.Repositories
                 {
                     dicResult = new Dictionary<string, GuidLookupResult>()
                     {
-                        { guid, new GuidLookupResult() { Entity = "BUD.WORK", PrimaryKey = "1" } }
+                        { guid, new GuidLookupResult() { Entity = "BWK.2016", PrimaryKey = "1" } }
                     };
 
                     intlParams = new Base.DataContracts.IntlParams()
@@ -505,7 +505,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Tests.Repositories
                 [ExpectedException(typeof(KeyNotFoundException))]
                 public async Task BudgetPhases_GetBudgetPhasesIdFromGuidAsync_Invalid_GuidDict()
                 {
-                    dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+                    dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
                     await budgetRepository.GetBudgetPhasesIdFromGuidAsync(guid);
                 }
 
@@ -548,7 +548,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Tests.Repositories
                 [TestMethod]
                 public async Task BudgetPhases_GetBudgetPhaseLineItemsAsync_Returns_Null_BudgetIds()
                 {
-                    dataReaderMock.Setup(d => d.SelectAsync("BUDGET", It.IsAny<string>())).ReturnsAsync(null);
+                    dataReaderMock.Setup(d => d.SelectAsync("BUDGET", It.IsAny<string>())).ReturnsAsync(() => null);
 
                     var result = await budgetRepository.GetBudgetPhaseLineItemsAsync(0, 2, null, null);
 
@@ -557,7 +557,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Tests.Repositories
                 }
 
                 [TestMethod]
-                [ExpectedException(typeof(Exception))]
+                [ExpectedException(typeof(RepositoryException))]
                 public async Task BudgetPhases_GetBudgetPhaseLineItemsAsync_Exception()
                 {
                     dataReaderMock.Setup(d => d.SelectAsync("BUDGET", It.IsAny<string>())).ThrowsAsync(new Exception());
@@ -635,8 +635,31 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Tests.Repositories
                 [ExpectedException(typeof(KeyNotFoundException))]
                 public async Task BudgetPhases_GetByGuid_Record_NotFound_For_PrimaryKey()
                 {
-                    dataReaderMock.Setup(d => d.ReadRecordAsync<DataContracts.BudWork>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(null);
+                    dataReaderMock.Setup(d => d.ReadRecordAsync<DataContracts.BudWork>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(() => null);
                     await budgetRepository.GetBudgetPhaseLineItemsByGuidAsync(guid);
+                }
+
+                [TestMethod]
+                [ExpectedException(typeof(RepositoryException))]
+                public async Task BudgetPhases_GetBudgetPhaseLineItemsByGuidAsync_InvalidEntity()
+                {
+                    var budWork = new DataContracts.BudWork()
+                    {
+                        RecordGuid = guid,
+                        Recordkey = "1"
+                    };
+
+                    var lookUpResult = new Dictionary<string, GuidLookupResult>() {
+                    { "1", new GuidLookupResult { Entity = "BUDGET", PrimaryKey = "1", SecondaryKey = "1" } },
+                    { "2", new GuidLookupResult { Entity = "BUDGET", PrimaryKey = "2", SecondaryKey = "2" } } };
+                    dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(lookUpResult);
+
+                    dataReaderMock.Setup(d => d.ReadRecordAsync<DataContracts.BudWork>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(budWork);
+
+                    var result = await budgetRepository.GetBudgetPhaseLineItemsByGuidAsync(guid);
+
+                    Assert.IsNotNull(result);
+                    Assert.AreEqual(result.RecordGuid, guid);
                 }
 
                 [TestMethod]

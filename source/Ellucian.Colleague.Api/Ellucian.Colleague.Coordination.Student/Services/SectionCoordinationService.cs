@@ -1,5 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
-
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,8 +21,10 @@ using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Coordination.Base;
-using DDay.iCal;
-using DDay.iCal.Serialization;
+using Ical.Net;
+using Ical.Net.DataTypes;
+using Ical.Net.Serialization;
+using Ellucian.Colleague.Coordination.Student.Adapters;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -629,7 +630,52 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             // Permission check
             var section = await _sectionRepository.GetSectionAsync(sectionId);
             CanViewSectionWaitlists(section, sectionId);
-            IEnumerable<SectionWaitlistStudent> entity = await _sectionRepository.GetSectionWaitlist2Async(sectionId);
+            IEnumerable<SectionWaitlistStudent> entity = await _sectionRepository.GetSectionWaitlist2Async(new List<string> { sectionId });
+            List<Dtos.Student.SectionWaitlistStudent> waitlistDetails = new List<Dtos.Student.SectionWaitlistStudent>();
+            foreach (var item in entity)
+            {
+                Dtos.Student.SectionWaitlistStudent dto = _adapterRegistry.GetAdapter<Domain.Student.Entities.SectionWaitlistStudent, Dtos.Student.SectionWaitlistStudent>().MapToType(item);
+                waitlistDetails.Add(dto);
+            }
+            return waitlistDetails;
+        }
+        /// <summary>
+        /// Gets a list of SectionWaitlistStudent for given sections or includes the cross listed sections data based on the query criteria
+        /// </summary>
+        /// <param name="criteria">SectionWaitlistQueryCriteria object</param>
+        /// <returns>A list of Dtos.Student.SectionWaitlistStudent </returns>
+        public async Task<IEnumerable<Dtos.Student.SectionWaitlistStudent>> GetSectionWaitlist3Async(Dtos.Student.SectionWaitlistQueryCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria", "Must supply a criteria to query waitlist data.");
+            }
+            if (criteria.SectionIds == null || !criteria.SectionIds.Any())
+            {
+                throw new ArgumentException("Must supply atleast one section to query waitlist data.");
+            }
+            List<Domain.Student.Entities.Section> sections = new List<Domain.Student.Entities.Section>();
+            // Permission check
+            foreach (var sectionId in criteria.SectionIds)
+            {
+                var section = await _sectionRepository.GetSectionAsync(sectionId);
+                CanViewSectionWaitlists(section, sectionId);
+                sections.Add(section);              
+            }
+            List<string> querySectionIds =  criteria.SectionIds;
+            
+            if(criteria.IncludeCrossListedSections && sections != null && sections.Any())
+            {
+                foreach (var sec in sections)
+                {
+                    if (sec.CrossListedSections != null && sec.CrossListedSections.Any())
+                    {
+                        querySectionIds.AddRange(sec.CrossListedSections.Select(x => x.Id));
+                    }
+                }
+
+            }
+            IEnumerable<SectionWaitlistStudent> entity = await _sectionRepository.GetSectionWaitlist2Async(querySectionIds);
             List<Dtos.Student.SectionWaitlistStudent> waitlistDetails = new List<Dtos.Student.SectionWaitlistStudent>();
             foreach (var item in entity)
             {
@@ -730,7 +776,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (Exception ex)
             {
                 var message = string.Format("Exception occurred while trying to fetch the student section waitlists using  student Id {0} and section Id {1}  Exception message: ", studentId, sectionId, ex.Message);
-                logger.Info(ex, message);
+                logger.Error(ex, message);
                 throw;
             }
         }
@@ -767,15 +813,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             // forceNoVerifyFlag false for default immediate verification, and false for check for locks. This maintains the behavior of the repository 
             // prior to the addition of the the arguments in v3 of the section/{sectionId}/grades endpoint. 
             // callerType ILP because only ILP functionality was supported in v1.
-            var domainResponse = await _sectionRepository.ImportGradesAsync(domainSectionGrades, false, false, GradesPutCallerTypes.ILP);
+            // New argument with the v5 endpoint. Default to false for all prior versions.
+            bool sendGradingCompleteEmail = false;
+            var domainResponse = await _sectionRepository.ImportGradesAsync(domainSectionGrades, false, false, GradesPutCallerTypes.ILP, sendGradingCompleteEmail);
 
             // Convert domain response to DTO
             var gradeDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionGradeResponse, Ellucian.Colleague.Dtos.Student.SectionGradeResponse>();
             List<Dtos.Student.SectionGradeResponse> dtoResponseCollection = new List<Dtos.Student.SectionGradeResponse>();
-
-            foreach (var response in domainResponse)
+            if ((domainResponse != null) && (domainResponse.StudentResponses != null))
             {
-                dtoResponseCollection.Add(gradeDtoAdapter.MapToType(response));
+                foreach (var response in domainResponse.StudentResponses)
+                {
+                    dtoResponseCollection.Add(gradeDtoAdapter.MapToType(response));
+                }
             }
 
             return dtoResponseCollection;
@@ -801,15 +851,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             // forceNoVerifyFlag false for default immediate verification, and false for check for locks. This maintains the behavior of the repository 
             // prior to the addition of the the arguments in v3 of the section/{sectionId}/grades endpoint. 
             // callerType ILP because only ILP functionality was supported in v2.
-            var domainResponse = await _sectionRepository.ImportGradesAsync(domainSectionGrades, false, false, GradesPutCallerTypes.ILP);
+            // New argument with the v5 endpoint. Default to false for all prior versions.
+            bool sendGradingCompleteEmail = false;
+            var domainResponse = await _sectionRepository.ImportGradesAsync(domainSectionGrades, false, false, GradesPutCallerTypes.ILP, sendGradingCompleteEmail);
 
             // Convert domain response to DTO
             var gradeDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionGradeResponse, Ellucian.Colleague.Dtos.Student.SectionGradeResponse>();
             List<Dtos.Student.SectionGradeResponse> dtoResponseCollection = new List<Dtos.Student.SectionGradeResponse>();
-
-            foreach (var response in domainResponse)
+            if ((domainResponse != null) && (domainResponse.StudentResponses != null))
             {
-                dtoResponseCollection.Add(gradeDtoAdapter.MapToType(response));
+                foreach (var response in domainResponse.StudentResponses)
+                {
+                    dtoResponseCollection.Add(gradeDtoAdapter.MapToType(response));
+                }
             }
 
             return dtoResponseCollection;
@@ -840,15 +894,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             bool forceNoVerifyFlag = (sectionGrades.ForceNoVerifyFlag.HasValue) ? sectionGrades.ForceNoVerifyFlag.Value : false;
             // The checkForLocksFlag is added and passed true starting with version 3 of the section/{sectionId}/grades endpoint.
             // callerType ILP because only ILP functionality was supported in v3.
-            var domainResponse = await _sectionRepository.ImportGradesAsync(domainSectionGrades, forceNoVerifyFlag, true, GradesPutCallerTypes.ILP);
+            // New argument with the v5 endpoint. Default to false for all prior versions.
+            bool sendGradingCompleteEmail = false;
+            var domainResponse = await _sectionRepository.ImportGradesAsync(domainSectionGrades, forceNoVerifyFlag, true, GradesPutCallerTypes.ILP, sendGradingCompleteEmail);
 
             // Convert domain response to DTO
             var gradeDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionGradeResponse, Ellucian.Colleague.Dtos.Student.SectionGradeResponse>();
             List<Dtos.Student.SectionGradeResponse> dtoResponseCollection = new List<Dtos.Student.SectionGradeResponse>();
-
-            foreach (var response in domainResponse)
+            if ((domainResponse != null) && (domainResponse.StudentResponses != null))
             {
-                dtoResponseCollection.Add(gradeDtoAdapter.MapToType(response));
+                foreach (var response in domainResponse.StudentResponses)
+                {
+                    dtoResponseCollection.Add(gradeDtoAdapter.MapToType(response));
+                }
             }
 
             return dtoResponseCollection;
@@ -861,6 +919,25 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns><see cref="Grade">StudentSectionGradeResponse</see></returns>
         public async Task<IEnumerable<Dtos.Student.SectionGradeResponse>> ImportGrades4Async(Dtos.Student.SectionGrades3 sectionGrades)
         {
+            Dtos.Student.SectionGrades4 sectionGrades4 = new Dtos.Student.SectionGrades4();
+            sectionGrades4.SectionId = sectionGrades.SectionId;
+            sectionGrades4.ForceNoVerifyFlag = sectionGrades.ForceNoVerifyFlag;
+            sectionGrades4.StudentGrades = sectionGrades.StudentGrades;
+            // Pass property for newer API version as null. Appropriate default value will be used.
+            sectionGrades4.SendGradingCompleteEmail = null;
+
+            var sectionResponse = await this.ImportGradesFromIlpOrStandard(sectionGrades4, GradesPutCallerTypes.Standard);
+            // This older endpoint version returns only StudentResponses
+            return sectionResponse.StudentResponses;
+        }
+
+        /// <summary>
+        /// Imports students grades for a section from a standard non-ILP caller.
+        /// </summary>
+        /// <param name="sectionGrades">DTO of section grade information</param>
+        /// <returns><see cref="Grade">StudentSectionGradeResponse</see></returns>
+        public async Task<Dtos.Student.SectionGradeSectionResponse> ImportGrades5Async(Dtos.Student.SectionGrades4 sectionGrades)
+        {
             return await this.ImportGradesFromIlpOrStandard(sectionGrades, GradesPutCallerTypes.Standard);
         }
 
@@ -871,7 +948,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns><see cref="Grade">StudentSectionGradeResponse</see></returns>
         public async Task<IEnumerable<Dtos.Student.SectionGradeResponse>> ImportIlpGrades1Async(Dtos.Student.SectionGrades3 sectionGrades)
         {
-            return await this.ImportGradesFromIlpOrStandard(sectionGrades, GradesPutCallerTypes.ILP);
+            Dtos.Student.SectionGrades4 sectionGrades4 = new Dtos.Student.SectionGrades4();
+            sectionGrades4.SectionId = sectionGrades.SectionId;
+            sectionGrades4.ForceNoVerifyFlag = sectionGrades.ForceNoVerifyFlag;
+            sectionGrades4.StudentGrades = sectionGrades.StudentGrades;
+            // Pass property for newer API version as null. Appropriate default value will be used.
+            sectionGrades4.SendGradingCompleteEmail = null;
+
+            var sectionResponse = await this.ImportGradesFromIlpOrStandard(sectionGrades4, GradesPutCallerTypes.ILP);
+            // This older endpoint version returns only StudentResponses
+            return sectionResponse.StudentResponses;
+
         }
 
         /// <summary>
@@ -881,8 +968,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="sectionGrades">DTO of section grade information</param>
         /// <param name="callerType">Indicate the caller type</param>
         /// <returns><see cref="Grade">StudentSectionGradeResponse</see></returns>
-        private async Task<IEnumerable<Dtos.Student.SectionGradeResponse>> ImportGradesFromIlpOrStandard(Dtos.Student.SectionGrades3 sectionGrades, GradesPutCallerTypes callerType)
+        private async Task<Dtos.Student.SectionGradeSectionResponse> ImportGradesFromIlpOrStandard(Dtos.Student.SectionGrades4 sectionGrades, GradesPutCallerTypes callerType)
         {
+            Dtos.Student.SectionGradeSectionResponse responseDto = new Dtos.Student.SectionGradeSectionResponse();
+
             if (sectionGrades == null)
                 throw new ArgumentNullException("sectionGrades");
 
@@ -893,25 +982,42 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             // Convert to domain objects
-            var gradeDomainAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Dtos.Student.SectionGrades3, Ellucian.Colleague.Domain.Student.Entities.SectionGrades>();
+            var gradeDomainAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Dtos.Student.SectionGrades4, Ellucian.Colleague.Domain.Student.Entities.SectionGrades>();
             var domainSectionGrades = gradeDomainAdapter.MapToType(sectionGrades);
 
             // Import the grades
             // forceNoVerifyFlag defaults to false if it was not supplied. False causes the configured immediate verification behavior to occur.
             bool forceNoVerifyFlag = (sectionGrades.ForceNoVerifyFlag.HasValue) ? sectionGrades.ForceNoVerifyFlag.Value : false;
             // The checkForLocksFlag is added and passed true starting with version 3 of the section/{sectionId}/grades endpoint.
-            var domainResponse = await _sectionRepository.ImportGradesAsync(domainSectionGrades, forceNoVerifyFlag, true, callerType);
+            bool checkForLocksFlag = true;
+            // sendGradingCompleteEmail defaults to false if it was not supplied. 
+            bool sendGradingCompleteFlag = (sectionGrades.SendGradingCompleteEmail.HasValue) ? sectionGrades.SendGradingCompleteEmail.Value : false;
 
-            // Convert domain response to DTO
+            var domainResponse = await _sectionRepository.ImportGradesAsync(domainSectionGrades, forceNoVerifyFlag, checkForLocksFlag, callerType, sendGradingCompleteFlag);
+
+            // Add each student response from the entity to the return dto
             var gradeDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionGradeResponse, Ellucian.Colleague.Dtos.Student.SectionGradeResponse>();
-            List<Dtos.Student.SectionGradeResponse> dtoResponseCollection = new List<Dtos.Student.SectionGradeResponse>();
-
-            foreach (var response in domainResponse)
+            if (domainResponse != null)
             {
-                dtoResponseCollection.Add(gradeDtoAdapter.MapToType(response));
+                if (domainResponse.StudentResponses != null)
+                {
+                    foreach (var studentResponse in domainResponse.StudentResponses)
+                    {
+                        responseDto.StudentResponses.Add(gradeDtoAdapter.MapToType(studentResponse));
+                    }
+                }
+
+                if (domainResponse.InformationalMessages != null)
+                {
+                    // Add each informational message from the entity to the return dto
+                    foreach (string infoMsg in domainResponse.InformationalMessages)
+                    {
+                        responseDto.InformationalMessages.Add(infoMsg);
+                    }
+                }
             }
 
-            return dtoResponseCollection;
+            return responseDto;
         }
 
         /// <summary>
@@ -986,9 +1092,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new KeyNotFoundException("Section must provide a GUID.");
             }
 
-            // Make sure the user has the appropriate permissions to do this
-            CheckSectionPermission();
-
+        
             // Convert the CDM section into a domain entity and create it
             var entity = await ConvertSectionDtoToEntityAsync(section);
             var newEntity = await _sectionRepository.PostSectionAsync(entity);
@@ -1013,9 +1117,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new KeyNotFoundException("Section must provide a GUID.");
             }
-
-            // Make sure the user has the appropriate permissions to do this
-            CheckSectionPermission();
 
             // Convert the CDM section into a domain entity and update it
             var entity = await ConvertSectionDtoToEntityAsync(section);
@@ -2157,14 +2258,30 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>DTO containing the created Data Model version 6 section</returns>
         public async Task<Dtos.Section3> PostSection3Async(Dtos.Section3 section)
         {
-            // Make sure the user has the appropriate permissions to do this
-            CheckSectionPermission();
-
+         
             if ((section != null) && (section.Status != null))
                 await ValidateSectionStatusConfigurationAsync(section.Status);
 
             _sectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
+            // Make sure dept percentage is from 0-100%.  This is also checked in the contructor for the domain entity OfferingDepartment,
+            // but we want to customize the error message for Ethos APIs to refernece "Ownership percentage".
+            if (section != null)
+            {
+                if (section.OwningInstitutionUnits != null && section.OwningInstitutionUnits.Any())
+                {
+                    foreach (var owningInstitutionUnit in section.OwningInstitutionUnits)
+                    {
+                        if (owningInstitutionUnit != null)
+                        {
+                            if (owningInstitutionUnit.OwnershipPercentage < 0 || owningInstitutionUnit.OwnershipPercentage > 100)
+                            {
+                                throw new ArgumentOutOfRangeException("ownershipPercentage", "Ownership percentage must be between 0 and 100.");
+                            }
+                        }
+                    }
+                }
+            }
             // Convert the CDM section into a domain entity and create it
             var entity = await ConvertSectionDto3ToEntityAsync(section);
             if (entity == null)
@@ -2188,14 +2305,30 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>DTO containing the updated Data Model version 6 section</returns>
         public async Task<Dtos.Section3> PutSection3Async(Dtos.Section3 section)
         {
-            // Make sure the user has the appropriate permissions to do this
-            CheckSectionPermission();
-
+          
             if ((section != null) && (section.Status != null))
                 await ValidateSectionStatusConfigurationAsync(section.Status);
 
             _sectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
+            // Make sure dept percentage is from 0-100%.  This is also checked in the contructor for the domain entity OfferingDepartment,
+            // but we want to customize the error message for Ethos APIs to refernece "Ownership percentage".
+            if (section != null)
+            {
+                if (section.OwningInstitutionUnits != null && section.OwningInstitutionUnits.Any())
+                {
+                    foreach (var owningInstitutionUnit in section.OwningInstitutionUnits)
+                    {
+                        if (owningInstitutionUnit != null)
+                        {
+                            if (owningInstitutionUnit.OwnershipPercentage < 0 || owningInstitutionUnit.OwnershipPercentage > 100)
+                            {
+                                throw new ArgumentOutOfRangeException("ownershipPercentage", "Ownership percentage must be between 0 and 100.");
+                            }
+                        }
+                    }
+                }
+            }
             // Convert the CDM section into a domain entity and update it
             var entity = await ConvertSectionDto3ToEntityAsync(section);
             if (entity == null)
@@ -3237,7 +3370,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var academicPeriod = academicPeriods.FirstOrDefault(a => a.Code == entity.TermId);
                 sectionDto.AcademicPeriod.Id = (academicPeriod != null) ? academicPeriod.Guid : null;
             }
-
+            if (string.IsNullOrEmpty(entity.LearningProvider))
+            {
+                if (!string.IsNullOrEmpty(entity.DefaultLearningProvider))
+                {
+                    entity.LearningProvider = entity.DefaultLearningProvider;
+                }
+            }
             if (!string.IsNullOrEmpty(entity.LearningProvider))
             {
                 var instructionalPlatform = (await InstructionalPlatformsAsync()).FirstOrDefault(i => i.Code == entity.LearningProvider);
@@ -3506,11 +3645,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     if (org.InstitutionUnit == null || string.IsNullOrEmpty(org.InstitutionUnit.Id))
                     {
                         throw new ArgumentException("Institution Unit id is a required field when Owning Organizations are in the message body.");
-                    }
-
-                    if (org.OwnershipPercentage == 0)
-                    {
-                        throw new ArgumentException("Ownership Percentage is a required field when Owning Organizations are in the message body.");
                     }
                 }
             }
@@ -3787,7 +3921,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             }
 
-            string term = sectionDto.AcademicPeriod == null ? null : ConvertGuidToCode(academicPeriods, sectionDto.AcademicPeriod.Id);
+            // string term = sectionDto.AcademicPeriod == null ? null : ConvertGuidToCode(academicPeriods, sectionDto.AcademicPeriod.Id);
+            string term = string.Empty;
+            if (sectionDto.AcademicPeriod != null && !string.IsNullOrEmpty(sectionDto.AcademicPeriod.Id))
+            {
+                term = ConvertGuidToCode(academicPeriods, sectionDto.AcademicPeriod.Id);
+                if (string.IsNullOrEmpty(term))
+                {
+                    throw new ArgumentException(string.Format("Invalid Id '{0}' supplied for academicPeriod.", sectionDto.AcademicPeriod.Id));
+                }
+            }
 
             // Create the section entity
             var entity = new Domain.Student.Entities.Section(id, course.Id, sectionDto.Number, sectionDto.StartOn.GetValueOrDefault().DateTime,
@@ -3906,7 +4049,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 else
                 {
                     var currentStatus = currentStatuses[0];
-                    if (newStatusCode.IntegrationStatusType.Value != currentStatus.IntegrationStatus)
+                    if (newStatusCode.Code != currentStatus.StatusCode)
                     {
                         statuses.Add(new SectionStatusItem(Domain.Student.Entities.SectionStatus.Active, newStatusCode.IntegrationStatusType.Value, newStatusCodeGuid.Code, DateTime.Today));
                         statuses.AddRange(currentStatuses);
@@ -4094,14 +4237,30 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>DTO containing the created Data Model version 6 section</returns>
         public async Task<Dtos.Section4> PostSection4Async(Dtos.Section4 section)
         {
-            // Make sure the user has the appropriate permissions to do this
-            CheckSectionPermission();
-
+          
             if ((section != null) && (section.Status != null))
                 await ValidateSectionStatusConfigurationAsync(section.Status);
 
             _sectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
+            // Make sure dept percentage is from 0-100%.  This is also checked in the contructor for the domain entity OfferingDepartment,
+            // but we want to customize the error message for Ethos APIs to refernece "Ownership percentage".
+            if (section != null)
+            {
+                if (section.OwningInstitutionUnits != null && section.OwningInstitutionUnits.Any())
+                {
+                    foreach (var owningInstitutionUnit in section.OwningInstitutionUnits)
+                    {
+                        if (owningInstitutionUnit != null)
+                        {
+                            if (owningInstitutionUnit.OwnershipPercentage < 0 || owningInstitutionUnit.OwnershipPercentage > 100)
+                            {
+                                throw new ArgumentOutOfRangeException("ownershipPercentage", "Ownership percentage must be between 0 and 100.");
+                            }
+                        }
+                    }
+                }
+            }
             // Convert the CDM section into a domain entity and create it
             var entity = await ConvertSectionDto4ToEntityAsync(section);
             if (entity == null)
@@ -4125,14 +4284,30 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>DTO containing the updated Data Model version 8 section</returns>
         public async Task<Dtos.Section4> PutSection4Async(Dtos.Section4 section)
         {
-            // Make sure the user has the appropriate permissions to do this
-            CheckSectionPermission();
-
+            
             if ((section != null) && (section.Status != null))
                 await ValidateSectionStatusConfigurationAsync(section.Status);
 
             _sectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
+            // Make sure dept percentage is from 0-100%.  This is also checked in the contructor for the domain entity OfferingDepartment,
+            // but we want to customize the error message for Ethos APIs to refernece "Ownership percentage".
+            if (section != null)
+            {
+                if (section.OwningInstitutionUnits != null && section.OwningInstitutionUnits.Any())
+                {
+                    foreach (var owningInstitutionUnit in section.OwningInstitutionUnits)
+                    {
+                        if (owningInstitutionUnit != null)
+                        {
+                            if (owningInstitutionUnit.OwnershipPercentage < 0 || owningInstitutionUnit.OwnershipPercentage > 100)
+                            {
+                                throw new ArgumentOutOfRangeException("ownershipPercentage", "Ownership percentage must be between 0 and 100.");
+                            }
+                        }
+                    }
+                }
+            }
             // Convert the CDM section into a domain entity and update it
             var entity = await ConvertSectionDto4ToEntityAsync(section);
             if (entity == null)
@@ -4182,7 +4357,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var academicPeriod = academicPeriods.FirstOrDefault(a => a.Code == entity.TermId);
                 sectionDto.AcademicPeriod.Id = (academicPeriod != null) ? academicPeriod.Guid : null;
             }
-
+            if (string.IsNullOrEmpty(entity.LearningProvider))
+            {
+                if (!string.IsNullOrEmpty(entity.DefaultLearningProvider))
+                {
+                    entity.LearningProvider = entity.DefaultLearningProvider;
+                }
+            }
             if (!string.IsNullOrEmpty(entity.LearningProvider))
             {
                 var instructionalPlatform = (await InstructionalPlatformsAsync()).FirstOrDefault(i => i.Code == entity.LearningProvider);
@@ -4506,11 +4687,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         throw new ArgumentException("Institution Unit id is a required field when Owning Organizations are in the message body.");
                     }
-
-                    if (org.OwnershipPercentage == 0)
-                    {
-                        throw new ArgumentException("Ownership Percentage is a required field when Owning Organizations are in the message body.");
-                    }
                 }
             }
 
@@ -4785,7 +4961,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             }
 
-            string term = sectionDto.AcademicPeriod == null ? null : ConvertGuidToCode(academicPeriods, sectionDto.AcademicPeriod.Id);
+            // string term = sectionDto.AcademicPeriod == null ? null : ConvertGuidToCode(academicPeriods, sectionDto.AcademicPeriod.Id);
+            string term = string.Empty;
+            if (sectionDto.AcademicPeriod != null && !string.IsNullOrEmpty(sectionDto.AcademicPeriod.Id))
+            {
+                term = ConvertGuidToCode(academicPeriods, sectionDto.AcademicPeriod.Id);
+                if (string.IsNullOrEmpty(term))
+                {
+                    throw new ArgumentException(string.Format("Invalid Id '{0}' supplied for academicPeriod.", sectionDto.AcademicPeriod.Id));
+                }
+            }
 
 
             // Because census dates can be defaulted in from TERMS or TERMS.LOCATIONS when the consumer GETS them,
@@ -4843,8 +5028,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         sectionDto.CensusDates = null;
                     }
                 }
-
-
                 if (sectionDto.CensusDates != null && secTermOverrides != null)
                 {
                     var secOverCount = sectionDto.CensusDates.Count();
@@ -5207,7 +5390,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 if (sectionEntity.Guid != null)
                 {
-                    var sectionDto = await ConvertSectionEntityToDto5Async(sectionEntity);
+                    var sectionDto = await ConvertSectionEntityToDto5Async(sectionEntity, false);
                     sectionDtos.Add(sectionDto);
                 }
             }
@@ -5215,10 +5398,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
-        /// Get a Data Model section version 8 by its GUID
+        /// Get a DTO for section5 for v11 sections by its GUID
         /// </summary>
         /// <param name="guid">GUID of section</param>
-        /// <returns>The Data Model Section version 6 DTO</returns>
+        /// <returns>The Data Model Section version 5 DTO</returns>
         public async Task<Dtos.Section5> GetSection5ByGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -5230,7 +5413,28 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new KeyNotFoundException(string.Concat("Section not found or invalid for id '", guid, "'.  See Log for more information."));
             }
-            var sectionDto = await ConvertSectionEntityToDto5Async(sectionEntity);
+            var sectionDto = await ConvertSectionEntityToDto5Async(sectionEntity, false);
+            return sectionDto;
+        }
+
+        /// <summary>
+        /// Get a DTO for section5 for v11 sections by its GUID
+        ///but exclude defaulted census dates
+        /// </summary>
+        /// <param name="guid">GUID of section</param>
+        /// <returns>The Data Model Section version 5 DTO</returns>
+        public async Task<Dtos.Section5> GetSection5ByGuidFilterCensusDatesAsync(string guid)
+        {
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid", "GUID is required to get a section.");
+            }
+            var sectionEntity = await _sectionRepository.GetSectionByGuidAsync(guid);
+            if (sectionEntity == null)
+            {
+                throw new KeyNotFoundException(string.Concat("Section not found or invalid for id '", guid, "'.  See Log for more information."));
+            }
+            var sectionDto = await ConvertSectionEntityToDto5Async(sectionEntity, true);
             return sectionDto;
         }
 
@@ -5240,15 +5444,30 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="section">DTO containing the Data Model version 6 section to create</param>
         /// <returns>DTO containing the created Data Model version 6 section</returns>
         public async Task<Dtos.Section5> PostSection5Async(Dtos.Section5 section)
-        {
-            // Make sure the user has the appropriate permissions to do this
-            CheckSectionPermission();
-
+        {         
             if ((section != null) && (section.Status != null))
                 await ValidateSectionStatusConfigurationAsync(section.Status.Category);
 
             _sectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
+            // Make sure dept percentage is from 0-100%.  This is also checked in the contructor for the domain entity OfferingDepartment,
+            // but we want to customize the error message for Ethos APIs to refernece "Ownership percentage".
+            if (section != null)
+            {
+                if (section.OwningInstitutionUnits != null && section.OwningInstitutionUnits.Any())
+                {
+                    foreach (var owningInstitutionUnit in section.OwningInstitutionUnits)
+                    {
+                        if (owningInstitutionUnit != null)
+                        {
+                            if (owningInstitutionUnit.OwnershipPercentage < 0 || owningInstitutionUnit.OwnershipPercentage > 100)
+                            {
+                                throw new ArgumentOutOfRangeException("ownershipPercentage", "Ownership percentage must be between 0 and 100.");
+                            }
+                        }
+                    }
+                }
+            }
             // Convert the CDM section into a domain entity and create it
             var entity = await ConvertSectionDto5ToEntityAsync(section);
             if (entity == null)
@@ -5260,7 +5479,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new KeyNotFoundException("Failed to return a valid section. ");
             }
-            var newDto = await ConvertSectionEntityToDto5Async(newEntity);
+            var newDto = await ConvertSectionEntityToDto5Async(newEntity, false);
 
             return newDto;
         }
@@ -5410,11 +5629,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     if (org.InstitutionUnit == null || string.IsNullOrEmpty(org.InstitutionUnit.Id))
                     {
                         throw new ArgumentException("Institution Unit id is a required field when Owning Organizations are in the message body.");
-                    }
-
-                    if (org.OwnershipPercentage == 0)
-                    {
-                        throw new ArgumentException("Ownership Percentage is a required field when Owning Organizations are in the message body.");
                     }
                 }
             }
@@ -5759,7 +5973,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             }
 
-            string term = sectionDto.AcademicPeriod == null ? null : ConvertGuidToCode(academicPeriods, sectionDto.AcademicPeriod.Id);
+            //string term = sectionDto.AcademicPeriod == null ? null : ConvertGuidToCode(academicPeriods, sectionDto.AcademicPeriod.Id);
+            string term = string.Empty;
+            if (sectionDto.AcademicPeriod != null && !string.IsNullOrEmpty(sectionDto.AcademicPeriod.Id))
+            {
+                term = ConvertGuidToCode(academicPeriods, sectionDto.AcademicPeriod.Id);
+                if (string.IsNullOrEmpty(term))
+                {
+                    throw new ArgumentException(string.Format("Invalid Id '{0}' supplied for academicPeriod.", sectionDto.AcademicPeriod.Id));
+                }
+            }
 
 
             // Because census dates can be defaulted in from TERMS or TERMS.LOCATIONS when the consumer GETS them,
@@ -5780,8 +6003,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var secTerms = (await AllTermsAsync()).Where(t => t.Code == term);
                     if (secTerms != null && secTerms.Count() == 1)
                     {
-                        secTerm = secTerms.First();
-                        if (secTerm.RegistrationDates != null && secTerm.RegistrationDates.Where(srd => srd.Location == null).Count() == 1)
+                        secTerm = secTerms.First();                        
+                        if (secTerm.RegistrationDates != null && secTerm.RegistrationDates.Where(srd => string.IsNullOrEmpty(srd.Location)).Count() == 1)
                         {
                             secTermOverrides = secTerm.RegistrationDates.First(srd => string.IsNullOrEmpty(srd.Location)).CensusDates;
                         }
@@ -5797,6 +6020,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     var key = term + "*" + site;
                     var termLocRegDates = secTerm.RegistrationDates.Where(trd => trd.Location == secLocCode);
+                    //var termLocRegDates = secTerm.RegistrationDates.Where(trd => trd.Location == site);
                     if (termLocRegDates != null && termLocRegDates.Count() > 0)
                     {
                         secTermLocOverrides = termLocRegDates.First().CensusDates;
@@ -5807,30 +6031,26 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // existing overrides - which indicates they probably were defaulted in on the GET, 
                 // and should not be written to the section record on the PUT.
 
-                if (secTermLocOverrides != null)
+                if (secTermLocOverrides != null && sectionDto.CensusDates != null && sectionDto.CensusDates.Any())
                 {
-                    var secOverCount = sectionDto.CensusDates.Count();
-                    var secTermLocOverCount = secTermLocOverrides.Count();
-                    if (secOverCount == secTermLocOverCount && sectionDto.CensusDates.Intersect(secTermLocOverrides).Count() == secOverCount)
+                    if (sectionDto.CensusDates.SequenceEqual(secTermLocOverrides))
                     {
                         // incoming census dates match the term-location overrides, do not update the section overrides.
                         sectionDto.CensusDates = null;
                     }
                 }
-
-
-                if (sectionDto.CensusDates != null && secTermOverrides != null)
+                else
                 {
-                    var secOverCount = sectionDto.CensusDates.Count();
-                    var secTermOverCount = secTermOverrides.Count();
-                    if (secOverCount == secTermOverCount && sectionDto.CensusDates.Intersect(secTermOverrides).Count() == secOverCount)
+                    if (sectionDto.CensusDates != null && secTermOverrides != null)
                     {
-                        // incoming census dates match the term overrides, do not update the section overrides.
-                        sectionDto.CensusDates = null;
+                        if (sectionDto.CensusDates.SequenceEqual(secTermOverrides))
+                        {
+                            // incoming census dates match the term overrides, do not update the section overrides.
+                            sectionDto.CensusDates = null;
+                        }
                     }
                 }
             }
-
 
             // Create the section entity
             var entity = new Domain.Student.Entities.Section(id, course.Id, sectionDto.Number, sectionDto.StartOn.GetValueOrDefault().DateTime,
@@ -5919,14 +6139,30 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>DTO containing the updated Data Model version 8 section</returns>
         public async Task<Dtos.Section5> PutSection5Async(Dtos.Section5 section)
         {
-            // Make sure the user has the appropriate permissions to do this
-            CheckSectionPermission();
-
+         
             if ((section != null) && (section.Status != null))
                 await ValidateSectionStatusConfigurationAsync(section.Status.Category);
 
             _sectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
+            // Make sure dept percentage is from 0-100%.  This is also checked in the contructor for the domain entity OfferingDepartment,
+            // but we want to customize the error message for Ethos APIs to refernece "Ownership percentage".
+            if (section != null)
+            {
+                if (section.OwningInstitutionUnits != null && section.OwningInstitutionUnits.Any())
+                {
+                    foreach (var owningInstitutionUnit in section.OwningInstitutionUnits)
+                    {
+                        if (owningInstitutionUnit != null)
+                        {
+                            if (owningInstitutionUnit.OwnershipPercentage < 0 || owningInstitutionUnit.OwnershipPercentage > 100)
+                            {
+                                throw new ArgumentOutOfRangeException("ownershipPercentage", "Ownership percentage must be between 0 and 100.");
+                            }
+                        }
+                    }
+                }
+            }
             // Convert the CDM section into a domain entity and update it
             var entity = await ConvertSectionDto5ToEntityAsync(section);
             if (entity == null)
@@ -5938,12 +6174,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new KeyNotFoundException(string.Format("GUID '{0}' failed to return a valid section. ", section.Id));
             }
-            var updatedDto = await ConvertSectionEntityToDto5Async(updatedEntity);
+            var updatedDto = await ConvertSectionEntityToDto5Async(updatedEntity, false);
 
             return updatedDto;
         }
 
-        private async Task<Dtos.Section5> ConvertSectionEntityToDto5Async(Domain.Student.Entities.Section entity)
+
+        /// <summary>
+        /// Converts entity to dto.
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <param name="filterDefaultCensusDates"</param>
+        /// <returns></returns>
+        private async Task<Dtos.Section5> ConvertSectionEntityToDto5Async(Domain.Student.Entities.Section entity, bool filterDefaultCensusDates = false)
         {
             if (entity == null)
             {
@@ -5965,7 +6208,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 var academicPeriod = academicPeriods.FirstOrDefault(a => a.Code == entity.TermId);
                 sectionDto.AcademicPeriod.Id = (academicPeriod != null) ? academicPeriod.Guid : null;
             }
-
+            if (string.IsNullOrEmpty(entity.LearningProvider))
+            {
+                if (!string.IsNullOrEmpty(entity.DefaultLearningProvider))
+                {
+                    entity.LearningProvider = entity.DefaultLearningProvider;
+                }
+            }
             if (!string.IsNullOrEmpty(entity.LearningProvider))
             {
                 var instructionalPlatform = (await InstructionalPlatformsAsync()).FirstOrDefault(i => i.Code == entity.LearningProvider);
@@ -6104,7 +6353,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 sectionDto.CensusDates = entity.CensusDates;
             }
-            else if (!String.IsNullOrEmpty(entity.TermId))
+            else if (filterDefaultCensusDates == false && !String.IsNullOrEmpty(entity.TermId))
             {
                 // If the section has a term, and if there are no census dates in the section, for EEDM output we will check
                 // TERMS.LOCATIONS for census dates.  If none there, we will check TERMS.  Most of this logic is already in the
@@ -6299,7 +6548,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     if (sectionEntity.Guid != null)
                     {
-                        var sectionDto = await ConvertSectionEntityToDto6Async(sectionEntity, bypassCache);
+                        var sectionDto = await ConvertSectionEntityToDto6Async(sectionEntity, bypassCache, false);
                         sectionDtos.Add(sectionDto);
                     }
                 }
@@ -6311,7 +6560,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 return new Tuple<IEnumerable<Dtos.Section6>, int>(sectionDtos, sectionEntities.Item2);
             }
-            catch(ArgumentNullException)
+            catch (ArgumentNullException)
             {
                 throw;
             }
@@ -6319,14 +6568,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 throw ex;
             }
         }
 
         /// <summary>
-        /// Get a Data Model section version 6 by its GUID
+        /// Get a DTO for section6 for v16.0.0 sections by its GUID
         /// </summary>
         /// <param name="guid">GUID of section</param>
         /// <returns>The Data Model Section version 6 DTO</returns>
@@ -6345,7 +6594,47 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     throw new KeyNotFoundException(string.Concat("Section not found or invalid for id '", guid, "'.  See Log for more information."));
                 }
 
-                var dto = await ConvertSectionEntityToDto6Async(sectionEntity, bypassCache);
+                var dto = await ConvertSectionEntityToDto6Async(sectionEntity, bypassCache, false);
+
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+
+                return dto;
+            }
+            catch (IntegrationApiException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        /// <summary>
+        ///Get a DTO for section6 for v16.0.0 sections by its GUID
+        ///but exclude defaulted census dates
+        /// </summary>
+        /// <param name="guid">GUID of section</param>
+        /// <returns>The Data Model Section version 6 DTO</returns>
+        public async Task<Dtos.Section6> GetSection6ByGuidFilterCensusDatesAsync(string guid, bool bypassCache = false)
+        {
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid", "GUID is required to get a section.");
+            }
+
+            try
+            {
+                var sectionEntity = await _sectionRepository.GetSectionByGuid2Async(guid, true);
+                if (sectionEntity == null)
+                {
+                    throw new KeyNotFoundException(string.Concat("Section not found or invalid for id '", guid, "'.  See Log for more information."));
+                }
+
+                var dto = await ConvertSectionEntityToDto6Async(sectionEntity, bypassCache, true);
 
                 if (IntegrationApiException != null)
                 {
@@ -6371,47 +6660,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>DTO containing the created Data Model version 6 section</returns>
         public async Task<Dtos.Section6> PostSection6Async(Dtos.Section6 section)
         {
-            // Make sure the user has the appropriate permissions to do this
-            CheckSectionPermission1();
-
-            if ((section != null) && (section.Status != null))
-            {
-                try
-                {
-                    await ValidateSectionStatusConfigurationAsync(section.Status.Category);
-                }
-                catch(Exception)
-                {
-                    throw;
-                }
-            }
-            _sectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
-
-            // Convert the CDM section into a domain entity and create it
-            var entity = await ConvertSectionDto6ToEntityAsync(section);
-            if (entity == null)
-            {
-                throw new KeyNotFoundException("Failed to create a valid section. ");
-            }
-            var newEntity = await _sectionRepository.PostSection2Async(entity);
-            if (newEntity == null)
-            {
-                throw new KeyNotFoundException("Failed to return a valid section. ");
-            }
-            return await ConvertSectionEntityToDto6Async(newEntity);
-
-        }
-
-        /// <summary>
-        /// Update a section
-        /// </summary>
-        /// <param name="section">DTO containing the Data Model version 6 section to update</param>
-        /// <returns>DTO containing the updated Data Model version 6 section</returns>
-        public async Task<Dtos.Section6> PutSection6Async(Dtos.Section6 section)
-        {
-            // Make sure the user has the appropriate permissions to do this
-            CheckSectionPermission1();
-
             if ((section != null) && (section.Status != null))
             {
                 try
@@ -6425,6 +6673,77 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             _sectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
+            // Make sure dept percentage is from 0-100%.  This is also checked in the contructor for the domain entity OfferingDepartment,
+            // but we want to customize the error message for Ethos APIs to refernece "Ownership percentage".
+            if (section != null)
+            {
+                if (section.OwningInstitutionUnits != null && section.OwningInstitutionUnits.Any())
+                {
+                    foreach (var owningInstitutionUnit in section.OwningInstitutionUnits)
+                    {
+                        if (owningInstitutionUnit != null)
+                        {
+                            if (owningInstitutionUnit.OwnershipPercentage < 0 || owningInstitutionUnit.OwnershipPercentage > 100)
+                            {
+                                throw new ArgumentOutOfRangeException("ownershipPercentage", "Ownership percentage must be between 0 and 100.");
+                            }
+                        }
+                    }
+                }
+            }
+            // Convert the CDM section into a domain entity and create it
+            var entity = await ConvertSectionDto6ToEntityAsync(section);
+            if (entity == null)
+            {
+                throw new KeyNotFoundException("Failed to create a valid section. ");
+            }
+            var newEntity = await _sectionRepository.PostSection2Async(entity);
+            if (newEntity == null)
+            {
+                throw new KeyNotFoundException("Failed to return a valid section. ");
+            }
+            return await ConvertSectionEntityToDto6Async(newEntity, false);
+
+        }
+
+        /// <summary>
+        /// Update a section
+        /// </summary>
+        /// <param name="section">DTO containing the Data Model version 6 section to update</param>
+        /// <returns>DTO containing the updated Data Model version 6 section</returns>
+        public async Task<Dtos.Section6> PutSection6Async(Dtos.Section6 section)
+        {
+            if ((section != null) && (section.Status != null))
+            {
+                try
+                {
+                    await ValidateSectionStatusConfigurationAsync(section.Status.Category);
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
+            _sectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+
+            // Make sure dept percentage is from 0-100%.  This is also checked in the contructor for the domain entity OfferingDepartment,
+            // but we want to customize the error message for Ethos APIs to refernece "Ownership percentage".
+            if (section != null)
+            {
+                if (section.OwningInstitutionUnits != null && section.OwningInstitutionUnits.Any())
+                {
+                    foreach (var owningInstitutionUnit in section.OwningInstitutionUnits)
+                    {
+                        if (owningInstitutionUnit != null)
+                        {
+                            if (owningInstitutionUnit.OwnershipPercentage < 0 || owningInstitutionUnit.OwnershipPercentage > 100)
+                            {
+                                throw new ArgumentOutOfRangeException("ownershipPercentage", "Ownership percentage must be between 0 and 100.");
+                            }
+                        }
+                    }
+                }
+            }
             // Convert the CDM section into a domain entity and update it
             var entity = await ConvertSectionDto6ToEntityAsync(section);
             if (entity == null)
@@ -6436,7 +6755,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new KeyNotFoundException(string.Format("GUID '{0}' failed to return a valid section. ", section.Id));
             }
-            var updatedDto = await ConvertSectionEntityToDto6Async(updatedEntity);
+            var updatedDto = await ConvertSectionEntityToDto6Async(updatedEntity, false);
 
             return updatedDto;
         }
@@ -6446,8 +6765,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// </summary>
         /// <param name="entity"></param>
         /// <param name="bypassCache"></param>
+        /// <param name="filterDefaultCensusDates"</param>
         /// <returns></returns>
-        private async Task<Dtos.Section6> ConvertSectionEntityToDto6Async(Domain.Student.Entities.Section entity, bool bypassCache = false)
+        private async Task<Dtos.Section6> ConvertSectionEntityToDto6Async(Domain.Student.Entities.Section entity, bool bypassCache = false, bool filterDefaultCensusDates = false)
         {
             if (entity == null)
             {
@@ -6508,7 +6828,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (!string.IsNullOrEmpty(entity.TermId))
             {
                 var acadPeriods = this.academicPeriods;
-                if (acadPeriods != null && acadPeriods.Any()) 
+                if (acadPeriods != null && acadPeriods.Any())
                 {
                     var academicPeriod = acadPeriods.FirstOrDefault(a => a.Code == entity.TermId);
                     if (academicPeriod != null && !string.IsNullOrEmpty(academicPeriod.ReportingTerm))
@@ -6527,6 +6847,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             //Learning Providor
+            if (string.IsNullOrEmpty(entity.LearningProvider))
+            {
+                if (!string.IsNullOrEmpty(entity.DefaultLearningProvider))
+                {
+                    entity.LearningProvider = entity.DefaultLearningProvider;
+                }                    
+            }
             if (!string.IsNullOrEmpty(entity.LearningProvider))
             {
                 try
@@ -6541,14 +6868,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             try
-            {                
+            {
                 var courseGuid = await _courseRepository.GetCourseGuidFromIdAsync(entity.CourseId);
                 sectionDto.Course = new Dtos.GuidObject2(courseGuid);
             }
             catch (ArgumentException ex)
             {
                 IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
-            }            
+            }
 
             var credit = new Dtos.DtoProperties.SectionCreditDtoProperty();
             var ceuCredit = new Dtos.DtoProperties.SectionCreditDtoProperty();
@@ -6605,7 +6932,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 ceuCredit.Measure = Dtos.CreditMeasure2.CEU;
                 ceuCredit.Minimum = entity.Ceus.Value;
-                
+
                 if (sectionDto.Credits == null) sectionDto.Credits = new List<SectionCreditDtoProperty>();
 
                 sectionDto.Credits.Add(ceuCredit);
@@ -6644,7 +6971,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     if (sectionDto.AcademicLevels == null) sectionDto.AcademicLevels = new List<GuidObject2>();
 
                     var acadLevelGuid = await _studentReferenceDataRepository.GetAcademicLevelsGuidAsync(entity.AcademicLevelCode);
-                    sectionDto.AcademicLevels.Add(new Dtos.GuidObject2(acadLevelGuid));                    
+                    sectionDto.AcademicLevels.Add(new Dtos.GuidObject2(acadLevelGuid));
                 }
                 catch (RepositoryException ex)
                 {
@@ -6702,10 +7029,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     try
                     {
                         var statuses = await AllStatusesWithGuidsAsync();
-                        if (statuses != null && statuses.Any()) 
+                        if (statuses != null && statuses.Any())
                         {
                             var sts = statuses.FirstOrDefault(i => i.Code.Equals(status, StringComparison.OrdinalIgnoreCase));
-                            if(sts == null)
+                            if (sts == null)
                             {
                                 IntegrationApiExceptionAddError(string.Format("No Guid found, Entity:'SECTION.STATUSES', Record ID:'{0}'", status), "GUID.Not.Found", entity.Guid, entity.Id);
                             }
@@ -6747,9 +7074,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
                     }
-                    
+
                 }
-                sectionDto.OwningInstitutionUnits = departments;                
+                sectionDto.OwningInstitutionUnits = departments;
             }
 
             if (entity.NumberOfWeeks.HasValue)
@@ -6760,12 +7087,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     Unit = DurationUnit2.Weeks
                 };
             }
-            
+
             if (entity.CensusDates != null && entity.CensusDates.Count() > 0)
             {
                 sectionDto.CensusDates = entity.CensusDates;
             }
-            else if (!String.IsNullOrEmpty(entity.TermId))
+            else if (filterDefaultCensusDates == false && !String.IsNullOrEmpty(entity.TermId))
             {
                 // If the section has a term, and if there are no census dates in the section, for EEDM output we will check
                 // TERMS.LOCATIONS for census dates.  If none there, we will check TERMS.  Most of this logic is already in the
@@ -6823,7 +7150,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             sectionDto.Billing = entity.BillingCred;
-            
+
             if (entity.CourseTypeCodes != null && entity.CourseTypeCodes.Any())
             {
                 sectionDto.CourseCategories = new List<GuidObject2>();
@@ -6843,7 +7170,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                 }
             }
-            
+
             // New object InstructionalMethods with v16
 
             if (entity.InstructionalContacts != null && entity.InstructionalContacts.Any())
@@ -6896,9 +7223,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                                 {
                                     sectionDto.Hours = new List<CoursesHoursDtoProperty>();
                                 }
-                                sectionDto.Hours.Add(instrMethodHoursDetail);                                
+                                sectionDto.Hours.Add(instrMethodHoursDetail);
                             }
-                            catch(RepositoryException ex)
+                            catch (RepositoryException ex)
                             {
                                 IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
                             }
@@ -6919,7 +7246,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         if (!sectionDto.InstructionalMethods.Contains(item))
                             sectionDto.InstructionalMethods.Add(new GuidObject2(instructionalMethod));
                     }
-                    catch(RepositoryException ex)
+                    catch (RepositoryException ex)
                     {
                         IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
                     }
@@ -6968,7 +7295,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     Title = "Source Key",
                     Value = entity.Id
                 }
-            };            
+            };
 
             return sectionDto;
         }
@@ -6993,7 +7320,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     return ContactHoursPeriod.NotSet;
             }
         }
-        
+
         /// <summary>
         /// Converts a IntervalTypes DTO enum to a ContactPeriod entity enum
         /// </summary>
@@ -7035,7 +7362,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             try
             {
                 section = await _sectionRepository.GetSectionByGuidAsync(sectionDto.Id);
-                sectionId = section != null && string.IsNullOrEmpty(section.Id)? section.Id : string.Empty;
+                sectionId = section != null && string.IsNullOrEmpty(section.Id) ? section.Id : string.Empty;
             }
             catch (Exception)
             {
@@ -7197,11 +7524,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         IntegrationApiExceptionAddError("Institution Unit id is a required field when Owning Organizations are in the message body.", "Missing.Required.Property", sectionDto.Id, sectionId);
                     }
-
-                    if (org.OwnershipPercentage == 0)
-                    {
-                        IntegrationApiExceptionAddError("Ownership Percentage is a required field when Owning Organizations are in the message body.", "Validation.Exception", sectionDto.Id, sectionId);
-                    }
                 }
             }
 
@@ -7227,7 +7549,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (sectionDto.Credits != null && sectionDto.Credits.Count() == 2)
             {
                 if (sectionDto.Credits.ElementAt(0).CreditCategory != null && sectionDto.Credits.ElementAt(0).CreditCategory.CreditType.HasValue &&
-                    sectionDto.Credits.ElementAt(1).CreditCategory != null && sectionDto.Credits.ElementAt(1).CreditCategory.CreditType.HasValue && 
+                    sectionDto.Credits.ElementAt(1).CreditCategory != null && sectionDto.Credits.ElementAt(1).CreditCategory.CreditType.HasValue &&
                     sectionDto.Credits.ElementAt(0).CreditCategory.CreditType != sectionDto.Credits.ElementAt(1).CreditCategory.CreditType)
                 {
                     IntegrationApiExceptionAddError("The same Credit Type must be used for each entry in the Credits array.", "Validation.Exception", sectionDto.Id, sectionId);
@@ -7279,7 +7601,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         IntegrationApiExceptionAddError("WaitlistMaximum cannot be updated because the section is not eligible for waitlisting.", "Validation.Exception", sectionDto.Id, sectionId);
                     }
                 }
-            }            
+            }
 
             SectionStatusIntegration? newStatusFromDetail = null;
 
@@ -7290,7 +7612,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     newStatusFromDetail = allStatuses.Single(st => st.Guid == sectionDto.Status.Detail.Id).SectionStatusIntg;
                 }
-                catch(Exception)
+                catch (Exception)
                 {
                     IntegrationApiExceptionAddError(string.Format("Section status detail guid '{0}' is not valid.", sectionDto.Status.Detail.Id), "Validation.Exception", sectionDto.Id, sectionId);
                 }
@@ -7316,11 +7638,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         statuses = await UpdateSectionStatus4(currentStatuses, sectionDto.Status);
                     }
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     IntegrationApiExceptionAddError(ex.Message, "Validation.Exception", sectionDto.Id, sectionId);
                 }
-            }            
+            }
 
             // Set the credit type and credits/CEUs for the course based on the supplied GUID, or using the ERP default 
             Ellucian.Colleague.Domain.Student.Entities.CreditCategory creditCategory = null;
@@ -7375,12 +7697,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         creditCategory = (await CreditTypesAsync()).FirstOrDefault(cc => cc.CreditType == CreditType.None);
                         break;
                 }
-            }
-
-            //If creditCategory is null then throw an exception
-            if (creditCategory == null)
-            {
-                IntegrationApiExceptionAddError("Credits data requires Credit Category Type or Id.", "Validation.Exception", sectionDto.Id, sectionId);
             }
 
             var creditTypeCode = creditCategory == null ? string.Empty : creditCategory.Code;
@@ -7439,7 +7755,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             IntegrationApiExceptionAddError("Owning institution unit of type 'division' is not supported.", "Validation.Exception", sectionDto.Id, sectionId);
                         }
                     }
-                    var schools = await _referenceDataRepository.GetSchoolsAsync(bypassCache);
+                    var schools = await _referenceDataRepository.GetSchools2Async(bypassCache);
                     if (schools != null && schools.Any())
                     {
 
@@ -7525,7 +7841,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         academicLevel = tempAcadCode;
                     }
                 }
-                catch(ArgumentNullException)
+                catch (ArgumentNullException)
                 {
                     IntegrationApiExceptionAddError("Validation table academic levels is missing from the database.", "Validation.Exception", sectionDto.Id, sectionId);
                 }
@@ -7562,15 +7878,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var instrPlatforms = await InstructionalPlatformsAsync();
                     var providerCode = ConvertGuidToCode(instrPlatforms, sectionDto.InstructionalPlatform.Id);
                     if (string.IsNullOrEmpty(providerCode))
-                    {
-                        IntegrationApiExceptionAddError(string.Format("Unable to locate code for GUID : '{0}'.", sectionDto.InstructionalPlatform.Id), "Record.Not.Found", sectionDto.Id, sectionId);
+                    {                        
+                        IntegrationApiExceptionAddError(string.Format("Invalid GUID '{0}' supplied for instructionalPlatform.", sectionDto.InstructionalPlatform.Id), "Record.Not.Found", sectionDto.Id, sectionId);
                     }
                     else
                     {
                         learningProvider = providerCode;
                     }
                 }
-                catch(Exception)
+                catch (Exception)
                 {
                     IntegrationApiExceptionAddError("Validation table instructional platforms is missing from the database.", "Record.Not.Found", sectionDto.Id, sectionId);
                 }
@@ -7579,7 +7895,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             string term = string.Empty;
             try
             {
-                term = (sectionDto.AcademicPeriod == null || string.IsNullOrEmpty(sectionDto.AcademicPeriod.Id)) ? null : ConvertGuidToCode(academicPeriods, sectionDto.AcademicPeriod.Id);
+                if (sectionDto.AcademicPeriod != null && !string.IsNullOrEmpty(sectionDto.AcademicPeriod.Id))
+                {
+                    term = ConvertGuidToCode(academicPeriods, sectionDto.AcademicPeriod.Id);
+                    if (string.IsNullOrEmpty(term))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Invalid guid '{0}' supplied for academicPeriod.", sectionDto.AcademicPeriod.Id), "Validation.Exception", sectionDto.Id, sectionId);
+                    }
+                }
             }
             catch (Exception)
             {
@@ -7592,7 +7915,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // Reporting Term Academic Period
                 try
                 {
-                    string reportingTerm = (sectionDto.ReportingAcademicPeriod == null || string.IsNullOrEmpty(sectionDto.ReportingAcademicPeriod.Id)) ? null : 
+                    string reportingTerm = (sectionDto.ReportingAcademicPeriod == null || string.IsNullOrEmpty(sectionDto.ReportingAcademicPeriod.Id)) ? null :
                         ConvertGuidToCode(academicPeriods, sectionDto.ReportingAcademicPeriod.Id);
                     if (academicPeriod != null && !string.IsNullOrEmpty(reportingTerm) && reportingTerm != academicPeriod.ReportingTerm)
                     {
@@ -7604,7 +7927,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         IntegrationApiExceptionAddError(string.Format("The reportingAcademicPeriod.id '{0}' is invalid.", sectionDto.ReportingAcademicPeriod.Id), "Validation.Exception", sectionDto.Id, sectionId);
                     }
                 }
-                catch(ArgumentNullException)
+                catch (ArgumentNullException)
                 {
                     IntegrationApiExceptionAddError("Validation table academic periods is missing from the database.", "Validation.Exception", sectionDto.Id, sectionId);
                 }
@@ -7617,11 +7940,31 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             }
 
+            string site = null;
+            if (sectionDto.Site != null)
+            {
+                try
+                {
+                    var tempLocationCode = ConvertGuidToCode(locations, sectionDto.Site.Id);
+                    if (string.IsNullOrEmpty(tempLocationCode))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Invalid GUID '{0}' supplied for site.", sectionDto.Site.Id), "Record.Not.Found", sectionDto.Id, sectionId);
+                    }
+                    else
+                    {
+                        site = tempLocationCode;
+                    }                    
+                }            
+                catch (ArgumentNullException)
+                {
+                    IntegrationApiExceptionAddError("Validation table locations is missing from the database.", "Validation.Exception", sectionDto.Id, sectionId);
+                }
+            }
+
             // Because census dates can be defaulted in from TERMS or TERMS.LOCATIONS when the consumer GETS them,
             // if the consumer PUTs or POSTs a section with census dates, we have to make sure they are intended to
             // be overridden at the section level, rather than blindly writing inherited defaults back to the section.
 
-            string site = string.Empty;
             if (sectionDto.CensusDates != null && sectionDto.CensusDates.Count() > 0)
             {
 
@@ -7640,7 +7983,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         if (secTerms != null && secTerms.Count() == 1)
                         {
                             secTerm = secTerms.FirstOrDefault();
-                            if (secTerm != null && secTerm.RegistrationDates != null && secTerm.RegistrationDates.Where(srd => srd.Location == null).Count() == 1)
+                            if (secTerm != null && secTerm.RegistrationDates != null && secTerm.RegistrationDates.Where(srd => string.IsNullOrEmpty(srd.Location)).Count() == 1)
                             {
                                 secTermOverrides = secTerm.RegistrationDates.FirstOrDefault(srd => string.IsNullOrEmpty(srd.Location)).CensusDates;
                             }
@@ -7651,20 +7994,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // If we have a term, now check for a location to see if it has its own term-location overrides
                 try
                 {
-                    site = sectionDto.Site == null ? null : ConvertGuidToCode(locations, sectionDto.Site.Id);
-                    String secLocCode = null;
-
                     if (term != null && site != null && secTerm != null)
                     {
                         var key = term + "*" + site;
-                        var termLocRegDates = secTerm.RegistrationDates.Where(trd => trd.Location == secLocCode);
+                        var termLocRegDates = secTerm.RegistrationDates.Where(trd => trd.Location == site);
                         if (termLocRegDates != null && termLocRegDates.Count() > 0)
                         {
                             secTermLocOverrides = termLocRegDates.FirstOrDefault().CensusDates;
                         }
                     }
                 }
-                catch(ArgumentNullException)
+                catch (ArgumentNullException)
                 {
                     IntegrationApiExceptionAddError("Validation table locations is missing from the database.", "Validation.Exception", sectionDto.Id, sectionId);
                 }
@@ -7675,23 +8015,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 if (secTermLocOverrides != null && sectionDto.CensusDates != null && sectionDto.CensusDates.Any())
                 {
-                    var secOverCount = sectionDto.CensusDates.Count();
-                    var secTermLocOverCount = secTermLocOverrides.Count();
-                    if (secOverCount == secTermLocOverCount && sectionDto.CensusDates.Intersect(secTermLocOverrides).Count() == secOverCount)
+                    if (sectionDto.CensusDates.SequenceEqual(secTermLocOverrides))
                     {
                         // incoming census dates match the term-location overrides, do not update the section overrides.
                         sectionDto.CensusDates = null;
                     }
                 }
-
-                if (sectionDto.CensusDates != null && secTermOverrides != null)
+                else
                 {
-                    var secOverCount = sectionDto.CensusDates.Count();
-                    var secTermOverCount = secTermOverrides.Count();
-                    if (secOverCount == secTermOverCount && sectionDto.CensusDates.Intersect(secTermOverrides).Count() == secOverCount)
+                    if (sectionDto.CensusDates != null && secTermOverrides != null)
                     {
-                        // incoming census dates match the term overrides, do not update the section overrides.
-                        sectionDto.CensusDates = null;
+                        if (sectionDto.CensusDates.SequenceEqual(secTermOverrides))
+                        {
+                            // incoming census dates match the term overrides, do not update the section overrides.
+                            sectionDto.CensusDates = null;
+                        }
                     }
                 }
             }
@@ -7764,7 +8102,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     CensusDates = sectionDto.CensusDates,
                 };
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 IntegrationApiExceptionAddError(ex.Message, "Missing.Required.Property", sectionDto.Id, sectionId);
                 throw IntegrationApiException;
@@ -7800,7 +8138,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         var method = allAdministrativeInstructionalMethods.FirstOrDefault(im => im.Guid.Equals(mthd.AdministrativeInstructionalMethod.Id, StringComparison.OrdinalIgnoreCase));
                         if (method != null)
-                        {                            
+                        {
                             contactMethodCodes.Add(method.Code);
                             if (DuplicateContactMethodCodes.Contains(method.Code))
                             {
@@ -8583,14 +8921,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>List of SectionMaximum4 <see cref="Dtos.SectionMaximum5"/> objects representing matching sections</returns>
         public async Task<Tuple<IEnumerable<Dtos.SectionMaximum5>, int>> GetSectionsMaximum5Async(int offset, int limit, string title = "", string startOn = "", string endOn = "",
             string code = "", string number = "", string instructionalPlatform = "", string academicPeriod = "", string reportingAcademicPeriod = "",
-            List<string> academicLevel = null, string course = "", string site = "", string status = "", List<string> owningOrganization = null, List<string> instructors = null, 
+            List<string> academicLevel = null, string course = "", string site = "", string status = "", List<string> owningOrganization = null, List<string> instructors = null,
             string scheduleAcademicPeriod = "", bool bypassCache = false)
         {
             //Convert and validate all input parameters
             IDictionary<string, string> args = new Dictionary<string, string>();
             try
             {
-                args = await ValidateAndConvertFilterArguments(startOn, endOn, instructionalPlatform, academicPeriod, course, site, status, "", reportingAcademicPeriod:reportingAcademicPeriod, scheduleAcademicPeriod:scheduleAcademicPeriod);
+                args = await ValidateAndConvertFilterArguments(startOn, endOn, instructionalPlatform, academicPeriod, course, site, status, "", reportingAcademicPeriod: reportingAcademicPeriod, scheduleAcademicPeriod: scheduleAcademicPeriod);
             }
             catch (ArgumentException)
             {
@@ -8625,16 +8963,33 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var newSubject = args["newSubject"];
 
             var sectionDtos = new List<Dtos.SectionMaximum5>();
-            var sectionEntities = await _sectionRepository.GetSectionsAsync(offset, limit, title, newStartOn, newEndOn,
-                code, number, newInstructionalPlatform, newAcademicPeriod, newReportingAcademicPeriod,
-                newAcademicLevel, newCourse, newSite, newStatus, newOwningOrganization, "", newInstructors, newScheduleAcademicPeriod);
+            Tuple<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section>, int> sectionEntities = null;
+            try
+            {                
+                sectionEntities = await _sectionRepository.GetSectionsAsync(offset, limit, title, newStartOn, newEndOn,
+                    code, number, newInstructionalPlatform, newAcademicPeriod, newReportingAcademicPeriod,
+                    newAcademicLevel, newCourse, newSite, newStatus, newOwningOrganization, "", newInstructors, newScheduleAcademicPeriod);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message);
+                throw IntegrationApiException;
+            }
 
             var personIds = sectionEntities.Item1
                             .SelectMany(f => f.Faculty)
                             .Where(i => !string.IsNullOrWhiteSpace(i.Id))
                             .Select(fc => fc.FacultyId).Distinct().ToArray();
 
-            await SetFacultyGuidsAsync(personIds);
+            if (personIds != null && personIds.Any())
+            {
+                await SetFacultyGuidsAsync(personIds);
+            }
 
             if (_facultyGuids != null && _facultyGuids.Any())
             {
@@ -8648,8 +9003,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             .Select(c => c.CourseId).Distinct().ToList();
             await SetCourseCollectionAsync(courseIds);
 
-            SetSectionGuids(sectionEntities.Item1);
-
             foreach (var sectionEntity in sectionEntities.Item1)
             {
                 if (sectionEntity.Guid != null)
@@ -8658,6 +9011,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     sectionDtos.Add(sectionDto);
                 }
             }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+
             return new Tuple<IEnumerable<Dtos.SectionMaximum5>, int>(sectionDtos, sectionEntities.Item2);
         }
 
@@ -8670,12 +9029,28 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             if (string.IsNullOrEmpty(guid))
             {
-                throw new ArgumentNullException("guid", "GUID is required to get a section.");
+                IntegrationApiExceptionAddError("A GUID is required to obtain a section", "Missing.Required.Property");
+                throw IntegrationApiException;
             }
-            var sectionEntity = await _sectionRepository.GetSectionByGuidAsync(guid);
-            if (sectionEntity == null)
+            Domain.Student.Entities.Section sectionEntity = null;
+            try
             {
-                throw new KeyNotFoundException(string.Concat("Section not found or invalid for id '", guid, "'.  See Log for more information."));
+                sectionEntity = await _sectionRepository.GetSectionByGuidAsync(guid);
+                if (sectionEntity == null)
+                {
+                    IntegrationApiExceptionAddError("Section not found or invalid for id '", guid, "'.  See Log for more information.", "Bad.Data");
+                    throw IntegrationApiException;
+                }
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex, guid: guid);
+                throw IntegrationApiException;
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message);
+                throw IntegrationApiException;
             }
 
             var personIds = sectionEntity.Faculty
@@ -8697,6 +9072,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             SetSectionGuids(sectionEntity);
 
             var sectionDto = await ConvertSectionEntityToSectionMaximum5Async(sectionEntity, bypassCache);
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
             return sectionDto;
         }
 
@@ -8728,202 +9107,377 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (!string.IsNullOrEmpty(entity.LearningProvider))
             {
-                var instructionalPlatform = (await InstructionalPlatformsAsync()).FirstOrDefault(i => i.Code == entity.LearningProvider);
-
-                sectionDto.InstructionalPlatform = (instructionalPlatform != null)
-                    ? new InstructionalPlatformDtoProperty()
+                Domain.Base.Entities.InstructionalPlatform instructionalPlatform = null;
+                try
+                {
+                    var instructionalPlatforms = await InstructionalPlatformsAsync();
+                    if (instructionalPlatforms.Any())
                     {
-                        Code = instructionalPlatform.Code,
-                        Title = instructionalPlatform.Description,
-                        Detail = new GuidObject2(instructionalPlatform.Guid)
+                        instructionalPlatform = (instructionalPlatforms.FirstOrDefault(i => i.Code == entity.LearningProvider));
+                        if (instructionalPlatform != null && !string.IsNullOrEmpty(instructionalPlatform.Guid))
+                        {
+                            if (!string.IsNullOrEmpty(instructionalPlatform.Description))
+                            {
+                                sectionDto.InstructionalPlatform = (instructionalPlatform != null)
+                                        ? new InstructionalPlatformDtoProperty()
+                                        {
+                                            Code = instructionalPlatform.Code,
+                                            Title = instructionalPlatform.Description,
+                                            Detail = new GuidObject2(instructionalPlatform.Guid)
+                                        }
+                                        : null;
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError(string.Concat("Missing description for instructional platform ", entity.LearningProvider, "."),
+                                "GUID.Not.Found", entity.Guid, entity.Id);
+                            }
+                        }
+                        else
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("Missing instructional platform GUID or invalid code of ", entity.LearningProvider, "."),
+                                "GUID.Not.Found", entity.Guid, entity.Id);
+                        }
                     }
-                    : null;
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("No instructional platforms found."),
+                            "GUID.Not.Found", entity.Guid, entity.Id);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
+                }
             }
 
             if (!string.IsNullOrEmpty(entity.TermId))
             {
-                var academicPeriod = academicPeriods.FirstOrDefault(a => a.Code == entity.TermId);
-                if (academicPeriod != null)
+                Domain.Student.Entities.AcademicPeriod academicPeriod = null;
+                try
                 {
-                    var returnAcadPeriod = new AcademicPeriodDtoProperty3()
+                    var acadPeriods = academicPeriods;
+                    if (acadPeriods.Any())
                     {
-                        Detail = new GuidObject2(academicPeriod.Guid),
-                        Code = academicPeriod.Code,
-                        Start = academicPeriod.StartDate,
-                        End = academicPeriod.EndDate,
-                        Title = academicPeriod.Description
-                    };
-
-                    if (academicPeriod.RegistrationDates != null)
-                    {
-                        if (academicPeriod.RegistrationDates.FirstOrDefault().CensusDates.Any())
+                        academicPeriod = acadPeriods.FirstOrDefault(a => a.Code == entity.TermId);
+                        if (academicPeriod != null && !string.IsNullOrEmpty(academicPeriod.Guid))
                         {
-                            returnAcadPeriod.CensusDates = academicPeriod.RegistrationDates.FirstOrDefault().CensusDates;
-                        }
-                    }
-
-                    var category = new Dtos.AcademicPeriodCategory3();
-                    switch (academicPeriod.Category)
-                    {
-                        case ("year"):
+                            var validAcadPeriod = true;
+                            if (string.IsNullOrEmpty(academicPeriod.Description))
                             {
-                                category.Type = Dtos.AcademicTimePeriod2.Year;
-                                break;
+                                IntegrationApiExceptionAddError(string.Concat("Missing description for academic period ", entity.TermId, "."),
+                                "GUID.Not.Found", entity.Guid, entity.Id);
+                                validAcadPeriod = false;
                             }
-                        case ("term"):
+                            if (academicPeriod.StartDate == null)
                             {
-                                category.Type = Dtos.AcademicTimePeriod2.Term;
-                                if (!string.IsNullOrEmpty(academicPeriod.ParentId))
+                                IntegrationApiExceptionAddError(string.Concat("Missing start date for academic period ", entity.TermId, "."),
+                                "GUID.Not.Found", entity.Guid, entity.Id);
+                                validAcadPeriod = false;
+                            }
+                            if (academicPeriod.EndDate == null)
+                            {
+                                IntegrationApiExceptionAddError(string.Concat("Missing end date for academic period ", entity.TermId, "."),
+                                "GUID.Not.Found", entity.Guid, entity.Id);
+                                validAcadPeriod = false;
+                            }
+                            if (validAcadPeriod == true)
+                            {
+                                var returnAcadPeriod = new AcademicPeriodDtoProperty3()
                                 {
-                                    category.Parent = new AcademicPeriodCategoryParent()
-                                    {
-                                        Id = academicPeriod.ParentId
-                                    };
-                                }
-                                else
+                                    Detail = new GuidObject2(academicPeriod.Guid),
+                                    Code = academicPeriod.Code,
+                                    Start = academicPeriod.StartDate,
+                                    End = academicPeriod.EndDate,
+                                    Title = academicPeriod.Description
+                                };
+
+                                if (academicPeriod.RegistrationDates != null)
                                 {
-                                    if (academicPeriod.ReportingYear > 0)
+                                    if (academicPeriod.RegistrationDates.FirstOrDefault().CensusDates.Any())
                                     {
-                                        category.Parent = new AcademicPeriodCategoryParent()
-                                        {
-                                            Year = academicPeriod.ReportingYear
-                                        };
+                                        returnAcadPeriod.CensusDates = academicPeriod.RegistrationDates.FirstOrDefault().CensusDates;
                                     }
                                 }
 
-                                if (!string.IsNullOrEmpty(academicPeriod.PrecedingId))
+                                var category = new Dtos.AcademicPeriodCategory3();
+                                switch (academicPeriod.Category)
                                 {
-                                    category.PrecedingGuid = new GuidObject2(academicPeriod.PrecedingId);
+                                    case ("year"):
+                                        {
+                                            category.Type = Dtos.AcademicTimePeriod2.Year;
+                                            break;
+                                        }
+                                    case ("term"):
+                                        {
+                                            category.Type = Dtos.AcademicTimePeriod2.Term;
+                                            if (!string.IsNullOrEmpty(academicPeriod.ParentId))
+                                            {
+                                                category.Parent = new AcademicPeriodCategoryParent()
+                                                {
+                                                    Id = academicPeriod.ParentId
+                                                };
+                                            }
+                                            else
+                                            {
+                                                if (academicPeriod.ReportingYear > 0)
+                                                {
+                                                    category.Parent = new AcademicPeriodCategoryParent()
+                                                    {
+                                                        Year = academicPeriod.ReportingYear
+                                                    };
+                                                }
+                                            }
+
+                                            if (!string.IsNullOrEmpty(academicPeriod.PrecedingId))
+                                            {
+                                                category.PrecedingGuid = new GuidObject2(academicPeriod.PrecedingId);
+                                            }
+                                            break;
+                                        }
+                                    case ("subterm"):
+                                        {
+                                            category.Type = Dtos.AcademicTimePeriod2.Subterm;
+                                            if (academicPeriod.ParentId != null)
+                                            {
+                                                category.Parent = new AcademicPeriodCategoryParent()
+                                                {
+                                                    Id = academicPeriod.ParentId
+                                                };
+                                            }
+
+                                            if (!string.IsNullOrEmpty(academicPeriod.PrecedingId))
+                                            {
+                                                category.PrecedingGuid = new GuidObject2(academicPeriod.PrecedingId);
+                                            }
+                                            break;
+                                        }
                                 }
-                                break;
-                            }
-                        case ("subterm"):
-                            {
-                                category.Type = Dtos.AcademicTimePeriod2.Subterm;
-                                if (academicPeriod.ParentId != null)
+
+                                returnAcadPeriod.Category = category;
+
+                                sectionDto.AcademicPeriod = returnAcadPeriod;
+
+                                var returnScheduleAcadPeriod = new AcademicPeriodDtoProperty3()
                                 {
-                                    category.Parent = new AcademicPeriodCategoryParent()
+                                    Detail = new GuidObject2(academicPeriod.Guid),
+                                    Code = academicPeriod.Code,
+                                    Title = academicPeriod.Description
+                                };
+                                sectionDto.ScheduleAcademicPeriod = returnScheduleAcadPeriod;
+
+                                // Update Reporting Academic Period Object
+                                if (!string.IsNullOrEmpty(academicPeriod.ReportingTerm))
+                                {
+                                    var reportingTerm = academicPeriods.FirstOrDefault(a => a.Code == academicPeriod.ReportingTerm);
+                                    if (reportingTerm != null)
                                     {
-                                        Id = academicPeriod.ParentId
-                                    };
+                                        sectionDto.ReportingAcademicPeriod = new GuidObject2(reportingTerm.Guid);
+                                    }
                                 }
-
-                                if (!string.IsNullOrEmpty(academicPeriod.PrecedingId))
-                                {
-                                    category.PrecedingGuid = new GuidObject2(academicPeriod.PrecedingId);
-                                }
-                                break;
                             }
-                    }
-
-                    returnAcadPeriod.Category = category;
-
-                    sectionDto.AcademicPeriod = returnAcadPeriod;
-
-                    var returnScheduleAcadPeriod = new AcademicPeriodDtoProperty3()
-                    {
-                        Detail = new GuidObject2(academicPeriod.Guid),
-                        Code = academicPeriod.Code,
-                        Title = academicPeriod.Description
-                    };
-                    sectionDto.ScheduleAcademicPeriod = returnScheduleAcadPeriod;
-
-                    // Update Reporting Academic Period Object
-                    if (!string.IsNullOrEmpty(academicPeriod.ReportingTerm))
-                    {
-                        var reportingTerm = academicPeriods.FirstOrDefault(a => a.Code == academicPeriod.ReportingTerm);
-                        if (reportingTerm != null)
+                        }
+                        else
                         {
-                            sectionDto.ReportingAcademicPeriod = new GuidObject2(reportingTerm.Guid);
+                            IntegrationApiExceptionAddError(string.Concat("Missing academic period GUID or invalid code of ", entity.TermId, "."),
+                                "GUID.Not.Found", entity.Guid, entity.Id);
                         }
                     }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("No academic periods found."),
+                            "GUID.Not.Found", entity.Guid, entity.Id);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
                 }
             }
 
             // get course from previously bulk loaded courses
-            var course = await GetCourseByIdAsync(entity.CourseId);
-            if (course != null)
+            if (!string.IsNullOrEmpty(entity.CourseId))
             {
-                var courseReturn = new CourseDtoProperty2()
+                try
                 {
-                    Detail = new GuidObject2(course.Guid),
-                    Number = course.Number
-
-                };
-                courseReturn.Titles = new List<CoursesTitlesDtoProperty2>();
-
-                var shortCourseEntity = (await CourseTitleTypesAsync(bypassCache)).FirstOrDefault(ctt => ctt.Code.ToLower() == "short");
-                if (shortCourseEntity == null || string.IsNullOrEmpty(shortCourseEntity.Guid))
-                {
-                    throw new ArgumentException("Course Title Types 'SHORT' is missing. ", "invalidKey");
-                }
-                var shortCourseTitle = new CoursesTitlesDtoProperty2() { Type = new GuidObject2(shortCourseEntity.Guid), Value = course.Title };
-                courseReturn.Titles.Add(shortCourseTitle);
-
-                var longCourseEntity = (await CourseTitleTypesAsync(bypassCache)).FirstOrDefault(ctt => ctt.Code.ToLower() == "long");
-                if (longCourseEntity == null || string.IsNullOrEmpty(longCourseEntity.Guid))
-                {
-                    throw new ArgumentException("Course Title Types 'LONG' is missing. ", "invalidKey");
-                }
-                var longCourseTitle = new CoursesTitlesDtoProperty2() { Type = new GuidObject2(longCourseEntity.Guid), Value = course.LongTitle };
-                courseReturn.Titles.Add(longCourseTitle);
-
-                var subject = (await SubjectsAsync(bypassCache)).FirstOrDefault(s => s.Code == course.SubjectCode);
-                if (subject != null)
-                {
-                    courseReturn.Subject = new SubjectDtoProperty()
+                    var course = await GetCourseByIdAsync(entity.CourseId);
+                    if (course != null)
                     {
-                        Abbreviation = subject.Code,
-                        Title = subject.Description,
-                        Detail = new GuidObject2(subject.Guid)
-                    };
-                }
-                sectionDto.Course = courseReturn;
-            }
-            else
-            {
-                throw new ArgumentException(string.Concat("Course not found or invalid for id '", entity.CourseId, "'.  See Log for more information."));
-            }
+                        var courseReturn = new CourseDtoProperty2()
+                        {
+                            Detail = new GuidObject2(course.Guid),
+                            Number = course.Number
 
-            var credit = new Dtos.DtoProperties.Credit2DtoProperty();
-            var creditTypeItems = await CreditTypesAsync();
-            if (creditTypeItems.Any(ct => ct.Code == entity.CreditTypeCode))
-            {
-                var creditTypeItem = creditTypeItems.First(ct => ct.Code == entity.CreditTypeCode);
-                credit.CreditCategory.Detail.Id = creditTypeItem.Guid;
-                credit.CreditCategory.Code = creditTypeItem.Code;
-                credit.CreditCategory.Title = creditTypeItem.Description;
-                switch (creditTypeItem.CreditType)
+                        };
+                        courseReturn.Titles = new List<CoursesTitlesDtoProperty2>();
+                        try
+                        {
+                            var courseTitleTypes = await CourseTitleTypesAsync(bypassCache);
+                            if (courseTitleTypes.Any())
+                            {
+                                if (!string.IsNullOrEmpty(course.Title))
+                                {
+                                    var shortCourseEntity = courseTitleTypes.FirstOrDefault(ctt => ctt.Code.ToLower() == "short");
+                                    if (shortCourseEntity != null && !string.IsNullOrEmpty(shortCourseEntity.Guid))
+                                    {
+                                        var shortCourseTitle = new CoursesTitlesDtoProperty2() { Type = new GuidObject2(shortCourseEntity.Guid), Value = course.Title };
+                                        courseReturn.Titles.Add(shortCourseTitle);
+                                    }
+                                    else
+                                    {
+                                        IntegrationApiExceptionAddError("Missing course title type GUID for 'SHORT'.",
+                                        "GUID.Not.Found", entity.Guid, entity.Id);
+                                    }
+                                }
+                                else
+                                {
+                                    IntegrationApiExceptionAddError(string.Concat("Missing short course title for course ", course.Id, "."),
+                                "GUID.Not.Found", entity.Guid, entity.Id);
+                                }
+
+                                if (!string.IsNullOrEmpty(course.LongTitle))
+                                {
+                                    var longCourseEntity = courseTitleTypes.FirstOrDefault(ctt => ctt.Code.ToLower() == "long");
+                                    if (longCourseEntity != null && !string.IsNullOrEmpty(longCourseEntity.Guid))
+                                    {
+                                        var longCourseTitle = new CoursesTitlesDtoProperty2() { Type = new GuidObject2(longCourseEntity.Guid), Value = course.LongTitle };
+                                        courseReturn.Titles.Add(longCourseTitle);
+                                    }
+                                    else
+                                    {
+                                        IntegrationApiExceptionAddError("Missing course title type GUID for 'LONG'.",
+                                        "GUID.Not.Found", entity.Guid, entity.Id);
+                                    }
+                                }
+                                else
+                                {
+                                    IntegrationApiExceptionAddError(string.Concat("Missing long course title for course ", course.Id, "."),
+                                "GUID.Not.Found", entity.Guid, entity.Id);
+                                }
+                            }
+                            else
+                            {
+                                {
+                                    IntegrationApiExceptionAddError(string.Concat("No course title types found."),
+                                        "GUID.Not.Found", entity.Guid, entity.Id);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
+                        }
+
+                        
+                        if (!string.IsNullOrEmpty(course.SubjectCode))
+                        {
+                            var subjects = await SubjectsAsync(bypassCache);
+                            if (subjects.Any())
+                            {
+                                var subject = subjects.FirstOrDefault(s => s.Code == course.SubjectCode);
+                                if (subject != null)
+                                {
+                                    courseReturn.Subject = new SubjectDtoProperty()
+                                    {
+                                        Abbreviation = subject.Code,
+                                        Title = subject.Description,
+                                        Detail = new GuidObject2(subject.Guid)
+                                    };
+                                    sectionDto.Course = courseReturn;
+                                }
+                                else
+                                {
+                                    IntegrationApiExceptionAddError(string.Concat("Missing subject GUID or invalid code of ", course.SubjectCode, "."),
+                                "GUID.Not.Found", entity.Guid, entity.Id);
+                                }
+                            }
+                            else
+                            {
+                                {
+                                    IntegrationApiExceptionAddError(string.Concat("No subjects found."),
+                                        "GUID.Not.Found", entity.Guid, entity.Id);
+                                }
+                            }
+                        }     
+                        else
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("Missing subject for course ", course.Id, "."),
+                               "GUID.Not.Found", entity.Guid, entity.Id);
+                        }
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("Missing course GUID for id '", entity.CourseId, "."),
+                                "GUID.Not.Found", entity.Guid, entity.Id);
+                    }
+                }
+                catch (Exception ex)
                 {
-
-                    case CreditType.ContinuingEducation:
-                        credit.CreditCategory.CreditType = CreditCategoryType3.ContinuingEducation;
-                        break;
-                    case CreditType.Institutional:
-                        credit.CreditCategory.CreditType = CreditCategoryType3.Institutional;
-                        break;
-                    case CreditType.Transfer:
-                        credit.CreditCategory.CreditType = CreditCategoryType3.Transfer;
-                        break;
-                    case CreditType.Exchange:
-                        credit.CreditCategory.CreditType = CreditCategoryType3.Exchange;
-                        break;
-                    case CreditType.Other:
-                        credit.CreditCategory.CreditType = CreditCategoryType3.Other;
-                        break;
-                    case CreditType.None:
-                        credit.CreditCategory.CreditType = CreditCategoryType3.NoCredit;
-                        break;
-                    default:
-                        credit.CreditCategory.CreditType = CreditCategoryType3.ContinuingEducation;
-                        break;
-
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
                 }
             }
             else
             {
-                //default to CE
-                credit.CreditCategory.CreditType = CreditCategoryType3.ContinuingEducation;
+                IntegrationApiExceptionAddError("Missing course.", "GUID.Not.Found", entity.Guid, entity.Id);
+            }
+                        
+            var credit = new Dtos.DtoProperties.Credit2DtoProperty();
+            if (!string.IsNullOrEmpty(entity.CreditTypeCode))
+            {
+                try
+                {
+                    var creditTypeItems = await CreditTypesAsync();
+                    if (creditTypeItems.Any())
+                    {
+                        if (creditTypeItems.Any(ct => ct.Code == entity.CreditTypeCode))
+                        {
+                            var creditTypeItem = creditTypeItems.First(ct => ct.Code == entity.CreditTypeCode);
+                            credit.CreditCategory.Detail.Id = creditTypeItem.Guid;
+                            credit.CreditCategory.Code = creditTypeItem.Code;
+                            credit.CreditCategory.Title = creditTypeItem.Description;
+                            switch (creditTypeItem.CreditType)
+                            {
+
+                                case CreditType.ContinuingEducation:
+                                    credit.CreditCategory.CreditType = CreditCategoryType3.ContinuingEducation;
+                                    break;
+                                case CreditType.Institutional:
+                                    credit.CreditCategory.CreditType = CreditCategoryType3.Institutional;
+                                    break;
+                                case CreditType.Transfer:
+                                    credit.CreditCategory.CreditType = CreditCategoryType3.Transfer;
+                                    break;
+                                case CreditType.Exchange:
+                                    credit.CreditCategory.CreditType = CreditCategoryType3.Exchange;
+                                    break;
+                                case CreditType.Other:
+                                    credit.CreditCategory.CreditType = CreditCategoryType3.Other;
+                                    break;
+                                case CreditType.None:
+                                    credit.CreditCategory.CreditType = CreditCategoryType3.NoCredit;
+                                    break;
+                                default:
+                                    credit.CreditCategory.CreditType = CreditCategoryType3.ContinuingEducation;
+                                    break;
+
+                            }
+                        }
+                        else
+                        {
+                            //default to CE
+                            credit.CreditCategory.CreditType = CreditCategoryType3.ContinuingEducation;
+                        }
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("No credit types found."),
+                            "GUID.Not.Found", entity.Guid, entity.Id);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
+                }
             }
 
             if (entity.Ceus.HasValue)
@@ -8942,76 +9496,195 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             creditList.Add(credit);
             sectionDto.Credits = creditList;
 
-            var site = new SiteDtoProperty();
+            if (!string.IsNullOrEmpty(entity.Location))
+            {                
+                var site = new SiteDtoProperty();
+                try
+                {
+                    var sites = locations;
+                    if (sites.Any())
+                    {
+                        var location = sites.FirstOrDefault(l => l.Code == entity.Location);
+                        if (location != null)
+                        {
+                            site.Code = location.Code;
+                            site.Title = location.Description;
+                            site.Detail = new GuidObject2(location.Guid);
 
-            var location = locations.FirstOrDefault(l => l.Code == entity.Location);
-            if (location != null)
-            {
-                site.Code = location.Code;
-                site.Title = location.Description;
-                site.Detail = new GuidObject2(location.Guid);
-
-                sectionDto.Site = site;
+                            sectionDto.Site = site;
+                        }
+                        else
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("Missing site GUID or invalid code of ", entity.Location, "."),
+                                "GUID.Not.Found", entity.Guid, entity.Id);
+                        }
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("No sites found."),
+                            "GUID.Not.Found", entity.Guid, entity.Id);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
+                }
             }
 
             var acadLevel = new AcademicLevelDtoProperty();
             var acadLevel2 = new AcademicLevel2DtoProperty();
-            var level = (await AcademicLevelsAsync()).FirstOrDefault(l => l.Code == entity.AcademicLevelCode);
-            if (level != null)
+            if (!string.IsNullOrEmpty(entity.AcademicLevelCode))
             {
-                acadLevel.Code = level.Code;
-                acadLevel.Title = level.Description;
-                acadLevel.Detail = new GuidObject2(level.Guid);
-
-                acadLevel2.Code = level.Code;
-                acadLevel2.Title = level.Description;
-                acadLevel2.Detail = new GuidObject2(level.Guid);
-
-                sectionDto.AcademicLevels = new List<AcademicLevelDtoProperty>()
+                try
                 {
-                   acadLevel
-                };
-            }
-
-            var gradeScheme = (await GradeSchemesAsync()).FirstOrDefault(g => g.Code == entity.GradeSchemeCode);
-            if (gradeScheme != null)
-            {
-                var returnGradeScheme = new GradeSchemeDtoProperty2();
-
-                returnGradeScheme.Code = gradeScheme.Code;
-                returnGradeScheme.Title = gradeScheme.Description;
-                returnGradeScheme.Start = gradeScheme.EffectiveStartDate;
-                returnGradeScheme.End = gradeScheme.EffectiveEndDate;
-                returnGradeScheme.Detail = new GuidObject2(gradeScheme.Guid);
-                returnGradeScheme.AcademicLevel = acadLevel2;
-
-                sectionDto.GradeSchemes = new List<GradeSchemeDtoProperty2>()
-                {
-                   returnGradeScheme
-                };
-            }
-
-            var courseLevels = await CourseLevelsAsync();
-            if (courseLevels.Any())
-            {
-                var courseLevelList = new List<CourseLevelDtoProperty>();
-                foreach (var code in entity.CourseLevelCodes)
-                {
-                    var cLevel = courseLevels.FirstOrDefault(l => l.Code == code);
-                    if (cLevel != null)
-                    {
-                        var levelReturn = new CourseLevelDtoProperty
+                    var levels = await AcademicLevelsAsync();
+                    if (levels.Any())
+                    {                        
+                        var level = (levels.FirstOrDefault(l => l.Code == entity.AcademicLevelCode));
+                        if (level != null)
                         {
-                            Code = cLevel.Code,
-                            Title = cLevel.Description,
-                            Detail = new GuidObject2(cLevel.Guid)
-                        };
-                        courseLevelList.Add(levelReturn);
+                            if (!string.IsNullOrEmpty(level.Description))
+                            {
+                                acadLevel.Code = level.Code;
+                                acadLevel.Title = level.Description;
+                                acadLevel.Detail = new GuidObject2(level.Guid);
+
+                                acadLevel2.Code = level.Code;
+                                acadLevel2.Title = level.Description;
+                                acadLevel2.Detail = new GuidObject2(level.Guid);
+
+                                sectionDto.AcademicLevels = new List<AcademicLevelDtoProperty>()
+                                {
+                                    acadLevel
+                                };
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError(string.Concat("Missing description for academic level ", entity.AcademicLevelCode, "."),
+                                "GUID.Not.Found", entity.Guid, entity.Id);
+                            }
+
+                        }
+                        else
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("Missing academic level GUID or invalid code of ", entity.Location, "."),
+                                "GUID.Not.Found", entity.Guid, entity.Id);
+                        }
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("No academic levels found."),
+                            "GUID.Not.Found", entity.Guid, entity.Id);
                     }
                 }
-                sectionDto.CourseLevels = courseLevelList;
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
+                }
             }
 
+            if (!string.IsNullOrEmpty(entity.GradeSchemeCode))
+            {
+                try
+                {
+                    var gradeSchemes = await GradeSchemesAsync();
+                    if (gradeSchemes.Any())
+                    {
+                        var gradeScheme = (await GradeSchemesAsync()).FirstOrDefault(g => g.Code == entity.GradeSchemeCode);
+                        if (gradeScheme != null)
+                        {
+                            if (!string.IsNullOrEmpty(gradeScheme.Description))
+                            {
+                                var returnGradeScheme = new GradeSchemeDtoProperty2();
+
+                                returnGradeScheme.Code = gradeScheme.Code;
+                                returnGradeScheme.Title = gradeScheme.Description;
+                                returnGradeScheme.Start = gradeScheme.EffectiveStartDate;
+                                returnGradeScheme.End = gradeScheme.EffectiveEndDate;
+                                returnGradeScheme.Detail = new GuidObject2(gradeScheme.Guid);
+                                returnGradeScheme.AcademicLevel = acadLevel2;
+
+                                sectionDto.GradeSchemes = new List<GradeSchemeDtoProperty2>()
+                                {
+                                    returnGradeScheme
+                                };
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError(string.Concat("Missing description for grade scheme ", entity.GradeSchemeCode, "."),
+                                "GUID.Not.Found", entity.Guid, entity.Id);
+                            }
+                        }
+                        else
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("Missing grade scheme GUID or invalid code of ", entity.GradeSchemeCode, "."),
+                                "GUID.Not.Found", entity.Guid, entity.Id);
+                        }
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("No grade schemes found."),
+                            "GUID.Not.Found", entity.Guid, entity.Id);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
+                }
+            }
+
+            if (entity.CourseLevelCodes.Any())
+            {
+                try
+                {
+                    var courseLevels = await CourseLevelsAsync();
+                    if (courseLevels.Any())
+                    {
+                        var courseLevelList = new List<CourseLevelDtoProperty>();
+                        foreach (var code in entity.CourseLevelCodes)
+                        {
+                            if (!string.IsNullOrEmpty(code))
+                            {
+                                var cLevel = courseLevels.FirstOrDefault(l => l.Code == code);
+                                if (cLevel != null)
+                                {
+                                    if (!string.IsNullOrEmpty(cLevel.Description))
+                                    {
+                                        var levelReturn = new CourseLevelDtoProperty
+                                        {
+                                            Code = cLevel.Code,
+
+                                            Title = cLevel.Description,
+                                            Detail = new GuidObject2(cLevel.Guid)
+                                        };
+                                        courseLevelList.Add(levelReturn);
+                                    }
+                                    else
+                                    {
+                                        IntegrationApiExceptionAddError(string.Concat("Missing description for course level ", code, "."),
+                                        "GUID.Not.Found", entity.Guid, entity.Id);
+                                    }
+                                }
+                                else
+                                {
+                                    IntegrationApiExceptionAddError(string.Concat("Missing course level GUID or invalid code of ", code, "."),
+                                        "GUID.Not.Found", entity.Guid, entity.Id);
+                                }
+                            }
+                        }
+                        sectionDto.CourseLevels = courseLevelList;
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("No course levels found."),
+                            "GUID.Not.Found", entity.Guid, entity.Id);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
+                }
+            }
             string status;
             var currentStatus = ConvertSectionStatusToDto2(entity.Statuses.ElementAt(0).IntegrationStatus, out status);
             status = entity.Statuses.ElementAt(0).StatusCode;
@@ -9033,93 +9706,200 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 };
             }
 
-            var orgs = await DepartmentsAsync();
-            if (entity.Departments != null && entity.Departments.Any() && orgs != null && orgs.Any())
+
+            //if (entity.Departments != null && entity.Departments.Any() && orgs != null && orgs.Any())
+            if (entity.Departments != null && entity.Departments.Any())
             {
-                var orgsList = new List<OwningOrganizationDtoProperty>();
-                foreach (var code in entity.Departments)
+                try
                 {
-                    var owningOrg = orgs.FirstOrDefault(o => o.Code == code.AcademicDepartmentCode);
-                    if (owningOrg != null)
+                    var orgs = await DepartmentsAsync();
+                    if (orgs.Any())
                     {
-                        var orgReturn = new OwningOrganizationDtoProperty();
-                        orgReturn.Code = owningOrg.Code;
-                        orgReturn.Title = owningOrg.Description;
-                        orgReturn.OwnershipPercentage = code.ResponsibilityPercentage;
-                        orgReturn.Detail = new GuidObject2(owningOrg.Guid);
-                        orgReturn.Type = EducationalInstitutionUnitType.Department;
-                        orgsList.Add(orgReturn);
+                        var orgsList = new List<OwningOrganizationDtoProperty>();
+                        foreach (var code in entity.Departments)
+                        {
+                            if (code != null)
+                            {
+                                var owningOrg = orgs.FirstOrDefault(o => o.Code == code.AcademicDepartmentCode);
+                                if (owningOrg != null)
+                                {
+                                    var orgReturn = new OwningOrganizationDtoProperty();
+                                    orgReturn.Code = owningOrg.Code;
+                                    orgReturn.Title = owningOrg.Description;
+                                    orgReturn.OwnershipPercentage = code.ResponsibilityPercentage;
+                                    orgReturn.Detail = new GuidObject2(owningOrg.Guid);
+                                    orgReturn.Type = EducationalInstitutionUnitType.Department;
+                                    orgsList.Add(orgReturn);
+                                }
+                                else
+                                {
+                                    IntegrationApiExceptionAddError(string.Concat("Missing owning institution unit GUID or invalid code of ", code, "."),
+                                        "GUID.Not.Found", entity.Guid, entity.Id);
+                                }
+                            }
+                        }
+                        sectionDto.OwningOrganizations = orgsList;
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("No owning institution units found."),
+                            "GUID.Not.Found", entity.Guid, entity.Id);
                     }
                 }
-                sectionDto.OwningOrganizations = orgsList;
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
+                }
+            }
+
+            // Get instructional methods if it will be needed for any of multiple DTO properties
+            IEnumerable<Domain.Student.Entities.InstructionalMethod> allInstructionalMethods = null;            
+            if ((entity.InstructionalContacts != null && entity.InstructionalContacts.Any()) ||
+                (entity.InstructionalMethods != null && entity.InstructionalMethods.Any()) ||
+                (entity.Meetings != null) && (entity.Meetings.Any()) ||
+                (entity.Faculty != null) && (entity.Faculty.Any()))           
+            {
+                try
+                {
+                    allInstructionalMethods = await InstructionalMethodsAsync(bypassCache);
+                    if (!allInstructionalMethods.Any())
+                    {  
+                        IntegrationApiExceptionAddError(string.Concat("No instructional methods found."),
+                            "GUID.Not.Found", entity.Guid, entity.Id);
+                    }
+                }
+                catch (Exception ex) // could not get all instructional methods
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
+                }
             }
 
             // New object InstructionalMethods with v16
-
             if (entity.InstructionalContacts != null && entity.InstructionalContacts.Any())
             {
                 sectionDto.InstructionalMethods = new List<GuidObject2>();
                 var instructionalMethodDetails = new List<InstructionalMethodDetailsDtoProperty>();
-                var allInstructionalMethods = await InstructionalMethodsAsync(bypassCache);
-                var allContactMeasures = await AllContactMeasuresAsync(bypassCache);
-                foreach (var method in entity.InstructionalContacts)
+                if (allInstructionalMethods != null && allInstructionalMethods.Any())
                 {
-                    ContactHoursPeriod? instrMethodPeriod = ContactHoursPeriod.NotSet;
-                    decimal? instrMethodHours = null;
+                    try
+                    {
+                        var allContactMeasures = await AllContactMeasuresAsync(bypassCache);
+                        if (allContactMeasures.Any())
+                        {
+                            foreach (var method in entity.InstructionalContacts)
+                            {
+                                if (method != null)
+                                {
+                                    ContactHoursPeriod? instrMethodPeriod = ContactHoursPeriod.NotSet;
+                                    decimal? instrMethodHours = null;
 
-                    var instructionalMethod = allInstructionalMethods.FirstOrDefault(x => x.Code == method.InstructionalMethodCode);
-                    if (instructionalMethod == null || string.IsNullOrEmpty(instructionalMethod.Guid))
-                    {
-                        throw new ArgumentException(string.Concat("Instructional Method not found for :", method.InstructionalMethodCode));
-                    }
-                    if (!string.IsNullOrEmpty(method.ContactMeasure))
-                    {
-                        var interval = allContactMeasures.FirstOrDefault(x => x.Code == method.ContactMeasure);
-                        if (interval == null)
-                        {
-                            throw new ArgumentException(string.Concat("Contact Measure not found for :", method.ContactMeasure));
+                                    var instructionalMethod = allInstructionalMethods.FirstOrDefault(x => x.Code == method.InstructionalMethodCode);
+                                    if (instructionalMethod == null || string.IsNullOrEmpty(instructionalMethod.Guid))
+                                    {
+                                        IntegrationApiExceptionAddError(string.Concat("Missing instructional method GUID or invalid code of ",
+                                            method.InstructionalMethodCode, "."), "GUID.Not.Found", entity.Guid, entity.Id);
+                                    }
+                                    else
+                                    {
+                                        if (!string.IsNullOrEmpty(method.ContactMeasure))
+                                        {
+                                            var interval = allContactMeasures.FirstOrDefault(x => x.Code == method.ContactMeasure);
+                                            if (interval == null)
+                                            {
+                                                IntegrationApiExceptionAddError(string.Concat("Missing contact measures GUID or invalid code of ",
+                                            method.ContactMeasure, "."), "GUID.Not.Found", entity.Guid, entity.Id);
+                                            }
+                                            else
+                                            {
+                                                instrMethodPeriod = ConvertContactPeriodToInterval(interval.ContactPeriod);
+
+
+                                                if ((method.ContactHours.HasValue) || ((instrMethodPeriod != null) || (instrMethodPeriod != ContactHoursPeriod.NotSet)))
+                                                {
+                                                    instrMethodHours = method.ContactHours;
+                                                }
+                                                if (instrMethodHours != null && instrMethodHours.HasValue)
+                                                {
+                                                    try
+                                                    {
+                                                        var adminInstructionalMethods = await AdministrativeInstructionalMethodsAsync(bypassCache);
+                                                        if (adminInstructionalMethods.Any())
+                                                        {
+                                                            var adminInstructionalMethod = adminInstructionalMethods.FirstOrDefault(x => x.Code == method.InstructionalMethodCode);
+                                                            if (adminInstructionalMethod == null || string.IsNullOrEmpty(adminInstructionalMethod.Guid))
+                                                            {
+                                                                IntegrationApiExceptionAddError(string.Concat("Missing administrative instructional method GUID or invalid code of ",
+                                            method.InstructionalMethodCode, "."), "GUID.Not.Found", entity.Guid, entity.Id);
+                                                            }
+                                                            else
+                                                            {
+                                                                var instrMethodHoursDetail = new CoursesHoursDtoProperty()
+                                                                {
+                                                                    AdministrativeInstructionalMethod = new GuidObject2(adminInstructionalMethod.Guid),
+                                                                    Minimum = instrMethodHours
+                                                                };
+                                                                if (instrMethodPeriod != ContactHoursPeriod.NotSet)
+                                                                    instrMethodHoursDetail.Interval = instrMethodPeriod;
+                                                                if (sectionDto.Hours == null)
+                                                                {
+                                                                    sectionDto.Hours = new List<CoursesHoursDtoProperty>();
+                                                                }
+                                                                sectionDto.Hours.Add(instrMethodHoursDetail);
+                                                            }
+
+                                                        }
+                                                        else
+                                                        {
+                                                            IntegrationApiExceptionAddError(string.Concat("No administrative instructional methods found."),
+                                                                "GUID.Not.Found", entity.Guid, entity.Id);
+                                                        }
+                                                    }
+                                                    catch (Exception ex) // could not get all contact measures
+                                                    {
+                                                        IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
-                        instrMethodPeriod = ConvertContactPeriodToInterval(interval.ContactPeriod);
-                    }
-                    if ((method.ContactHours.HasValue) || ((instrMethodPeriod != null) || (instrMethodPeriod != ContactHoursPeriod.NotSet)))
-                    {
-                        instrMethodHours = method.ContactHours;
-                    }
-                    if (instrMethodHours != null && instrMethodHours.HasValue)
-                    {
-                        var adminInstructionalMethod = (await AdministrativeInstructionalMethodsAsync(bypassCache)).FirstOrDefault(x => x.Code == method.InstructionalMethodCode);
-                        if (adminInstructionalMethod == null || string.IsNullOrEmpty(adminInstructionalMethod.Guid))
+                        else
                         {
-                            throw new ArgumentException(string.Concat("Administrative Instructional Method not found for :", method.InstructionalMethodCode));
+                            IntegrationApiExceptionAddError(string.Concat("No contact measures found."),
+                                "GUID.Not.Found", entity.Guid, entity.Id);
                         }
-                        var instrMethodHoursDetail = new CoursesHoursDtoProperty()
-                        {
-                            AdministrativeInstructionalMethod = new GuidObject2(adminInstructionalMethod.Guid),
-                            Minimum = instrMethodHours
-                        };
-                        if (instrMethodPeriod != ContactHoursPeriod.NotSet)
-                            instrMethodHoursDetail.Interval = instrMethodPeriod;
-                        if (sectionDto.Hours == null)
-                        {
-                            sectionDto.Hours = new List<CoursesHoursDtoProperty>();
-                        }
-                        sectionDto.Hours.Add(instrMethodHoursDetail);
                     }
+                    catch (Exception ex) // could not get all contact measures
+                    {
+                        IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
+                    }
+
                 }
             }
             if (entity.InstructionalMethods != null && entity.InstructionalMethods.Any())
             {
-                var allInstructionalMethods = await this.InstructionalMethodsAsync();
-                foreach (var method in entity.InstructionalMethods)
+                if (allInstructionalMethods != null && allInstructionalMethods.Any())
                 {
-                    var instructionalMethod = allInstructionalMethods.FirstOrDefault(x => x.Code == method);
-                    if (instructionalMethod == null)
+                    foreach (var method in entity.InstructionalMethods)
                     {
-                        throw new ArgumentException(string.Concat("Instructional Method not found for :", method));
+                        if (method != null)
+                        {
+                            var instructionalMethod = allInstructionalMethods.FirstOrDefault(x => x.Code == method);
+                            if (instructionalMethod != null && !string.IsNullOrEmpty(instructionalMethod.Guid))
+                            {
+                                var item = new GuidObject2(instructionalMethod.Guid);
+                                if (!sectionDto.InstructionalMethods.Contains(item))
+                                    sectionDto.InstructionalMethods.Add(new GuidObject2(instructionalMethod.Guid));
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError(string.Concat("Missing instructional method GUID or invalid code of ",
+                                                instructionalMethod.Code, "."), "GUID.Not.Found", entity.Guid, entity.Id);
+                            }
+                        }
                     }
-                    var item = new GuidObject2(instructionalMethod.Guid);
-                    if (!sectionDto.InstructionalMethods.Contains(item))
-                        sectionDto.InstructionalMethods.Add(new GuidObject2(instructionalMethod.Guid));
                 }
             }
 
@@ -9127,15 +9907,32 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (!string.IsNullOrEmpty(entity.BillingMethod))
             {
-                var allChargeAssessmentMethods = await this.AllChargeAssessmentMethodAsync(bypassCache);
-                if (allChargeAssessmentMethods != null)
+                try
                 {
-                    var chargeAssessmentMethod = allChargeAssessmentMethods.FirstOrDefault(x => x.Code == entity.BillingMethod);
-                    if (chargeAssessmentMethod != null)
+                    var allChargeAssessmentMethods = await this.AllChargeAssessmentMethodAsync(bypassCache);
+                    if (allChargeAssessmentMethods.Any())
                     {
-                        sectionDto.ChargeAssessmentMethod = new GuidObject2(chargeAssessmentMethod.Guid);
+                        var chargeAssessmentMethod = allChargeAssessmentMethods.FirstOrDefault(x => x.Code == entity.BillingMethod);
+                        if (chargeAssessmentMethod != null && !string.IsNullOrEmpty(chargeAssessmentMethod.Guid))
+                        {
+                            sectionDto.ChargeAssessmentMethod = new GuidObject2(chargeAssessmentMethod.Guid);
+                        }
+                        else
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("Missing charge assessment GUID or invalid code of ",
+                                            chargeAssessmentMethod.Code, "."), "GUID.Not.Found", entity.Guid, entity.Id);
+                        }
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("No charge assessments found."),
+                            "GUID.Not.Found", entity.Guid, entity.Id);
                     }
                 }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
+                }               
             }
 
             // New property for alternate Ids
@@ -9150,219 +9947,270 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if ((entity.Meetings != null) && (entity.Meetings.Any()))
             {
-                var instructionalEventsList = new List<InstructionalEventDtoProperty3>();
-                var instructorRosterList = new List<InstructorRosterDtoProperty2>();
-
-                foreach (var eventInstructional in entity.Meetings)
+                if (allInstructionalMethods != null && allInstructionalMethods.Any())
                 {
-                    if (eventInstructional.Guid != null)
+                    var instructionalEventsList = new List<InstructionalEventDtoProperty3>();
+                    var instructorRosterList = new List<InstructorRosterDtoProperty2>();
+
+                    foreach (var eventInstructional in entity.Meetings)
                     {
-                        var returnInstructionalEventDto = new InstructionalEventDtoProperty3();
-
-                        var instEventDto = await ConvertSectionMeetingToInstructionalEvent2Async(eventInstructional);
-
-                        returnInstructionalEventDto.Detail = new GuidObject2(instEventDto.Id);
-                        returnInstructionalEventDto.Title = instEventDto.Title;
-                        var instMethod = (await InstructionalMethodsAsync()).FirstOrDefault(im => im.Guid == instEventDto.InstructionalMethod.Id);
-
-                        if (instMethod != null)
+                        if (eventInstructional.Guid != null)
                         {
-                            returnInstructionalEventDto.InstructionalMethod = new InstructionalMethodDtoProperty()
+                            var returnInstructionalEventDto = new InstructionalEventDtoProperty3();
+
+                            var instEventDto = await ConvertSectionMeetingToInstructionalEvent2_5Async(eventInstructional, entity);
+
+                            returnInstructionalEventDto.Detail = new GuidObject2(instEventDto.Id);
+                            returnInstructionalEventDto.Title = instEventDto.Title;
+                            var instMethod = (allInstructionalMethods.FirstOrDefault(im => im.Guid == instEventDto.InstructionalMethod.Id));
+
+                            if (instMethod != null)
                             {
-                                Abbreviation = instMethod.Code,
-                                Title = instMethod.Description,
-                                Detail = new GuidObject2(instMethod.Guid)
-                            };
-                        }
-
-                        if (instEventDto.Recurrence != null)
-                        {
-                            returnInstructionalEventDto.Recurrence = instEventDto.Recurrence;
-                        }
-
-                        if ((instEventDto.Locations != null) && (instEventDto.Locations.Any()))
-                        {
-                            var locationsList = new List<LocationDtoProperty>();
-                            var locationDtoProperty = new LocationDtoProperty();
-                            var locationRoom = new LocationRoomDtoProperty();
-                            var room = (await RoomsAsync()).FirstOrDefault(r => r.Id == eventInstructional.Room);
-
-                            if (room != null)
-                            {
-                                locationRoom.LocationType = InstructionalLocationType.InstructionalRoom;
-                                locationRoom.Title = !string.IsNullOrEmpty(room.Name) ? room.Name : null;
-                                locationRoom.Number = !string.IsNullOrEmpty(room.Number) ? room.Number : null;
-                                locationRoom.Floor = !string.IsNullOrEmpty(room.Floor) ? room.Floor : null;
-                                locationRoom.Detail = new GuidObject2(room.Guid);
-
-                                var building = (await BuildingsAsync()).FirstOrDefault(b => b.Code == room.BuildingCode);
-                                if (building != null)
+                                returnInstructionalEventDto.InstructionalMethod = new InstructionalMethodDtoProperty()
                                 {
-                                    locationRoom.Building = new BuildingDtoProperty()
-                                    {
-                                        Code = building.Code,
-                                        Title = building.Description,
-                                        Detail = new GuidObject2(building.Guid)
-                                    };
-                                }
-
-                                locationDtoProperty.Location = locationRoom;
-                                locationsList.Add(locationDtoProperty);
+                                    Abbreviation = instMethod.Code,
+                                    Title = instMethod.Description,
+                                    Detail = new GuidObject2(instMethod.Guid)
+                                };
                             }
-                            returnInstructionalEventDto.Locations = locationsList;
-                        }
+                            else
+                            {
+                                IntegrationApiExceptionAddError(string.Concat("Missing instructional method GUID or invalid code of ",
+                                                instMethod.Code, "."), "GUID.Not.Found", entity.Guid, entity.Id);
+                            }
 
-                        instructionalEventsList.Add(returnInstructionalEventDto);
+                            if (instEventDto.Recurrence != null)
+                            {
+                                returnInstructionalEventDto.Recurrence = instEventDto.Recurrence;
+                            }
+
+                            if ((instEventDto.Locations != null) && (instEventDto.Locations.Any()))
+                            {
+                                var locationsList = new List<LocationDtoProperty>();
+                                var locationDtoProperty = new LocationDtoProperty();
+                                var locationRoom = new LocationRoomDtoProperty();
+                                try
+                                {
+                                    var rooms = await RoomsAsync();
+                                    if (rooms.Any())
+                                    {
+                                        var room = (await RoomsAsync()).FirstOrDefault(r => r.Id == eventInstructional.Room);
+                                        if (room != null)
+                                        {
+                                            locationRoom.LocationType = InstructionalLocationType.InstructionalRoom;
+                                            locationRoom.Title = !string.IsNullOrEmpty(room.Name) ? room.Name : null;
+                                            locationRoom.Number = !string.IsNullOrEmpty(room.Number) ? room.Number : null;
+                                            locationRoom.Floor = !string.IsNullOrEmpty(room.Floor) ? room.Floor : null;
+                                            locationRoom.Detail = new GuidObject2(room.Guid);
+
+                                            try
+                                            {
+
+                                                var buildings = await BuildingsAsync();
+                                                if (buildings.Any())
+                                                {
+                                                    var building = buildings.FirstOrDefault(b => b.Code == room.BuildingCode);
+                                                    if (building != null)
+                                                    {
+                                                        locationRoom.Building = new BuildingDtoProperty()
+                                                        {
+                                                            Code = building.Code,
+                                                            Title = building.Description,
+                                                            Detail = new GuidObject2(building.Guid)
+                                                        };
+                                                    }
+                                                    else
+                                                    {
+                                                        IntegrationApiExceptionAddError(string.Concat("Missing building GUID or invalid code of ",
+                                                                        room.BuildingCode, "."), "GUID.Not.Found", entity.Guid, entity.Id);
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    IntegrationApiExceptionAddError(string.Concat("No buildings found."),
+                                                        "GUID.Not.Found", entity.Guid, entity.Id);
+                                                }
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
+                                            }
+
+                                            locationDtoProperty.Location = locationRoom;
+                                            locationsList.Add(locationDtoProperty);
+                                        }
+                                        else
+                                        {
+                                            IntegrationApiExceptionAddError(string.Concat("Missing room  GUID or invalid code of ",
+                                                            eventInstructional.Room, "."), "GUID.Not.Found", entity.Guid, entity.Id);
+                                        }
+                                        returnInstructionalEventDto.Locations = locationsList;
+                                    }
+                                    else
+                                    {
+                                        IntegrationApiExceptionAddError(string.Concat("No rooms found."),
+                                            "GUID.Not.Found", entity.Guid, entity.Id);
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", entity.Guid, entity.Id);
+                                }
+                            }
+                            instructionalEventsList.Add(returnInstructionalEventDto);
+                        }
                     }
-                }
-                if (instructionalEventsList.Any())
-                {
-                    sectionDto.InstructionalEvents = instructionalEventsList;
+                    if (instructionalEventsList.Any())
+                    {
+                        sectionDto.InstructionalEvents = instructionalEventsList;
+                    }
                 }
             }
 
             var instructorList = new List<InstructorRosterDtoProperty3>();
             if ((entity.Faculty != null) && (entity.Faculty.Any()))
             {
-                var allInstructionalMethods = await this.InstructionalMethodsAsync();
-                foreach (var sectionFaculty in entity.Faculty)
+                if (allInstructionalMethods != null && allInstructionalMethods.Any())
                 {
-                    var returnInstructorRoster = new InstructorRosterDtoProperty3
+                    foreach (var sectionFaculty in entity.Faculty)
                     {
-                        WorkLoadPercentage = sectionFaculty.LoadFactor,
-                        ResponsibilityPercentage = sectionFaculty.ResponsibilityPercentage,
-                        WorkStartDate = sectionFaculty.StartDate,
-                        WorkEndDate = sectionFaculty.EndDate
-                    };
-                    if (sectionFaculty.PrimaryIndicator)
-                    {
-                        returnInstructorRoster.InstructorRole = SectionInstructorsInstructorRole.Primary;
-                    }
-                    // Update instructional method for instructor and any instructional events
-                    // that match the instructional method.
-                    if (!string.IsNullOrEmpty(sectionFaculty.InstructionalMethodCode))
-                    {
-                        returnInstructorRoster.InstructionalMethods = new List<GuidObject2>();
-                        var instructionalMethod = allInstructionalMethods.FirstOrDefault(x => x.Code == sectionFaculty.InstructionalMethodCode);
-                        if (instructionalMethod == null)
+                        var returnInstructorRoster = new InstructorRosterDtoProperty3
                         {
-                            throw new ArgumentException(string.Concat("Instructional Method not found for :", sectionFaculty.InstructionalMethodCode));
+                            WorkLoadPercentage = sectionFaculty.LoadFactor,
+                            ResponsibilityPercentage = sectionFaculty.ResponsibilityPercentage,
+                            WorkStartDate = sectionFaculty.StartDate,
+                            WorkEndDate = sectionFaculty.EndDate
+                        };
+                        if (sectionFaculty.PrimaryIndicator)
+                        {
+                            returnInstructorRoster.InstructorRole = SectionInstructorsInstructorRole.Primary;
                         }
-                        var item = new GuidObject2(instructionalMethod.Guid);
-                        if (!returnInstructorRoster.InstructionalMethods.Contains(item))
-                            returnInstructorRoster.InstructionalMethods.Add(new GuidObject2(instructionalMethod.Guid));
-                        if (sectionDto.InstructionalEvents != null && sectionDto.InstructionalEvents.Any())
+                        // Update instructional method for instructor and any instructional events
+                        // that match the instructional method.
+                        if (!string.IsNullOrEmpty(sectionFaculty.InstructionalMethodCode))
                         {
-                            var instrEvents = sectionDto.InstructionalEvents.Where(ie => ie.InstructionalMethod != null &&
-                                ie.InstructionalMethod.Detail != null && !string.IsNullOrEmpty(ie.InstructionalMethod.Detail.Id) &&
-                                ie.InstructionalMethod.Detail.Id == instructionalMethod.Guid);
-                            if (instrEvents != null && instrEvents.Any())
+                            returnInstructorRoster.InstructionalMethods = new List<GuidObject2>();
+                            var instructionalMethod = allInstructionalMethods.FirstOrDefault(x => x.Code == sectionFaculty.InstructionalMethodCode);
+                            if (instructionalMethod == null)
                             {
-                                returnInstructorRoster.InstructionalEvents = new List<GuidObject2>();
-                                returnInstructorRoster.InstructionalEvents = instrEvents.Select(ie => ie.Detail).ToList();
+                                IntegrationApiExceptionAddError(string.Concat("Instructional Method not found for :", sectionFaculty.InstructionalMethodCode), "Bad.Data", entity.Guid, entity.Id);
                             }
-                        }
-                    }
-                    else
-                    {
-                        if (sectionDto.InstructionalEvents != null && sectionDto.InstructionalEvents.Any())
-                        {
-                            var instrEvents = sectionDto.InstructionalEvents.Where(ie => ie.InstructionalMethod != null &&
-                            ie.InstructionalMethod.Detail != null && !string.IsNullOrEmpty(ie.InstructionalMethod.Detail.Id));
-                            if (instrEvents != null && instrEvents.Any())
+                            var item = new GuidObject2(instructionalMethod.Guid);
+                            if (!returnInstructorRoster.InstructionalMethods.Contains(item))
+                                returnInstructorRoster.InstructionalMethods.Add(new GuidObject2(instructionalMethod.Guid));
+                            if (sectionDto.InstructionalEvents != null && sectionDto.InstructionalEvents.Any())
                             {
-                                returnInstructorRoster.InstructionalMethods = new List<GuidObject2>();
-                                returnInstructorRoster.InstructionalEvents = new List<GuidObject2>();
-                                returnInstructorRoster.InstructionalMethods = instrEvents.Select(ie => ie.InstructionalMethod.Detail).ToList();
-                                returnInstructorRoster.InstructionalEvents = instrEvents.Select(ie => ie.Detail).ToList();
-                            }
-                        }
-                    }
-
-                    if (string.IsNullOrEmpty(sectionFaculty.FacultyId))
-                    {
-                        throw new ArgumentNullException("facultyId", "Faculty ID is a required argument.");
-                    }
-
-                    string personGuid = null;
-                    if (_facultyGuids != null && _facultyGuids.Any())
-                    {
-                        _facultyGuids.TryGetValue(sectionFaculty.FacultyId, out personGuid);
-                    }
-
-                    if (personGuid == null)
-                    {
-                        throw new ArgumentOutOfRangeException("personId", "No GUID found for person ID " + sectionFaculty.FacultyId);
-                    }
-                    Domain.Base.Entities.PersonIntegration person = await GetPersonDataForFacultyByGuidAsync(personGuid);
-
-                    if (person == null)
-                    {
-                        throw new ArgumentOutOfRangeException("personId", "Unable to retrieve person record, or duplicate GUID, found for person ID " + sectionFaculty.FacultyId);
-                    }
-
-
-                    var returnInstructor = new InstructorDtoProperty3 { Detail = new GuidObject2(personGuid) };
-
-                    returnInstructor.Names = await GetInstructorNames(person, bypassCache);
-
-                    var credentialList = new List<InstructorCredential3DtoProperty>();
-
-                    credentialList.Add(new InstructorCredential3DtoProperty()
-                    {
-                        Type = Dtos.EnumProperties.Credential3Type.ColleaguePersonId,
-                        Value = person.Id
-                    });
-
-                    // Elevate ID
-                    if (person.PersonAltIds != null && person.PersonAltIds.Any())
-                    {
-                        // Allow more than one Elevate ID as of v12.1.0
-                        var elevPersonAltIdList =
-                            person.PersonAltIds.Where(
-                                a => a.Type == Domain.Base.Entities.PersonAlt.ElevatePersonAltType);
-                        if (elevPersonAltIdList != null && elevPersonAltIdList.Any())
-                        {
-                            foreach (var elevPersonAltId in elevPersonAltIdList)
-                            {
-                                if (elevPersonAltId != null && !string.IsNullOrEmpty(elevPersonAltId.Id))
+                                var instrEvents = sectionDto.InstructionalEvents.Where(ie => ie.InstructionalMethod != null &&
+                                    ie.InstructionalMethod.Detail != null && !string.IsNullOrEmpty(ie.InstructionalMethod.Detail.Id) &&
+                                    ie.InstructionalMethod.Detail.Id == instructionalMethod.Guid);
+                                if (instrEvents != null && instrEvents.Any())
                                 {
-                                    credentialList.Add(new Dtos.DtoProperties.InstructorCredential3DtoProperty()
-                                    {
-                                        Type = Dtos.EnumProperties.Credential3Type.ElevateID,
-                                        Value = elevPersonAltId.Id
-                                    });
+                                    returnInstructorRoster.InstructionalEvents = new List<GuidObject2>();
+                                    returnInstructorRoster.InstructionalEvents = instrEvents.Select(ie => ie.Detail).ToList();
                                 }
                             }
                         }
-                    }
-                    // SSN
-                    if (!string.IsNullOrEmpty(person.GovernmentId))
-                    {
-                        var type = Dtos.EnumProperties.Credential3Type.TaxIdentificationNumber;
+                        else
+                        {
+                            if (sectionDto.InstructionalEvents != null && sectionDto.InstructionalEvents.Any())
+                            {
+                                var instrEvents = sectionDto.InstructionalEvents.Where(ie => ie.InstructionalMethod != null &&
+                                ie.InstructionalMethod.Detail != null && !string.IsNullOrEmpty(ie.InstructionalMethod.Detail.Id));
+                                if (instrEvents != null && instrEvents.Any())
+                                {
+                                    returnInstructorRoster.InstructionalMethods = new List<GuidObject2>();
+                                    returnInstructorRoster.InstructionalEvents = new List<GuidObject2>();
+                                    returnInstructorRoster.InstructionalMethods = instrEvents.Select(ie => ie.InstructionalMethod.Detail).ToList();
+                                    returnInstructorRoster.InstructionalEvents = instrEvents.Select(ie => ie.Detail).ToList();
+                                }
+                            }
+                        }
+
+                        if (string.IsNullOrEmpty(sectionFaculty.FacultyId))
+                        {
+                            IntegrationApiExceptionAddError("Faculty ID is a required arguyment", "Bad.Data", entity.Guid, entity.Id);
+                        }
+
+                        string personGuid = null;
+                        if (_facultyGuids != null && _facultyGuids.Any())
+                        {
+                            _facultyGuids.TryGetValue(sectionFaculty.FacultyId, out personGuid);
+                        }
+
+                        if (personGuid == null)
+                        {
+                            IntegrationApiExceptionAddError("No GUID found for person ID " + sectionFaculty.FacultyId, "GUID.Not.Found", entity.Guid, entity.Id);
+                        }
+                        Domain.Base.Entities.PersonIntegration person = await GetPersonDataForFacultyByGuidAsync(personGuid);
+
+                        if (person == null)
+                        {
+                            IntegrationApiExceptionAddError("Unable to retrieve person record, or duplicate GUID, found for person ID " + sectionFaculty.FacultyId, "GUID.Not.Found", entity.Guid, entity.Id);
+                        }
+
+
+                        var returnInstructor = new InstructorDtoProperty3 { Detail = new GuidObject2(personGuid) };
+
+                        returnInstructor.Names = await GetInstructorNames(person, bypassCache);
+
+                        var credentialList = new List<InstructorCredential3DtoProperty>();
+
                         credentialList.Add(new InstructorCredential3DtoProperty()
                         {
-                            Type = type,
-                            Value = person.GovernmentId
+                            Type = Dtos.EnumProperties.Credential3Type.ColleaguePersonId,
+                            Value = person.Id
                         });
-                    }
-                    //PERSON.PIN
-                    if (_personPins != null)
-                    {
-                        var personPinEntity = _personPins.FirstOrDefault(i => i.PersonId.Equals(person.Id, StringComparison.OrdinalIgnoreCase));
-                        if ((personPinEntity != null) && (!string.IsNullOrEmpty(personPinEntity.PersonPinUserId)))
+
+                        // Elevate ID
+                        if (person.PersonAltIds != null && person.PersonAltIds.Any())
                         {
+                            // Allow more than one Elevate ID as of v12.1.0
+                            var elevPersonAltIdList =
+                                person.PersonAltIds.Where(
+                                    a => a.Type == Domain.Base.Entities.PersonAlt.ElevatePersonAltType);
+                            if (elevPersonAltIdList != null && elevPersonAltIdList.Any())
+                            {
+                                foreach (var elevPersonAltId in elevPersonAltIdList)
+                                {
+                                    if (elevPersonAltId != null && !string.IsNullOrEmpty(elevPersonAltId.Id))
+                                    {
+                                        credentialList.Add(new Dtos.DtoProperties.InstructorCredential3DtoProperty()
+                                        {
+                                            Type = Dtos.EnumProperties.Credential3Type.ElevateID,
+                                            Value = elevPersonAltId.Id
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                        // SSN
+                        if (!string.IsNullOrEmpty(person.GovernmentId))
+                        {
+                            var type = Dtos.EnumProperties.Credential3Type.TaxIdentificationNumber;
                             credentialList.Add(new InstructorCredential3DtoProperty()
                             {
-                                Type = Dtos.EnumProperties.Credential3Type.ColleagueUserName,
-                                Value = personPinEntity.PersonPinUserId
+                                Type = type,
+                                Value = person.GovernmentId
                             });
                         }
-                    }
+                        //PERSON.PIN
+                        if (_personPins != null)
+                        {
+                            var personPinEntity = _personPins.FirstOrDefault(i => i.PersonId.Equals(person.Id, StringComparison.OrdinalIgnoreCase));
+                            if ((personPinEntity != null) && (!string.IsNullOrEmpty(personPinEntity.PersonPinUserId)))
+                            {
+                                credentialList.Add(new InstructorCredential3DtoProperty()
+                                {
+                                    Type = Dtos.EnumProperties.Credential3Type.ColleagueUserName,
+                                    Value = personPinEntity.PersonPinUserId
+                                });
+                            }
+                        }
 
-                    returnInstructor.Credentials = credentialList;
-                    returnInstructorRoster.Instructor = returnInstructor;
-                    instructorList.Add(returnInstructorRoster);
+                        returnInstructor.Credentials = credentialList;
+                        returnInstructorRoster.Instructor = returnInstructor;
+                        instructorList.Add(returnInstructorRoster);
+                    }
                 }
             }
             if (instructorList.Any())
@@ -9589,45 +10437,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     throw new Exception(errorMessage);
                 }
             }
-        }
-
-        /// <summary>
-        /// Helper method to determine if the user has permission to create and update sections
-        /// </summary>
-        /// <permission cref="StudentPermissionCodes.CreateAndUpdateSection"></permission>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckSectionPermission()
-        {
-            bool hasSectionPermission = HasPermission(StudentPermissionCodes.CreateAndUpdateSection);
-
-            // User is not allowed to create or update sections without the appropriate permissions
-            if (!hasSectionPermission)
-            {
-                var message = "User " + CurrentUser.UserId + " does not have permission to create or update sections.";
-                logger.Error(message);
-                throw new PermissionsException(message);
-            }
-        }
-
-        /// <summary>
-        /// Helper method to determine if the user has permission to create and update sections
-        /// </summary>
-        /// <permission cref="StudentPermissionCodes.CreateAndUpdateSection"></permission>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckSectionPermission1()
-        {
-            bool hasSectionPermission = HasPermission(StudentPermissionCodes.CreateAndUpdateSection);
-
-            // User is not allowed to create or update sections without the appropriate permissions
-            if (!hasSectionPermission)
-            {
-                string errorMsg = string.Format("User '{0}' does not have permission to create or update sections.", CurrentUser.UserId);
-                logger.Error(errorMsg);
-                IntegrationApiExceptionAddError(errorMsg, "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
-
-                throw IntegrationApiException;
-            }
-        }
+        }   
         #region Instructional Events Version 6
 
         /// <summary>
@@ -10101,7 +10911,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             var entities = pageOfItems.Item1;
 
             if (entities == null || !entities.Any())
-            { 
+            {
                 return new Tuple<IEnumerable<Dtos.InstructionalEvent4>, int>(new List<Dtos.InstructionalEvent4>(), 0);
             }
 
@@ -10113,7 +10923,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 try
                 {
-                    instructionalEventDtos.Add(await ConvertSectionMeetingToInstructionalEvent4Async(entity, sectionIdDict ));
+                    instructionalEventDtos.Add(await ConvertSectionMeetingToInstructionalEvent4Async(entity, sectionIdDict));
                 }
                 catch (Exception ex)
                 {
@@ -10149,7 +10959,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (Exception ex)
             {
-                IntegrationApiExceptionAddError(string.Format("No instructional-events was found for GUID '{0}'", id), "GUID.Not.Found", id, "", 
+                IntegrationApiExceptionAddError(string.Format("No instructional-events was found for GUID '{0}'", id), "GUID.Not.Found", id, "",
                    System.Net.HttpStatusCode.NotFound);
                 throw IntegrationApiException;
             }
@@ -10163,7 +10973,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             InstructionalEvent4 dto = null;
             try
             {
-                var sectionIdDict = await _sectionRepository.GetSectionGuidsCollectionAsync(new List<string>() { entity.SectionId } );
+                var sectionIdDict = await _sectionRepository.GetSectionGuidsCollectionAsync(new List<string>() { entity.SectionId });
 
                 dto = await ConvertSectionMeetingToInstructionalEvent4Async(entity, sectionIdDict);
             }
@@ -10196,7 +11006,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             #region create domain entity from request
             Domain.Student.Entities.Section section = null;
-           _sectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+            _sectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
             try
             {
                 section = await ConvertInstructionalEvent4ToSectionMeetingAsync(meeting);
@@ -10232,12 +11042,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (RepositoryException ex)
             {
-                IntegrationApiExceptionAddError(ex);             
+                IntegrationApiExceptionAddError(ex);
             }
             catch (Exception ex)
             {
                 IntegrationApiExceptionAddError("An unexpected error occurred attempting to create the instructional-event record. " + ex.Message, "Global.Internal.Error",
-                     !string.IsNullOrEmpty(meeting.Id) ? meeting.Id : null);               
+                     !string.IsNullOrEmpty(meeting.Id) ? meeting.Id : null);
             }
 
             if (IntegrationApiException != null)
@@ -10292,7 +11102,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             CheckInstructionalEvent4Permissions(meeting);
 
             #region update domain entity from request
-         
+
             Domain.Student.Entities.Section section = null;
             _sectionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
             try
@@ -10369,7 +11179,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             #endregion
-            
+
             return dto;
         }
 
@@ -10550,12 +11360,187 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 StartOn = meeting.StartDate.GetValueOrDefault().Date + meeting.StartTime.GetValueOrDefault().TimeOfDay,
                 EndOn = meeting.EndDate.GetValueOrDefault().Date + meeting.EndTime.GetValueOrDefault().TimeOfDay
             };
+                if (!string.IsNullOrEmpty(meeting.Frequency))
+                {
+                    var repeatCode = scheduleRepeats.FirstOrDefault(x => x.Code == meeting.Frequency);
+                    if (repeatCode == null)
+                    {
+                        throw new ArgumentException("Invalid meeting frequency code: " + meeting.Frequency, "meeting.Frequency");
+                    }
+
+                    switch ((Dtos.FrequencyType2)repeatCode.FrequencyType)
+                    {
+                        case Dtos.FrequencyType2.Daily:
+                            var repeatRuleDaily = new Dtos.RepeatRuleDaily()
+                            {
+                                Interval = repeatCode.Interval.GetValueOrDefault(),
+                                Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date }
+                            };
+                            outputDto.Recurrence.RepeatRule = repeatRuleDaily;
+                            break;
+                        case Dtos.FrequencyType2.Weekly:
+                            var repeatRuleWeekly = new Dtos.RepeatRuleWeekly()
+                            {
+                                Interval = repeatCode.Interval.GetValueOrDefault(),
+                                Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date },
+                                DayOfWeek = ConvertDaysToHedmDays(meeting.Days)
+                            };
+
+                            outputDto.Recurrence.RepeatRule = repeatRuleWeekly;
+                            break;
+                        case Dtos.FrequencyType2.Monthly:
+                            int? dayOfMonth = null;
+                            RepeatRuleDayOfWeek dayOfWeek = null;
+                            if (meeting.Days.Any())
+                            {
+                                dayOfWeek = new RepeatRuleDayOfWeek()
+                                {
+                                    Day = ConvertDaysToHedmDays(meeting.Days).ElementAt(0)
+                                };
+                            }
+                            else
+                            {
+                                dayOfMonth = meeting.StartDate.GetValueOrDefault().Day;
+                            }
+                            var repeatRuleMonthly = new Dtos.RepeatRuleMonthly()
+                            {
+                                Interval = repeatCode.Interval.GetValueOrDefault(),
+                                Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date },
+                                RepeatBy = new RepeatRuleRepeatBy()
+                                {
+                                    DayOfWeek = dayOfWeek,
+                                    DayOfMonth = dayOfMonth
+                                }
+                            };
+                            outputDto.Recurrence.RepeatRule = repeatRuleMonthly;
+                            break;
+                        case Dtos.FrequencyType2.Yearly:
+                            var repeatRuleYearly = new Dtos.RepeatRuleYearly()
+                            {
+                                Interval = repeatCode.Interval.GetValueOrDefault(),
+                                Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date }
+                            };
+                            outputDto.Recurrence.RepeatRule = repeatRuleYearly;
+                            break;
+                        default: break;
+                    }
+                
+            }
+
+            if (!string.IsNullOrEmpty(meeting.Room) && meeting.Room != "*")
+            {
+                /*
+                    In some cases, it's possible that Colleague customers may no longer have records in the ROOMS file that correspond to the 
+                    CSM.BLDG and CSM.ROOM combination that is exposed in this reference (e.g. some rooms may have been removed when remodeling was done, 
+                    but the reference to the room itself was not removed from COURSE.SEC.MEETING file). If this is the case, we should omit the locations 
+                    array object from the response altogether. This will avoid the issue of surfacing an error for an old room that is no longer used by 
+                    a client yet is referenced in older COURSE.SEC.MEETING records. See http://corpappprod.ellucian.com/crmview/Main/CRDetail.asp?crno=CR-000173681 
+                */
+
+                try
+                {
+                    //In above scenario following may throw RepositoryException. Per spec just don't add locations to the payload.
+                    var locations = new List<Location>();
+                    string roomGuid = string.Empty;
+                    roomGuid = await _roomRepository.GetRoomsGuidAsync(meeting.Room);
+                    if ((string.IsNullOrEmpty(roomGuid)) || (roomGuid.Equals(Guid.Empty.ToString())))
+                    {
+                        throw new ArgumentException(string.Format("GUID is missing, or not found, for room '{0}'. ", meeting.Room),
+                            "GUID.Not.Found");
+                    }
+                    else
+                    {
+                        var roomid = new GuidObject2(roomGuid);
+                        var room = new Dtos.InstructionalRoom2() { Room = roomid, LocationType = InstructionalLocationType.InstructionalRoom };
+
+                        var location = new Location() { Locations = room };
+                        locations.Add(location);
+                        outputDto.Locations = locations;
+                    }
+                }
+                catch (Exception e)
+                {
+                    logger.Error(string.Concat("Ethos API instructional-events V6, Method: ConvertSectionMeetingToInstructionalEvent2Async, Line: 10653, ", e.Message));
+                }
+            }
+
+            outputDto.Workload = meeting.Load;
+
+            if (meeting.FacultyRoster != null && meeting.FacultyRoster.Any())
+            {
+                var instructors = new List<Dtos.InstructionalEventInstructor2>();
+                foreach (var sectionfaculty in meeting.FacultyRoster)
+                {
+                    var instructor = new Dtos.InstructionalEventInstructor2();
+                    try
+                    {
+                        instructor.Instructor = new Dtos.GuidObject2(await _personRepository.GetPersonGuidFromIdAsync(sectionfaculty.FacultyId));
+                    }
+                    catch
+                    {
+                        if (string.IsNullOrEmpty(sectionfaculty.FacultyId))
+                        {
+                            throw new ArgumentException(string.Format("Instructor is missing for the instructional event '{0}'. ", meeting.Guid), "meeting.FacultyRoster.FacultyId");
+                        }
+                        throw new ArgumentException(string.Format("Instructor '{0}' is invalid for the instructional event '{1}'. ", sectionfaculty.FacultyId, meeting.Guid), "meeting.FacultyRoster.FacultyId");
+                    }
+                    instructor.WorkLoadPercentage = sectionfaculty.LoadFactor;
+                    instructor.ResponsibilityPercentage = sectionfaculty.ResponsibilityPercentage;
+                    instructor.WorkStartDate = sectionfaculty.StartDate;
+                    instructor.WorkEndDate = sectionfaculty.EndDate;
+                    instructors.Add(instructor);
+                }
+                outputDto.Instructors = instructors;
+            }
+
+            return outputDto;
+        }
+
+        #endregion
+
+        // upgraded from version "2" of this method for v2 errors for sections-maximum
+        private async Task<Dtos.InstructionalEvent2> ConvertSectionMeetingToInstructionalEvent2_5Async(Domain.Student.Entities.SectionMeeting meeting, Domain.Student.Entities.Section entity)
+        {
+            var outputDto = new Dtos.InstructionalEvent2();
+            outputDto.Id = meeting.Guid;
+            try
+            {
+                outputDto.Section = new Dtos.GuidObject2(await ConvertSectionIdToSectionGuidAsync(meeting.SectionId));
+            }
+            catch
+            {
+                if (string.IsNullOrEmpty(meeting.SectionId))
+                {
+                    IntegrationApiExceptionAddError(string.Format("Section ID is missing for the instructional event '{0}'. ", meeting.Guid), "Bad.Data", entity.Guid, entity.Id);
+                }
+                IntegrationApiExceptionAddError(string.Format("Section ID is missing for the instructional event '{0}'. ", meeting.Guid), "Bad.Data", entity.Guid, entity.Id);
+            }
+            try
+            {
+                outputDto.InstructionalMethod = new Dtos.GuidObject2(ConvertCodeToGuid(await InstructionalMethodsAsync(), meeting.InstructionalMethodCode));
+            }
+            catch
+            {
+                if (string.IsNullOrEmpty(meeting.InstructionalMethodCode))
+                {
+                    IntegrationApiExceptionAddError(string.Format("Instructional Method is missing for the instructional event '{0}'. ", meeting.Guid), "Bad.Data", entity.Guid, entity.Id);
+                }
+                IntegrationApiExceptionAddError(string.Format("Instructional Method '{0}' is invalid for the instructional event '{1}'. ", meeting.InstructionalMethodCode, meeting.Guid),
+                    "Bad.Data", entity.Guid, entity.Id);
+            }
+            outputDto.Recurrence = new Dtos.Recurrence3();
+            outputDto.Recurrence.TimePeriod = new Dtos.RepeatTimePeriod2()
+            {
+                StartOn = meeting.StartDate.GetValueOrDefault().Date + meeting.StartTime.GetValueOrDefault().TimeOfDay,
+                EndOn = meeting.EndDate.GetValueOrDefault().Date + meeting.EndTime.GetValueOrDefault().TimeOfDay
+            };
             if (!string.IsNullOrEmpty(meeting.Frequency))
             {
                 var repeatCode = scheduleRepeats.FirstOrDefault(x => x.Code == meeting.Frequency);
                 if (repeatCode == null)
                 {
-                    throw new ArgumentException("Invalid meeting frequency code: " + meeting.Frequency, "meeting.Frequency");
+                    IntegrationApiExceptionAddError("Invalid meeting frequency code: " + meeting.Frequency,
+                    "Bad.Data", entity.Guid, entity.Id);
                 }
 
                 switch ((Dtos.FrequencyType2)repeatCode.FrequencyType)
@@ -10635,8 +11620,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     roomGuid = await _roomRepository.GetRoomsGuidAsync(meeting.Room);
                     if ((string.IsNullOrEmpty(roomGuid)) || (roomGuid.Equals(Guid.Empty.ToString())))
                     {
-                        throw new ArgumentException(string.Format("GUID is missing, or not found, for room '{0}'. ", meeting.Room),
-                            "GUID.Not.Found");
+                        IntegrationApiExceptionAddError(string.Format("GUID is missing, or not found, for room '{0}'. ", meeting.Room),
+                            "GUID.Not.Found", entity.Guid, entity.Id);
                     }
                     else
                     {
@@ -10670,9 +11655,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         if (string.IsNullOrEmpty(sectionfaculty.FacultyId))
                         {
-                            throw new ArgumentException(string.Format("Instructor is missing for the instructional event '{0}'. ", meeting.Guid), "meeting.FacultyRoster.FacultyId");
+                            IntegrationApiExceptionAddError(string.Format("Instructor is missing for the instructional event '{0}'. ", meeting.Guid),
+                    "Bad.Data", entity.Guid, entity.Id);
                         }
                         throw new ArgumentException(string.Format("Instructor '{0}' is invalid for the instructional event '{1}'. ", sectionfaculty.FacultyId, meeting.Guid), "meeting.FacultyRoster.FacultyId");
+                        IntegrationApiExceptionAddError(string.Format("Instructor '{0}' is invalid for the instructional event '{1}'. ", sectionfaculty.FacultyId, meeting.Guid),
+                    "Bad.Data", entity.Guid, entity.Id);
                     }
                     instructor.WorkLoadPercentage = sectionfaculty.LoadFactor;
                     instructor.ResponsibilityPercentage = sectionfaculty.ResponsibilityPercentage;
@@ -10685,8 +11673,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             return outputDto;
         }
-
-        #endregion
 
         #region Convert Section Meeting Version 8
 
@@ -10717,7 +11703,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     throw new ArgumentException(string.Format("Instructional Method is missing for the instructional event '{0}'. ", meeting.Guid), "meeting.InstructionalMethodCode");
                 }
                 throw new ArgumentException(string.Format("Instructional Method '{0}' is invalid for the instructional event '{1}'. ", meeting.InstructionalMethodCode, meeting.Guid), "meeting.InstructionalMethodCode");
-            }
+            }            
             outputDto.Recurrence = new Dtos.Recurrence3();
             outputDto.Recurrence.TimePeriod = new Dtos.RepeatTimePeriod2()
             {
@@ -10889,7 +11875,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (string.IsNullOrEmpty(meeting.SectionId))
             {
-                IntegrationApiExceptionAddError("Section ID is missing for instructional event.",  "Bad.Data", meeting.Guid, meeting.Id);
+                IntegrationApiExceptionAddError("Section ID is missing for instructional event.", "Bad.Data", meeting.Guid, meeting.Id);
             }
             else if (sectionIdDict == null)
             {
@@ -10902,16 +11888,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     //var sectionGuid = await _sectionRepository.GetSectionGuidFromIdAsync(meeting.SectionId);
                     string sectionGuid = null;
                     if (sectionIdDict.TryGetValue(meeting.SectionId, out sectionGuid))
-                        
-                    if (string.IsNullOrEmpty(sectionGuid))
-                    {
-                        IntegrationApiExceptionAddError(string.Format("GUID not found for the section id '{0}'. ", meeting.SectionId),
-                                 "GUID.Not.Found", meeting.Guid, meeting.Id);
-                    }
-                    else
-                    {
-                        outputDto.Section = new Dtos.GuidObject2(sectionGuid);
-                    }
+
+                        if (string.IsNullOrEmpty(sectionGuid))
+                        {
+                            IntegrationApiExceptionAddError(string.Format("GUID not found for the section id '{0}'. ", meeting.SectionId),
+                                     "GUID.Not.Found", meeting.Guid, meeting.Id);
+                        }
+                        else
+                        {
+                            outputDto.Section = new Dtos.GuidObject2(sectionGuid);
+                        }
                 }
                 catch (RepositoryException ex)
                 {
@@ -10923,7 +11909,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 IntegrationApiExceptionAddError(string.Format("Instructional Method is missing for the instructional event '{0}'.", meeting.Guid), "Bad.Data", meeting.Guid, meeting.Id);
             }
-            else {
+            else
+            {
                 try
                 {
                     var instMethodGuid = await _studentReferenceDataRepository.GetInstructionalMethodGuidAsync(meeting.InstructionalMethodCode);
@@ -10943,80 +11930,84 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     IntegrationApiExceptionAddError(ex, "GUID.Not.Found", meeting.Guid, meeting.Id);
                 }
             }
-            outputDto.Recurrence = new Dtos.Recurrence3();
-            outputDto.Recurrence.TimePeriod = new Dtos.RepeatTimePeriod2()
+            // only set Recurrence if we have start/end times
+            if (meeting.StartTime != null && meeting.EndTime != null)
             {
-                StartOn = meeting.StartDate.GetValueOrDefault().Date + meeting.StartTime.GetValueOrDefault().TimeOfDay,
-                EndOn = meeting.EndDate.GetValueOrDefault().Date + meeting.EndTime.GetValueOrDefault().TimeOfDay
-            };
-            if (!string.IsNullOrEmpty(meeting.Frequency))
-            {
-                var repeatCode = scheduleRepeats.FirstOrDefault(x => x.Code == meeting.Frequency);
-                if (repeatCode == null)
+                outputDto.Recurrence = new Dtos.Recurrence3();
+                outputDto.Recurrence.TimePeriod = new Dtos.RepeatTimePeriod2()
                 {
-                    IntegrationApiExceptionAddError("Invalid meeting frequency code: " + meeting.Frequency, "Bad.Data", meeting.Guid, meeting.Id);
-                }
-                else
+                    StartOn = meeting.StartDate.GetValueOrDefault().Date + meeting.StartTime.GetValueOrDefault().TimeOfDay,
+                    EndOn = meeting.EndDate.GetValueOrDefault().Date + meeting.EndTime.GetValueOrDefault().TimeOfDay
+                };
+                if (!string.IsNullOrEmpty(meeting.Frequency))
                 {
-                    switch ((Dtos.FrequencyType2)repeatCode.FrequencyType)
+                    var repeatCode = scheduleRepeats.FirstOrDefault(x => x.Code == meeting.Frequency);
+                    if (repeatCode == null)
                     {
-                        case Dtos.FrequencyType2.Daily:
-                            var repeatRuleDaily = new Dtos.RepeatRuleDaily()
-                            {
-                                Interval = repeatCode.Interval.GetValueOrDefault(),
-                                Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date }
-                            };
-                            outputDto.Recurrence.RepeatRule = repeatRuleDaily;
-                            break;
-                        case Dtos.FrequencyType2.Weekly:
-                            var repeatRuleWeekly = new Dtos.RepeatRuleWeekly()
-                            {
-                                Interval = repeatCode.Interval.GetValueOrDefault(),
-                                Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date },
-                                DayOfWeek = ConvertDaysToHedmDays(meeting.Days)
-                            };
-
-                            outputDto.Recurrence.RepeatRule = repeatRuleWeekly;
-                            break;
-                        case Dtos.FrequencyType2.Monthly:
-                            int? dayOfMonth = null;
-                            RepeatRuleDayOfWeek dayOfWeek = null;
-                            if (meeting.Days.Any())
-                            {
-                                dayOfWeek = new RepeatRuleDayOfWeek()
+                        IntegrationApiExceptionAddError("Invalid meeting frequency code: " + meeting.Frequency, "Bad.Data", meeting.Guid, meeting.Id);
+                    }
+                    else
+                    {
+                        switch ((Dtos.FrequencyType2)repeatCode.FrequencyType)
+                        {
+                            case Dtos.FrequencyType2.Daily:
+                                var repeatRuleDaily = new Dtos.RepeatRuleDaily()
                                 {
-                                    Day = ConvertDaysToHedmDays(meeting.Days).ElementAt(0)
+                                    Interval = repeatCode.Interval.GetValueOrDefault(),
+                                    Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date }
                                 };
-                            }
-                            else
-                            {
-                                dayOfMonth = meeting.StartDate.GetValueOrDefault().Day;
-                            }
-                            var repeatRuleMonthly = new Dtos.RepeatRuleMonthly()
-                            {
-                                Interval = repeatCode.Interval.GetValueOrDefault(),
-                                Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date },
-                                RepeatBy = new RepeatRuleRepeatBy()
+                                outputDto.Recurrence.RepeatRule = repeatRuleDaily;
+                                break;
+                            case Dtos.FrequencyType2.Weekly:
+                                var repeatRuleWeekly = new Dtos.RepeatRuleWeekly()
                                 {
-                                    DayOfWeek = dayOfWeek,
-                                    DayOfMonth = dayOfMonth
+                                    Interval = repeatCode.Interval.GetValueOrDefault(),
+                                    Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date },
+                                    DayOfWeek = ConvertDaysToHedmDays(meeting.Days)
+                                };
+
+                                outputDto.Recurrence.RepeatRule = repeatRuleWeekly;
+                                break;
+                            case Dtos.FrequencyType2.Monthly:
+                                int? dayOfMonth = null;
+                                RepeatRuleDayOfWeek dayOfWeek = null;
+                                if (meeting.Days.Any())
+                                {
+                                    dayOfWeek = new RepeatRuleDayOfWeek()
+                                    {
+                                        Day = ConvertDaysToHedmDays(meeting.Days).ElementAt(0)
+                                    };
                                 }
-                            };
-                            outputDto.Recurrence.RepeatRule = repeatRuleMonthly;
-                            break;
-                        case Dtos.FrequencyType2.Yearly:
-                            var repeatRuleYearly = new Dtos.RepeatRuleYearly()
-                            {
-                                Interval = repeatCode.Interval.GetValueOrDefault(),
-                                Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date }
-                            };
-                            outputDto.Recurrence.RepeatRule = repeatRuleYearly;
-                            break;
-                        default: break;
+                                else
+                                {
+                                    dayOfMonth = meeting.StartDate.GetValueOrDefault().Day;
+                                }
+                                var repeatRuleMonthly = new Dtos.RepeatRuleMonthly()
+                                {
+                                    Interval = repeatCode.Interval.GetValueOrDefault(),
+                                    Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date },
+                                    RepeatBy = new RepeatRuleRepeatBy()
+                                    {
+                                        DayOfWeek = dayOfWeek,
+                                        DayOfMonth = dayOfMonth
+                                    }
+                                };
+                                outputDto.Recurrence.RepeatRule = repeatRuleMonthly;
+                                break;
+                            case Dtos.FrequencyType2.Yearly:
+                                var repeatRuleYearly = new Dtos.RepeatRuleYearly()
+                                {
+                                    Interval = repeatCode.Interval.GetValueOrDefault(),
+                                    Ends = new RepeatRuleEnds() { Date = meeting.EndDate.GetValueOrDefault().Date }
+                                };
+                                outputDto.Recurrence.RepeatRule = repeatRuleYearly;
+                                break;
+                            default: break;
+                        }
                     }
                 }
             }
-           
+
             if (!string.IsNullOrEmpty(meeting.Room) && meeting.Room != "*")
             {
 
@@ -11033,25 +12024,25 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     //In above scenario following may throw RepositoryException. Per spec just don't add locations to the payload.
                     var locations = new List<Location>();
                     string roomGuid = string.Empty;
-                    roomGuid = await _roomRepository.GetRoomsGuidAsync( meeting.Room );
-                    if( ( string.IsNullOrEmpty( roomGuid ) ) || ( roomGuid.Equals( Guid.Empty.ToString() ) ) )
+                    roomGuid = await _roomRepository.GetRoomsGuidAsync(meeting.Room);
+                    if ((string.IsNullOrEmpty(roomGuid)) || (roomGuid.Equals(Guid.Empty.ToString())))
                     {
-                        IntegrationApiExceptionAddError( string.Format( "GUID is missing, or not found, for room '{0}'. ", meeting.Room ),
-                            "GUID.Not.Found", meeting.Guid, meeting.Id );
+                        IntegrationApiExceptionAddError(string.Format("GUID is missing, or not found, for room '{0}'. ", meeting.Room),
+                            "GUID.Not.Found", meeting.Guid, meeting.Id);
                     }
                     else
                     {
-                        var roomid = new GuidObject2( roomGuid );
+                        var roomid = new GuidObject2(roomGuid);
                         var room = new Dtos.InstructionalRoom2() { Room = roomid, LocationType = InstructionalLocationType.InstructionalRoom };
 
                         var location = new Location() { Locations = room };
-                        locations.Add( location );
+                        locations.Add(location);
                         outputDto.Locations = locations;
                     }
                 }
-                catch( Exception e )
+                catch (Exception e)
                 {
-                    logger.Error( string.Concat( "Ethos API instructional-events V11, Method: ConvertSectionMeetingToInstructionalEvent4Async, Line: 10976, ", e.Message ));
+                    logger.Error(string.Concat("Ethos API instructional-events V11, Method: ConvertSectionMeetingToInstructionalEvent4Async, Line: 10976, ", e.Message));
                 }
             }
 
@@ -12082,7 +13073,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             Domain.Student.Entities.Section section = null;
             string meetingId = string.Empty;
             string instructionalMethod = string.Empty;
-            
+
             // Initialize the logger for the section processor service
             SectionProcessor.InitializeLogger(logger);
 
@@ -12146,53 +13137,27 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
 
-            if (meeting.InstructionalMethod == null || string.IsNullOrEmpty(meeting.InstructionalMethod.Id))
-            {
-
-                try
-                {
-                    var allInstructionalMethods = await InstructionalMethodsAsync();
-                    if (allInstructionalMethods != null)
-                    {
-                        var instructionalMethodRecord = allInstructionalMethods.FirstOrDefault(im => im.Guid.Equals(meeting.InstructionalMethod.Id, StringComparison.OrdinalIgnoreCase));
-
-                        if (instructionalMethodRecord != null)
-                        {
-                            instructionalMethod = instructionalMethodRecord.Code;
-                        }
-                    }
-                }
-                catch (Exception)
-                {
-                    // do not throw and continue to check below...
-                }
-            }
-            if ((section != null) && (string.IsNullOrEmpty(instructionalMethod)))
+            instructionalMethod = meeting.InstructionalMethod == null ? null : ConvertGuidToCode(await InstructionalMethodsAsync(), meeting.InstructionalMethod.Id);
+            // Instructional method is required - use the (first) instructional method from the section
+            if (string.IsNullOrEmpty(instructionalMethod))
             {
                 var firstContact = section.InstructionalContacts.FirstOrDefault();
                 instructionalMethod = firstContact == null ? null : firstContact.InstructionalMethodCode;
                 if (string.IsNullOrEmpty(instructionalMethod))
                 {
-                    try
+                    var curriculumConfiguration = await GetCurriculumConfigurationAsync();
+                    if (curriculumConfiguration != null && !string.IsNullOrEmpty(curriculumConfiguration.DefaultInstructionalMethodCode))
                     {
-                        var curriculumConfiguration = await GetCurriculumConfigurationAsync();
-                        if (curriculumConfiguration != null)
-                        {
-                            instructionalMethod = curriculumConfiguration.DefaultInstructionalMethodCode;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        // do not throw and continue to check below...
-                    }
+                        instructionalMethod = curriculumConfiguration.DefaultInstructionalMethodCode;
+                    }                    
                 }
             }
             if (string.IsNullOrEmpty(instructionalMethod))
             {
                 IntegrationApiExceptionAddError("No valid instructional method found.", "Validation.Exception");
             }
-            
-         
+
+
             int interval = new int();
             var daysOfWeek = new List<HedmDayOfWeek?>();
 
@@ -12282,8 +13247,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                 }
             }
-           
-          
+
+
             // The frequency code in Colleague represents both frequency and the interval
             string frequency = null;
             if (meeting.Recurrence != null && meeting.Recurrence.RepeatRule != null)
@@ -12387,7 +13352,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     Days = meeting.Recurrence == null || daysOfWeek == null ? new List<DayOfWeek>() : ConvertHedmDaysToDays(daysOfWeek),
                     Room = roomId,
                     Load = (meeting.Workload != null ? meeting.Workload : null),
-                    TotalMeetingMinutes = (meeting.Recurrence != null && daysOfWeek != null && daysOfWeek.Any() && meeting.Recurrence.RepeatRule != null && meeting.Recurrence.TimePeriod.StartOn != null 
+                    TotalMeetingMinutes = (meeting.Recurrence != null && daysOfWeek != null && daysOfWeek.Any() && meeting.Recurrence.RepeatRule != null && meeting.Recurrence.TimePeriod.StartOn != null
                         ? CalculateMeetingMinutes4(meeting.Recurrence) : new int()),
                     OverrideRoomCapacity = overrideRoomCapacity,
                     OverrideRoomAvailability = overrideRoomAvailability,
@@ -12670,11 +13635,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         public async Task<PrivacyWrapper<Dtos.Student.Section>> GetSectionAsync(string sectionId, bool useCache)
         {
-            IEnumerable<string> listOfIds = new List<string>() {sectionId};
+            IEnumerable<string> listOfIds = new List<string>() { sectionId };
             IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sectionEntities = new List<Ellucian.Colleague.Domain.Student.Entities.Section>();
             var hasPrivacyRestriction = false;
 
-            if(sectionId==null)
+            if (sectionId == null)
             {
                 throw new ArgumentNullException("sectionId", "sectionId isn't provided");
             }
@@ -12688,17 +13653,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 sectionEntities = await _sectionRepository.GetNonCachedSectionsAsync(listOfIds);
             }
             Ellucian.Colleague.Domain.Student.Entities.Section sectionEntity = sectionEntities.Where(s => s.Id == sectionId).FirstOrDefault();
-            if(sectionEntity==null)
+            if (sectionEntity == null)
             {
                 throw new KeyNotFoundException(string.Format("Couldn't retrieve section entity for given sectionId {0}", sectionId));
             }
             //only a faculty that belongs to that section can retrieve student Ids.There is no need for other users to see that information
             //student Ids are considered as PII at institution level
-           if(sectionEntity.FacultyIds==null ||  !sectionEntity.FacultyIds.Contains(CurrentUser.PersonId))
+            if (sectionEntity.FacultyIds == null || !sectionEntity.FacultyIds.Contains(CurrentUser.PersonId))
             {
                 hasPrivacyRestriction = true;
             }
-           
+
             // Get the right adapter for the type mapping
             var sectionDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Section, Dtos.Student.Section>();
 
@@ -12758,6 +13723,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return new PrivacyWrapper<Dtos.Student.Section2>(sectionDto, hasPrivacyRestriction);
         }
 
+        /// <summary>
+        /// Retrieves a <see cref="Dtos.Student.Section3"/>
+        /// </summary>
+        /// <param name="sectionId">Course section ID</param>
+        /// <param name="useCache">Flag indicating whether or not to retrieve the cached data for the course section</param>
+        /// <returns>A <see cref="Dtos.Student.Section3"/></returns>
+        [Obsolete("Obsolete as of Api version 1.31, use version 4 of this API")]
         public async Task<PrivacyWrapper<Dtos.Student.Section3>> GetSection3Async(string sectionId, bool useCache)
         {
             IEnumerable<string> listOfIds = new List<string>() { sectionId };
@@ -12802,6 +13774,58 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             return new PrivacyWrapper<Dtos.Student.Section3>(sectionDto, hasPrivacyRestriction);
         }
+
+        /// <summary>
+        /// Retrieves a <see cref="Dtos.Student.Section4"/>
+        /// </summary>
+        /// <param name="sectionId">Course section ID</param>
+        /// <param name="useCache">Flag indicating whether or not to retrieve the cached data for the course section</param>
+        /// <returns>A <see cref="Dtos.Student.Section4"/></returns>
+        public async Task<PrivacyWrapper<Dtos.Student.Section4>> GetSection4Async(string sectionId, bool useCache)
+        {
+            IEnumerable<string> listOfIds = new List<string>() { sectionId };
+            IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sectionEntities = new List<Ellucian.Colleague.Domain.Student.Entities.Section>();
+            var hasPrivacyRestriction = false;
+
+            if (sectionId == null)
+            {
+                throw new ArgumentNullException("sectionId", "sectionId isn't provided");
+            }
+
+            if (useCache)
+            {
+                sectionEntities = await _sectionRepository.GetCachedSectionsAsync(listOfIds);
+            }
+            else
+            {
+                sectionEntities = await _sectionRepository.GetNonCachedSectionsAsync(listOfIds);
+            }
+            Ellucian.Colleague.Domain.Student.Entities.Section sectionEntity = sectionEntities.Where(s => s.Id == sectionId).FirstOrDefault();
+            if (sectionEntity == null)
+            {
+                throw new KeyNotFoundException(string.Format("Couldn't retrieve section entity for given sectionId {0}", sectionId));
+            }
+            //only a faculty that belongs to that section can retrieve student Ids.There is no need for other users to see that information
+            //student Ids are considered as PII at institution level
+            if (sectionEntity.FacultyIds == null || !sectionEntity.FacultyIds.Contains(CurrentUser.PersonId))
+            {
+                hasPrivacyRestriction = true;
+            }
+
+            // Get the right adapter for the type mapping
+            var sectionDtoAdapter = new SectionEntityToStudentSection4DtoAdapter(_adapterRegistry, logger);
+
+            // Map the section entity to the section Dto then set up response and cache for the single item.
+            Dtos.Student.Section4 sectionDto = sectionDtoAdapter.MapToType(sectionEntity);
+            if (hasPrivacyRestriction)
+            {
+                sectionDto.ActiveStudentIds = new List<string>();
+
+            }
+
+            return new PrivacyWrapper<Dtos.Student.Section4>(sectionDto, hasPrivacyRestriction);
+        }
+
 
         public async Task<PrivacyWrapper<List<Dtos.Student.Section>>> GetSectionsAsync(IEnumerable<string> sectionIds, bool useCache)
         {
@@ -12879,7 +13903,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             return new PrivacyWrapper<List<Dtos.Student.Section2>>(sectionDtos, hasPrivacyRestriction);
         }
-        public async Task<PrivacyWrapper<List<Dtos.Student.Section3>>> GetSections3Async(IEnumerable<string> sectionIds, bool useCache=true, bool bestFit=false )
+
+        [Obsolete("Obsolete as of Api version 1.31, use version 4 of this API")]
+        public async Task<PrivacyWrapper<List<Dtos.Student.Section3>>> GetSections3Async(IEnumerable<string> sectionIds, bool useCache = true, bool bestFit = false)
         {
             List<Dtos.Student.Section3> sectionDtos = new List<Dtos.Student.Section3>();
             IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sectionEntities = new List<Ellucian.Colleague.Domain.Student.Entities.Section>();
@@ -12899,7 +13925,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 sectionEntities = await _sectionRepository.GetNonCachedSectionsAsync(sectionIds, bestFit);
             }
-           
+
             var sectionDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Section, Dtos.Student.Section3>();
             foreach (var section in sectionEntities)
             {
@@ -12916,6 +13942,52 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             return new PrivacyWrapper<List<Dtos.Student.Section3>>(sectionDtos, hasPrivacyRestriction);
+        }
+
+        /// <summary>
+        /// Retrieve a list of privacy-protected course sections
+        /// </summary>
+        /// <param name="sectionIds">IDs of course sections to be retrieved</param>
+        /// <param name="useCache">Flag indicating whether or not to retrieve cached course section information</param>
+        /// <param name="bestFit">Flag indicating whether or not to sort non-term course sections into the academic term that best fits their start and end dates</param>
+        /// <returns>List of privacy-protected course sections</returns>
+        public async Task<PrivacyWrapper<List<Dtos.Student.Section4>>> GetSections4Async(IEnumerable<string> sectionIds, bool useCache = true, bool bestFit = false)
+        {
+            List<Dtos.Student.Section4> sectionDtos = new List<Dtos.Student.Section4>();
+            IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> sectionEntities = new List<Ellucian.Colleague.Domain.Student.Entities.Section>();
+            var hasPrivacyRestriction = false;
+
+            if (sectionIds == null || sectionIds.Count() == 0)
+            {
+                string errorText = "At least one item in list of sectionIds must be provided.";
+                throw new ArgumentNullException(errorText);
+            }
+
+            if (useCache)
+            {
+                sectionEntities = await _sectionRepository.GetCachedSectionsAsync(sectionIds, bestFit);
+            }
+            else
+            {
+                sectionEntities = await _sectionRepository.GetNonCachedSectionsAsync(sectionIds, bestFit);
+            }
+
+            var sectionDtoAdapter = new SectionEntityToStudentSection4DtoAdapter(_adapterRegistry, logger);
+            foreach (var section in sectionEntities)
+            {
+                if (section != null)
+                {
+                    Dtos.Student.Section4 sectionDto = sectionDtoAdapter.MapToType(section);
+                    if (section.FacultyIds == null || !section.FacultyIds.Contains(CurrentUser.PersonId))
+                    {
+                        hasPrivacyRestriction = true;
+                        sectionDto.ActiveStudentIds = new List<string>();
+                    }
+                    sectionDtos.Add(sectionDto);
+                }
+            }
+
+            return new PrivacyWrapper<List<Dtos.Student.Section4>>(sectionDtos, hasPrivacyRestriction);
         }
 
         /// <summary>
@@ -12969,7 +14041,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new ArgumentNullException("SectionId", "SectionId is not provided");
             }
 
-            if (sectionGradingComplete== null)
+            if (sectionGradingComplete == null)
             {
                 throw new ArgumentNullException("sectionGradingComplete", "Section Midterm Grading information is not provided");
             }
@@ -13012,13 +14084,44 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
+        /// Retrieves the grading status for a course section
+        /// </summary>
+        /// <param name="sectionId">Unique identifier for the course section</param>
+        /// <returns>Grading status for the specified course section</returns>
+        /// <exception cref="ArgumentNullException">A course section ID is required when retrieving course section grading status.</exception>
+        /// <exception cref="PermissionsException">Authenticated user is not an assigned faculty member for the specified course section.</exception>
+        public async Task<Dtos.Student.SectionGradingStatus> GetSectionGradingStatusAsync(string sectionId)
+        {
+            if (string.IsNullOrEmpty(sectionId))
+            {
+                throw new ArgumentNullException("sectionId", "A course section ID is required when retrieving course section grading status information.");
+            }
+
+            // Retrieve non-cached course section information for further validations
+            var courseSection = await RetrieveCourseSectionInformation(sectionId);
+
+            // The authenticated user is only permitted to retrieve section grading status information for a course section if they are an assigned faculty member for the course section
+            VerifyAuthenticatedUserIsAssignedFacultyForSectionAsync(courseSection);
+
+            // Retrieve section grading status information
+            var sectionGradingStatusEntity = await _sectionRepository.GetSectionGradingStatusAsync(sectionId);
+
+            // Convert entity to DTO
+            var sectionGradingStatusEntityToDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionGradingStatus, Dtos.Student.SectionGradingStatus>();
+            var sectionGradingStatusDto = sectionGradingStatusEntityToDtoAdapter.MapToType(sectionGradingStatusEntity);
+
+            // Return the DTO
+            return sectionGradingStatusDto;
+        }
+
+        /// <summary>
         /// Retrieve sections events ICal from calendar schedules
         /// </summary>
         /// <param name="sectionIds"></param>
         /// <param name="startDate"></param>
         /// <param name="endDate"></param>
         /// <returns></returns>
-        public async Task< Ellucian.Colleague.Dtos.Base.EventsICal> GetSectionEventsICalAsync(IEnumerable<string> sectionIds, DateTime? startDate, DateTime? endDate)
+        public async Task<Dtos.Base.EventsICal> GetSectionEventsICalAsync(IEnumerable<string> sectionIds, DateTime? startDate, DateTime? endDate)
         {
             if (sectionIds == null || sectionIds.Count() == 0)
             {
@@ -13026,42 +14129,249 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new ArgumentNullException(errorText);
             }
             var events = await _sectionRepository.GetSectionEventsICalAsync("CS", sectionIds, startDate, endDate);
-            Ellucian.Colleague.Domain.Base.Entities.EventsICal eventsICalEntity = EventListToEventsICal(events);
-            Ellucian.Colleague.Dtos.Base.EventsICal eventsICalDto = new Dtos.Base.EventsICal(eventsICalEntity.iCal);
+            Domain.Base.Entities.EventsICal eventsICalEntity = EventListToEventsICal(events);
+            Dtos.Base.EventsICal eventsICalDto = new Dtos.Base.EventsICal(eventsICalEntity.iCal);
             return eventsICalDto;
         }
-        private Ellucian.Colleague.Domain.Base.Entities.EventsICal EventListToEventsICal(IEnumerable<Ellucian.Colleague.Domain.Base.Entities.Event> events)
+
+        public async Task<Dtos.Student.SectionCensusCertification> CreateSectionCensusCertificationAsync(string sectionId, Dtos.Student.SectionCensusToCertify sectionCensusToCertify, Dtos.Student.SectionRegistrationDate sectionRegistrationDate)
         {
-            if(events==null)
+            Domain.Student.Entities.Section sectionEntity = null;
+            Domain.Student.Entities.SectionCensusConfiguration sectionCensusConfiguration = null;
+
+            Dtos.Student.SectionCensusCertification certifiedCensusDto = null;
+            if (sectionId == null)
+            {
+                throw new ArgumentNullException("sectionId", "Section Id must be provided in service layer to update its census certification details");
+            }
+            if (sectionCensusToCertify == null)
+            {
+                throw new ArgumentNullException("sectionCensusToCertify", "Section Census Certification details must be provided in service layer");
+            }
+            if (sectionCensusToCertify.CensusCertificationDate == null)
+            {
+                throw new ArgumentNullException("CensusCertificationDate", "Section Census date must be provided");
+            }
+            if (sectionCensusToCertify.CensusCertificationRecordedDate == null)
+            {
+                throw new ArgumentNullException("CensusCertificationRecordedDate", "Section Census recorded date must be provided");
+            }
+            if (sectionCensusToCertify.CensusCertificationRecordedTime == null)
+            {
+                throw new ArgumentNullException("CensusCertificationRecordedTime", "Section Census recorded time must be provided");
+            }
+
+            if (string.IsNullOrWhiteSpace(sectionCensusToCertify.CensusCertificationPosition))
+            {
+                throw new ArgumentNullException("CensusCertificationPosition", "Section Census position must be provided");
+            }
+
+            int censusPosition;
+            sectionCensusToCertify.CensusCertificationPosition = sectionCensusToCertify.CensusCertificationPosition.Trim();
+            if (!int.TryParse(sectionCensusToCertify.CensusCertificationPosition, out censusPosition))
+            {
+                throw new ArgumentException("CensusCertificationPosition", "CensusCertificationPosition must be a number");
+            }
+
+            //validate only a faculty of the section can certify census
+            try
+            {
+                //this will be retrieving non-cache course section 
+                sectionEntity = await _sectionRepository.GetSectionAsync(sectionId);
+            }
+            catch (Exception ex)
+            {
+                string message = string.Format("An exception occurred while retrieving section information for sectionId {0}, in order to create section's census certification", sectionId);
+                logger.Error(ex, message);
+                throw;
+            }
+
+            if (sectionEntity == null)
+            {
+                throw new KeyNotFoundException(string.Format("Couldn't retrieve section information for given sectionId {0}", sectionId));
+            }
+
+            // The current user must be a faculty member of the section
+            if (sectionEntity.FacultyIds == null || !sectionEntity.FacultyIds.Contains(CurrentUser.PersonId))
+            {
+                throw new PermissionsException(string.Format("User must be the faculty of the section {0} in order to certify census", sectionId));
+            }
+
+            //retrieve section census configuration
+            try
+            {
+                sectionCensusConfiguration = await _studentConfigRepository.GetSectionCensusConfigurationAsync();
+            }
+            catch (Exception ex)
+            {
+                string message = string.Format("An exception occurred while retrieving section census configuration, in order to create section {0} census certification", sectionId);
+                logger.Error(ex, message);
+                throw;
+            }
+
+            if (sectionCensusConfiguration == null)
+            {
+                throw new ConfigurationException("Could not retrieve section census configuration");
+            }
+
+            //validate that census recorded date is less than or equal to today (not in the future)
+            if (sectionCensusToCertify.CensusCertificationRecordedDate.Value > DateTime.Today)
+            {
+                var errorMessage = string.Format("The Section Census recorded date of {0} cannot be in the future.",
+                     sectionCensusToCertify.CensusCertificationRecordedDate.Value.ToShortDateString());
+                logger.Error(errorMessage);
+                throw new ArgumentOutOfRangeException("CensusCertificationRecordedDate", errorMessage);
+            }
+
+            //default start date for the census certification to the census date
+            DateTime censusCertificationStartDate = sectionCensusToCertify.CensusCertificationDate.Value;
+
+            //use the position to locate the current census certification to check for a number of days prior to allow a certification to take place
+            Domain.Student.Entities.CensusDatePositionSubmission censusDatePositionSubmission =
+                sectionCensusConfiguration.CensusDatePositionSubmissionRange.Where(c => c != null && c.Position == censusPosition).FirstOrDefault();
+
+            //override census date if there is a number of days prior for the census position
+            if (censusDatePositionSubmission != null && censusDatePositionSubmission.CertifyDaysBeforeOffset.HasValue)
+            {
+                censusCertificationStartDate = censusCertificationStartDate.AddDays(censusDatePositionSubmission.CertifyDaysBeforeOffset.Value * -1);
+            }
+
+            //validate that the census certification recorded date cannot be less than (before) the certification start date
+            if (sectionCensusToCertify.CensusCertificationRecordedDate < censusCertificationStartDate)
+            {
+                var errorMessage = string.Format("The Section Census recorded date of {0} cannot occur prior to the Section Census start date of {1}",
+                    sectionCensusToCertify.CensusCertificationRecordedDate.Value.ToShortDateString(), censusCertificationStartDate);
+                logger.Error(errorMessage);
+                throw new ArgumentOutOfRangeException("CensusCertificationRecordedDate", errorMessage);
+            }
+
+            try
+            {
+                Domain.Student.Entities.SectionCensusCertification certifiedCensus = sectionEntity.SectionCertifiedCensuses.Where(
+                    s => s.CensusCertificationPosition == sectionCensusToCertify.CensusCertificationPosition &&
+                    s.CensusCertificationDate == sectionCensusToCertify.CensusCertificationDate).FirstOrDefault();
+
+                //if not null means that census was certified
+                if (certifiedCensus != null && certifiedCensus.CensusCertificationRecordedDate != null)
+                {
+                    throw new ExistingResourceException(string.Format("Section {0} is already certified for Census Date {1} and Census Position {2}", sectionId, sectionCensusToCertify.CensusCertificationDate.Value.ToShortDateString(), sectionCensusToCertify.CensusCertificationPosition), sectionId);
+                }
+
+                //validate that census date passed is valid census date to certify
+                if (sectionRegistrationDate != null && sectionRegistrationDate.CensusDates != null && sectionRegistrationDate.CensusDates.Any())
+                {
+                    bool censusDateExist = sectionRegistrationDate.CensusDates.Contains(sectionCensusToCertify.CensusCertificationDate);
+                    if (censusDateExist == false)
+                    {
+                        throw new KeyNotFoundException(string.Format("Census Date {0} is not a valid census date for the section {1}", sectionCensusToCertify.CensusCertificationDate.Value.ToShortDateString(), sectionId));
+                    }
+                }
+
+                //convert dto to entity and sent to repository
+                //call repository- returned certified census will have census certification recorded date and time. 
+                Domain.Student.Entities.SectionCensusCertification certifiedCensusEntity = await _sectionRepository.CreateSectionCensusCertificationAsync(sectionId, sectionCensusToCertify.CensusCertificationDate, sectionCensusToCertify.CensusCertificationPosition, sectionCensusToCertify.CensusCertificationLabel, sectionCensusToCertify.CensusCertificationRecordedDate, sectionCensusToCertify.CensusCertificationRecordedTime, CurrentUser.PersonId);
+
+                // convert entity to dto and send back to controller.Dto does not have person Id. Person Id is only stored during inbound, for security reasons we need to marshal it for outbound.
+                var entityToDtoAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.SectionCensusCertification, Dtos.Student.SectionCensusCertification>();
+                certifiedCensusDto = entityToDtoAdapter.MapToType(certifiedCensusEntity);
+                return certifiedCensusDto;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, string.Format("An exception occurred while updating section {0} census certification", sectionId));
+                throw;
+            }
+        }
+        private Domain.Base.Entities.EventsICal EventListToEventsICal(IEnumerable<Ellucian.Colleague.Domain.Base.Entities.Event> events)
+        {
+            if (events == null)
             {
                 logger.Info("events are null, cannot create ICal");
-                return new Ellucian.Colleague.Domain.Base.Entities.EventsICal(string.Empty);
+                return new Domain.Base.Entities.EventsICal(string.Empty);
             }
-            var iCal = new iCalendar();
+            var ICalendar = new Calendar();
             foreach (var anEvent in events)
             {
-                DDay.iCal.Event evt = iCal.Create<DDay.iCal.Event>();
-                evt.Name = "VEVENT";
-                evt.Summary = anEvent.Description;
-                evt.Categories = new List<string>() { anEvent.Type };
-                evt.Location = anEvent.Location;
-                evt.DTStart = new iCalDateTime(anEvent.StartTime.UtcDateTime);
-                evt.DTStart.IsUniversalTime = true;
-                evt.DTEnd = new iCalDateTime(anEvent.EndTime.UtcDateTime);
-                evt.DTEnd.IsUniversalTime = true;
-                //Retain the time component of DTStart and DTEnd. Fix bug in iCal which considers midnight UTC as all-day event and drops the time portion
-                evt.DTStart.HasTime = true;
-                evt.DTEnd.HasTime = true;
+                ICalendar.Events.Add(new Ical.Net.CalendarComponents.CalendarEvent
+                {
+                    Name = "VEVENT",
+                    Summary = anEvent.Description,
+                    Categories = new List<string>() { anEvent.Type },
+                    Location = anEvent.Location,
+                    DtStart = new CalDateTime(anEvent.StartTime.UtcDateTime, DateTimeKind.Utc.ToString()) { HasTime = true },
+                    DtEnd = new CalDateTime(anEvent.EndTime.UtcDateTime, DateTimeKind.Utc.ToString()) { HasTime = true },
+                    //Retain the time component of DTStart and DTEnd. Fix bug in iCal which considers midnight UTC as all-day event and drops the time portion
+                });
             }
             string result = null;
             var ctx = new SerializationContext();
-            var factory = new DDay.iCal.Serialization.iCalendar.SerializerFactory();
-            var serializer = factory.Build(iCal.GetType(), ctx) as IStringSerializer;
+            var factory = new SerializerFactory();
+            var serializer = factory.Build(ICalendar.GetType(), ctx) as IStringSerializer;
             if (serializer != null)
             {
-                result = serializer.SerializeToString(iCal);
+                result = serializer.SerializeToString(ICalendar);
             }
-            return new Ellucian.Colleague.Domain.Base.Entities.EventsICal(result);
+            return new Domain.Base.Entities.EventsICal(result);
+        }
+
+        #region Section Seat Counts
+        public async Task<IEnumerable<Dtos.Student.SectionSeats>> GetSectionsSeatsAsync(IEnumerable<string> sectionIds)
+        {
+            var sectionSeatsDtos = new List<Dtos.Student.SectionSeats>();
+            if (sectionIds == null || !sectionIds.Any())
+            {
+                throw new ArgumentNullException("sectionIds", "At least one course section ID is required when retrieving seat counts for sections.");
+            }
+
+            try
+            {
+                var sectionSeatsDictionary = (await _sectionRepository.GetSectionsSeatsAsync(sectionIds));
+                if (sectionSeatsDictionary != null && sectionSeatsDictionary.Any())
+                {
+                    var entityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.Student.Entities.SectionSeats, Dtos.Student.SectionSeats>();
+                    foreach (var sectionSeatCount in sectionSeatsDictionary)
+                    {
+                        sectionSeatsDtos.Add(entityToDtoAdapter.MapToType(sectionSeatCount.Value));
+                    }
+                }
+                return sectionSeatsDtos;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, string.Format("An error occurred while trying to retrieve seat counts for course section IDs {0}.", string.Join(",", sectionIds)));
+                throw ex;
+            }
+        }
+        #endregion
+
+        /// <summary>
+        /// Verifies that the authenticated user is an assigned faculty member for the specified course section
+        /// </summary>
+        /// <param name="courseSection">Course section to check</param>
+        /// <exception cref="PermissionsException">Authenticated user is not an assigned faculty member for course section.</exception>
+        private void VerifyAuthenticatedUserIsAssignedFacultyForSectionAsync(Domain.Student.Entities.Section courseSection)
+        {
+            // The current user must be a faculty member of the section
+            if (courseSection.FacultyIds == null || !courseSection.FacultyIds.Contains(CurrentUser.PersonId))
+            {
+                throw new PermissionsException(string.Format("Authenticated user is not an assigned faculty member for course section {0}.", courseSection.Id));
+            }
+        }
+
+        /// <summary>
+        /// Retrieves course section information for the specified course section ID
+        /// </summary>
+        /// <param name="sectionId">ID of the course section whose data will be retrieved</param>
+        /// <returns>Course section information for the specified course section ID</returns>
+        /// <exception cref="KeyNotFoundException">Course section data could not be retrieved.</exception>
+        private async Task<Domain.Student.Entities.Section> RetrieveCourseSectionInformation(string sectionId)
+        {
+            var courseSections = await _sectionRepository.GetSectionAsync(sectionId);
+            if (courseSections == null)
+            {
+                throw new KeyNotFoundException(string.Format("Could not retrieve course section information for course section {0}.", sectionId));
+            }
+            return courseSections;
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -55,6 +55,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             #region Null checks
             if (string.IsNullOrEmpty(generalLedgerAccountId))
             {
+                logger.Debug("==> generalLedgerAccountId is null or empty <==");
                 throw new ArgumentNullException("generalLedgerAccountId", "generalLedgerAccountId is required.");
             }
 
@@ -62,6 +63,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var glAccountStructure = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
             if (glAccountStructure == null)
             {
+                logger.Debug("==> glAccountStructure is null <==");
                 throw new ConfigurationException("Account structure must be defined.");
             }
 
@@ -69,6 +71,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var glClassConfiguration = await generalLedgerConfigurationRepository.GetClassConfigurationAsync();
             if (glClassConfiguration == null)
             {
+                logger.Debug("==> glClassConfiguration is null <==");
                 throw new ConfigurationException("GL class configuration must be defined.");
             }
 
@@ -76,12 +79,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var generalLedgerUser = await generalLedgerUserRepository.GetGeneralLedgerUserAsync2(CurrentUser.PersonId, glAccountStructure.FullAccessRole, glClassConfiguration);
             if (generalLedgerUser == null)
             {
+                logger.Debug("==> generalLedgerUser is null <==");
                 throw new ApplicationException("GL user must be defined.");
             }
 
             var glAccountEntity = await generalLedgerAccountRepository.GetAsync(generalLedgerAccountId, glAccountStructure.MajorComponentStartPositions);
             if (glAccountEntity == null)
             {
+                logger.Debug("==> glAccountEntity is null <==");
                 throw new ApplicationException("No general ledger account entity returned.");
             }
             #endregion
@@ -114,6 +119,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var glAccountStructure = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
             if (glAccountStructure == null)
             {
+                logger.Debug("==> glAccountStructure is null <==");
                 throw new ConfigurationException("Account structure must be defined.");
             }
 
@@ -121,6 +127,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var glClassConfiguration = await generalLedgerConfigurationRepository.GetClassConfigurationAsync();
             if (glClassConfiguration == null)
             {
+                logger.Debug("==> glClassConfiguration is null <==");
                 throw new ConfigurationException("GL class configuration must be defined.");
             }
 
@@ -138,28 +145,47 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             if (logger.IsInfoEnabled)
             {
                 watch.Stop();
-                logger.Info("GL account LookUp SERVICE timing: GetGeneralLedgerUserAsync2 completed in " + watch.ElapsedMilliseconds.ToString() + " ms");
+                logger.Info("==> GL account LookUp SERVICE timing: GetGeneralLedgerUserAsync2 completed in " + watch.ElapsedMilliseconds.ToString() + " ms <==");
             }
 
             if (generalLedgerUser == null)
             {
+                logger.Debug("==> generalLedgerUser is null <==");
                 throw new ApplicationException("GL user must be defined.");
             }
 
             List<string> glAccounts = new List<string>();
             if (string.IsNullOrWhiteSpace(glClass))
             {
-                glAccounts = generalLedgerUser.AllAccounts.ToList();
+                if (generalLedgerUser.AllAccounts != null && generalLedgerUser.AllAccounts.Any())
+                {
+                    logger.Debug("==> generalLedgerUser.AllAccounts is used <==");
+                    glAccounts = generalLedgerUser.AllAccounts.ToList();
+                }
+                else
+                {
+                    logger.Debug("==> generalLedgerUser.AllAccounts is null or empty <==");
+                }
             }
             else if (glClass.ToUpperInvariant().Substring(0, 1) == "E")
             {
-                glAccounts = generalLedgerUser.ExpenseAccounts.ToList();
+                if (generalLedgerUser.ExpenseAccounts != null && generalLedgerUser.ExpenseAccounts.Any())
+                {
+                    logger.Debug("==> generalLedgerUser.ExpenseAccounts is used <==");
+                    glAccounts = generalLedgerUser.ExpenseAccounts.ToList();
+                }
+                else
+                {
+                    logger.Debug("==> generalLedgerUser.ExpenseAccounts is null or empty <==");
+                }
             }
             else
             {
-                logger.Debug(string.Format("Incorrect gl class"));
+                logger.Debug("==> Incorrect gl class <==");
                 throw new ArgumentNullException("glClass", "glClass must be null for all types or expense.");
             }
+
+            logger.Info("number of GL accounts " + glAccounts.Count());
 
             // Limit the list of accounts to those that are active.
             List<string> activeGlAccounts = await generalLedgerAccountRepository.GetActiveGeneralLedgerAccounts(glAccounts);
@@ -168,6 +194,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 if (logger.IsInfoEnabled)
                 {
+                    logger.Info("==> number of active GL accounts " + activeGlAccounts.Count() + " <==");
                     watch.Restart();
                 }
 
@@ -176,7 +203,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 if (logger.IsInfoEnabled)
                 {
                     watch.Stop();
-                    logger.Info("number of GL accounts " + glAccountEntities.Count());
+                    logger.Info("number of GL accounts entities " + glAccountEntities.Count());
                     logger.Info("GL account LookUp SERVICE timing: GetUserGeneralLedgerAccountsAsync completed in " + watch.ElapsedMilliseconds.ToString() + " ms");
                 }
 
@@ -196,6 +223,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         if (glAccount != null && !string.IsNullOrWhiteSpace(glAccount.GlAccountNumber))
                         {
                             var glAccountDto = glAccountAdapter.MapToType(glAccount, glAccountStructure.MajorComponentStartPositions);
+                            glAccountDto.GlClass = GetGlClass(glAccount.GlAccountNumber, glAccountStructure, glClassConfiguration);
                             glAccountDtos.Add(glAccountDto);
                         }
                     }
@@ -222,6 +250,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             if (string.IsNullOrEmpty(generalLedgerAccountId))
             {
+                logger.Debug("==> generalLedgerAccountId is null or empty <==");
                 throw new ArgumentNullException("generalLedgerAccountId", "generalLedgerAccountId is required.");
             }
 
@@ -229,6 +258,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var glAccountStructure = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
             if (glAccountStructure == null)
             {
+                logger.Debug("==> glAccountStructure is null <==");
                 throw new ConfigurationException("Account structure must be defined.");
             }
 
@@ -247,6 +277,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var glClassConfiguration = await generalLedgerConfigurationRepository.GetClassConfigurationAsync();
             if (glClassConfiguration == null)
             {
+                logger.Debug("==> glClassConfiguration is null <==");
                 throw new ConfigurationException("GL class configuration must be defined.");
             }
 
@@ -254,6 +285,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             var generalLedgerUser = await generalLedgerUserRepository.GetGeneralLedgerUserAsync2(CurrentUser.PersonId, glAccountStructure.FullAccessRole, glClassConfiguration);
             if (generalLedgerUser == null)
             {
+                logger.Debug("==> generalLedgerUser is null <==");
                 throw new ApplicationException("GL user must be defined.");
             }
 
@@ -321,6 +353,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 var glAccountEntity = await generalLedgerAccountRepository.GetAsync(generalLedgerAccountId, glAccountStructure.MajorComponentStartPositions);
                 if (glAccountEntity == null)
                 {
+                    logger.Debug("==> glAccountEntity not returned <==");
                     throw new ApplicationException("No GL account entity returned.");
                 }
 
@@ -330,6 +363,28 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
 
             return glAccountValidationResponseDto;
+        }
+
+        private static Dtos.ColleagueFinance.GlClass GetGlClass(string glAccountNumber, Domain.ColleagueFinance.Entities.GeneralLedgerAccountStructure glAccountStructure, Domain.ColleagueFinance.Entities.GeneralLedgerClassConfiguration glClassConfiguration)
+        {
+            Domain.ColleagueFinance.Entities.GlClass glClassEnum = GlAccountUtility.GetGlAccountGlClass(glAccountNumber, glClassConfiguration, glAccountStructure.MajorComponentStartPositions);
+
+            // Translate the domain GlClass into the DTO GlClass
+            switch (glClassEnum)
+            {
+                case Ellucian.Colleague.Domain.ColleagueFinance.Entities.GlClass.Asset:
+                    return Dtos.ColleagueFinance.GlClass.Asset;
+                case Ellucian.Colleague.Domain.ColleagueFinance.Entities.GlClass.Expense:
+                    return Dtos.ColleagueFinance.GlClass.Expense;
+                case Ellucian.Colleague.Domain.ColleagueFinance.Entities.GlClass.FundBalance:
+                    return Dtos.ColleagueFinance.GlClass.FundBalance;
+                case Ellucian.Colleague.Domain.ColleagueFinance.Entities.GlClass.Liability:
+                    return Dtos.ColleagueFinance.GlClass.Liability;
+                case Ellucian.Colleague.Domain.ColleagueFinance.Entities.GlClass.Revenue:
+                    return Dtos.ColleagueFinance.GlClass.Revenue;
+                default:
+                    throw new ApplicationException("Invalid glClass for GL account: " + glAccountNumber);
+            }
         }
     }
 }

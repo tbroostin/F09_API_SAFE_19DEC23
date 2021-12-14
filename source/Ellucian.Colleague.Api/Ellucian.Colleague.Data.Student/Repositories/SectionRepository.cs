@@ -1,8 +1,9 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
+using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.Entities;
@@ -12,6 +13,7 @@ using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Colleague.Domain.Student.Services;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Data.Colleague.Exceptions;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Web.Cache;
@@ -36,18 +38,21 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         private ApplValcodes waitlistStatuses;
         private IEnumerable<BookOption> bookOptions;
         private ITermRepository termRepository;
+        private IFacultyRepository facultyRepository;
         private IEnumerable<Term> termList;
         private string colleagueTimeZone;
         private IEnumerable<SectionStatusCode> _sectionStatusCodes;
         private Data.Base.DataContracts.IntlParams internationalParameters;
-        //private IEnumerable<CourseCategory> _courseCategories;
         private RepositoryException exception;
         private bool addToErrorCollection = false;
 
         const int SectionMeetingCacheTimeout = 20; // Clear from cache every 20 minutes
         const int SectionInstructorCacheTimeout = 20;
+        const string AllStudentSectionWaitListRecordsCache = "AllStudentSectionWaitListRecordKeys";
+        const int AllStudentSectionWaitlistRecordsCacheTimeout = 20;
         const string AllSectionInstructorCache = "AllSectionInstructor";
 
+        private PortalParameters portalParameters = null;
 
         private async Task<IEnumerable<SectionStatusCode>> GetSectionStatusCodesAsync()
         {
@@ -69,7 +74,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 ss.ValExternalRepresentationAssocMember), Level1CacheTimeoutValue);
 
         }
-      
+
 
         // Track the time that the addtional/changed section cache was last built.
         private static DateTime ChangedRegistrationSectionsCacheBuildTime = new DateTime();
@@ -259,7 +264,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         // Sets the maximum number of records to bulk read at one time
         readonly int readSize;
 
-        public SectionRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
+        public SectionRepository(ICacheProvider cacheProvider,  IColleagueTransactionFactory transactionFactory, ILogger logger,
+            IFacultyRepository facultyRepository, ITermRepository termRepository, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)
         {
             // Using 24 hours for the RegistrationSections cache timeout - otherwise not caching section info.
@@ -267,7 +273,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             colleagueTimeZone = apiSettings.ColleagueTimeZone;
 
             this.readSize = ((apiSettings != null) && (apiSettings.BulkReadSize > 0)) ? apiSettings.BulkReadSize : 5000;
-            termRepository = new TermRepository(cacheProvider, transactionFactory, logger);
+            this.termRepository = termRepository;
+            this.facultyRepository = facultyRepository;
         }
 
         // Sets string for the AllRegistrationSectionsCache
@@ -316,22 +323,19 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             return sectionWailitst;
         }
-
-
         /// <summary>
-        /// Get a list of<see cref="SectionWaitlist"/> for a given course section ID
+        /// Get a list of<see cref="SectionWaitlistStudent"/> for a given list of course section IDs
         /// </summary>
-        /// <param name="sectionId">Course section ID</param>
-        /// <returns>A list of<see cref="SectionWaitlist"/></returns>
-        public async Task<IEnumerable<SectionWaitlistStudent>> GetSectionWaitlist2Async(string sectionId)
+        /// <param name="sectionIds">List of Course section IDs</param>
+        /// <returns>A list of<see cref="SectionWaitlistStudent"</returns>
+        public async Task<IEnumerable<SectionWaitlistStudent>> GetSectionWaitlist2Async(List<string> sectionIds)
         {
-            if (string.IsNullOrEmpty(sectionId))
+            if (sectionIds == null || !sectionIds.Any())
             {
-                throw new ArgumentNullException("sectionId", "Cannot build a section waitlist without a course section ID.");
+                throw new ArgumentNullException("sectionId", "Cannot build a section waitlist without atleast one course section ID.");
             }
-            List<WaitList> waitlistStudents = await GetWaitListsAsync(new List<string>() { sectionId });
+            List<WaitList> waitlistStudents = await GetWaitListsAsync(sectionIds);
             List<SectionWaitlistStudent> WaitlistDetails = new List<SectionWaitlistStudent>();
-            int rank = 0;
             var stwebSettings = await GetStwebDefaultsAsync();
             List<string> nonActiveStudentsStatuses = new List<string>();
             if (stwebSettings != null)
@@ -341,26 +345,31 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             if (waitlistStudents != null && waitlistStudents.Any())
             {
-                var waitlist = waitlistStudents.Where(ws => ws != null).OrderByDescending(s => s.WaitRating).ThenBy(s => s.WaitStatusDate).ThenBy(s => s.WaitTime);
-                foreach (var item in waitlist)
+                var groupedwaitlistInfo = waitlistStudents.GroupBy(w => w.WaitCourseSection);               
+                foreach (var waitlistInfo in groupedwaitlistInfo)
                 {
-                    string waitListStatusValcode = await GetWaitlistStatusActionCodeAsync(item.WaitStatus);
-                    /* Waitlist status val codes
-                     * 1. Active
-                     * 4. Permission to register
-                     */
-                    if (!string.IsNullOrEmpty(waitListStatusValcode) && (waitListStatusValcode == "1" || waitListStatusValcode == "4"))
+                    int rank = 0;
+                    var waitlist = waitlistInfo.Where(ws => ws != null).OrderByDescending(s => s.WaitRating).ThenBy(s => s.WaitStatusDate).ThenBy(s => s.WaitTime);
+                    foreach (var item in waitlist)
                     {
-                        rank++;
-                        SectionWaitlistStudent sectionWaitlist = new SectionWaitlistStudent(item.WaitCourseSection, item.WaitStudent, rank, item.WaitRating, waitListStatusValcode, item.WaitStatusDate, item.WaitTime);
-                        WaitlistDetails.Add(sectionWaitlist);
-                    }
-                    else if(nonActiveStudentsStatuses.Count() > 0 && nonActiveStudentsStatuses.Contains(item.WaitStatus))
-                    {
-                        SectionWaitlistStudent sectionWaitlist = new SectionWaitlistStudent(item.WaitCourseSection, item.WaitStudent, 0, 0, waitListStatusValcode, item.WaitStatusDate, item.WaitTime);
-                        WaitlistDetails.Add(sectionWaitlist);
-                    }
+                        string waitListStatusValcode = await GetWaitlistStatusActionCodeAsync(item.WaitStatus);
+                        /* Waitlist status val codes
+                         * 1. Active
+                         * 4. Permission to register
+                         */
+                        if (!string.IsNullOrEmpty(waitListStatusValcode) && (waitListStatusValcode == "1" || waitListStatusValcode == "4"))
+                        {
+                            rank++;
+                            SectionWaitlistStudent sectionWaitlist = new SectionWaitlistStudent(item.WaitCourseSection, item.WaitStudent, rank, item.WaitRating, waitListStatusValcode, item.WaitStatusDate, item.WaitTime,item.WaitListAdddate);
+                            WaitlistDetails.Add(sectionWaitlist);
+                        }
+                        else if (nonActiveStudentsStatuses.Count() > 0 && nonActiveStudentsStatuses.Contains(item.WaitStatus))
+                        {
+                            SectionWaitlistStudent sectionWaitlist = new SectionWaitlistStudent(item.WaitCourseSection, item.WaitStudent, 0, 0, waitListStatusValcode, item.WaitStatusDate, item.WaitTime, item.WaitListAdddate);
+                            WaitlistDetails.Add(sectionWaitlist);
+                        }
 
+                    }
                 }
             }
             return WaitlistDetails;
@@ -789,6 +798,63 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         }
 
         /// <summary>
+        /// Using a collection of section ids, get a dictionary collection of associated guids
+        /// </summary>
+        /// <param name="personIds">collection of person ids</param>
+        /// <returns>Dictionary consisting of a personId (key) and guid (value)</returns>
+        public async Task<Dictionary<string, string>> GetPersonGuidsCollectionAsync(IEnumerable<string> personIds)
+        {
+            if ((personIds == null) || (personIds != null && !personIds.Any()))
+            {
+                return new Dictionary<string, string>();
+            }
+            var sectionGuidCollection = new Dictionary<string, string>();
+            var missingGuids = new List<string>();
+            try
+            {
+                var sectionGuidLookup = personIds
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct().ToList()
+                    .ConvertAll(p => new RecordKeyLookup("PERSON", p, false)).ToArray();
+                var recordKeyLookupResults = await DataReader.SelectAsync(sectionGuidLookup);
+                foreach (var recordKeyLookupResult in recordKeyLookupResults)
+                {
+                    var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                    if (!sectionGuidCollection.ContainsKey(splitKeys[1]))
+                    {
+                        if (recordKeyLookupResult.Value == null || string.IsNullOrEmpty(recordKeyLookupResult.Value.Guid))
+                        {
+                            missingGuids.Add(splitKeys[1]);
+                        }
+                        else
+                        {
+                            sectionGuidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
+                        }
+                    }
+                }
+                if (missingGuids != null && missingGuids.Any())
+                {
+                    var repositoryException = new RepositoryException();
+                    foreach (var csKey in missingGuids)
+                    {
+                        repositoryException.AddError(new RepositoryError("Bad.Data", string.Format("The guid is missing for PERSON ID: '{0}'", csKey)));
+                    }
+                    throw repositoryException;
+                }
+            }
+            catch (RepositoryException ex)
+            {
+                throw ex;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error occured while getting course person guids.", ex);
+            }
+
+            return sectionGuidCollection;
+        }
+
+        /// <summary>
         /// Get the GUID for a section meeting using its ID
         /// </summary>
         /// <param name="id">Section meeting ID</param>
@@ -847,13 +913,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
             if (idDict == null || idDict.Count == 0)
             {
-                throw new KeyNotFoundException("Section GUID " + guid + " not found.");
+                throw new KeyNotFoundException(string.Format("No section was found for guid {0}", guid));
             }
 
             var foundEntry = idDict.FirstOrDefault();
             if (foundEntry.Value == null)
             {
-                throw new KeyNotFoundException("Section GUID " + guid + " lookup failed.");
+                throw new KeyNotFoundException(string.Format("No section was found for guid {0}", guid));
             }
 
             if (foundEntry.Value.Entity != "COURSE.SECTIONS")
@@ -907,7 +973,22 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>The section</returns>
         public async Task<Section> GetSectionByGuidAsync(string guid)
         {
-            return await GetSectionAsync(await GetSectionIdFromGuidAsync(guid));
+            var sectionId = await GetSectionIdFromGuidAsync(guid);
+            if (!string.IsNullOrEmpty(sectionId))
+            {
+                try
+                {
+                    return await GetSectionAsync(sectionId);
+                }
+                catch (RepositoryException ex)
+                {
+                    throw ex;
+                }
+            }                     
+            else
+            {
+                throw new KeyNotFoundException(string.Format("No section was found for guid [0]", guid));
+            }
         }
 
         /// <summary>
@@ -1233,6 +1314,19 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     criteria += " AND ";
                 }
                 criteria += "WITH SEC.LEARNING.PROVIDER EQ '" + learningProvider + "'";
+                var portalParameters = GetPortalParameters();
+                if (portalParameters != null)
+                {
+                    if (!string.IsNullOrEmpty(portalParameters.PpDefaultLearnProvider))
+                    {
+                        if (portalParameters.PpDefaultLearnProvider == learningProvider)
+                        {
+                            // filter search is on the default learning provider.  So add an 
+                            // OR search for null learning providers on sections
+                            criteria += "''";
+                        }
+                    }
+                }
             }
             if (!string.IsNullOrEmpty(status))
             {
@@ -1362,7 +1456,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             //execute existing criteria to limit potential sections
             //sectionIds = await DataReader.SelectAsync("COURSE.SECTIONS", limitingKeys, criteria);
-            return new CacheSupport.KeyCacheRequirements() { criteria = criteria, limitingKeys = limitingKeys != null && limitingKeys.Any()? limitingKeys.ToList() : null, NoQualifyingRecords = false };
+            return new CacheSupport.KeyCacheRequirements() { criteria = criteria, limitingKeys = limitingKeys != null && limitingKeys.Any() ? limitingKeys.ToList() : null, NoQualifyingRecords = false };
         }
 
         /// <summary>
@@ -1640,9 +1734,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         var regUser = regUsers[0];
                         if (regUser.RguRegControls == null || regUser.RguRegControls.Count == 0)
                         {
-                        //If there are no reg controls defined for reg users. It is highly impossible unless data is corrupted. 
-                        //If there are no reg controls do not return any sections.
-                        logger.Debug(string.Format("No RGU.REG.CONTROLS for REG.USER {0}, hence no sections will be returned for Instant Enrollment catalog", regUser));
+                            //If there are no reg controls defined for reg users. It is highly impossible unless data is corrupted. 
+                            //If there are no reg controls do not return any sections.
+                            logger.Debug(string.Format("No RGU.REG.CONTROLS for REG.USER {0}, hence no sections will be returned for Instant Enrollment catalog", regUser));
                             return new List<Section>();
                         }
                         var regControlId = regUser.RguRegControls[0];
@@ -2557,36 +2651,81 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         public async Task<Tuple<IEnumerable<StudentSectionWaitlist>, int>> GetWaitlistsAsync(int offset, int limit)
         {
+            string selectedRecordCacheKey = CacheSupport.BuildCacheKey(AllStudentSectionWaitListRecordsCache);
 
-            // Get all waitlist items 
-            var query = "WAIT.COURSE.SECTION NE ''";
+            int totalCount = 0;
 
+            string[] limitingKeys = null;
+            var criteria = new StringBuilder();
 
-            var waitlistIds = await DataReader.SelectAsync("WAIT.LIST", query);
-            var totalCount = waitlistIds.Count();
+            var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                selectedRecordCacheKey,
+                "WAIT.LIST",
+                offset,
+                limit,
+                AllStudentSectionWaitlistRecordsCacheTimeout,
+                async () =>
+                {
+                    // Any filtering, limiting keys and criteria should be in this block of code.
+                    criteria.Append("WITH WAIT.COURSE.SECTION NE '' AND WITH WAIT.STUDENT NE ''");
 
-            Array.Sort(waitlistIds);
+                    return new CacheSupport.KeyCacheRequirements()
+                    {
+                        limitingKeys = limitingKeys != null && limitingKeys.Any() ? limitingKeys.Distinct().ToList() : null,
+                        criteria = criteria.ToString()
+                    };
+                });
 
-            var subList = waitlistIds.Skip(offset).Take(limit).ToArray();
+            if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
+            {
+                return new Tuple<IEnumerable<StudentSectionWaitlist>, int>(new List<StudentSectionWaitlist>(), 0);
+            }
+
+            totalCount = keyCacheObject.TotalCount.Value;
+
+            var subList = keyCacheObject.Sublist.ToArray();
 
             if (subList.Any())
             {
                 Collection<WaitList> waitlistBulkData = await DataReader.BulkReadRecordAsync<WaitList>("WAIT.LIST", subList);
                 List<StudentSectionWaitlist> waitlistData = new List<StudentSectionWaitlist>();
+                // Get the guid collections.  If there are missing GUIDs for any of the IDs
+                // then a RepositoryException will be thrown for all missing GUIDs.
+                var sectionIds = waitlistBulkData.Select(wl => wl.WaitCourseSection).Distinct();
+                var sectionGuidCollection = await GetSectionGuidsCollectionAsync(sectionIds);
+                var studentIds = waitlistBulkData.Select(wl => wl.WaitStudent).Distinct();
+                var studentGuidCollection = await GetPersonGuidsCollectionAsync(studentIds);
+
                 if (waitlistBulkData != null)
                 {
+                    var repositoryException = new RepositoryException();
                     foreach (var wl in waitlistBulkData)
                     {
-                        try
+                        string studentGuid = string.Empty;
+                        string sectionGuid = string.Empty;
+                        if (studentGuidCollection.TryGetValue(wl.WaitStudent, out studentGuid) && sectionGuidCollection.TryGetValue(wl.WaitCourseSection, out sectionGuid))
                         {
-                            var studentGuid = await GetGuidFromRecordInfoAsync("PERSON", wl.WaitStudent);
-                            var sectionGuid = await GetGuidFromRecordInfoAsync("COURSE.SECTIONS", wl.WaitCourseSection);
-                            waitlistData.Add(new StudentSectionWaitlist(wl.RecordGuid, studentGuid, sectionGuid, wl.WaitRating));
+                            if (!string.IsNullOrEmpty(wl.RecordGuid))
+                            {
+                                waitlistData.Add(new StudentSectionWaitlist(wl.RecordGuid, studentGuid, sectionGuid, wl.WaitRating));
+                            }
+                            else
+                            {
+                                repositoryException.AddError(new RepositoryError("Bad.Data", string.Format("The guid is missing for WAIT.LIST: '{0}'", wl.Recordkey))
+                                {
+                                    SourceId = wl.Recordkey
+                                });
+                            }
                         }
-                        catch (Exception e)
-                        {
-                            logger.Error("Error converting waitlist entity with guid :'" + wl.RecordGuid + "'.  Error message: " + e.Message);
-                        }
+                    }
+                    if (repositoryException != null && repositoryException.Errors != null && repositoryException.Errors.Any())
+                    {
+                        throw repositoryException;
                     }
                 }
                 return new Tuple<IEnumerable<StudentSectionWaitlist>, int>(waitlistData, totalCount);
@@ -2634,7 +2773,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             rank++;
                             if (item.WaitStudent == studentId)
                             {
-                                studentSectionWaitlistInfo.SectionWaitlistStudent = new SectionWaitlistStudent(sectionId, studentId, rank, item.WaitRating, waitListStatusValcode, item.WaitStatusDate, null);
+                                studentSectionWaitlistInfo.SectionWaitlistStudent = new SectionWaitlistStudent(sectionId, studentId, rank, item.WaitRating, waitListStatusValcode, item.WaitStatusDate, null,null);
                                 break;
                             }
                         }
@@ -2645,7 +2784,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 var stwebSettings = await GetStwebDefaultsAsync();
                 var query = "WITH COURSE.SECTIONS.ID EQ " + sectionId;
                 Collection<CourseSections> courseSection = await DataReader.BulkReadRecordAsync<CourseSections>("COURSE.SECTIONS", query);
-                int? noOfDaysToEnroll= null;
+                int? noOfDaysToEnroll = null;
                 if (stwebSettings != null)
                 {
                     var courseSec = courseSection.FirstOrDefault();
@@ -2666,9 +2805,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         {
                             displayRating = true;
                         }
-                    }
+                    }                    
                 }
-                studentSectionWaitlistInfo.SectionWaitlistConfig = new SectionWaitlistConfig(sectionId, displayRank, displayRating, noOfDaysToEnroll);
+                studentSectionWaitlistInfo.SectionWaitlistConfig = new SectionWaitlistConfig(sectionId, displayRank, displayRating, noOfDaysToEnroll, null,null,null);
                 return studentSectionWaitlistInfo;
             }
             catch (Exception)
@@ -2699,30 +2838,61 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 throw new KeyNotFoundException("No waitlist found with GUID '" + waitlistGuid + "'.");
             }
-
-            try
+            string studentGuid = string.Empty;
+            string sectionGuid = string.Empty;
+            wl = await DataReader.ReadRecordAsync<WaitList>(id);
+            if (wl != null)
             {
-                wl = await DataReader.ReadRecordAsync<WaitList>(id);
-                if (wl != null)
+                try
                 {
-                    var studentGuid = await GetGuidFromRecordInfoAsync("PERSON", wl.WaitStudent);
-                    var sectionGuid = await GetGuidFromRecordInfoAsync("COURSE.SECTIONS", wl.WaitCourseSection);
-                    return new StudentSectionWaitlist(wl.RecordGuid, studentGuid, sectionGuid, wl.WaitRating);
+                    studentGuid = await GetGuidFromRecordInfoAsync("PERSON", wl.WaitStudent);
                 }
-                else
+                catch (Exception)
                 {
-                    throw new KeyNotFoundException("No waitlist found with GUID '" + waitlistGuid + "'.");
+                    studentGuid = string.Empty;
                 }
+                try
+                {
+                    sectionGuid = await GetGuidFromRecordInfoAsync("COURSE.SECTIONS", wl.WaitCourseSection);
+                }
+                catch (Exception)
+                {
+                    sectionGuid = string.Empty;
+                }
+                if (string.IsNullOrEmpty(studentGuid))
+                {
+                    if (exception == null)
+                        exception = new RepositoryException();
+
+                    exception.AddError(new RepositoryError("Bad.Data", string.Format("The guid is missing for PERSON ID: '{0}'.", wl.WaitStudent))
+                    {
+                        SourceId = string.IsNullOrEmpty(wl.Recordkey) ? "" : wl.Recordkey,
+                        Id = string.IsNullOrEmpty(wl.RecordGuid) ? "" : wl.RecordGuid
+                    });
+                }
+                if (string.IsNullOrEmpty(sectionGuid))
+                {
+                    if (exception == null)
+                        exception = new RepositoryException();
+
+                    exception.AddError(new RepositoryError("Bad.Data", string.Format("The guid is missing for COURSE.SECTIONS ID: '{0}'.", wl.WaitCourseSection))
+                    {
+                        SourceId = string.IsNullOrEmpty(wl.Recordkey) ? "" : wl.Recordkey,
+                        Id = string.IsNullOrEmpty(wl.RecordGuid) ? "" : wl.RecordGuid
+                    });
+                }
+
+                if (exception != null && exception.Errors != null && exception.Errors.Any())
+                {
+                    throw exception;
+                }
+
+                return new StudentSectionWaitlist(wl.RecordGuid, studentGuid, sectionGuid, wl.WaitRating);
             }
-            catch (Exception e)
+            else
             {
-
-                var msg = "Error retrieving waitlist data contract with guid :'" + waitlistGuid + "' and record key '" + id + "'.  Error message: " + e.Message;
-                logger.Error(msg);
-                throw new RepositoryException(msg);
-
+                throw new KeyNotFoundException("No waitlist found with GUID '" + waitlistGuid + "'.");
             }
-
         }
 
         private async Task<Collection<CourseSecXlists>> GetCrossListedSectionsAsync(List<CourseSections> sectionData)
@@ -3264,8 +3434,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 bool displayRank = false;
                 bool displayRating = false;
+                bool sortOrderByRank = false;
+                bool waitlistSortByDate = false;
+                bool includeCrossListedSections = false;
                 var query = "COURSE.SECTIONS.ID EQ " + sectionId;
                 var stwebSettings = await GetStwebDefaultsAsync();
+                var stwebSettings2 = await GetStwebDefaults2Async();
                 Collection<CourseSections> courseSection = await DataReader.BulkReadRecordAsync<CourseSections>("COURSE.SECTIONS", query);
                 if (stwebSettings != null)
                 {
@@ -3277,7 +3451,30 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
                     }
                 }
-
+                if (stwebSettings2 != null)
+                {
+                    if (!string.IsNullOrEmpty(stwebSettings2.Stweb2DfltSortOrderRank))
+                    {
+                        if (stwebSettings2.Stweb2DfltSortOrderRank.ToUpper() == "Y")
+                        {
+                            sortOrderByRank = true;
+                        }
+                    }
+                   if (!string.IsNullOrEmpty(stwebSettings2.Stweb2DfltWlSortAdddate))
+                   {
+                        if (stwebSettings2.Stweb2DfltWlSortAdddate.ToUpper() == "Y")
+                        {
+                            waitlistSortByDate = true;
+                        }
+                   }
+                    if (!string.IsNullOrEmpty(stwebSettings2.Stweb2ShowCrossListedSt))
+                    {
+                        if (stwebSettings2.Stweb2ShowCrossListedSt.ToUpper() == "Y")
+                        {
+                            includeCrossListedSections = true;
+                        }
+                    }
+                }
                 if (courseSection != null && stwebSettings != null)
                 {
                     if (!string.IsNullOrEmpty(courseSection.FirstOrDefault().SecWaitlistRating) && stwebSettings.StwebShowWlRankRating.ToUpper() == "Y")
@@ -3286,7 +3483,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                 }
 
-                SectionWaitlistConfig sectionWaitlistSetting = new SectionWaitlistConfig(sectionId, displayRank, displayRating,null);
+                SectionWaitlistConfig sectionWaitlistSetting = new SectionWaitlistConfig(sectionId, displayRank, displayRating, null, sortOrderByRank, waitlistSortByDate, includeCrossListedSections);
                 return sectionWaitlistSetting;
             }
             catch (Exception)
@@ -3401,9 +3598,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <param name="callerType">
         /// Indicates the caller type. Some functionality varies by caller type.
         /// </param>
+        /// <param name="sendGradingCompleteEmail">
+        /// true to send a grading complete e-mail to the faculty members, when backend Colleague is configured to do so.
+        /// When false the e-mail is not sent, even when the backend is configured to do so.
+        /// </param>
         /// 
-        public async Task<IEnumerable<SectionGradeResponse>> ImportGradesAsync(SectionGrades sectionGrades, bool forceNoVerifyFlag, bool checkForLocksFlag,
-            GradesPutCallerTypes callerType)
+        public async Task<SectionGradeSectionResponse> ImportGradesAsync(SectionGrades sectionGrades, bool forceNoVerifyFlag, bool checkForLocksFlag,
+            GradesPutCallerTypes callerType, bool sendGradingCompleteEmail)
         {
             if (sectionGrades == null)
                 throw new ArgumentNullException("sectionGrades", "SectionGrades must be specified");
@@ -3425,6 +3626,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 // Standard is the only value besides ILP.
                 request.CallerType = "Standard";
             }
+            request.SendGradingCompleteEmail = sendGradingCompleteEmail;
             request.ItemsToPostInput = new List<ItemsToPostInput>();
 
             foreach (var studentGrade in sectionGrades.StudentGrades)
@@ -3442,7 +3644,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 throw new Exception(errorMessage);
             }
 
-            List<SectionGradeResponse> domainResponse = ConvertImportOutputToDomainEntities(transactionResponse);
+            SectionGradeSectionResponse domainResponse = ConvertImportOutputToDomainEntities(transactionResponse);
 
             return domainResponse;
         }
@@ -3530,6 +3732,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var bookOptions = (await GetBookOptionsAsync()).ToList();
             string sectionBookstoreUrlTemplate = await GetBookstoreUrlTemplateAsync();
             var specialCourseTypes = await GetSpecialIconCourseTypesAsync();
+            IEnumerable<InstructionalMethod> instructionalMethods = await InstructionalMethodsAsync();
+            IEnumerable<CourseType> courseTypes = await GetCourseTypesAsync();
             foreach (var sec in sectionData)
             {
                 try
@@ -3573,6 +3777,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             try
                             {
                                 section.AddFaculty(courseSecFaculty.CsfFaculty);
+                                Domain.Student.Entities.Faculty faculty= await facultyRepository.GetAsync(courseSecFaculty.CsfFaculty);
+                                section.AddFacultyNames(faculty);
                                 var sectionFaculty = BuildSectionFaculty(courseSecFaculty);
                                 var ethosSectionFaculty = BuildEthosSectionFaculty(sectionFaculty, sec, courseSecMeetings);
                                 section.AddSectionFaculty(ethosSectionFaculty);
@@ -3789,7 +3995,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     section.SectionRequisites = sectionRequisites;
 
                     // Add books to section
-                    AddBooksToSection(section, sec, bookOptions);
+                    //
+                    // addToErrorCollection is for EEDM sections API v16.0.0 (or later).  Do not bother adding
+                    // books since EEDM does not expose books data
+                    //
+                    if (addToErrorCollection == false)
+                    {
+                        AddBooksToSection(section, sec, bookOptions);
+                    }
                     // Find reserved seat information.
                     CourseSecPending pendingSection = null;
                     if (pendingData != null)
@@ -3824,7 +4037,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                         sectionPermittedToRegisterStudents.Add(wlItem.WaitStudent);
                                     }
                                 }
-                                catch(Exception ex)
+                                catch (Exception ex)
                                 {
                                     LogRepoError(ex.Message, string.IsNullOrWhiteSpace(sec.RecordGuid) ? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
                                     if (!this.addToErrorCollection)
@@ -3874,6 +4087,20 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         section.LearningProviderSiteId = null;
                         section.LearningProvider = sec.SecLearningProvider;
                     }
+
+                    // if no section learning provider, save default from PORTAL.PARAMETERS
+                    if (string.IsNullOrEmpty(sec.SecLearningProvider))
+                    {
+                        var portalParameters = GetPortalParameters();
+                        if (portalParameters != null)
+                        {
+                            if (!string.IsNullOrEmpty(portalParameters.PpDefaultLearnProvider))
+                            {
+                                section.DefaultLearningProvider = portalParameters.PpDefaultLearnProvider;
+                            }
+                        }
+                    }
+
                     // See if there is a section specific bookstore URL that should be constructed
                     if (!string.IsNullOrEmpty(sectionBookstoreUrlTemplate))
                     {
@@ -3914,6 +4141,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                     // Add financial charges for section
                     AddChargesToSection(section, sec, regBillingRateData);
+                    AddInstructionalMethodsToSection(section, sec, groupedMeetings, instructionalMethods);
+                    AddCourseTypesToSection(section, sec, courseTypes);
 
                     // If any of the section's course types exist in the list of special Course types then set ShowSpecialIcon for the section to true
                     // Note: Special course types are those with an I in special processing 1
@@ -4020,16 +4249,167 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return sections;
         }
 
+        private void AddCourseTypesToSection(Section section, CourseSections sec,  IEnumerable<CourseType> courseTypes)
+        {
+            if (section == null )
+            {
+                logger.Info("Cannot proceed to add course typess to section because section entity is null");
+                return;
+            }
+            if (courseTypes == null)
+            {
+                logger.Info("There are no course types to lookup in order to build section's course types ");
+                return;
+
+            }
+            if(sec.SecCourseTypes == null)
+            {
+                logger.Info(string.Format("There are no course types for the given section {0} ", sec.Recordkey));
+                return;
+            }
+            ILookup<string, CourseType> courseTypeLookup = courseTypes.ToLookup(g => g.Code);
+
+            foreach (var item in sec.SecCourseTypes)
+            {
+                CourseType courseType = courseTypeLookup[item].FirstOrDefault();
+                if (courseType != null)
+                {
+                    section.AddSectionCourseType(new SectionCourseType(courseType.Code, courseType.Description));
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Add Instructional methods to section
+        /// </summary>
+        /// <param name="section"></param>
+        /// <param name="sec"></param>
+        /// <param name="groupedMeetings"></param>
+        private void AddInstructionalMethodsToSection(Section section, CourseSections sec, Dictionary<string, List<CourseSecMeeting>> groupedMeetings, IEnumerable<InstructionalMethod> instructionalMethods)
+        {
+            List<CourseSecMeeting> courseSecMeetings = new List<CourseSecMeeting>();
+            int countOfOnlineInstructionalMethods = 0;
+            int countOfNotOnlineInstructionalMethods = 0;
+            if(section==null || sec==null)
+            {
+                logger.Info("Cannot proceed to add instructional methods to section because either section entity or section data contract is null");
+                return;
+            }
+            if(instructionalMethods==null)
+            {
+                logger.Info("There are no instructional methods to lookup in order to build section's instructional methods ");
+                return;
+
+            }
+            ILookup<string, InstructionalMethod> instructionalMethodsLookup = instructionalMethods.ToLookup(g => g.Code);
+
+            //find if section has meeting info- if has then load instructional methods from meeting info only
+            //if meeting info is empty then add section's Instructional methods.
+            //if both are empty then section entity will have empty Instructional methods.
+            if (groupedMeetings.ContainsKey(sec.Recordkey) && groupedMeetings[sec.Recordkey] != null)
+                {
+                    courseSecMeetings = groupedMeetings[sec.Recordkey];
+                }
+            if (courseSecMeetings != null && courseSecMeetings.Any())
+            {
+                logger.Info(string.Format("Loading instructional methods from section meetings for section {0}", sec.Recordkey));
+                foreach (var meeting in courseSecMeetings)
+                {
+                    if (meeting != null)
+                    {
+                        try
+                        {
+                            InstructionalMethod instructionalMethod = instructionalMethodsLookup[meeting.CsmInstrMethod].FirstOrDefault();
+                            if (instructionalMethod != null)
+                            {
+                                section.AddSectionInstructionalMethod(new SectionInstructionalMethod(meeting.CsmInstrMethod,instructionalMethod.Description, instructionalMethod.IsOnline));
+                            }
+                            else
+                            {
+                                logger.Debug(string.Format("Following instructional method {0} in section {1} is not in Instructional Method lookup", meeting.CsmInstrMethod, section.Id));
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.Error(ex, "An exception occured while adding instructional methods from section meetings to section entity");
+                            LogDataError("CourseSecMeeting", meeting.Recordkey, meeting, ex);
+                            LogRepoError(ex.Message, string.IsNullOrWhiteSpace(sec.RecordGuid) ? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
+                        }
+                    }
+                }
+            }
+            else if (sec.SecInstrMethods != null && sec.SecInstrMethods.Any())
+            {
+                foreach (string sectionInstructionalMethod in sec.SecInstrMethods)
+                {
+                    try
+                    {
+                        logger.Info(string.Format("Loading instructional methods from section SEC.INSTR.METHODS for section {0}", sec.Recordkey));
+                        InstructionalMethod instructionalMethod = instructionalMethodsLookup[sectionInstructionalMethod].FirstOrDefault();
+                        if (instructionalMethod != null)
+                        {
+                            section.AddSectionInstructionalMethod(new SectionInstructionalMethod(sectionInstructionalMethod, instructionalMethod.Description, instructionalMethod.IsOnline));
+                        }
+                        else
+                        {
+                            logger.Debug(string.Format("Following instructional method {0} in section {1} is not in Instructional Method lookup", sectionInstructionalMethod, section.Id));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(string.Format("Exception occured while adding instructional methods from section's SEC.INSTR.METHODS for section {0}", sec.Recordkey));
+                        logger.Error(ex, ex.Message);
+                    }
+                }
+            }
+            else
+            {
+                logger.Info(string.Format("No instructional methods were loaded for the section {0} because section's meeting info as well as  SEC.INSTR.METHODS are empty", sec.Recordkey));
+            }
+
+            //Determine Online category for the section based upon instrucutional method
+            foreach (SectionInstructionalMethod sectionInstructionalMethod in section.SectionInstructionalMethods)
+            {
+                bool isOnline = sectionInstructionalMethod.IsOnline;
+               if(isOnline)
+                {
+                    countOfOnlineInstructionalMethods += 1;
+                }
+               else
+                {
+                    countOfNotOnlineInstructionalMethods += 1;
+                }
+            }
+            section.OnlineCategory = OnlineCategory.NotOnline;
+            if (countOfOnlineInstructionalMethods > 0 && countOfNotOnlineInstructionalMethods > 0)
+            {
+                section.OnlineCategory = OnlineCategory.Hybrid;
+            }
+            else if(countOfOnlineInstructionalMethods>0)
+            {
+                section.OnlineCategory = OnlineCategory.Online;
+            }
+        }
+    
         private async Task<Section> BuildSectionAsync(CourseSections sec, bool bestFit)
         {
             List<SectionStatusItem> statuses = null;
+            string courseDelimiter = "-";
+            try
+            {
+                courseDelimiter = (await GetCourseDelimiterAsync()) ?? "-";
+            }
+            catch(Exception ex)
+            {
+                logger.Error(ex,"Exception occured reading course delimter while buliding sections entity");
+            }
             if (sec.SecStatusesEntityAssociation != null)
             {
                 try
                 {
                     statuses = await BuildSectionStatusItemAsync(sec);
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     LogRepoError(ex.Message, string.IsNullOrWhiteSpace(sec.RecordGuid) ? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
                     if (!this.addToErrorCollection)
@@ -4045,6 +4425,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             bool waitlistClosed = sec.SecCloseWaitlistFlag == "Y";
             bool consentRequired = sec.SecFacultyConsentFlag == "Y";
             bool hideInCatalog = sec.SecHideInCatalog != null && sec.SecHideInCatalog.ToUpper() == "Y";
+            bool gradeByRandomId = !string.IsNullOrWhiteSpace(sec.SecGradeByRandomIdFlag) && sec.SecGradeByRandomIdFlag.ToUpper() == "Y";
+
             var departments = sec.SecDepartmentsEntityAssociation.Select(item =>
                 new OfferingDepartment(item.SecDeptsAssocMember, item.SecDeptPctsAssocMember.GetValueOrDefault())).ToList();
 
@@ -4094,27 +4476,34 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     SectionCapacity = sec.SecCapacity,
                     WaitlistMaximum = sec.SecWaitlistMax,
                     WaitlistRatingCode = sec.SecWaitlistRating,
-                    CourseName = sec.SecSubject + "-" + sec.SecCourseNo,
+                    CourseName = sec.SecSubject + courseDelimiter + sec.SecCourseNo,
                     TransferStatus = sec.SecTransferStatus,
                     Comments = sectionComments,
                     CensusDates = sec.SecOvrCensusDates == null ? new List<DateTime?>() : sec.SecOvrCensusDates,
                     WaitListNumberOfDays = sec.SecWaitlistNoDays,
                     GradeSubschemeCode = sec.SecGradeSubschemesId,
                     Synonym = sec.SecSynonym,
-                    Subject = sec.SecSubject
-                    
+                    Subject = sec.SecSubject,
+                    GradeByRandomId = gradeByRandomId
                 };
             }
             catch (Exception e)
             {
                 logger.Error(e, e.Message);
-                LogRepoError(e.Message, string.IsNullOrWhiteSpace(sec.RecordGuid)? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
+                LogRepoError(e.Message, string.IsNullOrWhiteSpace(sec.RecordGuid) ? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
                 throw new RepositoryException(e.Message);
             }
 
             // Make sure bad colleague data doesn't get in
             section.CensusDates.RemoveAll(cd => cd == null);
 
+            var stwebSettings2 = await GetStwebDefaults2Async();
+            if (stwebSettings2 != null)
+            {
+                section.HideRequisiteWaiver = !string.IsNullOrEmpty(stwebSettings2.Stweb2HideReqstWaiver) && stwebSettings2.Stweb2HideReqstWaiver.ToUpper() == "Y";
+                section.HideStudentPetition = !string.IsNullOrEmpty(stwebSettings2.Stweb2HideStPetition) && stwebSettings2.Stweb2HideStPetition.ToUpper() == "Y";
+                section.HideFacultyConsent  = !string.IsNullOrEmpty(stwebSettings2.Stweb2HideFacConsent) && stwebSettings2.Stweb2HideFacConsent.ToUpper() == "Y";
+            }
             section.ExcludeFromAddAuthorization = sec.SecAddAuthExclusionFlag != null && sec.SecAddAuthExclusionFlag.ToUpper() == "Y";
 
             // Other processes are already dependent on the course "type" code
@@ -4127,7 +4516,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     section.AddCourseType(item);
                 }
             }
-
+            //Add instructional method code
             if (sec.SecInstrMethods != null && sec.SecInstrMethods.Any())
             {
                 foreach (var instrMethod in sec.SecInstrMethods)
@@ -4152,7 +4541,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             ContactMeasure = contact.SecContactMeasuresAssocMember
                         });
                     }
-                    catch(Exception e)
+                    catch (Exception e)
                     {
                         LogRepoError(e.Message, string.IsNullOrWhiteSpace(sec.RecordGuid) ? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
                         if (!this.addToErrorCollection)
@@ -4162,6 +4551,32 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                 }
             }
+
+
+            //Add Section Cert Census Information
+            if (sec.SecCertCensusEntityAssociation != null)
+            {
+                foreach (var certCensus in sec.SecCertCensusEntityAssociation)
+                {
+                    try
+                    {
+                        if (certCensus != null && certCensus.SecCertCensusDatesAssocMember != null)
+                        {
+                            SectionCensusCertification secCertCensus = new SectionCensusCertification(certCensus.SecCertCensusDatesAssocMember, certCensus.SecCertPositionsAssocMember, certCensus.SecCertPositionLabelsAssocMember, certCensus.SecCertRecordedDatesAssocMember, certCensus.SecCertRecordedTimesAssocMember, certCensus.SecCertPersonIdsAssocMember);
+                            section.AddSectionCensusCertification(secCertCensus);
+                        }
+                        else
+                        {
+                            logger.Info(string.Format("Section {0} have cert census date as null, therefore is not added to certs collection", sec.Recordkey));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, string.Format("There was an error while adding a  section's cert census  for the section- {0}. The section entity will still be built", sec.Recordkey));
+                    }
+                }
+            }
+
 
             // NOTE: these have to come from a scan of the calendar schedules records for the section to get
             // the actual values. If the schedule hasn't been built, they default to the section start/end dates.
@@ -4176,6 +4591,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
             section.BillingCred = sec.SecBillingCred;
             section.BillingMethod = sec.SecBillingMethod;
+            section.BillingPeriodType = sec.SecBillingPeriodType;
             //Causing performance issue - removing temporarily
             //section.WaitlistStatus = await GetSectionWaitlistStatusAsync(sec.Recordkey);
 
@@ -4184,7 +4600,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 section.AttendanceTrackingType = ConvertStringToAttendanceTrackingType(sec);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 LogRepoError(e.Message, string.IsNullOrWhiteSpace(sec.RecordGuid) ? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
                 if (!this.addToErrorCollection)
@@ -4192,6 +4608,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     throw;
                 }
 
+            }
+            section.ShowDropRoster = string.Equals(sec.SecShowDropRosterFlag, "Y", StringComparison.OrdinalIgnoreCase);
+            //This is to add more information about section's term like reporting year and sequence; used for section sorting on terms
+            if (!string.IsNullOrEmpty(section.TermId))
+            {
+                Term term = await termRepository.GetAsync(section.TermId);
+                section.AddSectionTerm(term);
             }
             return section;
         }
@@ -4218,19 +4641,31 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 throw new ApplicationException("Book options data could not be retrieved.");
                             }
                             if (sec.SecBookOptions != null && sec.SecBookOptions.Count > 0)
-                            {
-                                var matchingOptions = bookOptions.Where(op => op.Code == sec.SecBookOptions[i]);
-                                var option = (matchingOptions != null) ? matchingOptions.FirstOrDefault() : null;
-                                if (option != null)
+                            {                             
+                                if (sec.SecBookOptions != null && sec.SecBookOptions.Count > i && !string.IsNullOrEmpty(sec.SecBookOptions.ElementAt(i)))
                                 {
-                                    section.AddBook(bookId, sec.SecBookOptions[i], option.IsRequired);
+                                    var matchingOptions = bookOptions.Where(op => op.Code == sec.SecBookOptions[i]);
+                                    var option = (matchingOptions != null) ? matchingOptions.FirstOrDefault() : null;
+                                    if (option != null)
+                                    {                                        
+                                        section.AddBook(bookId, sec.SecBookOptions[i], option.IsRequired);
+                                    }
+                                    else
+                                    {
+                                        throw new ApplicationException(string.Format("Book option {0} for book {1} on section {2} is not a valid BOOK.OPTION value", sec.SecBookOptions[i], bookId, sec.Recordkey));
+                                    }                                    
                                 }
                                 else
                                 {
-                                    throw new ApplicationException(string.Format("Book option {0} for book {1} on section {2} is not a valid BOOK.OPTION value", sec.SecBookOptions[i], bookId, sec.Recordkey));
+                                    // no option for this book, add entry without an option
+                                    section.AddBook(bookId, null, false);
                                 }
                             }
-
+                            else
+                            {
+                                // no book options at all, add entry without options
+                                section.AddBook(bookId, null, false);
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -4293,9 +4728,37 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         private async Task<List<SectionStatusItem>> BuildSectionStatusItemAsync(CourseSections sec)
         {
             List<SectionStatusItem> sectionStatus = new List<SectionStatusItem>();
+            var statusCounter = 0;
             foreach (var association in sec.SecStatusesEntityAssociation)
             {
-                sectionStatus.Add(new SectionStatusItem((await ConvertStatusCodeToSectionStatusAsync(association.SecStatusAssocMember)), (await ConvertStatusCodeToSectionIntegrationStatusAsync(association.SecStatusAssocMember)), association.SecStatusAssocMember, association.SecStatusDateAssocMember.GetValueOrDefault()));
+                statusCounter += 1;
+                var validStatusAssoc = true;
+                if (string.IsNullOrEmpty(association.SecStatusAssocMember) || association.SecStatusDateAssocMember == null)
+                {
+                    if (statusCounter == 1)
+                    {
+                        // log repo error if its the first association
+                        if (string.IsNullOrEmpty(association.SecStatusAssocMember))
+                        {
+                            LogRepoError("Status missing from status association", string.IsNullOrWhiteSpace(sec.RecordGuid) ? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
+                            validStatusAssoc = false;
+                        }
+                        if (association.SecStatusDateAssocMember == null)
+                        {
+                            LogRepoError("Status date missing from status association", string.IsNullOrWhiteSpace(sec.RecordGuid) ? "" : sec.RecordGuid, string.IsNullOrWhiteSpace(sec.Recordkey) ? "" : sec.Recordkey);
+                            validStatusAssoc = false;
+                        }
+                    }
+                    else
+                    {
+                        // skip association if invalid and not the current status association
+                        validStatusAssoc = false;
+                    }
+                }
+                if (validStatusAssoc == true)
+                {
+                    sectionStatus.Add(new SectionStatusItem((await ConvertStatusCodeToSectionStatusAsync(association.SecStatusAssocMember)), (await ConvertStatusCodeToSectionIntegrationStatusAsync(association.SecStatusAssocMember)), association.SecStatusAssocMember, association.SecStatusDateAssocMember.GetValueOrDefault()));
+                }
             }
             return sectionStatus;
         }
@@ -4562,7 +5025,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             List<SectionMeeting> meetings = new List<SectionMeeting>();
             var selectStatement = new StringBuilder();
             string[] limitingKeys = null;
-            
+
             exception = null;
 
             int totalCount = 0;
@@ -5057,11 +5520,11 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     throw exc;
                 }
             }
-            catch(RepositoryException)
+            catch (RepositoryException)
             {
                 throw;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 exc.AddError(new RepositoryError(faculty.Recordkey, "Bad.Data", e.Message));
                 throw exc;
@@ -5333,7 +5796,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         var errorMessage = "The grading complete operator for a midterm grading 1 complete indication is blank. Not returning this grading complete indicator for the section {0}";
                         logger.Info(errorMessage, sectionId);
-                    } else
+                    }
+                    else
                     {
                         DateTimeOffset? completeDate = sgsMidGradeComplete.SgsMidGrade1CmplTimesAssocMember.ToPointInTimeDateTimeOffset(
                                 sgsMidGradeComplete.SgsMidGrade1CmplDatesAssocMember, colleagueTimeZone);
@@ -5534,7 +5998,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "The Colleague transaction failed recording midterm grading complete for section {0}" , sectionId);
+                logger.Error(ex, "The Colleague transaction failed recording midterm grading complete for section {0}", sectionId);
                 throw new ApplicationException("Unable to record midterm grading complete");
             }
 
@@ -5547,6 +6011,74 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             // Return the updated midterm grading complete information for the section
             return await GetSectionMidtermGradingCompleteAsync(sectionId);
 
+        }
+
+        /// <summary>
+        /// Retrieves the grading status for a course section
+        /// </summary>
+        /// <param name="sectionId">Unique identifier for the course section</param>
+        /// <returns>Grading status for the specified course section</returns>
+        /// <exception cref="ArgumentNullException">A course section ID is required when retrieving course section grading status.</exception>
+        /// <exception cref="KeyNotFoundException">The provided course section ID is not a valid course section.</exception>
+        /// <exception cref="ColleagueException">There is a data issue with the course section grading status information for the provided course section.</exception>
+        public async Task<SectionGradingStatus> GetSectionGradingStatusAsync(string sectionId)
+        {
+            if (string.IsNullOrEmpty(sectionId))
+            {
+                throw new ArgumentNullException("sectionId", "A course section ID is required when retrieving course section grading status information.");
+            }
+
+            SectionGradingStatus sectionGradingStatus = new SectionGradingStatus(sectionId, null, null, null);
+
+            // Verify that the provided course section ID is a valid one
+            var courseSection = await DataReader.ReadRecordAsync<CourseSections>(sectionId);
+            if (courseSection == null)
+            {
+                throw new KeyNotFoundException(string.Format("'{0}' is not a valid course section.", sectionId));
+            }
+
+            // Verify that the provided course section ID is valid and retrieve section grading status data
+            string[] idsToRead = { sectionId };
+            List<SecGradingStatus> secGradingStatusRecords = new List<SecGradingStatus>();
+            var sectionGradingStatusBulkReadOutput = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<SecGradingStatus>(idsToRead);
+            if (sectionGradingStatusBulkReadOutput.InvalidRecords != null && sectionGradingStatusBulkReadOutput.InvalidRecords.Any())
+            {
+                string invalidRecordMessages = string.Format("Data retrieval for SEC.GRADING.STATUS file returned one or more invalid records.");
+                foreach (var invalidRecord in sectionGradingStatusBulkReadOutput.InvalidRecords)
+                {
+                    invalidRecordMessages += Environment.NewLine + string.Format("Record: {0}, Message: '{1}'", invalidRecord.Key, invalidRecord.Value);
+                }
+                logger.Debug(invalidRecordMessages);
+                throw new ColleagueApiException(invalidRecordMessages); 
+            }
+            if (sectionGradingStatusBulkReadOutput.BulkRecordsRead != null && sectionGradingStatusBulkReadOutput.BulkRecordsRead.Any())
+            {
+                secGradingStatusRecords.AddRange(sectionGradingStatusBulkReadOutput.BulkRecordsRead);
+            }
+
+            // If there is SEC.GRADING.STATUS data for the course section, use it to build the section grading status information
+            if (secGradingStatusRecords.Any())
+            {
+                var sgs = secGradingStatusRecords[0];
+                if (sgs != null)
+                {
+                    DateTimeOffset? finalGradesPostedTime = null;
+                    if (sgs.SgsActFinGrdCmplDt.HasValue && sgs.SgsActFinGrdCmplTm.HasValue)
+                    {
+                        finalGradesPostedTime = sgs.SgsActFinGrdCmplTm.ToPointInTimeDateTimeOffset(sgs.SgsActFinGrdCmplDt, colleagueTimeZone).Value;
+                    }
+                    sectionGradingStatus = new SectionGradingStatus(sectionId, sgs.SgsActFinGrdCmplPerId, sgs.SgsActFinGrdCmplDt, finalGradesPostedTime);
+                }
+            } 
+            else
+            {
+                string noSgsRecordsMessage = string.Format("No SEC.GRADING.STATUS records were found for course section {0} but the data reader did not encounter any errors, which suggests:", sectionId);
+                noSgsRecordsMessage += Environment.NewLine + "- the course section has not had all of its final grades posted yet, OR";
+                noSgsRecordsMessage += Environment.NewLine + "- the course section has all of its final grades posted but the date/time/person who posted the last final grade were not recorded.";
+                logger.Debug(noSgsRecordsMessage);
+            }
+
+            return sectionGradingStatus;
         }
 
         private async Task<SectionFaculty> UpdateSectionFacultyAsync(SectionFaculty sectionFaculty, string guid)
@@ -6233,7 +6765,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return im;
         }
 
-
         private async Task<IEnumerable<Domain.Base.Entities.ScheduleRepeat>> GetScheduleRepeatsAsync()
         {
             return await GetValcodeAsync<Domain.Base.Entities.ScheduleRepeat>("CORE", "SCHED.REPEATS", r =>
@@ -6438,7 +6969,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
         public async Task<Data.Student.DataContracts.StwebDefaults> GetStWebDefltsAsync()
         {
-           return await this.GetStwebDefaultsAsync();
+            return await this.GetStwebDefaultsAsync();
         }
 
         private WaitlistStatus ConvertWaitlistActionToStatus(string actionCode)
@@ -6509,7 +7040,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
             return calendarScheduleData.CalsDate.Value;
         }
-        
+
         private FrequencyType? ConvertCodeToFrequencyType(string code)
         {
             if (string.IsNullOrEmpty(code))
@@ -6548,6 +7079,23 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 return stwebDefaults;
             }, Level1CacheTimeoutValue);
             return studentWebDefaults;
+        }
+
+        private async Task<Data.Student.DataContracts.StwebDefaults2> GetStwebDefaults2Async()
+        {
+            Data.Student.DataContracts.StwebDefaults2 studentWebDefaults2 = await GetOrAddToCacheAsync<Data.Student.DataContracts.StwebDefaults2>("StudentWebDefaults2",
+            async () =>
+            {
+                Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults2 stwebDefaults2 = await DataReader.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StwebDefaults2>("ST.PARMS", "STWEB.DEFAULTS.2", false);
+                if (stwebDefaults2 == null)
+                {
+                    var errorMessage = "Unable to access student web defaults from ST.PARMS. STWEB.DEFAULTS.2.";
+                    logger.Info(errorMessage);
+                    stwebDefaults2 = new StwebDefaults2();
+                }
+                return stwebDefaults2;
+            }, Level1CacheTimeoutValue);
+            return studentWebDefaults2;
         }
 
         private async Task<string> GetBookstoreUrlTemplateAsync()
@@ -6852,18 +7400,18 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// </summary>
         /// <param name="transactionResponse">The import grades transaction response</param>
         /// <returns>   list of domain entities</returns>
-        private List<SectionGradeResponse> ConvertImportOutputToDomainEntities(ImportGradesFromILPResponse transactionResponse)
+        private SectionGradeSectionResponse ConvertImportOutputToDomainEntities(ImportGradesFromILPResponse transactionResponse)
         {
+            SectionGradeSectionResponse responseEntity = new SectionGradeSectionResponse();
+
             // The output from the transaction contains a list of each grade/person/status (for a single section) imported.
             // This needs to be consolidated to a domain entity list by person.
-
-            List<SectionGradeResponse> domainEntities = new List<SectionGradeResponse>();
-
-            // Get unique list of people
+            // Get unique list of students
             List<string> persons = (from o in transactionResponse.ItemsToPostOutput
                                     group o by o.ItemOutPerson into g
                                     select g.Key).ToList<string>();
 
+            // Build a response entity for each student
             foreach (string person in persons)
             {
                 SectionGradeResponse entity = new SectionGradeResponse();
@@ -6896,10 +7444,16 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                 }
 
-                domainEntities.Add(entity);
+                responseEntity.StudentResponses.Add(entity);
             }
 
-            return domainEntities;
+            // Build a list of any informational messages returned
+            foreach (string infoMsg in transactionResponse.InformationalMessages)
+            {
+                responseEntity.InformationalMessages.Add(infoMsg);
+            }
+
+            return responseEntity;
         }
 
         /// <summary>
@@ -6919,7 +7473,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             return ChangedInstantEnrollmentSectionsCacheBuildTime;
         }
-        
+
 
         private async Task<ApplValcodes> GetWaitlistStatusesAsync()
         {
@@ -6996,6 +7550,115 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             List<StudentWaitlistStatus> studentWaitlistStatuses = (await GetWaitlistStatusesAsync()).ValsEntityAssociation.Select(y => new StudentWaitlistStatus(statuscode: y.ValActionCode1AssocMember, status: y.ValInternalCodeAssocMember, statusdescription: y.ValExternalRepresentationAssocMember)).ToList();
             return studentWaitlistStatuses;
+        }
+
+        /// <summary>
+        /// This method certifies Section Census details.
+        /// </summary>
+        /// <param name="sectionId">Section Id</param>
+        /// <param name="sectionCensusToCertify"> Section Cert Census Details</param>
+        /// <returns>Updated Section Cert Census information in Section Entity</returns>
+
+        public async Task<SectionCensusCertification> CreateSectionCensusCertificationAsync(string sectionId, DateTime? censusCertificationDate, string censusCertificationPosition, string censusCertificationLabel, DateTime? censusCertificationRecordedDate, DateTimeOffset? censusCertificationRecordedTime, string personId)
+        {
+            if (sectionId == null)
+            {
+                throw new ArgumentNullException("sectionId", "Section Id must be provided to update its census certification details");
+            }
+
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "Person Id certifying the section census cannot be empty");
+            }
+            if (censusCertificationDate == null)
+            {
+                throw new ArgumentNullException("censusCertificationDate", "Section Census date must be provided");
+            }
+            if (censusCertificationRecordedDate == null)
+            {
+                throw new ArgumentNullException("censusCertificationRecordedDate", "Section Census recorded date must be provided");
+            }
+            if (censusCertificationRecordedTime == null)
+            {
+                throw new ArgumentNullException("CensusCertificationRecordedTime", "Section Census recorded time must be provided");
+            }
+            try
+            {
+                var request = new UpdateSectionCensusCertificationRequest();
+                //populate request
+                request.ACourseSectionId = sectionId;
+                request.ACertCensusDate = censusCertificationDate;
+                request.APosition = censusCertificationPosition;
+                request.APositionLabel = censusCertificationLabel;
+                request.APersonId = personId;
+                request.ARecordedDate = censusCertificationRecordedDate;
+                request.ARecordedTime = censusCertificationRecordedTime.Value.ToLocalDateTime(colleagueTimeZone);
+
+                var response = await transactionInvoker.ExecuteAsync<UpdateSectionCensusCertificationRequest, UpdateSectionCensusCertificationResponse>(request);
+                //If error occurred while adding section census certification. 
+                if (response.AError && response.AlErrorMsgs != null && response.AlErrorMsgs.Any())
+                {
+                    string errorMessageToLog = string.Format("Error returned by CTX for the section {0} while updating certification for Census position {1} ", sectionId, censusCertificationPosition);
+                    logger.Error(errorMessageToLog);
+                    var exception = new RepositoryException(errorMessageToLog);
+                    foreach (var errorMsg in response.AlErrorMsgs)
+                    {
+                        logger.Error(errorMsg);
+                        exception.AddError(new RepositoryError(sectionId, errorMsg));
+                    }
+                    throw exception;
+                }
+                //this indicates that error flag is true but there are not any error messages. This is very rare situation because CTX only flags where there are any error but still will check in case somthing happens
+                if (response.AError && (response.AlErrorMsgs == null || !response.AlErrorMsgs.Any()))
+                {
+                    string errorMessageToLog = string.Format("Error Flag returned by CTX for the section {0} while updating certification for Census position {1} is true but the errors collection does not have any errors returned ", sectionId, censusCertificationPosition);
+                    logger.Error(errorMessageToLog);
+                    throw new RepositoryException(errorMessageToLog);
+                }
+                //if reached here then it means no errors occurred, we are going to return section certified census entity because that would be updated with latest census certification.
+                //certified censuses is linked entity to section therefore have to read course.sections file first and from there will retrieve census certification information for the census date and position passed.
+                //This call is to retrieve non-cached section details.
+                Section sectionEntity = await GetSectionAsync(sectionId);
+                //modify null cert position to empty
+                string certPosition = censusCertificationPosition ?? string.Empty;
+                SectionCensusCertification certifiedCensus = sectionEntity.SectionCertifiedCensuses != null ? sectionEntity.SectionCertifiedCensuses.Where(s => s != null && s.CensusCertificationPosition == certPosition && s.CensusCertificationDate == censusCertificationDate).FirstOrDefault() : null;
+                if (certifiedCensus == null)
+                {
+                    string errorMessageToLog = string.Format("There is no certified census for the section {0} for the date {1} at position {2}. ", sectionId, censusCertificationDate, censusCertificationPosition);
+                    logger.Error(errorMessageToLog);
+                    throw new ApplicationException(errorMessageToLog);
+
+                }
+                else
+                {
+                    if (certifiedCensus.CensusCertificationRecordedDate == null && certifiedCensus.CensusCertificationRecordedTime == null)
+                    {
+                        string errorMessageToLog = string.Format("Census for the section {0} for the date {1} at position {2} couldn't be certified.", sectionId, censusCertificationDate, censusCertificationPosition);
+                        logger.Error(errorMessageToLog);
+                        throw new ApplicationException(errorMessageToLog);
+                    }
+                }
+
+                return certifiedCensus;
+            }
+            catch (ColleagueTransactionException cte)
+            {
+                string error = "Exception occurred while adding census certification for the section " + sectionId;
+                logger.Error(cte, error);
+                throw new RepositoryException(error);
+            }
+            catch (RepositoryException ex)
+            {
+                string error = "Exception occurred while adding census certification for the section " + sectionId;
+                logger.Error(ex, error);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                string error = "Exception occurred while adding census certification for the section " + sectionId;
+                logger.Error(ex, error);
+                throw;
+            }
         }
 
         /// <summary>
@@ -7130,6 +7793,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         return AttendanceTrackingType.HoursBySectionMeeting;
                     case "T":
                         return AttendanceTrackingType.CumulativeHours;
+                    case "N":
+                        return AttendanceTrackingType.PresentAbsentWithoutSectionMeeting;
                     default:
                         string error = string.Format("COURSE.SECTIONS record '{0}' has an invalid SEC.ATTEND.TRACKING.TYPE value of '{1}'", section.Recordkey, section.SecAttendTrackingType);
                         throw new ApplicationException(error);
@@ -7211,6 +7876,36 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             }
 
             return cals;
+        }
+
+        private PortalParameters GetPortalParameters()
+        {
+            if (portalParameters == null)
+            {
+                portalParameters = DataReader.ReadRecord<PortalParameters>("UT.PARMS", "PORTAL.PARAMETERS");
+            }
+            return portalParameters;
+        }
+
+        private async Task<string> GetCourseDelimiterAsync()
+        {
+            return await GetOrAddToCacheAsync<string>("CourseDelimiter",
+              async () => {
+                  CdDefaults cdDefaults = await GetCdDefaultsAsync();
+                  return cdDefaults.CdCourseDelimiter;
+              });
+        }
+
+        private async Task<CdDefaults> GetCdDefaultsAsync()
+        {
+            CdDefaults cdDefaults = await DataReader.ReadRecordAsync<CdDefaults>("ST.PARMS", "CD.DEFAULTS");
+
+            if (cdDefaults == null)
+            {
+                // CD.DEFAULTS must exist for CDM configuration to function properly
+                throw new Ellucian.Colleague.Domain.Base.Exceptions.ConfigurationException("Course Default configuration setup not complete.");
+            }
+            return cdDefaults;
         }
     }
 }

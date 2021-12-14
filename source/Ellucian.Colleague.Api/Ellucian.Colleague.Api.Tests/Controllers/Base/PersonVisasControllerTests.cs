@@ -20,6 +20,12 @@ using Newtonsoft.Json.Linq;
 using slf4net;
 using System.Net.Http.Headers;
 using System.Threading;
+using System.Collections;
+using Ellucian.Web.Http.Filters;
+using System.Web.Http.Routing;
+using System.Web.Http.Controllers;
+using Ellucian.Web.Security;
+using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 {
@@ -261,6 +267,91 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             personVisasServiceMock.Setup(i => i.PostPersonVisaAsync(It.IsAny<Dtos.PersonVisa>())).ThrowsAsync(new Exception());
             await personVisasController.PostPersonVisaAsync(personVisa);
         }
+
+        ////POST v6
+        ////Successful
+        ////PostPersonVisaAsync
+        //[TestMethod]
+        //public async Task PersonVisasController_PostPersonVisaAsync_Permissions()
+        //{
+        //    var contextPropertyName = "PermissionsFilter";
+
+        //    HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+        //        {
+        //            { "controller", "PersonVisas" },
+        //            { "action", "PostPersonVisaAsync" }
+        //        };
+        //    HttpRoute route = new HttpRoute("person-visas", routeValueDict);
+        //    HttpRouteData data = new HttpRouteData(route);
+        //    personVisasController.Request.SetRouteData(data);
+        //    personVisasController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+        //    var permissionsFilter = new PermissionsFilter(BasePermissionCodes.UpdateAnyPersonVisa);
+
+        //    var controllerContext = personVisasController.ControllerContext;
+        //    var actionDescriptor = personVisasController.ActionContext.ActionDescriptor
+        //             ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+        //    var _context = new HttpActionContext(controllerContext, actionDescriptor);
+        //    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+        //    personVisa.Id = Guid.Empty.ToString();
+
+        //    personVisasServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+        //    personVisasServiceMock.Setup(i => i.PostPersonVisaAsync(personVisa)).ReturnsAsync(personVisa);
+        //    await personVisasController.PostPersonVisaAsync(personVisa);
+
+        //    Object filterObject;
+        //    personVisasController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+        //    var cancelToken = new System.Threading.CancellationToken(false);
+        //    Assert.IsNotNull(filterObject);
+
+        //    var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+        //                         .Select(x => x.ToString())
+        //                         .ToArray();
+
+        //    Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdateAnyPersonVisa));
+
+        //}
+
+        //POST v6
+        //Exception
+        //PostPersonVisaAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonVisasController_PostPersonVisaAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonVisas" },
+                    { "action", "PostPersonVisaAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-visas", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personVisasController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personVisasController.ControllerContext;
+            var actionDescriptor = personVisasController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                personVisasServiceMock.Setup(i => i.PostPersonVisaAsync(It.IsAny<Dtos.PersonVisa>())).ThrowsAsync(new PermissionsException());
+                personVisasServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                .Throws(new PermissionsException("User 'npuser' does not have permission to update person-visas."));
+                await personVisasController.PostPersonVisaAsync(personVisa);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion
 
         #region PUT
@@ -409,6 +500,91 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             personVisasServiceMock.Setup(i => i.PutPersonVisaAsync(It.IsAny<string>(), It.IsAny<Dtos.PersonVisa>())).ThrowsAsync(new InvalidOperationException());
             await personVisasController.PutPersonVisaAsync("375ef15b-f2d2-40ed-ac47-f0d2d45260f0", personVisa);
         }
+
+        //PUT v6
+        //Successful
+        //PutPersonVisaAsync
+        [TestMethod]
+        public async Task PersonVisasController_PutPersonVisaAsync_Permissions()
+        {
+            string id = personVisa.Id;
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonVisas" },
+                    { "action", "PutPersonVisaAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-visas", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personVisasController.Request.SetRouteData(data);
+            personVisasController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(BasePermissionCodes.UpdateAnyPersonVisa);
+
+            var controllerContext = personVisasController.ControllerContext;
+            var actionDescriptor = personVisasController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            personVisasServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personVisasServiceMock.Setup(i => i.PutPersonVisaAsync(id, It.IsAny<Dtos.PersonVisa>())).ReturnsAsync(personVisa);
+            var result = await personVisasController.PutPersonVisaAsync(id, personVisa);
+
+            Object filterObject;
+            personVisasController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdateAnyPersonVisa));
+
+        }
+
+        //PUT v6
+        //Exception
+        //PutPersonVisaAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonVisasController_PutPersonVisaAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonVisas" },
+                    { "action", "PutPersonVisaAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-visas", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personVisasController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personVisasController.ControllerContext;
+            var actionDescriptor = personVisasController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                personVisasServiceMock.Setup(i => i.PutPersonVisaAsync(It.IsAny<string>(), It.IsAny<Dtos.PersonVisa>())).ThrowsAsync(new PermissionsException());
+                personVisasServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                .Throws(new PermissionsException("User 'npuser' does not have permission to update person-visas."));
+                await personVisasController.PutPersonVisaAsync(It.IsAny<string>(), personVisa);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion
 
         #region DELETE
@@ -610,6 +786,259 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             personVisasServiceMock.Setup(i => i.GetAllAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
             var results = await personVisasController.GetAllPersonVisasAsync(new Paging(1, 1));
         }
+
+        //Get by id 6
+        //Successful
+        //GetPersonVisaByIdAsync
+        [TestMethod]
+        public async Task PersonVisasController_GetPersonVisaByIdAsync_Permissions()
+        {
+            string id = "375ef15b-f2d2-40ed-ac47-f0d2d45260f0";
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonVisas" },
+                    { "action", "GetPersonVisaByIdAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-visas", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personVisasController.Request.SetRouteData(data);
+            personVisasController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPersonVisa, BasePermissionCodes.UpdateAnyPersonVisa });
+
+            var controllerContext = personVisasController.ControllerContext;
+            var actionDescriptor = personVisasController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            personVisasServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personVisasServiceMock.Setup(i => i.GetPersonVisaByIdAsync(id)).ReturnsAsync(personVisa);
+            var result = await personVisasController.GetPersonVisaByIdAsync(id);
+
+            Object filterObject;
+            personVisasController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewAnyPersonVisa));
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdateAnyPersonVisa));
+
+        }
+
+        //Get by id 6
+        //Exception
+        //GetPersonVisaByIdAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonVisasController_GetPersonVisaByIdAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonVisas" },
+                    { "action", "GetPersonVisaByIdAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-visas", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personVisasController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personVisasController.ControllerContext;
+            var actionDescriptor = personVisasController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                personVisasServiceMock.Setup(i => i.GetPersonVisaByIdAsync(It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+                personVisasServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                .Throws(new PermissionsException("User 'npuser' does not have permission to view person-visas."));
+                await personVisasController.GetPersonVisaByIdAsync(It.IsAny<string>());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //Get 6
+        //Successful
+        //GetAllPersonVisasAsync
+        [TestMethod]
+        public async Task PersonVisasController_GetAllPersonVisasAsync_Permissions()
+        {
+            string id = "375ef15b-f2d2-40ed-ac47-f0d2d45260f0";
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonVisas" },
+                    { "action", "GetAllPersonVisasAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-visas", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personVisasController.Request.SetRouteData(data);
+            personVisasController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPersonVisa, BasePermissionCodes.UpdateAnyPersonVisa });
+
+            var controllerContext = personVisasController.ControllerContext;
+            var actionDescriptor = personVisasController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            personVisasServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personVisasServiceMock.Setup(i => i.GetAllAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(personVisaTuple);
+            var results = await personVisasController.GetAllPersonVisasAsync(It.IsAny<Paging>(), "51f12e6f-b6b1-4cbe-a45b-b4fed77c1dec");
+
+            Object filterObject;
+            personVisasController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewAnyPersonVisa));
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdateAnyPersonVisa));
+
+        }
+
+        //Get 6
+        //Exception
+        //GetAllPersonVisasAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonVisasController_GetAllPersonVisasAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonVisas" },
+                    { "action", "GetAllPersonVisasAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-visas", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personVisasController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personVisasController.ControllerContext;
+            var actionDescriptor = personVisasController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                personVisasServiceMock.Setup(i => i.GetAllAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                personVisasServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                .Throws(new PermissionsException("User 'npuser' does not have permission to view person-visas."));
+                var results = await personVisasController.GetAllPersonVisasAsync(new Paging(1, 1));
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //Get 11
+        //Successful
+        //GetAllPersonVisas2Async
+        [TestMethod]
+        public async Task PersonVisasController_GetAllPersonVisas2Async_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonVisas" },
+                    { "action", "GetAllPersonVisas2Async" }
+                };
+            HttpRoute route = new HttpRoute("person-visas", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personVisasController.Request.SetRouteData(data);
+            personVisasController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyPersonVisa, BasePermissionCodes.UpdateAnyPersonVisa });
+
+            var controllerContext = personVisasController.ControllerContext;
+            var actionDescriptor = personVisasController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            personVisasServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personVisasServiceMock.Setup(i => i.GetAll2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(personVisaTuple);
+            var results = await personVisasController.GetAllPersonVisas2Async(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>());
+
+            Object filterObject;
+            personVisasController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewAnyPersonVisa));
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdateAnyPersonVisa));
+
+        }
+
+        //Get 11
+        //Exception
+        //GetAllPersonVisas2Async
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonVisasController_GetAllPersonVisas2Async_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonVisas" },
+                    { "action", "GetAllPersonVisas2Async" }
+                };
+            HttpRoute route = new HttpRoute("person-visas", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personVisasController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personVisasController.ControllerContext;
+            var actionDescriptor = personVisasController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                personVisasServiceMock.Setup(i => i.GetAll2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                personVisasServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                .Throws(new PermissionsException("User 'npuser' does not have permission to view person-visas."));
+                var results = await personVisasController.GetAllPersonVisas2Async(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion
 
         #region PUT
@@ -633,6 +1062,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             Assert.AreEqual(result.Entries.Count(), 1);
             Assert.AreEqual(personVisa.Entries.First().EnteredOn, result.Entries.First().EnteredOn);
         }
+
+
         #endregion
 
         #region POST
@@ -655,6 +1086,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             Assert.AreEqual(result.Entries.Count(), 1);
             Assert.AreEqual(personVisa.Entries.First().EnteredOn, result.Entries.First().EnteredOn);
         }
+
+
+
         #endregion
 
         #region DELETE

@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
@@ -204,7 +204,12 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 logger.Error(ane, "Invalid arguments at some level of the request");
                 throw CreateHttpResponseException(ane.Message, HttpStatusCode.BadRequest);
             }
-            catch(LocalProcessingException lpe)
+            catch (PermissionsException pe)
+            {
+                logger.Error(pe, "Current user does not have permission to view requested data");
+                throw CreateHttpResponseException(pe.Message, HttpStatusCode.Forbidden);
+            }
+            catch (LocalProcessingException lpe)
             {
                 var message = "Exception occurred rendering the PDF: " + lpe.Message;
                 logger.Error(lpe, "Exception occurred rendering the PDF");

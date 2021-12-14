@@ -43,10 +43,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         Task<Ellucian.Colleague.Dtos.Student.Course> GetCourseByIdAsync(string id);
         Task<Ellucian.Colleague.Dtos.Student.Course2> GetCourseById2Async(string id);
         Task<Ellucian.Colleague.Dtos.Course2> GetCourseByGuid2Async(string guid);
-        Task<Ellucian.Colleague.Dtos.Course2> CreateCourse2Async(Ellucian.Colleague.Dtos.Course2 course);
-
-        Task<Ellucian.Colleague.Dtos.Course2> UpdateCourse2Async(Ellucian.Colleague.Dtos.Course2 course);
-
+       
         [Obsolete("Obsolete as of API version 1.3. Use the latest version of this method.")]
         Task<CoursePage> SearchAsync(CourseSearchCriteria criteria, int pageSize, int pageIndex);
 
@@ -59,7 +56,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="pageSize"></param>
         /// <param name="pageIndex"></param>
         /// <returns></returns>
+        [Obsolete("Obsolete as of API version 1.32. Use the latest version of this method.")]
         Task<SectionPage> InstantEnrollmentSearchAsync(InstantEnrollmentCourseSearchCriteria criteria, int pageSize, int pageIndex);
+        /// <summary>
+        /// Instant Enrollment Course Search
+        /// </summary>
+        /// <param name="criteria"></param>
+        /// <param name="pageSize"></param>
+        /// <param name="pageIndex"></param>
+        /// <returns></returns>
+        Task<SectionPage2> InstantEnrollmentSearch2Async(InstantEnrollmentCourseSearchCriteria criteria, int pageSize, int pageIndex);
 
         /// <summary>
         /// Section Search
@@ -68,7 +74,18 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="pageSize">Page Size</param>
         /// <param name="pageIndex">Page index</param>
         /// <returns></returns>
+        [Obsolete("Obsolete as of API version 1.32. Use the latest version of this method.")]
         Task<SectionPage> SectionSearchAsync(SectionSearchCriteria criteria, int pageSize, int pageIndex);
+
+        /// <summary>
+        /// Section Search
+        /// </summary>
+        /// <param name="criteria">A Section Search Criteria</param>
+        /// <param name="pageSize">Page Size</param>
+        /// <param name="pageIndex">Page index</param>
+        /// <returns></returns>
+       
+        Task<SectionPage2> SectionSearch2Async(SectionSearchCriteria2 criteria, int pageSize, int pageIndex);
 
         //V6 Changes
         Task<Dtos.Course3> GetCourseByGuid3Async(string id);

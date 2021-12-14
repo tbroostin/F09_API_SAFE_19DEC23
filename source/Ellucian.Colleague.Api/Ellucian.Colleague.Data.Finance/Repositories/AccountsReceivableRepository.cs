@@ -26,6 +26,8 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
     [RegisterType]
     public class AccountsReceivableRepository : PersonRepository, IAccountsReceivableRepository
     {
+
+        private readonly string _colleagueTimeZone;
         /// <summary>
         /// Constructor for accounts receivable repository
         /// </summary>
@@ -37,6 +39,10 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
         {
             // Override the default cache value - unless otherwise specified, only cache data for 1 minute
             CacheTimeout = 1;
+            if (apiSettings != null)
+            {
+                _colleagueTimeZone = apiSettings.ColleagueTimeZone;
+            }
         }
 
         #region Receivable Type Codes (AR Types)
@@ -141,7 +147,7 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
         /// </summary>
         /// <param name="personId">Accountholder ID</param>
         /// <returns>Accountholder data</returns>
-        public AccountHolder GetAccountHolder(string personId)
+        public async Task<AccountHolder> GetAccountHolderAsync(string personId, bool bypassCache = false)
         {
             // Make sure we have an ID passed in
             if (String.IsNullOrEmpty(personId))
@@ -149,14 +155,14 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 throw new ArgumentNullException("personId");
             }
 
-            AccountHolder accountHolder = base.Get<AccountHolder>(personId,
+            AccountHolder accountHolder = await base.GetAsync<AccountHolder>(personId,
                 person =>
                 {
                     AccountHolder personAccountHolder = new AccountHolder(person.Recordkey, person.LastName, person.PrivacyFlag);
                     personAccountHolder.AddDepositsDue(GetDepositsDue(personId));
                     return personAccountHolder;
                 }
-            );
+            , bypassCache);
 
             return accountHolder;
         }
@@ -220,15 +226,15 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
             // Build account holder objects for each non-corporation person
             foreach (string id in personIds)
             {
-                Person holder = await GetAsync<Person>(id,
-                   person => new AccountHolder(person.Recordkey, person.LastName, person.PrivacyFlag) 
-                   { 
-                       MiddleName = person.MiddleName, 
-                       FirstName = person.FirstName 
+                AccountHolder holder = await GetAsync<AccountHolder>(id,
+                   person =>
+                   {
+                       AccountHolder personAccountHolder = new AccountHolder(person.Recordkey, person.LastName, person.PrivacyFlag);
+                       personAccountHolder.AddDepositsDue(GetDepositsDue(id));
+                       return personAccountHolder;
                    });
-                accountHolders.Add((AccountHolder)holder);
+                accountHolders.Add(holder);
             }
-
             return accountHolders;
         }
 
@@ -345,6 +351,10 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 Archived = !String.IsNullOrEmpty(arInvoice.InvArchive),
                 AdjustmentToInvoice = arInvoice.InvAdjToInvoice
             };
+            if (arInvoice.InvDueDate.HasValue)
+            {
+                invoice.DueDateOffset = arInvoice.InvDueDate.ToPointInTimeDateTimeOffset(arInvoice.InvDueDate.Value, _colleagueTimeZone).GetValueOrDefault();
+            }
             if (arInvoice.InvAdjByInvoices != null && arInvoice.InvAdjByInvoices.Count > 0)
             {
                 foreach (var adj in arInvoice.InvAdjByInvoices)
@@ -768,6 +778,10 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                         {
                             TermId = arDepositDue.ArddTerm
                         };
+                if (arDepositDue.ArddDueDate.HasValue)
+                {
+                    depositDue.DueDateOffsetCTZS = arDepositDue.ArddDueDate.ToPointInTimeDateTimeOffset(arDepositDue.ArddDueDate, _colleagueTimeZone).GetValueOrDefault();
+                }
                 var depositType = DepositTypes.Where(dt => dt.Code == depositDue.DepositType).FirstOrDefault();
                 depositDue.DepositTypeDescription = depositType != null ? depositType.Description : string.Empty;
 
@@ -1026,6 +1040,7 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 {
                     InvoicePaymentItems invoicePaymentItem = invoicePaymentItems.Where(ip => ip.InvoicePaymentId == arInvoice.Recordkey).FirstOrDefault();
                     decimal amountPaid = invoicePaymentItem == null || !invoicePaymentItem.InvoicePaymentAmount.HasValue ? 0 : invoicePaymentItem.InvoicePaymentAmount.Value;
+                    decimal balanceAmount = invoicePaymentItem == null || !invoicePaymentItem.AlInvoiceBalanceAmount.HasValue ? 0 : invoicePaymentItem.AlInvoiceBalanceAmount.Value;
                     // Get the invoice items specific to this invoice
                     var specificInvoiceItems = arInvoiceItems.Where(aii => aii.InviInvoice == arInvoice.Recordkey);
                     var invoiceItems = specificInvoiceItems.Select(x => BuildCharge(x, taxDistributions)).ToList();
@@ -1040,7 +1055,7 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                         arInvoice.InvBillingEndDate.Value,
                         arInvoice.InvDesc,
                         invoiceItems,
-                        amountPaid)
+                        amountPaid, balanceAmount)
                     {
                         Archived = !String.IsNullOrEmpty(arInvoice.InvArchive),
                         AdjustmentToInvoice = arInvoice.InvAdjToInvoice

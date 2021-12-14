@@ -35,6 +35,9 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
         public Mock<IStudentAwardYearRepository> studentAwardYearRepositoryMock;
         public Mock<IFinancialAidOfficeRepository> financialAidOfficeRepositoryMock;
         public Mock<IFinancialAidReferenceDataRepository> referenceDataRepositoryMock;
+        public Mock<IProfileRepository> profileRepositoryMock;
+        public Mock<IRelationshipRepository> relationshipRepositoryMock;
+        public Mock<IProxyRepository> proxyRepositoryMock;
         private IConfigurationRepository baseConfigurationRepository;
         private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
 
@@ -76,7 +79,13 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             financialAidOfficeRepositoryMock = new Mock<IFinancialAidOfficeRepository>();
             referenceDataRepositoryMock = new Mock<IFinancialAidReferenceDataRepository>();
 
-            baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
+            //NAR
+            profileRepositoryMock = new Mock<IProfileRepository>();
+            relationshipRepositoryMock = new Mock<IRelationshipRepository>();
+            proxyRepositoryMock = new Mock<IProxyRepository>();
+
+
+        baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
             baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
 
             studentChecklistEntityToDtoAdapter = new StudentChecklistEntitytoDtoAdapter(adapterRegistryMock.Object, loggerMock.Object);
@@ -102,6 +111,8 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             studentChecklistRepositoryMock.Setup(r => r.CreateStudentChecklistAsync(It.IsAny<Domain.FinancialAid.Entities.StudentFinancialAidChecklist>()))
                 .Returns<Domain.FinancialAid.Entities.StudentFinancialAidChecklist>((checklistEntity) => studentChecklistRepository.CreateStudentChecklistAsync(checklistEntity));
 
+            
+
             BuildService();
         }
 
@@ -113,6 +124,9 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                             studentAwardYearRepositoryMock.Object,
                             financialAidOfficeRepositoryMock.Object,
                             referenceDataRepositoryMock.Object,
+                            profileRepositoryMock.Object,
+                            proxyRepositoryMock.Object,
+                            relationshipRepositoryMock.Object,
                             baseConfigurationRepository,
                             currentUserFactory,
                             roleRepositoryMock.Object,
@@ -174,6 +188,9 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
                     studentAwardYearRepositoryMock.Object,
                     financialAidOfficeRepositoryMock.Object,
                     referenceDataRepositoryMock.Object,
+                    profileRepositoryMock.Object,
+                    proxyRepositoryMock.Object,
+                    relationshipRepositoryMock.Object,
                     baseConfigurationRepository,
                     currentUserFactory,
                     roleRepositoryMock.Object,
@@ -346,7 +363,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             public async Task NullChecklistFromRepositoryTest()
             {
                 studentChecklistRepositoryMock.Setup(r => r.CreateStudentChecklistAsync(It.IsAny<Domain.FinancialAid.Entities.StudentFinancialAidChecklist>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 try
                 {
@@ -587,7 +604,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             public async Task StudentHasNullChecklistsTest()
             {
                 studentChecklistRepositoryMock.Setup(r => r.GetStudentChecklistsAsync(It.IsAny<string>(), It.IsAny<IEnumerable<string>>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
                 actualChecklists = (await studentChecklistService.GetAllStudentChecklistsAsync(studentId)).ToList();
                 Assert.IsFalse(actualChecklists.Any());
 
@@ -791,7 +808,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             public async Task ChecklistDoesNotExistForStudentTest()
             {
                 studentChecklistRepositoryMock.Setup(r => r.GetStudentChecklistAsync(It.IsAny<string>(), It.IsAny<string>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 try
                 {

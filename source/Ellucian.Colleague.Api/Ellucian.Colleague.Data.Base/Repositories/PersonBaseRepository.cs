@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -22,6 +22,7 @@ using slf4net;
 using Ellucian.Dmi.Runtime;
 using Ellucian.Colleague.Domain.Exceptions;
 using Microsoft.Practices.EnterpriseLibrary.Common.Utility;
+using Ellucian.Colleague.Domain.Entities;
 
 namespace Ellucian.Colleague.Data.Base.Repositories
 {
@@ -46,6 +47,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         private readonly string colleagueTimeZone;
         public static char _SM = Convert.ToChar(DynamicArray.SM);
         private int bulkReadSize;
+        private RepositoryException exception = new RepositoryException();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PersonRepository"/> class.
@@ -521,7 +523,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         }
                         catch (Exception)
                         {
-                            logger.Info("Unable to add formatted name to person " + record.Recordkey + " with type " + pFormat.PersonFormattedNameTypesAssocMember);
+                            logger.Error("Unable to add formatted name to person " + record.Recordkey + " with type " + pFormat.PersonFormattedNameTypesAssocMember);
                         }
                     }
                 }
@@ -3413,10 +3415,13 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                    if (!string.IsNullOrEmpty(credentialValue))
                    {
-                       criteria = string.Concat(criteria, " AND WITH ID = '", credentialValue, "'");
+                       if (credentialType.Equals("elevateId", StringComparison.OrdinalIgnoreCase))
+                           criteria = string.Concat(criteria, " AND WITH PERSON.ALT.ID.TYPES EQ 'ELEV' AND WITH PERSON.ALT.IDS EQ '", credentialValue, "'");
+                       else
+                           criteria = string.Concat(criteria, " AND WITH ID = '", credentialValue, "'");
                    }
 
-                   //this is all the ids from Person that could be orgs, will also include institutions
+                   //reteieve all the ids from Person with PERSON.CORP.INDICATOR = 'Y'.  This will return both institutions and organizations.
                    var orgIds = (await DataReader.SelectAsync("PERSON", criteria)).ToList();
 
                    //list of institutions
@@ -3534,8 +3539,33 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             subList.ForEach(s => idLookUpList.Add(new RecordKeyLookup("PERSON", s, false)));
 
             var orgGuidLookupList = await DataReader.SelectAsync(idLookUpList.ToArray());
+            //IF there is no guid then we need throw an exception
+            if (orgGuidLookupList != null && orgGuidLookupList.Any())
+            {
+                foreach (var org in orgGuidLookupList)
+                {
+                    if (org.Value != null && !string.IsNullOrEmpty(org.Value.Guid))
+                    {
+                        orgGuids.Add(org.Value.Guid);
+                    }
+                    else
+                    {
+                        exception.AddError(new RepositoryError("GUID.Not.Found", string.Format("Organization record '{0}' is missing a GUID.", org.Key.Split('+')[1]))
+                        {
+                            SourceId = org.Key.Split('+')[1]
+                        }); 
+                    }
+                }
+            }
+            else
+            {
+                exception.AddError(new RepositoryError("GUID.Not.Found", "Organization GUIDs are missing."));
 
-            orgGuidLookupList.ForEach(o => orgGuids.Add(o.Value.Guid));
+            }
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
 
             return new Tuple<IEnumerable<string>, int>(orgGuids, totalCount);
         }
@@ -4009,9 +4039,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                             emailAddresses.Add(emailToAdd);
                         }
-                        catch (Exception exception)
+                        catch (Exception)
                         {
-                            logger.Error(exception, string.Format("Could not load email address for person id {0} with GUID {1}", personDataContract.Recordkey, personDataContract.RecordGuid));
+                            // do not log error
+                            //logger.Error(exception, string.Format("Could not load email address for person id {0} with GUID {1}", personDataContract.Recordkey, personDataContract.RecordGuid));
                         }
                     }
                 }

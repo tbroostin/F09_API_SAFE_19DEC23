@@ -1,17 +1,22 @@
 //Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using Ellucian.Colleague.Api.Controllers.HumanResources;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -305,5 +310,184 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
         {
             await jobApplicationsController.DeleteJobApplicationsAsync(jobApplicationsCollection.FirstOrDefault().Id);
         }
+
+        //Permissions
+
+        //Success
+        // Get 10
+        //GetJobApplicationsAsync
+
+        [TestMethod]
+        public async Task JobApplicationsController_GetJobApplicationsAsync_Permissions()
+        {
+            var jobApplicationsTuple= new Tuple<IEnumerable<JobApplications>, int>(jobApplicationsCollection, jobApplicationsCollection.Count);
+            Paging paging = new Paging(jobApplicationsCollection.Count(), 0);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "JobApplications" },
+                    { "action", "GetJobApplicationsAsync" }
+                };
+            HttpRoute route = new HttpRoute("job-applications", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            jobApplicationsController.Request.SetRouteData(data);
+            jobApplicationsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.ViewJobApplications);
+
+            var controllerContext = jobApplicationsController.ControllerContext;
+            var actionDescriptor = jobApplicationsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.JobApplications>, int>(jobApplicationsCollection, 4);
+            jobApplicationsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            jobApplicationsServiceMock.Setup(x => x.GetJobApplicationsAsync(It.IsAny<int>(),It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(jobApplicationsTuple);
+            var sourceContexts = (await jobApplicationsController.GetJobApplicationsAsync(paging));
+
+            Object filterObject;
+            jobApplicationsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewJobApplications));
+        }
+
+        //Exception
+        //Get 10
+        //GetJobApplicationsAsync
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task JobApplicationsController_GetJobApplicationsAsync_Invalid_Permissions()
+        {
+            Paging paging = new Paging(jobApplicationsCollection.Count(), 0);
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "JobApplications" },
+                    { "action", "GetJobApplicationsAsync" }
+                };
+            HttpRoute route = new HttpRoute("job-applications", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            jobApplicationsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = jobApplicationsController.ControllerContext;
+            var actionDescriptor = jobApplicationsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.JobApplications>, int>(jobApplicationsCollection, 4);
+
+
+                jobApplicationsServiceMock.Setup(x => x.GetJobApplicationsAsync(It.IsAny<int>(),It.IsAny<int>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                jobApplicationsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view job-applications."));
+                await jobApplicationsController.GetJobApplicationsAsync(paging);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //Success
+        // Get By Id 10
+        //GetJobApplicationsByGuidAsync
+
+        [TestMethod]
+        public async Task JobApplications_GetJobApplicationsByGuidAsync_Permissions()
+        {
+            var expected = jobApplicationsCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "JobApplications" },
+                    { "action", "GetJobApplicationsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("job-applications", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            jobApplicationsController.Request.SetRouteData(data);
+            jobApplicationsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.ViewJobApplications);
+
+            var controllerContext = jobApplicationsController.ControllerContext;
+            var actionDescriptor = jobApplicationsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.JobApplications>, int>(jobApplicationsCollection, 4);
+            jobApplicationsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            jobApplicationsServiceMock.Setup(x => x.GetJobApplicationsByGuidAsync(expected.Id)).ReturnsAsync(expected);
+            var actual = await jobApplicationsController.GetJobApplicationsByGuidAsync(expected.Id);
+
+            Object filterObject;
+            jobApplicationsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewJobApplications));
+        }
+
+        //Exception
+        //Get By Id 10
+        //GetExternalEmploymentsByGuidAsync
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task JobApplicationsController_GetExternalEmploymentsByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "JobApplications" },
+                    { "action", "GetExternalEmploymentsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("job-applications", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            jobApplicationsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = jobApplicationsController.ControllerContext;
+            var actionDescriptor = jobApplicationsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.JobApplications>, int>(jobApplicationsCollection, 4);
+
+                jobApplicationsServiceMock.Setup(x => x.GetJobApplicationsByGuidAsync(It.IsAny<string>())).Throws<PermissionsException>();
+                jobApplicationsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view job-applications."));
+                await jobApplicationsController.GetJobApplicationsByGuidAsync(expectedGuid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
     }
 }

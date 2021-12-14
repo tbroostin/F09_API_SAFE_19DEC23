@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Text;
 using System.Linq;
@@ -262,6 +262,117 @@ namespace Ellucian.Colleague.Api.Client.Tests
             var thisShouldFail = await client.PreviewSampleDegreePlan6Async(12345, "12345", "");
         }
 
+
+
+
+
+
+
+
+
+
+
+
+        /// 
+        /// Tests for PreviewSamplePlan6Async
+        /// 
+        [TestMethod]
+        public async Task GetDegreePlanPreview7Async()
+        {
+            // Arrange
+            var degreePlan1 = new DegreePlan4()
+            {
+                Id = 12345,
+                NonTermPlannedCourses = new List<PlannedCourse4>(),
+                PersonId = "12345",
+                Terms = new List<DegreePlanTerm4>(),
+                Version = 1
+            };
+
+            var degreePlan2 = new DegreePlan4()
+            {
+                Id = 123451,
+                NonTermPlannedCourses = new List<PlannedCourse4>(),
+                PersonId = "12345",
+                Terms = new List<DegreePlanTerm4>(),
+                Version = 1
+            };
+
+            var academicHistoryResponse = new AcademicHistory4()
+            {
+                StudentId = "12345",
+                AcademicTerms = new List<AcademicTerm4>(),
+            };
+
+            var degreePlanPreviewResponse = new DegreePlanPreview6()
+            {
+                Preview = degreePlan1,
+                MergedDegreePlan = degreePlan2,
+                AcademicHistory = academicHistoryResponse
+            };
+
+            var serializedResponse = JsonConvert.SerializeObject(degreePlanPreviewResponse);
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Content = new StringContent(serializedResponse, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            var result = await client.PreviewSampleDegreePlan7Async(degreePlan1.Id, "ENGL+BA", "2015FA");
+
+            // Assert
+            Assert.IsInstanceOfType(result, typeof(DegreePlanPreview6));
+            Assert.AreEqual(degreePlan1.Id, result.Preview.Id);
+            Assert.AreEqual(degreePlan1.PersonId, result.Preview.PersonId);
+            Assert.AreEqual(degreePlan1.Version, result.Preview.Version);
+            Assert.AreEqual(academicHistoryResponse.StudentId, result.AcademicHistory.StudentId);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetDegreePlanPreview7Async_ZeroDegreePlanId()
+        {
+            // Arrange
+            var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+            response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            await client.PreviewSampleDegreePlan7Async(0, "ENGL+BA", "COMP+BS");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task GetDegreePlanPreview7Async_EmptyProgramId()
+        {
+            // Arrange
+            var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+            response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+            var mockHandler = new MockHandler();
+            mockHandler.Responses.Enqueue(response);
+
+            var testHttpClient = new HttpClient(mockHandler);
+            testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+            var client = new ColleagueApiClient(testHttpClient, _logger);
+
+            // Act
+            await client.PreviewSampleDegreePlan7Async(12345, "", "COMP+BS");
+        }
+
+       
         #endregion
 
         #region MediaTypeHeaderTests

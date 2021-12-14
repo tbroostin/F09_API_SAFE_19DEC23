@@ -129,6 +129,8 @@ namespace Ellucian.Colleague.Domain.Base.Entities
             }
         }
 
+        public string RestPrtlDisplayFlag { get; set; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Restriction"/> class.
         /// </summary>

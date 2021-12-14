@@ -209,18 +209,18 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
             /// </summary>
             [TestMethod]
             [ExpectedException(typeof(PermissionsException))]
-            public void AccountsReceivableService_GetAccountHolder2_UnauthorizedUser()
+            public async Task AccountsReceivableService_GetAccountHolder2_UnauthorizedUser()
             {
-                var accountHolder = service.GetAccountHolder2("0001234");
+                var accountHolder = await service.GetAccountHolder2Async("0001234", false);
             }
 
             /// <summary>
             /// User is self
             /// </summary>
             [TestMethod]
-            public void AccountsReceivableService_GetAccountHolder2_Valid()
+            public async Task AccountsReceivableService_GetAccountHolder2_Valid()
             {
-                var accountHolder = service.GetAccountHolder2(userFactory.CurrentUser.PersonId);
+                var accountHolder = await service.GetAccountHolder2Async(userFactory.CurrentUser.PersonId, false);
                 Assert.IsNotNull(accountHolder);
             }
 
@@ -228,13 +228,13 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
             /// User is admin
             /// </summary>
             [TestMethod]
-            public void AccountsReceivableService_GetAccountHolder2_UserIsAdmin()
+            public async Task AccountsReceivableService_GetAccountHolder2_UserIsAdmin()
             {
                 userFactory = new FinanceConfigurationServiceTests.CurrentUserFactory();
                 financeAdminRole.AddPermission(new Permission(FinancePermissionCodes.ViewStudentAccountActivity));
                 roleRepoMock.Setup(r => r.Roles).Returns(new List<Domain.Entities.Role>() { financeAdminRole });
                 BuildService();
-                var accountHolder = service.GetAccountHolder2("0000895");
+                var accountHolder = await service.GetAccountHolder2Async("0000895", false);
                 Assert.IsNotNull(accountHolder);
             }
 
@@ -243,22 +243,22 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
             /// </summary>
             [TestMethod]
             [ExpectedException(typeof(PermissionsException))]
-            public void AccountsReceivableService_GetAccountHolder2_UserIsAdminNoPermissions()
+            public async Task AccountsReceivableService_GetAccountHolder2_UserIsAdminNoPermissions()
             {
                 userFactory = new FinanceConfigurationServiceTests.CurrentUserFactory();
                 BuildService();
-                service.GetAccountHolder2("0000895");
+                await service.GetAccountHolder2Async("0000895", false);
             }
 
             /// <summary>
             /// User is proxy
             /// </summary>
             [TestMethod]
-            public void AccountsReceivableService_GetAccountHolder2_UserIsProxy()
+            public async Task AccountsReceivableService_GetAccountHolder2_UserIsProxy()
             {
                 userFactory = new FinanceConfigurationServiceTests.StudentUserFactoryWithProxy();
                 BuildService();
-                var accountHolder = service.GetAccountHolder2("0003315");
+                var accountHolder = await service.GetAccountHolder2Async("0003315", false);
                 Assert.IsNotNull(accountHolder);
             }
 
@@ -267,11 +267,11 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
             /// </summary>
             [TestMethod]
             [ExpectedException(typeof(PermissionsException))]
-            public void AccountsReceivableService_GetAccountHolder2_UserIsProxyDifferentPerson()
+            public async Task AccountsReceivableService_GetAccountHolder2_UserIsProxyDifferentPerson()
             {
                 userFactory = new FinanceConfigurationServiceTests.StudentUserFactoryWithProxy();
                 BuildService();
-                service.GetAccountHolder2("0000895");
+                await service.GetAccountHolder2Async("0000895", false);
             }
         }
 
@@ -710,6 +710,21 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
             public async Task AccountsReceivableService_QueryInvoicePaymentsAsync_RepositoryThrowsArgumentNullException()
             {
                 var invs = await service.QueryInvoicePaymentsAsync(new List<string>() { "abc" });
+            }
+
+            [TestMethod]
+            public async Task AccountsReceivableService_QueryInvoicePaymentsAsync_Valid_AmountPaid_BalanceAmount()
+            {
+                financeConfiguration.PaymentDisplay = Domain.Finance.Entities.Configuration.PaymentDisplay.DisplayByPeriod;
+                var authorizedInvoiceIds = invoices.Where(i => i.PersonId == userFactory.CurrentUser.PersonId).Select(inv => inv.Id);
+                var invs = await service.QueryInvoicePaymentsAsync(authorizedInvoiceIds);
+                Assert.IsNotNull(invs);
+                foreach (var inv in invs)
+                {
+                    var invoicePaymentEntity= invoicePayments.Where(ip => ip.Id == inv.Id).First();
+                    Assert.AreEqual(invoicePaymentEntity.AmountPaid, inv.AmountPaid);
+                    Assert.AreEqual(invoicePaymentEntity.BalanceAmount, inv.BalanceAmount);
+                }
             }
 
         }
@@ -1333,7 +1348,8 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
             foreach (var inv in invoices)
             {
                 decimal amountPaid = inv.BaseAmount > 20 ? inv.BaseAmount - 10 : 0;
-                var invPay = new Ellucian.Colleague.Domain.Finance.Entities.InvoicePayment(inv.Id, inv.PersonId, inv.ReceivableTypeCode, inv.TermId, inv.ReferenceNumber, inv.Date, inv.DueDate, inv.BillingStart, inv.BillingEnd, inv.Description, inv.Charges, amountPaid);
+                decimal balanceAmount = inv.BaseAmount - amountPaid;
+                var invPay = new Ellucian.Colleague.Domain.Finance.Entities.InvoicePayment(inv.Id, inv.PersonId, inv.ReceivableTypeCode, inv.TermId, inv.ReferenceNumber, inv.Date, inv.DueDate, inv.BillingStart, inv.BillingEnd, inv.Description, inv.Charges, amountPaid, balanceAmount);
                 invoicePayments.Add(invPay);
             }
 
@@ -1522,7 +1538,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
             var unauthorizedDepositIds = deposits.Where(d => d.PersonId != userFactory.CurrentUser.PersonId).Select(dep => dep.Id);
             arRepoMock.Setup(repo => repo.GetDeposits(authorizedDepositIds)).Returns(deposits.Where(d => d.PersonId == userFactory.CurrentUser.PersonId));
             arRepoMock.Setup(repo => repo.GetDeposits(unauthorizedDepositIds)).Returns(deposits.Where(d => d.PersonId != userFactory.CurrentUser.PersonId));
-            arRepoMock.Setup(repo => repo.GetAccountHolder(It.IsAny<string>())).Returns(accountHolder);
+            arRepoMock.Setup(repo => repo.GetAccountHolderAsync(It.IsAny<string>(), false)).ReturnsAsync(accountHolder);
             foreach (var inv in invoices)
             {
                 arRepoMock.Setup(repo => repo.GetInvoice(inv.Id)).Returns(invoices.Where(i => i.Id == inv.Id).FirstOrDefault());

@@ -1,4 +1,4 @@
-﻿/*Copyright 2014-2015 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2014-2021 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -88,5 +88,9 @@ namespace Ellucian.Colleague.Dtos.Base
         /// The untranslate country code. Country contains the translated value that the end-user sees.
         /// </summary>
         public string CountryCode { get; set; }
+        /// <summary>
+        /// The list of different address types - this address has
+        /// </summary>
+        public List<string> AddressTypeCodes { get; set; }
     }
 }

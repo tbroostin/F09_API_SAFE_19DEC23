@@ -71,13 +71,34 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 throw new KeyNotFoundException(string.Format("Integration GL Postings record {0} does not exist.", id));
             }
+
             var intgGlPostings = await DataReader.ReadRecordAsync<IntgGlPostings>(recordInfo.PrimaryKey);
+            if (intgGlPostings == null)
             {
-                if (intgGlPostings == null)
+                throw new KeyNotFoundException(string.Format("Integration GL Postings record {0} does not exist.", id));
+            }
+
+            bool donationPledge = true;
+            if (intgGlPostings.IgpSource != null)
+            {
+                foreach (var source in intgGlPostings.IgpSource)
                 {
-                    throw new KeyNotFoundException(string.Format("Integration GL Postings record {0} does not exist.", id));
+                    if (!source.Equals("DN", StringComparison.OrdinalIgnoreCase) && !source.Equals("PL", StringComparison.OrdinalIgnoreCase) 
+                        && !source.Equals("DNE", StringComparison.OrdinalIgnoreCase) && !source.Equals("PLE", StringComparison.OrdinalIgnoreCase))
+                    {
+                        donationPledge = false;
+                    }
                 }
             }
+            if (!donationPledge)
+            {
+                throw new KeyNotFoundException(string.Format("Integration GL Postings record {0} has a source that is not supported by this version of the API.", id));
+            }
+            if (intgGlPostings.IgpSource == null || !intgGlPostings.IgpSource.Any() || !donationPledge)
+            {
+                throw new KeyNotFoundException(string.Format("Integration GL Postings record {0} does not exist.", id));
+            }
+
             // Read the INTG.GL.POSTINGS.DETAIL records
             var detailIds = intgGlPostings.IgpTranDetails.ToArray();
             var intgGlPostingsDetail = await DataReader.BulkReadRecordAsync<IntgGlPostingsDetail>(detailIds);
@@ -139,7 +160,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         {
             var intgGlPostingsEntities = new List<GeneralLedgerTransaction>();
             // Read the INTG.GL.POSTINGS record
-            var criteria = "WITH IGP.SOURCE NE ''";
+            var criteria = "WITH EVERY IGP.SOURCE EQ 'DN''PL''DNE''PLE'";
             var intgGlPostings = await DataReader.BulkReadRecordAsync<IntgGlPostings>(criteria);
             {
                 if (intgGlPostings == null)

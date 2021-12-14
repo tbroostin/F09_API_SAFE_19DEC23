@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
@@ -31,6 +31,21 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// Default Tax form state / location.
         /// </summary>
         public string TaxFormState { get; set; }
+
+        /// <summary>
+        /// Withholding flag for 1099-NEC.
+        /// </summary>
+        public bool TaxForm1099NecWithholding { get; set; }
+
+        /// <summary>
+        /// Withholding flag for 1099-MISC.
+        /// </summary>
+        public bool TaxForm1099MiscWithholding { get; set; }
+
+        /// <summary>
+        /// Vendor AP Types
+        /// </summary>
+        public List<string> VendorApTypes { get; set; }
 
     }
 }

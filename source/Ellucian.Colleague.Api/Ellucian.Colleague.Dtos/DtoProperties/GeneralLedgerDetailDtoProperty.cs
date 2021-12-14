@@ -15,7 +15,7 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         /// <summary>
         /// An optional tracking number for the detailed accounting line.
         /// </summary>
-        [JsonProperty("sequenceNumber", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [JsonProperty("sequenceNumber", DefaultValueHandling = DefaultValueHandling.Ignore, NullValueHandling = NullValueHandling.Ignore)]
         public int? SequenceNumber { get; set; }
 
         /// <summary>

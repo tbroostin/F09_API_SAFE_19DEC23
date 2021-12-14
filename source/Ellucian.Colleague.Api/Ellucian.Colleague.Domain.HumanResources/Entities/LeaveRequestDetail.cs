@@ -1,9 +1,5 @@
-﻿/* Copyright 2019 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2021 Ellucian Company L.P. and its affiliates. */
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Domain.HumanResources.Entities
 {
@@ -42,6 +38,12 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// </summary>
         public decimal? LeaveHours { get { return leaveHours; } }
         private readonly decimal? leaveHours;
+
+        /// <summary>
+        /// Indicates if this detail record has been processed in a pay period by payroll
+        /// </summary>
+        public bool ProcessedInPayPeriod { get { return processedInPayPeriod; } }
+        private readonly bool processedInPayPeriod;
         #endregion
 
         #region Constructor
@@ -55,7 +57,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         public LeaveRequestDetail(string id,
             string leaveRequestId,
             DateTime leaveDate,
-            decimal? leaveHours)
+            decimal? leaveHours,
+            bool processedInPayPeriod)
         {
             if (leaveDate == null || leaveDate == DateTime.MinValue)
             {
@@ -65,6 +68,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             this.leaveRequestId = leaveRequestId;
             this.leaveDate = leaveDate;
             this.leaveHours = leaveHours;
+            this.processedInPayPeriod = processedInPayPeriod;
         }
         #endregion
 

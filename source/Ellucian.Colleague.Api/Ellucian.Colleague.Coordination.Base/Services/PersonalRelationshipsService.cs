@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -120,8 +120,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>IEnumerable<Dtos.PersonalRelationship></returns>
         public async Task<Tuple<IEnumerable<Dtos.PersonalRelationship>, int>> GetAllPersonalRelationshipsAsync(int offset, int limit, bool bypassCache)
         {
-            CheckUserPersonalRelationshipViewPermissions();
-          
+                     
             List<Dtos.PersonalRelationship> personalRelationships = new List<Dtos.PersonalRelationship>();
 
             List<string> guardianWithInverseRels = await GetGuardianRelationsWithInverseList();
@@ -143,8 +142,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>Dtos.PersonalRelationship</returns>
         public async Task<Dtos.PersonalRelationship> GetPersonalRelationshipByIdAsync(string id)
         {
-            CheckUserPersonalRelationshipViewPermissions();
-
             var personalRelationshipEntity = await _relationshipRepository.GetPersonRelationshipByIdAsync(id);
 
             bool isGurdianRelationship = await this.IsGuardianRelationship(personalRelationshipEntity.RelationshipType);
@@ -166,8 +163,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         public async Task<Tuple<IEnumerable<Dtos.PersonalRelationship>, int>> GetPersonalRelationshipsByFilterAsync(int offset, int limit, 
             string subjectPerson, string relatedPerson, string directRelationshipType, string directRelationshipDetailId)
         {
-            CheckUserPersonalRelationshipViewPermissions();
-
+           
             var personRelationshipDtos = new List<Dtos.PersonalRelationship>();
 
             string newSubjectPerson = string.Empty, newRelatedPerson = string.Empty, newDirectRelationshipType = string.Empty,
@@ -507,18 +503,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             return new Dtos.GuidObject2(statusEntity.Guid);
         }
 
-        /// <summary>
-        /// Verifies if the user has the correct permissions to view a person.
-        /// </summary>
-        private void CheckUserPersonalRelationshipViewPermissions()
-        {
-            // access is ok if the current user has the view personal relationships permission
-            if (!HasPermission(BasePermissionCodes.ViewAnyRelationship) && !HasPermission(BasePermissionCodes.UpdatePersonalRelationship))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view personal-relationships.");
-                throw new PermissionsException("User is not authorized to view personal-relationships.");
-            }
-        }
 
         #endregion
 
@@ -534,7 +518,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             try
             {
-                CheckUserPersonalRelationshipViewPermissions();
                 string personCode = string.Empty;
                 string[] filterPersonIds = new List<string>().ToArray();
 
@@ -656,7 +639,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>PersonalRelationships2 DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.PersonalRelationships2> GetPersonalRelationships2ByGuidAsync(string guid, bool bypassCache = true)
         {
-            CheckUserPersonalRelationshipViewPermissions();
+          
             try
             {
                var rela = await ConvertPersonalRelationships2EntityToDto(await _relationshipRepository.GetPersonalRelationshipById2Async(guid));
@@ -826,7 +809,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             try
             {
                 // verify the user has the permission to update a personalRelationships
-                this.CheckCreatePersonalRelationshipsPermission();
+                //this.CheckCreatePersonalRelationshipsPermission();
 
                 if (personalRelationships == null)
                 {
@@ -896,7 +879,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             try
             {
                 // verify the user has the permission to create a personalRelationships
-                this.CheckCreatePersonalRelationshipsPermission();
+                //this.CheckCreatePersonalRelationshipsPermission();
                 if (personalRelationships == null)
                 {
                     IntegrationApiExceptionAddError("Must provide a personal relationships representation for create.", "Missing.Request.Body");
@@ -1185,51 +1168,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         }
 
         /// <summary>
-        /// Helper method to determine if the user has permission to create/update PersonalRelationships.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckCreatePersonalRelationshipsPermission()
-        {
-            bool hasPermission = HasPermission(BasePermissionCodes.UpdatePersonalRelationship);
-
-            // User is not allowed to create or update PersonalRelationships without the appropriate permissions
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to create/update personal-relationships.");
-            }
-        }
-
-        /// <summary>
-        /// Helper method to determine if the user has permission to create/update PersonalRelationships.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckCreatePersonalRelationshipInitiationProcessPermission()
-        {
-            bool hasPermission = HasPermission(BasePermissionCodes.ProcessRelationshipRequest);
-
-            // User is not allowed to create or update PersonalRelationships without the appropriate permissions
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to create personal-relationship-initiation-process.");
-            }
-        }
-
-        /// <summary>
-        /// Helper method to determine if the user has permission to delete PersonalRelationships.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckDeletePersonalRelationships2Permission()
-        {
-            bool hasPermission = HasPermission(BasePermissionCodes.DeletePersonalRelationship);
-
-            // User is not allowed to delete PersonalRelationships without the appropriate permissions
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to delete personal-relationships.");
-            }
-        }
-
-        /// <summary>
         /// Delete a person relationship from the database
         /// </summary>
         /// <param name="id">The requested personrelationship GUID</param>
@@ -1240,7 +1178,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 throw new ArgumentNullException("guid", "Must provide a person relationship guid for deletion.");
             }
-            CheckDeletePersonalRelationships2Permission();
+            //CheckDeletePersonalRelationships2Permission();
             try
             {
                 var relationship = await _relationshipRepository.GetPersonalRelationshipById2Async(guid);
@@ -1271,9 +1209,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             try
             {
-                // verify the user has the permission to create a personalRelationships
-                CheckCreatePersonalRelationshipInitiationProcessPermission();
-
                 if (personalRelationships == null)
                 {
                     IntegrationApiExceptionAddError("Must provide a personal-relationship-initiation-process object for create.", "Missing.Request.Body");

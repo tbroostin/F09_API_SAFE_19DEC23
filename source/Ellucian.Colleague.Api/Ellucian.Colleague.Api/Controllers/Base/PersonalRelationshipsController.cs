@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -27,6 +27,7 @@ using Newtonsoft.Json.Linq;
 using System.Web.Http.ModelBinding;
 using Ellucian.Web.Http.ModelBinding;
 using System.Configuration;
+using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -61,11 +62,12 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves all active personal relationships for relationship id
         /// </summary>
         /// <returns>PersonalRelationship object for a personal relationship.</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyRelationship, BasePermissionCodes.UpdatePersonalRelationship })]
         public async Task<Dtos.PersonalRelationship> GetPersonalRelationshipByIdAsync([FromUri] string id)
         {
             try
             {
+                _personalRelationshipsService.ValidatePermissions(GetPermissionsMetaData());
                 bool bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {
@@ -123,7 +125,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="directRelationshipType">Personal Relationship directRelationship Contains ...directRelationship...</param>
         /// <param name="directRelationshipDetailId">Personal Relationship reciprocalRelationship Contains ...reciprocalRelationship...</param>
         // <returns>List of PersonalRelationship <see cref="Dtos.PersonalRelationship"/> objects representing matching personal relationships</returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyRelationship, BasePermissionCodes.UpdatePersonalRelationship })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [ValidateQueryStringFilter(new string[] { "subjectPerson", "relatedPerson", "directRelationshipType", "directRelationshipDetailId" }, false, true)]
         public async Task<IHttpActionResult> GetPersonalRelationshipsAsync(Paging page, [FromUri] string subjectPerson = "",
@@ -152,6 +154,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _personalRelationshipsService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(criteria))
                 {
                     pageOfItems = await _personalRelationshipsService.GetAllPersonalRelationshipsAsync(page.Offset, page.Limit, bypassCache);
@@ -251,7 +254,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <accessComments>
         /// Only the current user can get their own person relationships.
         /// </accessComments>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyRelationship, BasePermissionCodes.UpdatePersonalRelationship })]
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonalRelationships2Filter))]
@@ -270,6 +273,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
+                _personalRelationshipsService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(200, 0);
@@ -347,7 +351,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="id">GUID to desired personalRelationships2</param>
         /// <returns>A personalRelationships2 object <see cref="Dtos.PersonalRelationships2"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { BasePermissionCodes.ViewAnyRelationship, BasePermissionCodes.UpdatePersonalRelationship })]
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.PersonalRelationships2> GetPersonalRelationships2ByGuidAsync(string id)
         {
@@ -361,6 +365,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }            
             try
             {
+                _personalRelationshipsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                     await _personalRelationshipsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await _personalRelationshipsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -405,12 +410,13 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="id">GUID of the personalRelationships2 to update</param>
         /// <param name="personalRelationships2">DTO of the updated personalRelationships2</param>
         /// <returns>A PersonRelationships object <see cref="Dtos.PersonalRelationships2"/> in EEDM format</returns>
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(BasePermissionCodes.UpdatePersonalRelationship)]
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.PersonalRelationships2> PutPersonalRelationships2Async([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.PersonalRelationships2 personalRelationships2)
         {            
             try
             {
+                _personalRelationshipsService.ValidatePermissions(GetPermissionsMetaData());
                 return await _personalRelationshipsService.UpdatePersonalRelationships2Async(
                   await PerformPartialPayloadMerge(personalRelationships2, async () => await _personalRelationshipsService.GetPersonalRelationships2ByGuidAsync(id, true),
                   await _personalRelationshipsService.GetDataPrivacyListByApi(GetRouteResourceName(), true),
@@ -458,12 +464,13 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="personalRelationships2">DTO of the new personalRelationships2</param>
         /// <returns>A personalRelationships2 object <see cref="Dtos.PersonalRelationships2"/> in HeDM format</returns>
-        [HttpPost]
+        [HttpPost, PermissionsFilter(BasePermissionCodes.UpdatePersonalRelationship)]
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.PersonalRelationships2> PostPersonalRelationships2Async([ModelBinder(typeof(EedmModelBinder))] Dtos.PersonalRelationships2 personalRelationships2)
         {
             try
             {
+                _personalRelationshipsService.ValidatePermissions(GetPermissionsMetaData());
                 return await _personalRelationshipsService.CreatePersonalRelationships2Async(personalRelationships2);
             }
             catch (KeyNotFoundException e)
@@ -508,12 +515,13 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="id">GUID to desired personalRelationships2</param>
         /// <returns>HttpResponseMessage</returns>
-        [HttpDelete]
+        [HttpDelete, PermissionsFilter(BasePermissionCodes.DeletePersonalRelationship)]
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task DeletePersonalRelationshipsAsync([FromUri] string id)
         {
             try
             {
+                _personalRelationshipsService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(id))
                 {
                     throw new ArgumentNullException("id", "guid is a required for delete");
@@ -564,12 +572,13 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="personalRelationships">DTO of the new personalRelationships2</param>
         /// <returns>A personalRelationships2 object <see cref="Dtos.PersonalRelationshipInitiationProcess"/> in HeDM format</returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(BasePermissionCodes.ProcessRelationshipRequest)]
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<object> PostPersonalRelationshipInitiationProcessAsync([ModelBinder(typeof(EedmModelBinder))] PersonalRelationshipInitiationProcess personalRelationships)
         {
             try
             {
+                _personalRelationshipsService.ValidatePermissions(GetPermissionsMetaData());
                 var returnObject = await _personalRelationshipsService.CreatePersonalRelationshipInitiationProcessAsync(personalRelationships);
 
                 var resourceName = string.Empty;

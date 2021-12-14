@@ -137,6 +137,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
             programs.Add("TRANSCRIPT.GROUPING.FILTER.SUBJECTS", new Program("TRANSCRIPT.GROUPING.FILTER.SUBJECTS", "To test transcript grouping filters for subjects", new List<string> { "MATH" }, true, gradAcadLevel, scf, false, "Master of Math") { Catalogs = catalogs });
             programs.Add("TRANSCRIPT.GROUPING.FILTER.ADDL.SELECT", new Program("TRANSCRIPT.GROUPING.FILTER.ADDL.SELECT", "To test transcript grouping filters for additional criteria", new List<string> { "MATH" }, true, gradAcadLevel, additionalCF, false, "Master of Math") { Catalogs = catalogs });
             programs.Add("PROG.IN.LIST.SORT.ORDER.BB", new Program("PROG.SORT.ORDER.BB", "To test IN.LIST.ORDER syntax added to group", new List<string> { "LANG" }, true, acadLevelCode, cf, false, "Language and Arts") { Catalogs = catalogs });
+            programs.Add("DEGREE.PLAN.REVIEW.MIN.GRADE", new Program("DEGREE.PLAN.REVIEW.MIN.GRADE", "To test MinGrades with degreeplan preview", new List<string> { "LANG" }, true, acadLevelCode, cf, false, "Language and Arts") { Catalogs = catalogs });
 
 
 

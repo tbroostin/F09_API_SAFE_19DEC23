@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using slf4net;
 using System.Linq;
@@ -16,6 +16,8 @@ using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Dmi.Runtime;
 using System.Diagnostics;
+using Ellucian.Colleague.Data.Base.DataContracts;
+using System.Collections.ObjectModel;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -485,6 +487,275 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 logger.Error(ex, string.Format("Unable to get Retention Alert Cases for Advisor ") );
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Retrieves retention alert work cases
+        /// </summary>
+        /// <param name="advisorId"></param>
+        /// <param name="studentIds"></param>
+        /// <param name="searchCaseIds"></param>
+        /// <param name="roleIds"></param>
+        /// <param name="IsIncludeClosedCases"></param>
+        /// <returns>Retention Alert Work Cases 2 list</returns>
+        public async Task<List<RetentionAlertWorkCase2>> GetRetentionAlertCases2Async(string advisorId, IEnumerable<string> studentIds, IEnumerable<string> searchCaseIds, IEnumerable<string> roleIds, bool IsIncludeClosedCases)
+        {
+            List<RetentionAlertWorkCase2> workItems = new List<RetentionAlertWorkCase2>();
+            if (string.IsNullOrEmpty(advisorId))
+            {
+                throw new ArgumentNullException(advisorId, "Advisor ID must be specified");
+            }
+
+            try
+            {
+                var caseCategoriesTask = GetCaseCategoriesAsync();
+                var caseTypesTask = GetCaseTypesAsync();
+                var caseStatusesTask = GetCaseStatusAsync();
+                var casePrioritiesTask = GetCasePrioritiesAsync();
+                await Task.WhenAll(caseCategoriesTask, caseTypesTask, caseStatusesTask, casePrioritiesTask);
+
+                IEnumerable<CaseCategory> caseCategories = caseCategoriesTask.Result;
+                IEnumerable<CaseType> caseTypes = caseTypesTask.Result;
+                IEnumerable<CaseStatus> caseStatuses = caseStatusesTask.Result;
+                IEnumerable<CasePriority> casePriorities = casePrioritiesTask.Result;
+
+                string[] caseIds;
+                string[] workflowIds;
+                string workflowWhere = "";
+                string workListAddrWhere = "";
+                IEnumerable<string> worklistAddrIds;
+
+                Collection<Cases> cases = new Collection<Cases>();
+                Collection<Worklist> worklistItems = new Collection<Worklist>();
+                Collection<WorklistAddr> worklistAddr = new Collection<WorklistAddr>();
+                //string beginningStartDate = "10/01/2020";
+                string closedCaseStatus = "C";
+                string casesCriteria = "";
+
+                if ((studentIds != null && studentIds.Any()) || (searchCaseIds != null && searchCaseIds.Any()))
+                {
+                    // If searching for any particular student, filter the cases
+                    if (studentIds != null && studentIds.Any())
+                    {
+                        List<string> paddedStudentIds = new List<string>();
+                        foreach (var studentId in studentIds)
+                        {
+                            paddedStudentIds.Add(await PadIdPerPid2ParamsAsync(studentId));
+                        }
+
+                        if (IsIncludeClosedCases)
+                        {
+                            casesCriteria = "WITH CASES.PERSON.ID EQ '?' AND CASES.STATUS EQ '" + closedCaseStatus + "'";
+                        }
+                        else
+                        {
+                            casesCriteria = "WITH CASES.PERSON.ID EQ '?' ";
+                        }
+                        caseIds = (await DataReader.SelectAsync("CASES", casesCriteria, paddedStudentIds.ToArray()));
+                        cases = await DataReader.BulkReadRecordAsync<Cases>(caseIds);
+                    }
+                    // If searching for any particular case id, filter the cases
+                    else if (searchCaseIds != null && searchCaseIds.Any())
+                    {
+                        if (IsIncludeClosedCases)
+                        {
+                            casesCriteria = "WITH CASES.ID EQ '?' AND CASES.STATUS EQ '" + closedCaseStatus + "'";
+                        }
+                        else
+                        {
+                            casesCriteria = "WITH CASES.ID EQ '?' ";
+                        }
+                        caseIds = (await DataReader.SelectAsync("CASES", casesCriteria, searchCaseIds.ToArray()));
+                        cases = await DataReader.BulkReadRecordAsync<Cases>(caseIds);
+                    }
+
+                    if (cases != null && cases.Any())
+                    {
+                        List<string> casesWorkFlowIds = cases.Select(x => x.CasesWorkflowId).ToList();
+                        workflowIds = (await DataReader.SelectAsync("WORKLIST", "WITH WKL.WORKFLOW EQ '?' SAVING WORKLIST.ID", casesWorkFlowIds.ToArray()));
+                        worklistItems = await DataReader.BulkReadRecordAsync<Worklist>(workflowIds.ToArray());
+
+                        workListAddrWhere = "WITH WKLAD.WORKLIST EQ '?'";
+                        worklistAddrIds = (await DataReader.SelectAsync("WORKLIST.ADDR", workListAddrWhere, workflowIds.ToArray())).Distinct();
+                        worklistAddr = await DataReader.BulkReadRecordAsync<WorklistAddr>(worklistAddrIds.ToArray());
+                    }
+                }
+                else
+                {
+                    // Get the WKLAD.WORKLIST from WORKLIST.ADDR for the logged in user and roles
+                    workListAddrWhere = String.Format(@"WITH WKLAD.ORG.ENTITY = '{0}' OR WKLAD.ORG.ROLE EQ '?' SAVING WKLAD.WORKLIST", advisorId);
+                    worklistAddrIds = (await DataReader.SelectAsync("WORKLIST.ADDR", workListAddrWhere, roleIds.ToArray())).Distinct();
+
+                    // Get the record key from WORKLIST.ADDR 
+                    string workloadListWhere = "WITH WKLAD.WORKLIST EQ '?'";
+                    IEnumerable<string> worklistRecordIds = (await DataReader.SelectAsync("WORKLIST.ADDR", workloadListWhere, worklistAddrIds.ToArray()));
+                    // Retrieve worklistaddr collection for WKLAD.ORG.ENTITY and WKLAD.ORG.ROLE
+                    worklistAddr = await DataReader.BulkReadRecordAsync<WorklistAddr>(worklistRecordIds.ToArray());
+
+                    workflowWhere = "WITH WORKLIST.ID EQ '?'";
+                    string[] worklistIds = (await DataReader.SelectAsync("WORKLIST", workflowWhere, worklistAddrIds.ToArray()));
+                    worklistItems = await DataReader.BulkReadRecordAsync<Worklist>(worklistIds.ToArray());
+                    List<string> worklistWrkFlow = worklistItems.Select(x => x.WklWorkflow.ToString()).ToList();
+
+                    if (IsIncludeClosedCases)
+                    {
+                        casesCriteria = "WITH CASES.WORKFLOW.ID EQ '?' AND CASES.STATUS EQ '" + closedCaseStatus + "'";
+                    }
+                    else
+                    {
+                        casesCriteria = "WITH CASES.WORKFLOW.ID EQ '?' AND CASES.STATUS NE '" + closedCaseStatus + "'";
+                    }
+                    caseIds = (await DataReader.SelectAsync("CASES", casesCriteria, worklistWrkFlow.ToArray()));
+                    cases = await DataReader.BulkReadRecordAsync<Cases>(caseIds);
+                }
+
+                // Course.Sections
+                IEnumerable<string> distictCaseItemIds = cases.SelectMany(c => c.CasesItems).Distinct();
+                Collection<CaseItems> allCaseItems = await DataReader.BulkReadRecordAsync<CaseItems>(distictCaseItemIds.ToArray());
+                //convert collection of case items in lookup as case  Id with case item details. This will speed up to look for case item from case
+                ILookup<string, CaseItems> groupedCaseItems = allCaseItems.ToLookup(c => c.CitCase, c => c);
+
+                foreach (var racase in cases)
+                {
+                    //pick first case type
+                    String caseType = racase.CasesTypes.FirstOrDefault();
+                    var pri = string.Empty;
+                    if (!string.IsNullOrEmpty(racase.CasesPriority))
+                    {
+                        pri = casePriorities.FirstOrDefault(vals => vals.Code.Equals(racase.CasesPriority, StringComparison.CurrentCultureIgnoreCase)).Description;
+                    }
+                    var status = string.Empty;
+                    var statusAction = string.Empty;
+                    if (!string.IsNullOrEmpty(racase.CasesStatus))
+                    {
+                        var caseStatus = caseStatuses.FirstOrDefault(vals => vals.Code.Equals(racase.CasesStatus, StringComparison.CurrentCultureIgnoreCase));
+                        status = caseStatus.Description;
+                        statusAction = caseStatus.ActionCode;
+                    }
+                    //use lookup to find all the case items for the case
+                   IEnumerable<CaseItems> caseItems= groupedCaseItems[racase.Recordkey];
+                    
+                    //find earliest reminder date
+                    var reminderDate = caseItems.Where(x => x.CitReminderDate.HasValue).Select(x => x.CitReminderDate).OrderBy(x => x).FirstOrDefault();
+
+                    // Get Case Owners
+                    Worklist caseWorkListItems = worklistItems.FirstOrDefault(x => x.WklWorkflow.ToString() == racase.CasesWorkflowId);
+                    List<WorklistAddr> lstWorkListAddr = new List<WorklistAddr>();
+                    List<string> caseOwnerIds = new List<string>();
+                    List<int> caseOrgRoleIds = new List<int>();
+                    string caseOwner = "";
+
+                    DateTime? closedDate = null;
+                    string closedBy = string.Empty;
+                    //if case is closed then consider the latest case item like when was it added and added by whom
+                    if (statusAction.Equals("3"))
+                    {
+                        var closed = caseItems.OrderByDescending(x => x.CaseItemsAdddate).FirstOrDefault();
+                        closedDate = closed.CaseItemsAdddate;
+                        closedBy = closed.CaseItemsAddopr;
+                        caseOwner = "No Owner, Case Closed";
+                    }
+                    else if(caseWorkListItems != null)
+                    {
+                        lstWorkListAddr = worklistAddr.Where(x => x.WkladWorklist == caseWorkListItems.Recordkey).ToList();
+
+                        foreach (var wla in lstWorkListAddr)
+                        {
+                            if(!string.IsNullOrEmpty(wla.WkladOrgEntity))
+                            {
+                                caseOwnerIds.Add(wla.WkladOrgEntity);
+                            }
+
+                            if (!string.IsNullOrEmpty(wla.WkladOrgRole))
+                            {
+                                caseOrgRoleIds.Add(int.Parse(wla.WkladOrgRole));
+                            }
+                        }
+                    }
+
+                    RetentionAlertWorkCase2 item = new RetentionAlertWorkCase2(racase.Recordkey, racase.CasesPersonId)
+                    {
+                        Category = caseCategories.Where(x => x.CategoryId.Equals(racase.CasesCategory))
+                                                            .Select(x => x.Code)
+                                                            .FirstOrDefault(),
+                        CategoryDescription = caseCategories.Where(x => x.CategoryId.Equals(racase.CasesCategory))
+                                                            .Select(x => x.Description)
+                                                            .FirstOrDefault(),
+                        CaseTypeIds = racase.CasesTypes,
+                        CaseType = caseTypes.Where(x => x.CaseTypeId.Equals(caseType))
+                                            .Select(x => x.Description)
+                                            .FirstOrDefault(),
+                        Priority = pri,
+                        CaseOwner = caseOwner,
+                        CaseOwnerIds = caseOwnerIds,
+                        CaseRoleIds = caseOrgRoleIds,
+                        LastActionDate = racase.CasesLastActionDate,
+                        DateCreated = racase.CasesAdddate,
+                        Status = status,
+                        ReminderDate = reminderDate,
+                        ClosedDate = closedDate,
+                        ClosedBy = closedBy,
+                        ActionCount = caseItems.Count().ToString()
+                    };
+                    workItems.Add(item);
+                }
+                return workItems;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, string.Format("Unable to get Retention Alert Cases 2 for Advisor "));
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets a collection of Case priorities
+        /// </summary>
+        /// <returns>Collection of Case priorities</returns>
+        public async Task<IEnumerable<CaseStatus>> GetCaseStatusAsync()
+        {
+            return await GetOrAddToCacheAsync<IEnumerable<Domain.Base.Entities.CaseStatus>>("AllCaseStatus", async () =>
+            {
+                return await GetValcodeAsync<CaseStatus>("CORE", "CASE.STATUSES",
+                e => new CaseStatus(e.ValInternalCodeAssocMember, e.ValExternalRepresentationAssocMember, e.ValActionCode1AssocMember));
+            });
+        }
+
+        /// <summary>
+        /// Gets a collection of Case priorities
+        /// </summary>
+        /// <returns>Collection of Case priorities</returns>
+        public async Task<IEnumerable<CasePriority>> GetCasePrioritiesAsync()
+        {
+            return await GetOrAddToCacheAsync<IEnumerable<Domain.Base.Entities.CasePriority>>("AllCasePriorities", async () =>
+            {
+                return await GetValcodeAsync<CasePriority>("CORE", "CASE.PRIORITIES",
+                e => new CasePriority(e.ValInternalCodeAssocMember, e.ValExternalRepresentationAssocMember));
+            });
+        }
+
+        /// <summary>
+        /// Gets a collection of case categories
+        /// By default the results are cached with the name AllCaseCategories
+        /// </summary>
+        /// <returns>Collection of Case Categories</returns>
+        public async Task<IEnumerable<CaseCategory>> GetCaseCategoriesAsync()
+        {
+            IEnumerable<CaseCategory> CaseCategories = await GetCodeItemAsync<CaseCategories, Domain.Base.Entities.CaseCategory>("AllCaseCategories", "CASE.CATEGORIES",
+             c => new CaseCategory(c.CcatName, c.CcatDescription, c.Recordkey, c.CcatTypes, c.CcatClosureReasons, c.CcatWorkerEmailHier));
+            return CaseCategories;
+        }
+
+        /// <summary>
+        /// Gets a collection of case type
+        /// By default the results are cached with the name AllCaseType
+        /// </summary>
+        /// <returns>Collection of Case Type</returns>
+        public async Task<IEnumerable<CaseType>> GetCaseTypesAsync()
+        {
+            return await GetCodeItemAsync<CaseTypes, Domain.Base.Entities.CaseType>("AllCaseTypes", "CASE.TYPES",
+             c => new CaseType(c.CtypName, c.CtypDescription, c.Recordkey, c.CtypCategory, c.CtypDefaultPriority, c.CtypActiveFlag.ToUpperInvariant() == "Y", c.CtypAllowCaseContrib.ToUpperInvariant() == "Y", c.CtypAvailCommCodes));
+
         }
 
         /// <summary>

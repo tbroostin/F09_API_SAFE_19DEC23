@@ -49,11 +49,21 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         public async Task<Tuple<IEnumerable<EthosApiBuilder>, int>> GetEthosApiBuilderAsync(int offset, int limit, EthosApiConfiguration configuration, Dictionary<string, EthosExtensibleDataFilter> filterDictionary, bool bypassCache)
         {
             string instance = string.Empty;
+            string secondaryKeyName = !string.IsNullOrEmpty(configuration.SecondaryKeyName) ? configuration.SecondaryKeyName : string.Empty;
+            if (!string.IsNullOrEmpty(configuration.PrimaryGuidSource) && !configuration.PrimaryGuidDbType.Equals("K", StringComparison.OrdinalIgnoreCase))
+            {
+                secondaryKeyName = configuration.PrimaryGuidSource;
+            }
+
             IEnumerable<string> fileSuiteYears = new List<string>();
             var fileName = !string.IsNullOrEmpty(configuration.SelectFileName) ? configuration.SelectFileName : configuration.PrimaryEntity;
             if (string.IsNullOrEmpty(fileName))
             {
                 fileName = configuration.PrimaryGuidFileName;
+            }
+            if (fileName.EndsWith("VALCODES"))
+            {
+                fileName = configuration.PrimaryEntity;
             }
 
             Dictionary<string, string> dictionaryItems = new Dictionary<string, string>();
@@ -85,15 +95,17 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
 
             // Main Selection Criteria
-            criteria = BuildSelectCriteria(configuration.SelectColumnName, "", configuration.SavingField,
+            criteria = BuildSelectCriteria(configuration.SelectColumnName, "", "", configuration.SavingField,
                 configuration.SavingOption, configuration.SelectionCriteria, configuration.SortColumns);
             if (selectParagraph != null && selectParagraph.Any())
             {
                 // If we don't have any criteria but we still have a paragraph to execute
                 // then we don't want to select the entire file so we will null out the file name
-                // so that the CTX will only execute the paragraph.
+                // so that the CTX will only execute the paragraph.  Once the paragraph is
+                // executed, then make sure that the keys exist on the primary selection table.
                 if (criteria.Length == 0)
                 {
+                    selectParagraph.Add(string.Format("MIOSEL {0} REQUIRE.SELECT", fileName));
                     fileName = string.Empty;
                 }
                 else
@@ -102,15 +114,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     paragraph.AddRange(selectParagraph);
                     selectParagraph = paragraph;
                 }
-            }
-
-            // If we have filters but the selection criteria uses SAVING field then
-            // We can't execute the main select and must rely on the filter to get
-            // limitingKeys for the resulting data.
-            if (!string.IsNullOrEmpty(configuration.SavingField) && filterDictionary != null && filterDictionary.Any())
-            {
-                fileName = string.Empty;
-                criteria.Clear();
             }
 
             // Rules
@@ -136,21 +139,92 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             if (await IsEthosFileSuiteTemplateFile(fileName, bypassCache))
             {
                 List<string> limitKeys = new List<string>();
-                var prefix = fileName.Split('.')[0].ToString();
+                var prefix = await GetFileSuitePrefix(fileName, bypassCache);
                 fileSuiteYears = await GetFileSuiteYearsAsync(prefix, bypassCache);
                 foreach (var year in fileSuiteYears)
                 {
-                    var physicalFileName = await GetEthosFileSuiteFileNameAsync(fileName, year, false);
-                    var fileSuiteKeys = await DataReader.SelectAsync(physicalFileName, criteria.ToString());
-                    foreach (var key in fileSuiteKeys)
+                    try
                     {
-                        limitKeys.Add(string.Concat(physicalFileName, "+", key));
+                        var physicalFileName = await GetEthosFileSuiteFileNameAsync(fileName, year, false);
+                        // Primary and Secondary keys
+                        if (!string.IsNullOrEmpty(secondaryKeyName))
+                        {
+                            string primarySelect = string.Empty;
+                            string[] primaryKeys = null;
+                            primarySelect = string.Concat("WITH ", secondaryKeyName, " NE '' BY.EXP ", secondaryKeyName);
+                            var primaryKeyList = await DataReader.SelectAsync(physicalFileName, primaryKeys, primarySelect);
+                            primarySelect = string.Concat(primarySelect, " SAVING " + secondaryKeyName);
+                            var secondaryKeyList = await DataReader.SelectAsync(physicalFileName, primaryKeys, primarySelect);
+                            for (int i = 0; i < primaryKeyList.Count(); i++)
+                            {
+                                if (!string.IsNullOrEmpty(primaryKeyList[i]) && !string.IsNullOrEmpty(secondaryKeyList[i]))
+                                {
+                                    // Unidata will return a list of keys, Value Mark, and Position whereby SQL only returns the keys
+                                    limitKeys.Add(physicalFileName + "+" + primaryKeyList[i].Split(_VM)[0] + "+" + secondaryKeyList[i]);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            var fileSuiteKeys = await DataReader.SelectAsync(physicalFileName, criteria.ToString());
+                            foreach (var key in fileSuiteKeys)
+                            {
+                                limitKeys.Add(string.Concat(physicalFileName, "+", key));
+                            }
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // Just skip this file selection if it fails.
                     }
                 }
                 if (limitKeys != null && limitKeys.Any())
                 {
                     limitingKeys = limitKeys.ToArray();
                 }
+                fileName = string.Empty;
+                criteria.Clear();
+            }
+            else
+            {
+                // Primary and Secondary keys or VALCODES tables
+                if (!string.IsNullOrEmpty(secondaryKeyName) || (!string.IsNullOrEmpty(configuration.PrimaryTableName) && !string.IsNullOrEmpty(configuration.PrimaryApplication)))
+                {
+                    List<string> limitKeys = new List<string>();
+                    string primarySelect = string.Empty;
+                    if (!string.IsNullOrEmpty(configuration.PrimaryTableName) && !string.IsNullOrEmpty(configuration.PrimaryApplication))
+                    {
+                        primarySelect = string.Format("WITH VALCODE.ID EQ '{0}' ", configuration.PrimaryTableName);
+                        fileName = string.Concat(configuration.PrimaryApplication, ".VALCODES");
+                        secondaryKeyName = "VAL.INTERNAL.CODE";
+                    }
+                    string[] primaryKeys = null;
+                    primarySelect = string.Concat(primarySelect, "WITH ", secondaryKeyName, " NE '' BY.EXP ", secondaryKeyName);
+                    var primaryKeyList = await DataReader.SelectAsync(fileName, primaryKeys, primarySelect);
+                    primarySelect = string.Concat(primarySelect, " SAVING " + secondaryKeyName);
+                    var secondaryKeyList = await DataReader.SelectAsync(fileName, primaryKeys, primarySelect);
+                    for (int i = 0; i < primaryKeyList.Count(); i++)
+                    {
+                        if (!string.IsNullOrEmpty(primaryKeyList[i]) && !string.IsNullOrEmpty(secondaryKeyList[i]))
+                        {
+                            // Unidata will return a list of keys, Value Mark, and Position whereby SQL only returns the keys
+                            limitKeys.Add(fileName + "+" + primaryKeyList[i].Split(_VM)[0] + "+" + secondaryKeyList[i]);
+                        }
+                    }
+                    if (limitKeys != null && limitKeys.Any())
+                    {
+                        limitingKeys = limitKeys.ToArray();
+                    }
+                    fileName = string.Empty;
+                    criteria.Clear();
+                }
+            }
+
+            // If we have filters but the selection criteria uses SAVING field then
+            // We can't execute the main select and must rely on the filter to get
+            // limitingKeys for the resulting data.
+            if (!string.IsNullOrEmpty(configuration.SavingField) && filterDictionary != null && filterDictionary.Any())
+            {
                 fileName = string.Empty;
                 criteria.Clear();
             }
@@ -176,23 +250,114 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             var columnName = dictItem.Key;
                             var columnData = dictItem.Value;
                             var filterValues = columnData.FilterValue;
+                            var filterOper = columnData.FilterOper;
+
+                            //attempt to populate a default selection criteria
+                            if (columnData.SelectionCriteria == null || !columnData.SelectionCriteria.Any())
+                            {
+                                var listEthosApiSelectCriteria = new List<EthosApiSelectCriteria>();
+                                listEthosApiSelectCriteria.Add(
+                                    new EthosApiSelectCriteria("WITH", columnData.ColleagueColumnName, "EQ", columnData.JsonTitle)
+                                    );
+                                columnData.SelectionCriteria = listEthosApiSelectCriteria;
+                            }
+
                             if (filterValues != null && filterValues.Any())
                             {
                                 var selectFileName = columnData.SelectFileName;
+
                                 foreach (var filterValue in filterValues)
                                 {
-                                    var filterCriteria = BuildSelectCriteria(columnData.SelectColumnName, filterValue, columnData.SavingField,
+                                    var filterCriteria = BuildSelectCriteria(columnData.SelectColumnName, filterValue, filterOper, columnData.SavingField,
                                         columnData.SavingOption, columnData.SelectionCriteria, columnData.SortColumns);
 
-                                    var newLimitingKeys = await DataReader.SelectAsync(selectFileName, limitingKeys, filterCriteria.ToString());
-                                    if (newLimitingKeys == null || !newLimitingKeys.Any())
+                                    // File Suites Processing
+                                    if (await IsEthosFileSuiteTemplateFile(selectFileName, bypassCache))
                                     {
-                                        return new CacheSupport.KeyCacheRequirements()
+                                        var limitKeys = new List<string>();
+                                        var newKeys = limitingKeys.GroupBy(lk => lk.Split('+')[0]).ToDictionary(lk => lk.Key);
+                                        foreach (var group in newKeys)
                                         {
-                                            NoQualifyingRecords = true
-                                        };
+                                            var physicalFileName = group.Key;
+                                            var newLimitingKeys = group.Value.Select(gv => gv.Split('+')[1]).ToArray();
+                                            if (!string.IsNullOrEmpty(secondaryKeyName))
+                                            {
+                                                var tempLimitKeys = await FilterSecondaryKeys(physicalFileName, secondaryKeyName, filterValue, newLimitingKeys, columnData, filterCriteria);
+                                                if (tempLimitKeys != null && tempLimitKeys.Any())
+                                                {
+                                                    limitKeys.AddRange(tempLimitKeys);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                var fileSuiteKeys = await DataReader.SelectAsync(physicalFileName, newLimitingKeys, filterCriteria.ToString());
+                                                if (fileSuiteKeys != null && fileSuiteKeys.Any())
+                                                {
+                                                    foreach (var key in fileSuiteKeys)
+                                                    {
+                                                        limitKeys.Add(string.Concat(physicalFileName, "+", key));
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (limitKeys == null || !limitKeys.Any())
+                                        {
+                                            return new CacheSupport.KeyCacheRequirements()
+                                            {
+                                                NoQualifyingRecords = true
+                                            };
+                                        }
+                                        else
+                                        {
+                                            limitingKeys = limitingKeys.Intersect(limitKeys.ToArray()).ToArray();
+                                        }
                                     }
-                                    limitingKeys = newLimitingKeys;
+                                    else
+                                    {
+                                        // Primary and Secondary Key processing
+                                        if (!string.IsNullOrEmpty(secondaryKeyName))
+                                        {
+                                            string primaryEntity = configuration.PrimaryEntity;
+                                            if (!string.IsNullOrEmpty(configuration.PrimaryApplication) && !string.IsNullOrEmpty(configuration.PrimaryTableName))
+                                            {
+                                                primaryEntity = string.Concat(configuration.PrimaryApplication, ".VALCODES");
+                                            }
+                                            var limitKeys = await FilterSecondaryKeys(primaryEntity, secondaryKeyName, filterValue, limitingKeys, columnData, filterCriteria);
+
+                                            if (limitKeys == null || !limitKeys.Any())
+                                            {
+                                                return new CacheSupport.KeyCacheRequirements()
+                                                {
+                                                    NoQualifyingRecords = true
+                                                };
+                                            }
+                                            else
+                                            {
+                                                limitingKeys = limitingKeys.Intersect(limitKeys.ToArray()).ToArray();
+                                            }
+                                        }
+                                        else
+                                        {
+                                            // Filter processing on primary key or GUID
+                                            var newLimitingKeys = await DataReader.SelectAsync(selectFileName, limitingKeys, filterCriteria.ToString());
+
+                                            if (newLimitingKeys == null || !newLimitingKeys.Any())
+                                            {
+                                                return new CacheSupport.KeyCacheRequirements()
+                                                {
+                                                    NoQualifyingRecords = true
+                                                };
+                                            }
+                                            if (limitingKeys != null && limitingKeys.Any())
+                                            {
+                                                limitingKeys = limitingKeys.Intersect(newLimitingKeys.ToArray()).ToArray();
+                                            }
+                                            else
+                                            {
+                                                limitingKeys = newLimitingKeys.ToArray();
+                                            }
+                                        }
+                                    }
                                     var paragraph = BuildParagraphForFilter(filterValue, columnData);
                                     if (paragraph != null && paragraph.Any())
                                     {
@@ -246,32 +411,57 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var subList = keyCacheObject.Sublist.ToArray();          
 
             List<EthosApiBuilder> extendedDatas = new List<EthosApiBuilder>();
-            
-            var guidCollectionAndKeys = await GetGuidCollectionAsync(subList, configuration, limitingKeys);
-            var recordKeys = guidCollectionAndKeys.Item1;
-            var guidCollection = guidCollectionAndKeys.Item2;
-            foreach (var id in recordKeys)
+
+            if (string.IsNullOrEmpty(configuration.PrimaryKeyName))
             {
-                string guid = string.Empty;
-                if (guidCollection.TryGetValue(id.Contains('+') ? id.Split('+')[1] : id, out guid))
+                // We are using GUIDs to identify the record key
+                var guidCollectionAndKeys = await GetGuidCollectionAsync(subList, configuration, limitingKeys);
+                var recordKeys = guidCollectionAndKeys.Item1;
+                var guidCollection = guidCollectionAndKeys.Item2;
+                foreach (var id in recordKeys)
                 {
-                    EthosApiBuilder extendedData = await BuildEthosApiBuilder(guid, id.Contains('+') ? id.Split('+')[1] : id, configuration.PrimaryEntity);
-                    extendedDatas.Add(extendedData);
-                }
-                else
-                {
-                    if (guidCollection.TryGetValue(id, out guid))
+                    string guid = string.Empty;
+                    if (guidCollection.TryGetValue(id.Contains('+') ? id.Split('+')[1] : id, out guid))
                     {
                         EthosApiBuilder extendedData = await BuildEthosApiBuilder(guid, id.Contains('+') ? id.Split('+')[1] : id, configuration.PrimaryEntity);
                         extendedDatas.Add(extendedData);
                     }
                     else
                     {
-                        exception.AddError(new RepositoryError("GUID.Not.Found", string.Format("Cannot find a guid for {0}.", configuration.PrimaryGuidFileName))
+                        if (guidCollection.TryGetValue(id, out guid))
                         {
-                            SourceId = id
-                        });
+                            EthosApiBuilder extendedData = await BuildEthosApiBuilder(guid, id.Contains('+') ? id.Split('+')[1] : id, configuration.PrimaryEntity);
+                            extendedDatas.Add(extendedData);
+                        }
+                        else
+                        {
+                            exception.AddError(new RepositoryError("GUID.Not.Found", string.Format("Cannot find a guid for {0}.", configuration.PrimaryGuidFileName))
+                            {
+                                SourceId = id
+                            });
+                        }
                     }
+                }
+            }
+            else
+            {
+                foreach (var id in subList)
+                {
+                    string recordKey = id.Contains('+') ? id.Split('+')[1] : id;
+                    string guid = EncodePrimaryKey(id);
+                    if (!string.IsNullOrEmpty(configuration.PrimaryTableName) && !id.Contains('+'))
+                    {
+                        guid = EncodePrimaryKey(string.Concat(configuration.PrimaryEntity, "+", configuration.PrimaryTableName, "+", recordKey));
+                    }
+                    else
+                    {
+                        if (!id.Contains('+'))
+                        {
+                            guid = EncodePrimaryKey(string.Concat(configuration.PrimaryEntity, "+", id));
+                        }
+                    }
+                    EthosApiBuilder extendedData = await BuildEthosApiBuilder(guid, recordKey, configuration.PrimaryEntity);
+                    extendedDatas.Add(extendedData);
                 }
             }
 
@@ -292,37 +482,128 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         {
             if (string.IsNullOrEmpty(id))
             {
-                throw new ArgumentNullException("id", "Must provide an id to get the person visa.");
+                throw new ArgumentNullException("id", string.Format("Must provide an id to get the {0}.", configuration.ResourceName));
             }
             var fileName = !string.IsNullOrEmpty(configuration.PrimaryGuidFileName) ? configuration.PrimaryGuidFileName : configuration.PrimaryEntity;
-                    
-            var guidEntity = await this.GetRecordInfoFromGuidAsync(id);
-            if (guidEntity != null && guidEntity.Entity != fileName)
+            string primaryKey = string.Empty;
+            string secondaryKey = string.Empty;
+            if (!string.IsNullOrEmpty(configuration.PrimaryKeyName))
             {
-                // File Suites
-                if (await IsEthosFileSuiteTemplateFile(fileName))
+                var idSplit = UnEncodePrimaryKey(id).Split('+');
+                if (idSplit.Count() > 1)
                 {
-                    var prefix = fileName.Split('.')[0].ToString();
-                    if (prefix == guidEntity.Entity.Split('.')[0].ToString())
+                    fileName = idSplit[0];
+                    primaryKey = idSplit[1];
+                    if (idSplit.Count() > 2)
                     {
-                        var year = guidEntity.Entity.Split('.')[1];
-                        fileName = await GetEthosFileSuiteFileNameAsync(fileName, year, false);
+                        secondaryKey = idSplit[2];
+                    }
+                }
+                else
+                {
+                    primaryKey = idSplit[0];
+                }
+                // Attempt to select the primary record pointed to from the entity.  If we can't select the record, it may have been deleted.
+                var recordKey = await DataReader.SelectAsync(fileName, new string[] { primaryKey }, "");
+                if (recordKey == null || !recordKey.Any())
+                {
+                    throw new KeyNotFoundException(string.Format("Invalid Id for {0}: '{1}'", configuration.ResourceName, id));
+                }
+                if (!string.IsNullOrEmpty(configuration.SecondaryKeyName))
+                {
+                    if (string.IsNullOrEmpty(secondaryKey))
+                    {
+                        throw new KeyNotFoundException(string.Format("Invalid Id for {0}: '{1}'", configuration.ResourceName, id));
+                    }
+                    var columns = new string[] { configuration.SecondaryKeyName };
+                    var readResult = await DataReader.ReadRecordColumnsAsync(fileName, primaryKey, columns);
+                    string columnValue = string.Empty;
+                    if (readResult != null && readResult.TryGetValue(configuration.SecondaryKeyName, out columnValue))
+                    {
+                        var columnSplit = columnValue.Replace(_SM, _VM).Split(_VM);
+                        if (!columnSplit.Contains(secondaryKey))
+                        {
+                            throw new KeyNotFoundException(string.Format("Invalid Id for {0}: '{1}'", configuration.ResourceName, id));
+                        }
+                    }
+                    else
+                    {
+                        throw new KeyNotFoundException(string.Format("Invalid Id for {0}: '{1}'", configuration.ResourceName, id));
                     }
                 }
             }
-            if (guidEntity == null || guidEntity.Entity != fileName)           
+            else
             {
-                throw new KeyNotFoundException("No resource information for id " + id + ".  Key not found.");
+                var guidEntity = await this.GetRecordInfoFromGuidAsync(id);
+                if (guidEntity != null && guidEntity.Entity != fileName)
+                {
+                    // File Suites
+                    if (await IsEthosFileSuiteTemplateFile(fileName))
+                    {
+                        var prefix = fileName.Split('.')[0].ToString();
+                        if (prefix == guidEntity.Entity.Split('.')[0].ToString())
+                        {
+                            var year = guidEntity.Entity.Split('.')[1];
+                            fileName = await GetEthosFileSuiteFileNameAsync(fileName, year, false);
+                        }
+                        else
+                        {
+                            fileName = guidEntity.Entity;
+                        }
+                    }
+                }
+                if (guidEntity == null || (guidEntity.Entity != fileName && fileName != "VALCODES"))
+                {
+                    if (guidEntity != null && !string.IsNullOrEmpty(guidEntity.Entity))
+                    {
+                        var errorMessage = string.Format("GUID '{0}' has different entity, '{1}', than expected, {2}.", id, guidEntity.Entity, fileName);
+                        exception.AddError(new RepositoryError("GUID.Wrong.Type", errorMessage));
+                        throw exception;
+                    }
+                    else
+                    {
+                        throw new KeyNotFoundException(string.Format("Invalid GUID for {0}: '{1}'", configuration.ResourceName, id));
+                        //var errorMessage = string.Format("Invalid GUID for {0}: '{1}'", configuration.ResourceName, id);
+                        //exception.AddError(new RepositoryError("GUID.Not.Found", errorMessage));
+                        //throw exception;
+                    }
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(configuration.PrimaryTableName) && guidEntity.PrimaryKey != configuration.PrimaryTableName)
+                    {
+                        var errorMessage = string.Format("GUID '{0}' has different entity, '{1}' or primary key, '{2}', than expected.", id, guidEntity.Entity, guidEntity.PrimaryKey);
+                        exception.AddError(new RepositoryError("GUID.Wrong.Type", errorMessage));
+                        throw exception;
+                    }
+
+                    // Attempt to select the primary record pointed to from the entity.  If we can't select the record, it may have been deleted.
+                    var recordKey = await DataReader.SelectAsync(guidEntity.Entity, new string[] { guidEntity.PrimaryKey }, "");
+                    if (recordKey == null || !recordKey.Any())
+                    {
+                        throw new KeyNotFoundException(string.Format("Invalid GUID for {0}: '{1}'", configuration.ResourceName, id));
+                        //var errorMessage = string.Format("Invalid GUID for {0}: '{1}'", configuration.ResourceName, id);
+                        //exception.AddError(new RepositoryError("GUID.Not.Found", errorMessage));
+                        //throw exception;
+                    }
+                }
+                primaryKey = guidEntity.PrimaryKey;
+                secondaryKey = guidEntity.SecondaryKey;
             }
 
+            // Insure that the selected ID will pass all selection criteria defined on the API.
             var selectFileName = !string.IsNullOrEmpty(configuration.SelectFileName) ? configuration.SelectFileName : configuration.PrimaryEntity;
-            if (string.IsNullOrEmpty(fileName))
+            if (string.IsNullOrEmpty(selectFileName))
             {
                 selectFileName = configuration.PrimaryGuidFileName;
             }
-            string selectedRecordCacheKey = CacheSupport.BuildCacheKey(AllSelectedRecordsCache, fileName, id);
+            if (await IsEthosFileSuiteTemplateFile(selectFileName))
+            {
+                selectFileName = fileName;
+            }
+            string selectedRecordCacheKey = CacheSupport.BuildCacheKey(AllSelectedRecordsCache, selectFileName, id);
 
-            string[] limitingKeys = new string[] { guidEntity.PrimaryKey };
+            string[] limitingKeys = new string[] { primaryKey };
             var criteria = new StringBuilder();
             var selectParagraph = new List<string>();
             selectParagraph.AddRange(configuration.SelectParagraph);
@@ -339,18 +620,20 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
 
             // Main Selection Criteria
-            if (configuration.SelectionCriteria != null && configuration.SelectionCriteria.Any() && string.IsNullOrEmpty(configuration.SavingField))
+            if (string.IsNullOrEmpty(configuration.SavingField) && string.IsNullOrEmpty(configuration.PrimaryTableName))
             {
-                criteria = BuildSelectCriteria(configuration.SelectColumnName, "", configuration.SavingField,
+                criteria = BuildSelectCriteria(configuration.SelectColumnName, "", "", configuration.SavingField,
                     configuration.SavingOption, configuration.SelectionCriteria, configuration.SortColumns);
                 if (selectParagraph != null && selectParagraph.Any())
                 {
                     // If we don't have any criteria but we still have a paragraph to execute
                     // then we don't want to select the entire file so we will null out the file name
-                    // so that the CTX will only execute the paragraph.
+                    // so that the CTX will only execute the paragraph.  Once the paragraph is
+                    // executed, then make sure that the keys exist on the primary selection table.
                     if (criteria.Length == 0)
                     {
-                        fileName = string.Empty;
+                        selectParagraph.Add(string.Format("MIOSEL {0} REQUIRE.SELECT", fileName));
+                        selectFileName = string.Empty;
                     }
                     else
                     {
@@ -362,7 +645,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             else
             {
-                selectFileName = fileName;
+                criteria.Clear();
+                selectFileName = string.Empty;
             }
 
             // Rules
@@ -412,15 +696,24 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
             {
-                exception.AddError(new RepositoryError("Validation.Exception", string.Format("The record represented by GUID '{0}' doesn't meet primary selection criteria.", id))
+                var text = string.IsNullOrEmpty(configuration.PrimaryKeyName) ? "GUID" : "KEY";
+                exception.AddError(new RepositoryError("Validation.Exception", string.Format("The record represented by " + text + " '{0}' doesn't meet primary selection criteria.", id))
                 {
-                    SourceId = guidEntity.PrimaryKey,
+                    SourceId = primaryKey,
                     Id = id
                 });
                 throw exception;
             }
 
-            EthosApiBuilder extendedData = await BuildEthosApiBuilder(id, "", configuration.PrimaryEntity);
+            EthosApiBuilder extendedData = null;
+            if (!string.IsNullOrEmpty(configuration.PrimaryKeyName))
+            {
+                extendedData = await BuildEthosApiBuilder(id, primaryKey, configuration.PrimaryEntity);
+            }
+            else
+            {
+                extendedData = await BuildEthosApiBuilder(id, "", configuration.PrimaryEntity);
+            }
 
             if (exception != null && exception.Errors != null && exception.Errors.Any())
             {
@@ -436,37 +729,205 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// Updates API information
         /// </summary>
         /// <param name="extendedDataRequest">Domain.Base.Entities.EthosApiBuilderRequest</param>
+        /// <param name="configuration">Configuration from EthosApiBuilder</param>
         /// <returns>Domain.Base.Entities.EthosApiBuilderResponse</returns>
-        public async Task<Domain.Base.Entities.EthosApiBuilder> UpdateEthosApiBuilderAsync(EthosApiBuilder updateRequest, EthosApiConfiguration configuration)
+        public async Task<Domain.Base.Entities.EthosApiBuilder> UpdateEthosApiBuilderAsync(EthosApiBuilder extendedDataRequest, EthosApiConfiguration configuration)
         {
-            //UpdateEthosApiBuilderRequest updateRequest = new UpdateEthosApiBuilderRequest();
+            EthosApiBuilder extendedDataResponse = null;
+            if (configuration.ApiType == "T")
+            {
+                ProcessScreenApiRequest updateRequest = new ProcessScreenApiRequest();
+                updateRequest.ColumnData = new List<ColumnData>();
+                updateRequest.KeyData = new List<KeyData>();
+                updateRequest.ProcessId = configuration.ProcessId;
+                updateRequest.ProcessMode = (string.IsNullOrEmpty(extendedDataRequest.Code) || extendedDataRequest.Code.StartsWith("$NEW")) ? "POST" : "PUT";
 
-            //var extendedDataTuple = GetEthosEthosApiBuilderLists();
+                var extendedDataTuple = GetEthosExtendedDataLists();
 
-            //if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null)
-            //{
-            //    updateRequest.ExtendedNames = extendedDataTuple.Item1;
-            //    updateRequest.ExtendedValues = extendedDataTuple.Item2;
-            //}
+                if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null)
+                {
+                    foreach (var extendedData in extendedDataTuple.Item1)
+                    {
+                        var extendedValue = extendedDataTuple.Item2.ElementAt(extendedDataTuple.Item1.IndexOf(extendedData));
+                        if (!string.IsNullOrEmpty(extendedData) && !extendedData.Equals("EDME.VERSION.NUMBER", StringComparison.OrdinalIgnoreCase))
+                        {
+                            updateRequest.ColumnData.Add(new ColumnData()
+                            {
+                                ColumnNames = extendedData,
+                                ColumnValues = !string.IsNullOrEmpty(extendedValue) ? extendedValue : String.Empty
+                            });
+                        }
+                    }
+                }
 
-            //UpdateEthosApiBuilderResponse updateResponse = await transactionInvoker.ExecuteAsync<UpdateEthosApiBuilderRequest, UpdateEthosApiBuilderResponse>(updateRequest);
+                updateRequest.KeyData.Add(new KeyData()
+                {
+                    PrimaryKeyNames = extendedDataRequest.Description,
+                    PrimaryKeyValues = extendedDataRequest.Code
+                });
 
-            //if (updateResponse.VisaErrorMessages.Any())
-            //{
-            //    var errorMessage = string.Empty;
-            //    foreach (var message in updateResponse.VisaErrorMessages)
-            //    {
-            //        errorMessage = string.Format("Error occurred updating person visa '{0} {1}'", extendedDataRequest.Guid, extendedDataRequest.PersonId);
-            //        errorMessage += string.Join(Environment.NewLine, message.ErrorMsg);
-            //        logger.Error(errorMessage.ToString());
-            //    }
-            //    throw new InvalidOperationException(errorMessage);
-            //}
+                ProcessScreenApiResponse updateResponse = await transactionInvoker.ExecuteAsync<ProcessScreenApiRequest, ProcessScreenApiResponse>(updateRequest);
 
-            EthosApiBuilder updateResponse = new EthosApiBuilder(updateRequest.Guid, updateRequest.Code, updateRequest.Description);
+                if (updateResponse.ProcessScreenApiErrors.Any())
+                {
+                    var errorMessage = string.Format("Error(s) occurred updating {0}.", configuration.ResourceName);
+                    var exception = new RepositoryException();
+                    updateResponse.ProcessScreenApiErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)
+                    {
+                        SourceId = extendedDataRequest.Code == "$NEW" ? string.Empty : extendedDataRequest.Code
+                    })
+                    );
 
-            return updateResponse;
+                    logger.Error(errorMessage);
+                    throw exception;
+                }
+                var recordKeyData = updateResponse.KeyData.FirstOrDefault(kd => kd.PrimaryKeyNames == extendedDataRequest.Description);
+                if (recordKeyData != null && !string.IsNullOrEmpty(recordKeyData.PrimaryKeyValues))
+                {
+                    var recordKey = recordKeyData.PrimaryKeyValues;
+                    var recordGuid = EncodePrimaryKey(string.Concat(extendedDataRequest.Description, "+", recordKey));
+                    extendedDataResponse = new EthosApiBuilder(recordGuid, recordKey, extendedDataRequest.Description);
+                }
+            }
+            else
+            {
+                UpdateEthosApiBuilderRequest updateRequest = new UpdateEthosApiBuilderRequest();
 
+                var extendedDataTuple = GetEthosExtendedDataLists();
+
+                if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null)
+                {
+                    updateRequest.ExtendedNames = extendedDataTuple.Item1;
+                    updateRequest.ExtendedValues = extendedDataTuple.Item2;
+                }
+                string secondaryKey = string.Empty;
+                if (!string.IsNullOrEmpty(configuration.PrimaryKeyName))
+                {
+                    updateRequest.RecordGuid = string.Empty;
+                    updateRequest.RecordKey = extendedDataRequest.Code;
+                    updateRequest.Entity = extendedDataRequest.Description;
+                    updateRequest.ResourceName = configuration.ResourceName;
+                    if (!string.IsNullOrEmpty(configuration.SecondaryKeyName))
+                    {
+                        if (!updateRequest.ExtendedNames.Contains(configuration.SecondaryKeyName))
+                        {
+                            exception.AddError(new RepositoryError("Create.Update.Exception", string.Format("The POST request is missing the secondary key field '{0}'. Create not allowed.", configuration.SecondaryKeyName)));
+                            throw exception;
+                        }
+                        var secondaryKeyIndex = updateRequest.ExtendedNames.IndexOf(configuration.SecondaryKeyName);
+                        if (secondaryKeyIndex >= 0) secondaryKey = updateRequest.ExtendedValues.ElementAt(secondaryKeyIndex);
+                    }
+                }
+                else
+                {
+                    updateRequest.RecordGuid = extendedDataRequest.Guid;
+                    updateRequest.RecordKey = extendedDataRequest.Code != "$NEW" ? extendedDataRequest.Code : string.Empty;
+                    updateRequest.Entity = extendedDataRequest.Description;
+                    updateRequest.ResourceName = configuration.ResourceName;
+                }
+
+                UpdateEthosApiBuilderResponse updateResponse = await transactionInvoker.ExecuteAsync<UpdateEthosApiBuilderRequest, UpdateEthosApiBuilderResponse>(updateRequest);
+
+                if (updateResponse.UpdateEthosApiBuilderErrors.Any())
+                {
+                    var errorMessage = string.Format("Error(s) occurred updating {0}.", configuration.ResourceName);
+                    var exception = new RepositoryException();
+                    updateResponse.UpdateEthosApiBuilderErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)
+                    {
+                        SourceId = updateRequest.RecordKey == "$NEW" ? string.Empty : updateRequest.RecordKey,
+                        Id = updateRequest.RecordGuid
+                    })
+                    );
+
+                    logger.Error(errorMessage);
+                    throw exception;
+                }
+                extendedDataResponse = new EthosApiBuilder(updateResponse.RecordGuid, updateResponse.RecordKey, updateResponse.Entity);
+            }
+            
+            return extendedDataResponse;
+
+        }
+        #endregion
+
+        #region DELETE
+        /// <summary>
+        /// Updates API information
+        /// </summary>
+        /// <param name="extendedDataRequest">Domain.Base.Entities.EthosApiBuilder</param>
+        /// <param name="configuration">Configuration from EthosApiBuilder</param>
+        /// <returns>Domain.Base.Entities.EthosApiBuilderResponse</returns>
+        public async Task DeleteEthosApiBuilderAsync(string guid, EthosApiConfiguration configuration)
+        {
+            DeleteEthosApiBuilderRequest deleteRequest = new DeleteEthosApiBuilderRequest();
+
+            if (!string.IsNullOrEmpty(configuration.PrimaryKeyName))
+            {
+                var entity = configuration.PrimaryEntity;
+                var primaryKey = string.Empty;
+                var secondaryKey = string.Empty;
+                var recordKey = UnEncodePrimaryKey(guid);
+                if (recordKey.Contains('+'))
+                {
+                    var idSplit = recordKey.Split('+');
+                    if (idSplit.Count() > 1)
+                    {
+                        entity = idSplit[0];
+                        primaryKey = idSplit[1];
+                        if (idSplit.Count() > 2)
+                        {
+                            secondaryKey = idSplit[2];
+                        }
+                    }
+                    else
+                    {
+                        primaryKey = idSplit[0];
+                    }
+
+                }
+                else
+                {
+                    primaryKey = recordKey;
+                }
+                if (!string.IsNullOrEmpty(configuration.PrimaryTableName))
+                {
+                    primaryKey = string.Concat(configuration.PrimaryTableName, "|", primaryKey);
+                }
+                if (!string.IsNullOrEmpty(configuration.SecondaryKeyName))
+                {
+                    entity = string.Concat(entity, "|", configuration.SecondaryKeyName);
+                    primaryKey = string.Concat(primaryKey, "|", secondaryKey);
+                }
+                deleteRequest.RecordKey = primaryKey;
+                deleteRequest.Entity = entity;
+            }
+            else
+            {
+                deleteRequest.RecordGuid = guid;
+                deleteRequest.RecordKey = configuration.PrimaryTableName;
+                deleteRequest.Entity = !string.IsNullOrEmpty(configuration.PrimaryGuidFileName) ? configuration.PrimaryGuidFileName : configuration.PrimaryEntity;
+            }
+            deleteRequest.ResourceName = configuration.ResourceName;
+
+            DeleteEthosApiBuilderResponse deleteResponse = await transactionInvoker.ExecuteAsync<DeleteEthosApiBuilderRequest, DeleteEthosApiBuilderResponse>(deleteRequest);
+
+            if (deleteResponse.DeleteEthosApiBuilderErrors.Any())
+            {
+                var errorMessage = string.Format("Error(s) occurred updating {0}.", configuration.ResourceName);
+                var exception = new RepositoryException();
+                deleteResponse.DeleteEthosApiBuilderErrors.ForEach(e => exception.AddError(new RepositoryError(e.ErrorCodes, e.ErrorMessages)
+                    {
+                        Id = deleteRequest.RecordGuid
+                    })
+                );
+
+                logger.Error(errorMessage);
+                if (deleteResponse.DeleteEthosApiBuilderErrors.FirstOrDefault().ErrorCodes.Equals("GUID.Not.Found", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new KeyNotFoundException(deleteResponse.DeleteEthosApiBuilderErrors.FirstOrDefault().ErrorMessages);
+                }
+                throw exception;
+            }
         }
         #endregion
 
@@ -539,12 +1000,12 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
             else
             {
-                if (await IsEthosFileSuiteTemplateFile(primaryFileName, false))
+                if (await IsEthosFileSuiteTemplateFile(primaryFileName, false) || ids.FirstOrDefault().Contains("+"))
                 {
                     var guidLookup = ids
                     .Where(s => !string.IsNullOrWhiteSpace(s))
                     .Distinct().ToList()
-                    .ConvertAll(p => new RecordKeyLookup(p.Split('+')[0].ToString(), p.Split('+')[1].ToString(), configuration.PrimaryGuidSource, p.Split('+')[1].ToString(), false)).ToArray();
+                    .ConvertAll(p => new RecordKeyLookup(p.Split('+')[0].ToString(), p.Split('+')[1].ToString(), configuration.PrimaryGuidSource, p.Split('+')[2].ToString(), false)).ToArray();
                     recordKeyLookupResults = await DataReader.SelectAsync(guidLookup);
                 }
                 else
@@ -572,14 +1033,179 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         {
                             if (limitingKeys == null || !limitingKeys.Any())
                             {
-                                var criteria = BuildSelectCriteria(configuration.SelectColumnName, "", "", "",
-                                    configuration.SelectionCriteria, configuration.SortColumns);
+                                limitingKeys = ids.ToArray();
+                            }
+                            var limitingKeyValues = limitingKeys.ToList().Distinct();
+                            var sortCriteria = new List<EthosApiSortCriteria>()
+                            {
+                                new EthosApiSortCriteria(configuration.PrimaryGuidSource, "BY")
+                            };
 
-                                limitingKeys = await DataReader.SelectAsync(primaryFileName, criteria.ToString());
+                            List<string> limitingPrimaryKeys = new List<string>();
+                            foreach (var limitingKey in limitingKeyValues)
+                            {
+                                if (!string.IsNullOrEmpty(limitingKey))
+                                {
+                                    var selectCriteria = new List<EthosApiSelectCriteria>();
+                                    selectCriteria.AddRange(configuration.SelectionCriteria);
+                                    selectCriteria.Add(
+                                        new EthosApiSelectCriteria("WITH", configuration.PrimaryGuidSource, "EQ", "'" + limitingKey + "'")
+                                    );
+
+                                    var criteria = BuildSelectCriteria("", "", "", "", "",
+                                        selectCriteria, sortCriteria);
+
+                                    var selectedPrimaryKeys = await DataReader.SelectAsync(primaryFileName, criteria.ToString());
+                                    limitingPrimaryKeys.AddRange(selectedPrimaryKeys.ToList());
+                                }
+                            }
+
+                            List<RecordKeyLookup> guidLookupList = new List<RecordKeyLookup>();
+                            foreach (var primaryKey in limitingPrimaryKeys)
+                            {
+                                var guidLookupArray = ids
+                                   .Where(s => !string.IsNullOrWhiteSpace(s))
+                                   .Distinct().ToList()
+                                   .ConvertAll(p => new RecordKeyLookup(primaryFileName, primaryKey, configuration.PrimaryGuidSource, p, false));
+                                guidLookupList.AddRange(guidLookupArray);
+                            }
+                            recordKeyLookupResults = await DataReader.SelectAsync(guidLookupList.ToArray());
+                        }
+                    }
+                }
+            }
+            foreach (var recordKeyLookupResult in recordKeyLookupResults)
+            {
+                try
+                {
+                    var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                    if (!guidCollection.ContainsKey(recordKeyLookupResult.Key))
+                    {
+                        if (recordKeyLookupResult.Value != null && !string.IsNullOrEmpty(recordKeyLookupResult.Value.Guid))
+                        {
+                            guidCollection.Add(recordKeyLookupResult.Key, recordKeyLookupResult.Value.Guid);
+                        }
+                    }
+
+                    int index = splitKeys.Count() - 1;
+                    if (!guidCollection.ContainsKey(splitKeys[index]))
+                    {
+                        if (recordKeyLookupResult.Value != null && !string.IsNullOrEmpty(recordKeyLookupResult.Value.Guid))
+                        {
+                            guidCollection.Add(splitKeys[index], recordKeyLookupResult.Value.Guid);
+                        }
+                    }
+                }
+                catch (Exception) // Do not throw error.
+                {
+                }
+            }
+
+            return new Tuple<List<string>, Dictionary<string, string>>(recordKeys, guidCollection);
+
+        }
+
+        /// <summary>
+        /// Get a guid collection from a list of keys
+        /// </summary>
+        /// <param name="ids">List of keys to get a collection for.</param>
+        /// <param name="configuration">Configuration parameters for API</param>
+        /// <returns>Dictionary of keys and guids</returns>
+        private async Task<Tuple<List<string>, Dictionary<string, string>>> GetKeyCollectionAsync(IEnumerable<string> ids, EthosApiConfiguration configuration, string[] limitingKeys)
+        {
+
+            List<string> recordKeys = ids.ToList();
+            if ((ids == null) || (ids != null && !ids.Any()))
+            {
+                return new Tuple<List<string>, Dictionary<string, string>>(recordKeys, new Dictionary<string, string>());
+            }
+            var guidCollection = new Dictionary<string, string>();
+            Dictionary<string, RecordKeyLookupResult> recordKeyLookupResults = new Dictionary<string, RecordKeyLookupResult>();
+            string primaryFileName = configuration.PrimaryEntity;
+
+            if (!string.IsNullOrEmpty(configuration.SecondaryKeyName))
+            {
+                if (await IsEthosFileSuiteTemplateFile(primaryFileName, false))
+                {
+                    var guidLookup = ids
+                        .Where(s => !string.IsNullOrWhiteSpace(s))
+                        .Distinct().ToList()
+                        .ConvertAll(p => new RecordKeyLookup(p.Split('+')[0].ToString(), p.Split('+')[1].ToString(), false)).ToArray();
+                    recordKeyLookupResults = await DataReader.SelectAsync(guidLookup);
+                }
+                else
+                {
+                    var guidLookup = ids
+                        .Where(s => !string.IsNullOrWhiteSpace(s))
+                        .Distinct().ToList()
+                        .ConvertAll(p => new RecordKeyLookup(primaryFileName, p, false)).ToArray();
+                    recordKeyLookupResults = await DataReader.SelectAsync(guidLookup);
+                }
+            }
+            else
+            {
+                if (await IsEthosFileSuiteTemplateFile(primaryFileName, false))
+                {
+                    var guidLookup = ids
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct().ToList()
+                    .ConvertAll(p => new RecordKeyLookup(p.Split('+')[0].ToString(), p.Split('+')[1].ToString(), configuration.PrimaryGuidSource, p.Split('+')[1].ToString(), false)).ToArray();
+                    recordKeyLookupResults = await DataReader.SelectAsync(guidLookup);
+                }
+                else
+                {
+                    if (configuration.PrimaryEntity.EndsWith("VALCODES"))
+                    {
+                        var guidLookup = ids
+                        .Where(s => !string.IsNullOrWhiteSpace(s))
+                        .Distinct().ToList()
+                        .ConvertAll(p => new RecordKeyLookup(primaryFileName, configuration.PrimaryTableName, configuration.SecondaryKeyName, p, false)).ToArray();
+                        recordKeyLookupResults = await DataReader.SelectAsync(guidLookup);
+                    }
+                    else
+                    {
+                        var guidLookup = ids
+                            .Where(s => !string.IsNullOrWhiteSpace(s))
+                            .Distinct().ToList()
+                            .ConvertAll(p => new RecordKeyLookup(primaryFileName, p, configuration.PrimaryKeyName, p, false)).ToArray();
+                        recordKeyLookupResults = await DataReader.SelectAsync(guidLookup);
+
+                        // If we don't find any GUIDs with the same primary key as the secondary key, then
+                        // try selecting from limiting keys.
+                        var selectedGuids = recordKeyLookupResults.Where(s => s.Value != null && !string.IsNullOrEmpty(s.Value.Guid));
+                        if (selectedGuids == null || !selectedGuids.Any())
+                        {
+                            if (limitingKeys == null || !limitingKeys.Any())
+                            {
+                                limitingKeys = ids.ToArray();
+                            }
+                            var limitingKeyValues = limitingKeys.ToList().Distinct();
+                            var sortCriteria = new List<EthosApiSortCriteria>()
+                            {
+                                new EthosApiSortCriteria(configuration.PrimaryGuidSource, "BY")
+                            };
+
+                            List<string> limitingPrimaryKeys = new List<string>();
+                            foreach (var limitingKey in limitingKeyValues)
+                            {
+                                if (!string.IsNullOrEmpty(limitingKey))
+                                {
+                                    var selectCriteria = new List<EthosApiSelectCriteria>();
+                                    selectCriteria.AddRange(configuration.SelectionCriteria);
+                                    selectCriteria.Add(
+                                        new EthosApiSelectCriteria("WITH", configuration.PrimaryGuidSource, "EQ", "'" + limitingKey + "'")
+                                    );
+
+                                    var criteria = BuildSelectCriteria("", "", "", "", "",
+                                        selectCriteria, sortCriteria);
+
+                                    var selectedPrimaryKeys = await DataReader.SelectAsync(primaryFileName, criteria.ToString());
+                                    limitingPrimaryKeys.AddRange(selectedPrimaryKeys.ToList());
+                                }
                             }
 
                             recordKeyLookupResults = new Dictionary<string, RecordKeyLookupResult>();
-                            foreach (var primaryKey in limitingKeys)
+                            foreach (var primaryKey in limitingPrimaryKeys)
                             {
                                 guidLookup = ids
                                    .Where(s => !string.IsNullOrWhiteSpace(s))
@@ -606,7 +1232,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     int index = splitKeys.Count() - 1;
                     if (!guidCollection.ContainsKey(splitKeys[index]))
                     {
-                        string guid = splitKeys[1];
+                        string guid = splitKeys[index];
                         if (recordKeyLookupResult.Value != null && !string.IsNullOrEmpty(recordKeyLookupResult.Value.Guid))
                         {
                             guid = recordKeyLookupResult.Value.Guid;
@@ -754,6 +1380,23 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return false;
         }
 
+        private async Task<string> GetFileSuitePrefix(string fileName, bool bypassCache = false)
+        {
+            var ethosFileSuitesList = await GetEthosFileSuiteTemplatesAsync(bypassCache);
+
+            foreach (var template in ethosFileSuitesList)
+            {
+                foreach (var templateFile in template.FstmpltEntityAssociation)
+                {
+                    if (templateFile.FstTemplateAssocMember == fileName)
+                    {
+                        return templateFile.FstFilePrefixAssocMember;
+                    }
+                }
+            }
+            return string.Empty;
+        }
+
         /// <summary>
         /// Get the file name for a template file and specific year/instance.
         /// </summary>
@@ -861,6 +1504,16 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     return await GetGeneralLedgerYearsAsync(bypassCache);
                 case "GLP":
                     return await GetGeneralLedgerYearsAsync(bypassCache);
+                case "BCT":
+                    return await GetBudgetYearsAsync(bypassCache);
+                case "BJT":
+                    return await GetBudgetYearsAsync(bypassCache);
+                case "BOC":
+                    return await GetBudgetYearsAsync(bypassCache);
+                case "BWK":
+                    return await GetBudgetYearsAsync(bypassCache);
+                case "BPJ":
+                    return await GetBudgetYearsAsync(bypassCache);
                 default:
                     return await GetFinancialAidYearsAsync(bypassCache);
             }
@@ -904,21 +1557,21 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
         private IEnumerable<string> _genLedgerYears = null;
         /// <summary>
-        /// Get a collection of financial aid years.
+        /// Get a collection of General Ledger years.
         /// </summary>
         /// <param name="bypassCache">Bypass cache flag</param>
-        /// <returns>Collection of financial aid years</returns>
+        /// <returns>Collection of General Ledger years</returns>
         private async Task<IEnumerable<string>> GetGeneralLedgerYearsAsync(bool bypassCache = false)
         {
             if (_genLedgerYears == null)
             {
-                const string ethosFinancialAidYearsCacheKey = "AllEthosApiBuilderGeneralLedgerYears";
+                const string ethosGeneralLedgerYearsCacheKey = "AllEthosApiBuilderGeneralLedgerYears";
 
-                if (bypassCache && ContainsKey(BuildFullCacheKey(ethosFinancialAidYearsCacheKey)))
+                if (bypassCache && ContainsKey(BuildFullCacheKey(ethosGeneralLedgerYearsCacheKey)))
                 {
-                    ClearCache(new List<string> { ethosFinancialAidYearsCacheKey });
+                    ClearCache(new List<string> { ethosGeneralLedgerYearsCacheKey });
                 }
-                var genLedgerYears = await GetOrAddToCacheAsync<List<string>>(ethosFinancialAidYearsCacheKey,
+                var genLedgerYears = await GetOrAddToCacheAsync<List<string>>(ethosGeneralLedgerYearsCacheKey,
                     async () =>
                     {
                         var suiteYears = await DataReader.SelectAsync("GEN.LDGR", "WITH GEN.LDGR.TYPE EQ 'LEDGER' AND WITH GEN.LDGR.STATUS NE 'X'");
@@ -928,6 +1581,34 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 _genLedgerYears = genLedgerYears;
             }
             return _genLedgerYears;
+        }
+
+        private IEnumerable<string> _budgetYears = null;
+        /// <summary>
+        /// Get a collection of budget/years.
+        /// </summary>
+        /// <param name="bypassCache">Bypass cache flag</param>
+        /// <returns>Collection of budgets/years</returns>
+        private async Task<IEnumerable<string>> GetBudgetYearsAsync(bool bypassCache = false)
+        {
+            if (_budgetYears == null)
+            {
+                const string ethosBudgetYearsCacheKey = "AllEthosApiBuilderBudgetYears";
+
+                if (bypassCache && ContainsKey(BuildFullCacheKey(ethosBudgetYearsCacheKey)))
+                {
+                    ClearCache(new List<string> { ethosBudgetYearsCacheKey });
+                }
+                var budgetYears = await GetOrAddToCacheAsync<List<string>>(ethosBudgetYearsCacheKey,
+                    async () =>
+                    {
+                        var suiteYears = await DataReader.SelectAsync("BUDGET", "WITH BU.LOCATION EQ 'O'");
+                        return suiteYears.ToList();
+                    }, CacheTimeout);
+
+                _budgetYears = budgetYears;
+            }
+            return _budgetYears;
         }
 
         private IEnumerable<EdmCodeHooks> _ethosExtensibleCodeHooks = null;
@@ -1010,7 +1691,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return returnParagraph;
         }
 
-        private StringBuilder BuildSelectCriteria(string columnName, string value, string savingColumn, string savingOption, List<EthosApiSelectCriteria> selectionCriteria, List<EthosApiSortCriteria> sortCriteria)
+        private StringBuilder BuildSelectCriteria(string columnName, string value, string oper, string savingColumn, string savingOption, List<EthosApiSelectCriteria> selectionCriteria, List<EthosApiSortCriteria> sortCriteria)
         {
             var criteria = new StringBuilder();
             if (selectionCriteria != null && selectionCriteria.Any())
@@ -1041,14 +1722,24 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     criteria.Append(" ");
                     criteria.Append(select.SelectColumn);
                     criteria.Append(" ");
-                    criteria.Append(select.SelectOper);
-                    criteria.Append(" ");
                     if (!string.IsNullOrEmpty(columnName) && !string.IsNullOrEmpty(value))
                     {
+                        criteria.Append(" ");
+                        if (!string.IsNullOrEmpty(oper))
+                        {
+                            criteria.Append(oper);
+                        }
+                        else
+                        {
+                            criteria.Append(select.SelectOper);
+                        }
+                        criteria.Append(" ");
                         criteria.Append(select.SelectValue.Replace(columnName, value));
                     }
                     else
                     {
+                        criteria.Append(select.SelectOper);
+                        criteria.Append(" ");
                         criteria.Append(select.SelectValue);
                     }
                     criteria.Append(" ");
@@ -1166,6 +1857,309 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
 
             return limitingKeys;
+        }
+
+        /// <summary>
+        /// Encode a primary key for use in Extensibility
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns>Encoded string to use as guid on a non-guid based API.</returns>
+        private string EncodePrimaryKey(string id)
+        {
+            // Preserve all lower case and dashes in original key by manually escaping those characters.
+            var returnData = id.Replace("-", "-2D").Replace("a", "-61").
+                Replace("b", "-62").Replace("c", "-63").Replace("d", "-64").
+                Replace("e", "-65").Replace("f", "-66").Replace("g", "-67").
+                Replace("h", "-68").Replace("i", "-69").Replace("j", "-6A").
+                Replace("k", "-6B").Replace("l", "-6C").Replace("m", "-6D").
+                Replace("n", "-6E").Replace("o", "-6F").Replace("p", "-70").
+                Replace("q", "-71").Replace("r", "-72").Replace("s", "-73").
+                Replace("t", "-74").Replace("u", "-75").Replace("v", "-76").
+                Replace("w", "-77").Replace("x", "-78").Replace("y", "-79").
+                Replace("z", "-7A");
+            return Uri.EscapeDataString(returnData).Replace("%", "-").ToLower();
+        }
+
+        /// <summary>
+        /// Un-Encode a primary key for use in Extensibility
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns>Un-Encoded string taken from a non-guid based API guid.</returns>
+        private string UnEncodePrimaryKey(string id)
+        {
+            var primaryKey = id.Replace("-", "%").ToUpper();
+            return Uri.UnescapeDataString(primaryKey);
+        }
+
+        /// <summary>
+        /// Filter on all primary/secondary key values and rebuild the limiting list.
+        /// </summary>
+        /// <param name="primaryEntity"></param>
+        /// <param name="secondaryKeyName"></param>
+        /// <param name="filterValue"></param>
+        /// <param name="limitingKeys"></param>
+        /// <param name="columnData"></param>
+        /// <param name="filterCriteria"></param>
+        /// <returns></returns>
+        private async Task<List<string>> FilterSecondaryKeys(string primaryEntity, string secondaryKeyName, string filterValue, string[] limitingKeys, EthosExtensibleDataFilter columnData, StringBuilder filterCriteria)
+        {
+            var filterOper = columnData.FilterOper;
+
+            List<string> limitKeys = new List<string>();
+            if (limitingKeys == null || !limitingKeys.Any())
+            {
+                return limitKeys;
+            }
+
+            if (string.IsNullOrEmpty(secondaryKeyName))
+            {
+                return limitingKeys.ToList();
+            }
+
+            var sortColumns = new List<EthosApiSortCriteria>()
+            {
+                new EthosApiSortCriteria(secondaryKeyName, "BY.EXP")
+            };
+
+            var newLimitingKeys = limitingKeys.Select(gv => (gv.Contains('+') ? gv.Split('+')[1] : gv)).Distinct().ToArray();
+            if (columnData.SelectFileName != primaryEntity && !string.IsNullOrEmpty(columnData.SelectFileName) && columnData.SelectFileName != "VALCODES")
+            {
+                var tempLimitKeys = await DataReader.SelectAsync(columnData.SelectFileName, newLimitingKeys, filterCriteria.ToString());
+                newLimitingKeys = tempLimitKeys;
+            }
+            var primarySelect = BuildSelectCriteria(columnData.SelectColumnName, filterValue, filterOper, string.Empty,
+                 string.Empty, columnData.SelectionCriteria, sortColumns).ToString();
+            var primaryKeyList = await DataReader.SelectAsync(primaryEntity, newLimitingKeys, primarySelect);
+
+            var secondarySelect = BuildSelectCriteria(columnData.SelectColumnName, filterValue, filterOper, secondaryKeyName,
+                string.Empty, columnData.SelectionCriteria, sortColumns).ToString();
+            var secondaryKeyList = await DataReader.SelectAsync(primaryEntity, newLimitingKeys, secondarySelect);
+            var convertedValue = ConvertFilterValue(filterValue, columnData.JsonPropertyType.ToLower());
+
+            for (int i = 0; i < primaryKeyList.Count(); i++)
+            {
+                if (!string.IsNullOrEmpty(primaryKeyList[i]) && secondaryKeyList.Count() > i && !string.IsNullOrEmpty(secondaryKeyList[i]))
+                {
+                    bool includeKey = false;
+                    if (columnData.DatabaseUsageType != null && (columnData.DatabaseUsageType.Equals("K", StringComparison.OrdinalIgnoreCase)
+                        || (columnData.DatabaseUsageType.Equals("D", StringComparison.OrdinalIgnoreCase) 
+                        && columnData.ColleagueFileName.Equals(primaryEntity, StringComparison.OrdinalIgnoreCase))))
+                    {
+                        includeKey = true;
+                    }
+                    else
+                    {
+                        if (columnData.ColleagueColumnName != secondaryKeyName)
+                        {
+                            var columnNames = new List<string>() { secondaryKeyName };
+                            if (columnData.SelectFileName.Equals(primaryEntity, StringComparison.OrdinalIgnoreCase) || (primaryEntity.EndsWith("VALCODES") && columnData.SelectFileName.EndsWith("VALCODES")))
+                            {
+                                columnNames.Add(columnData.ColleagueColumnName);
+                            }
+                            Dictionary<string, string> dataRecordColumns = new Dictionary<string, string>();
+                            bool tryAgain = false;
+                            try
+                            {
+                                dataRecordColumns = await DataReader.ReadRecordColumnsAsync(primaryEntity, primaryKeyList[i], columnNames.ToArray());
+                            }
+                            catch
+                            {
+                                tryAgain = true;
+                            }
+                            if (primaryEntity.EndsWith("VALCODES") && tryAgain)
+                            {
+                                try
+                                {
+                                    dataRecordColumns = await DataReader.ReadRecordColumnsAsync("VALCODES", primaryKeyList[i], columnNames.ToArray());
+                                }
+                                catch
+                                {
+                                    return new List<string>();
+                                }
+                            }
+                            else
+                            {
+                                if (tryAgain)
+                                {
+                                    return new List<string>();
+                                }
+                            }
+                            string filterData = string.Empty;
+                            string secondaryKey = string.Empty;
+                            if (dataRecordColumns != null && dataRecordColumns.TryGetValue(secondaryKeyName, out secondaryKey) && dataRecordColumns.TryGetValue(columnData.ColleagueColumnName, out filterData))
+                            {
+                                var splitSecondary = secondaryKey.Split(_VM);
+                                var splitFilterData = filterData.Split(_VM);
+                                int idx = 0;
+                                foreach (var secondary in splitSecondary)
+                                {
+                                    if (secondary.Equals(secondaryKeyList[i], StringComparison.OrdinalIgnoreCase) && splitFilterData != null && splitFilterData.Count() > idx)
+                                    {
+                                        includeKey = CompareFilterValue(splitFilterData[idx], convertedValue, filterOper);
+                                    }
+                                    else
+                                    {
+                                        if (splitFilterData.Count() != splitSecondary.Count())
+                                        {
+                                            includeKey = CompareFilterValue(splitFilterData[0], convertedValue, filterOper);
+                                        }
+                                    }
+                                    idx++;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            includeKey = CompareFilterValue(secondaryKeyList[i], convertedValue, filterOper);
+                        }
+                    }
+                    if (includeKey)
+                    {
+                        // Unidata will return a list of keys, Value Mark, and Position whereby SQL only returns the keys
+                        limitKeys.Add(primaryEntity + "+" + primaryKeyList[i].Split(_VM)[0] + "+" + secondaryKeyList[i]);
+                    }
+                }
+            }
+            return limitKeys.Distinct().ToList();
+        }
+
+        /// <summary>
+        /// Convert a filter value into it's Unidata Value
+        /// </summary>
+        /// <param name="filterValue"></param>
+        /// <param name="propertyType"></param>
+        /// <returns></returns>
+        private string ConvertFilterValue(string filterValue, string propertyType)
+        {
+            string outputData = filterValue;
+            switch (propertyType.ToLower())
+            {
+                case ("date"):
+                    {
+                        try
+                        {
+                            var dateValues = filterValue.Split('/');
+                            if (dateValues.Count() >= 3)
+                            {
+                                var year = Convert.ToInt32(dateValues[2]);
+                                var month = Convert.ToInt32(dateValues[0]);
+                                var day = Convert.ToInt32(dateValues[1]);
+                                outputData = DmiString.DateTimeToPickDate(new DateTime(year, month, day)).ToString();
+                            }
+                        }
+                        catch (FormatException ex)
+                        {
+
+                        }
+                    }
+                    break;
+                case ("datetime"):
+                    {
+                        try
+                        {
+                            //DateTime temp = Convert.ToDateTime(filterData);
+                            //filterData = string.Concat(temp.Month.ToString(), "/", temp.Day.ToString(), "/", temp.Year.ToString());
+                        }
+                        catch (FormatException ex)
+                        {
+
+                        }
+                    }
+                    break;
+                case ("time"):
+                    {
+                        try
+                        {
+                            //filterData = DateTime.Today.ToString() + "T" + filterData;
+                            //DateTime temp = Convert.ToDateTime(filterData);
+                            //filterData = string.Concat(temp.Hour.ToString(), ":", temp.Minute.ToString(), ":", temp.Second.ToString());
+                        }
+                        catch (FormatException ex)
+                        {
+
+                        }
+                    }
+                    break;
+                case ("number"):
+                    {
+                        try
+                        {
+                            decimal temp = Convert.ToDecimal(filterValue);
+                            outputData = temp.ToString();
+                        }
+                        catch (FormatException ex)
+                        {
+
+                        }
+                    }
+                    break;
+                default:
+                    {
+                        outputData = filterValue;
+                        break;
+                    }
+            }
+
+            return outputData;
+        }
+
+        private bool CompareFilterValue(string filterData, string filterValue, string filterOper)
+        {
+            if (string.IsNullOrEmpty(filterOper)) filterOper = "EQ";
+            if (string.IsNullOrEmpty(filterData)) return false;
+            if (string.IsNullOrEmpty(filterValue)) return false;
+
+            try
+            {
+                bool includeKey;
+                switch (filterOper.ToUpper())
+                {
+                    case "LE":
+                        includeKey = (Convert.ToDecimal(filterData) <= Convert.ToDecimal(filterValue));
+                        break;
+                    case "GE":
+                        includeKey = (Convert.ToDecimal(filterData) >= Convert.ToDecimal(filterValue));
+                        break;
+                    case "LT":
+                        includeKey = (Convert.ToDecimal(filterData) < Convert.ToDecimal(filterValue));
+                        break;
+                    case "GT":
+                        includeKey = (Convert.ToDecimal(filterData) > Convert.ToDecimal(filterValue));
+                        break;
+                    case "NE":
+                        includeKey = (filterData != filterValue);
+                        break;
+                    case "EQ":
+                        includeKey = (filterData == filterValue);
+                        break;
+                    default:
+                        includeKey = (filterData == filterValue);
+                        break;
+                }
+
+                return includeKey;
+            }
+            catch
+            {
+                var comparison = string.Compare(filterData, filterValue, StringComparison.OrdinalIgnoreCase);
+                if (filterOper.Equals("LE", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (comparison <= 0) return true;
+                }
+                if (filterOper.Equals("GE", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (comparison >= 0) return true;
+                }
+                if (filterOper.Equals("LT", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (comparison < 0) return true;
+                }
+                if (filterOper.Equals("GT", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (comparison > 0) return true;
+                }
+                return false;
+            }
         }
     }
 }

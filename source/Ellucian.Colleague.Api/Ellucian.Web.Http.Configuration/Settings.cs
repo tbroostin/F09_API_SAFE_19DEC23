@@ -2,6 +2,8 @@
 using System;
 using System.Diagnostics;
 using Ellucian.Colleague.Configuration;
+using Serilog.Core;
+using Serilog.Events;
 
 namespace Ellucian.Web.Http.Configuration
 {
@@ -11,7 +13,7 @@ namespace Ellucian.Web.Http.Configuration
     public class Settings
     {
         private ColleagueSettings colleagueSettings;
-        private SourceLevels logLevel;
+        private LogEventLevel logLevel;
         private string profileName;
 
 
@@ -23,8 +25,7 @@ namespace Ellucian.Web.Http.Configuration
         /// <summary>
         /// Log level
         /// </summary>
-        public SourceLevels LogLevel { get { return logLevel; } }
-
+        public LogEventLevel LogLevel { get { return logLevel; } }
         public String ProfileName
         {
             get
@@ -37,7 +38,7 @@ namespace Ellucian.Web.Http.Configuration
             }
         }
         
-        public Settings(ColleagueSettings colleagueSettings, SourceLevels logLevel)
+        public Settings(ColleagueSettings colleagueSettings, LogEventLevel logLevel)
         {
             if (colleagueSettings == null)
             {

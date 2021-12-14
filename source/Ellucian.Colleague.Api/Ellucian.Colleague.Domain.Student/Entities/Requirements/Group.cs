@@ -398,7 +398,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
                     }
                     continue;
                 }
-
+                //if this course is planned course and cannot be retaken for credits and is already applied or planned applied to group then ignore it.
                 // COURSES
                 if (Courses.Count > 0)
                 {
@@ -805,39 +805,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
                     }
                 }
 
-                // If this is a planned course, do not apply it on top of 
-                // an applied academic credit if course retake is not allowed
-                //again this is a scenario that won't work when you  have TakeAll statements like Take CRS1 CRS2 
-                //this is beacuse in Take statement CRS1 can occur multiple times and irrespective of retake flag we need
-                //to pick that many times but not more. 
-                //whereas with other Take statements, planned could be picked multiple times when retake is allowed.
-                //if retake is not allowed then planned won't be picked if already have in-progress/completed or registered course
-                
-                bool alreadyapplied = false;
-                if (acadResult.GetAcadCredId() == null && !isCourseRetakeAllowed && (Courses == null || Courses.Count == 0))
-                {
-                    var applied = groupResult.GetApplied().Select(ap => ap.GetCourse()).Where(cs => cs != null).AsEnumerable();
-
-                    // Do not apply the planned course if the list of applied items contains this course
-                    if (applied.Contains(acadResult.GetCourse()))
-                    {
-                        alreadyapplied = true;
-                    }
-                    // Do not apply the planned course if the list of applied items contains an equated course
-                    // Do not apply the planned course if the list of applied items contains an equated course
-                    if (acadResult != null && acadResult.GetCourse() != null && applied.SelectMany(a => a.EquatedCourseIds).Contains(acadResult.GetCourse().Id))
-                    {
-                        alreadyapplied = true;
-                    }
-
-                }
                 // We need to apply the current course/credit if:
                 //  It's not a specific course that is already applied
                 //  It's a required course or an equivalent of a required course.
                 //  There is an unmet minimum, and the course/credit can count towards it.
-
-                if ((!alreadyapplied) &&
-                    ((acadResult.GetCourse() != null) && ((Courses.Contains(acadResult.GetCourse().Id)) || (Courses.Intersect(acadResult.GetCourse().EquatedCourseIds).Count() != 0)) ||
+                if (((acadResult.GetCourse() != null) && ((Courses.Contains(acadResult.GetCourse().Id)) || (Courses.Intersect(acadResult.GetCourse().EquatedCourseIds).Count() != 0)) ||
                     MinCoursesNotMet(groupResult, true) ||
                     (MinDepartmentsNotMet(groupResult, true) && IncreasesDeptCountBy(groupResult, acadResult) > 0) ||
                     (MinSubjectsNotMet(groupResult, true) && IncreasesSubjectCount(groupResult, acadResult)) ||
@@ -1555,10 +1527,15 @@ namespace Ellucian.Colleague.Domain.Student.Entities.Requirements
             }
 
 
-            //BB- Repeat - if credit has replaceInprogress flag then don't count that acad cred record for group evaluation
+            // Repeat - if credit has replaceInprogress flag then don't count that acad cred record for group evaluation
             if(acadResult!=null && acadResult.GetAcadCred()!=null && acadResult.GetAcadCred().ReplacedStatus == ReplacedStatus.ReplaceInProgress)
             {
                 return Result.ReplaceInProgress; 
+            }
+            //If planned course is replaced in progress then do not pass it for group evaluation
+            if (acadResult != null && acadResult.GetAcadCred() == null && acadResult.GetCourse() != null && ((CourseResult)acadResult).PlannedCourse.ReplacedStatus == ReplacedStatus.ReplaceInProgress)
+            {
+                return Result.ReplaceInProgress;
             }
 
 

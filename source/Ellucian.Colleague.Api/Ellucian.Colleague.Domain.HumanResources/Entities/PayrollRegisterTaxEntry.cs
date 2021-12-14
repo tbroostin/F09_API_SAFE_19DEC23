@@ -1,9 +1,5 @@
-﻿/*Copyright 2017 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2021 Ellucian Company L.P. and its affiliates.*/
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Domain.HumanResources.Entities
 {
@@ -57,7 +53,27 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// </summary>
         public decimal? EmployerTaxableAmount { get; set; }
 
-        
+        /// <summary>
+        /// Employee Adjustment amount if this is an adjustment
+        /// </summary>
+        public decimal? EmployeeAdjustmentAmount { get; set; }
+
+        /// <summary>
+        /// Employer Adjustment amount if this is an adjustment
+        /// </summary>
+        public decimal? EmployerAdjustmentAmount { get; set; }
+
+        /// <summary>
+        /// Employee Taxable Adjustment amount if this is an adjustment
+        /// </summary>
+        public decimal? EmployeeTaxableAdjustmentAmount { get; set; }
+
+        /// <summary>
+        /// Employer Taxable Adjustment amount if this is an adjustment
+        /// </summary>
+        public decimal? EmployerTaxableAdjustmentAmount { get; set; }
+
+
 
         /// <summary>
         /// Constructor

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -18,6 +18,8 @@ using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
 using Ellucian.Colleague.Domain.Base.Services;
 using System.Collections.ObjectModel;
+using System.Text;
+using Ellucian.Dmi.Runtime;
 
 namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 {
@@ -30,6 +32,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         private Ellucian.Data.Colleague.DataContracts.IntlParams _internationalParameters;
         protected const int AllRequisitionCacheTimeout = 20; // Clear from cache every 20 minutes
         protected const string AllRequisitionsCache = "AllEthosRequisitions";
+        public static char _SM = Convert.ToChar(DynamicArray.SM);
+        private RepositoryException exception = new RepositoryException();
 
         /// <summary>
         /// The constructor to instantiate a requisition repository object
@@ -55,6 +59,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <exception cref="KeyNotFoundException">Thrown if no database records exist for the given id argument</exception>
         public async Task<Requisition> GetRequisitionAsync(string id, string personId, GlAccessLevel glAccessLevel, IEnumerable<string> expenseAccounts)
         {
+            logger.Debug(string.Format("requisition {0} ", id));
+            logger.Debug(string.Format("gl access level {0}", glAccessLevel));
+
             if (string.IsNullOrEmpty(id))
             {
                 throw new ArgumentNullException("id");
@@ -63,6 +70,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (expenseAccounts == null)
             {
                 expenseAccounts = new List<string>();
+                logger.Debug(string.Format("no GL accounts for requisition {0} ", id));
             }
 
             var requisition = await DataReader.ReadRecordAsync<Requisitions>(id);
@@ -75,9 +83,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             RequisitionStatus requisitionStatus = new RequisitionStatus();
 
             // Get the first status in the list of requisition statuses and check it has a value
-            if (requisition.ReqStatus != null && !string.IsNullOrEmpty(requisition.ReqStatus.FirstOrDefault().ToUpper()))
+            if (requisition.ReqStatus != null && !string.IsNullOrEmpty(requisition.ReqStatus.FirstOrDefault()))
             {
-                switch (requisition.ReqStatus.FirstOrDefault().ToUpper())
+                switch (requisition.ReqStatus.First().ToUpper())
                 {
                     case "U":
                         requisitionStatus = RequisitionStatus.InProgress;
@@ -195,6 +203,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var requisitionDomainEntity = new Requisition(requisition.Recordkey, requisition.ReqNo, requisitionVendorName, requisitionStatus, requisitionStatusDate, requisition.ReqDate.Value.Date);
 
             requisitionDomainEntity.VendorId = requisition.ReqVendor;
+
+            // Assign Vendor Address
+            await GetVendorAddress(requisition.ReqVendor, requisitionDomainEntity);
+
             if (!string.IsNullOrEmpty(initiatorName))
             {
                 requisitionDomainEntity.InitiatorName = initiatorName;
@@ -299,8 +311,35 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             // Populate the line item domain entities and add them to the requisition domain entity
             var lineItemIds = requisition.ReqItemsId;
+            int documentFiscalYear = 0;
             if (lineItemIds != null && lineItemIds.Count() > 0)
             {
+                // determine the fiscal year from the requisition date or maintenance date
+                DateTime? transactionDate = requisition.ReqDate;
+                if (requisition.ReqMaintGlTranDate != null)
+                {
+                    transactionDate = requisition.ReqMaintGlTranDate;
+                }
+                logger.Debug(string.Format("transaction date for funds avail {0} ", transactionDate));
+                if (transactionDate.HasValue)
+                {
+                    var transactionDateMonth = transactionDate.Value.Month;
+                    documentFiscalYear = transactionDate.Value.Year;
+
+                    var fiscalYearDataContract = await DataReader.ReadRecordAsync<Fiscalyr>("ACCOUNT.PARAMETERS", "FISCAL.YEAR", true);
+                    if (fiscalYearDataContract != null && fiscalYearDataContract.FiscalStartMonth.HasValue)
+                    {
+                        if (fiscalYearDataContract.FiscalStartMonth > 1)
+                        {
+                            if (transactionDateMonth >= fiscalYearDataContract.FiscalStartMonth)
+                            {
+                                documentFiscalYear += 1;
+                            }
+                        }
+                    }
+                }
+                logger.Debug(string.Format("requisition fiscal year {0} ", documentFiscalYear));
+
                 // Read the item records for the list of IDs in the requisition record
                 var lineItemRecords = await DataReader.BulkReadRecordAsync<Items>(lineItemIds.ToArray());
                 if ((lineItemRecords != null) && (lineItemRecords.Count > 0))
@@ -340,6 +379,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             }
                         }
                     }
+
+                    // define a unique list of GL numbers to use for funds availability when the user has full GL access.
+                    List<string> availableFundsGlAccounts = new List<string>();
 
                     List<string> itemProjectIds = new List<string>();
                     List<string> itemProjectLineIds = new List<string>();
@@ -415,7 +457,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             {
                                 lineItemDomainEntity.AddReqTax(itemTax);
                             }
-                            
+
                         }
 
 
@@ -424,6 +466,16 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         {
                             foreach (var glDist in lineItem.ItemReqEntityAssociation)
                             {
+                                // build a list of unique list of GL numbers on the line item GL distributions
+                                // if the user has full GL access.
+                                if (glAccessLevel == GlAccessLevel.Full_Access || CanUserByPassGlAccessCheck(personId, requisition, requisitionDomainEntity))
+                                {
+                                    if (!availableFundsGlAccounts.Contains(glDist.ItmReqGlNoAssocMember))
+                                    {
+                                        availableFundsGlAccounts.Add(glDist.ItmReqGlNoAssocMember);
+                                    }
+                                }
+
                                 // The GL Distribution always uses the local currency amount.
                                 decimal gldistGlQty = glDist.ItmReqGlQtyAssocMember.HasValue ? glDist.ItmReqGlQtyAssocMember.Value : 0;
                                 decimal gldistGlAmount = glDist.ItmReqGlAmtAssocMember.HasValue ? glDist.ItmReqGlAmtAssocMember.Value : 0;
@@ -597,14 +649,198 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                             }
                         }
                     }
+
+                    // For each GL number that the user for which the user has access, get the funds availability 
+                    // information on disk and add the amounts that are on the requisition if the requisition status is
+                    // In Progress.
+                    if (glAccountsAllowed.Any() || ((glAccessLevel == GlAccessLevel.Full_Access || CanUserByPassGlAccessCheck(personId, requisition, requisitionDomainEntity)) && availableFundsGlAccounts.Any()))
+                    {
+                        logger.Debug(string.Format("Calculating funds availability"));
+                        string[] fundsAvailabilityArray;
+                        if ((glAccessLevel == GlAccessLevel.Full_Access || CanUserByPassGlAccessCheck(personId, requisition, requisitionDomainEntity)) && availableFundsGlAccounts.Any())
+                        {
+                            fundsAvailabilityArray = availableFundsGlAccounts.ToArray();
+                        }
+                        else
+                        {
+                            fundsAvailabilityArray = glAccountsAllowed.ToArray();
+                        }
+
+                        //Read GL Account records.
+                        var glAccountContracts = await DataReader.BulkReadRecordAsync<GlAccts>(fundsAvailabilityArray);
+
+                        GlAcctsMemos glAccountMemosForFiscalYear;
+                        string documentFiscalYr = documentFiscalYear.ToString();
+                        decimal accountBudgetAmount = 0m;
+                        decimal accountActualAmount = 0m;
+                        decimal accountEncumbranceAmount = 0m;
+                        decimal accountRequisitionAmount = 0m;
+
+                        // Get funds availability information for all GL numbers for which the user has access.
+                        string glpId = null;
+                        foreach (var glAccount in fundsAvailabilityArray)
+                        {
+                            // get GL account available funds.
+                            var glAccountContract = glAccountContracts.FirstOrDefault(x => x.Recordkey == glAccount);
+                            if (glAccountContract != null)
+                            {
+                                if (glAccountContract.MemosEntityAssociation != null)
+                                { 
+                                    // Check that the GL account is available for the fiscal year.
+                                    glAccountMemosForFiscalYear = glAccountContract.MemosEntityAssociation.FirstOrDefault(x => x.AvailFundsControllerAssocMember == documentFiscalYr);
+                                    if (glAccountMemosForFiscalYear != null)
+                                    {
+                                        glpId = null;
+                                        if (string.IsNullOrEmpty(glAccountMemosForFiscalYear.GlPooledTypeAssocMember))
+                                        {
+                                            accountBudgetAmount = glAccountMemosForFiscalYear.GlBudgetPostedAssocMember.HasValue ? glAccountMemosForFiscalYear.GlBudgetPostedAssocMember.Value : 0m;
+                                            accountBudgetAmount += glAccountMemosForFiscalYear.GlBudgetMemosAssocMember.HasValue ? glAccountMemosForFiscalYear.GlBudgetMemosAssocMember.Value : 0m;
+                                            accountEncumbranceAmount = glAccountMemosForFiscalYear.GlEncumbrancePostedAssocMember.HasValue ? glAccountMemosForFiscalYear.GlEncumbrancePostedAssocMember.Value : 0m;
+                                            accountEncumbranceAmount += glAccountMemosForFiscalYear.GlEncumbranceMemosAssocMember.HasValue ? glAccountMemosForFiscalYear.GlEncumbranceMemosAssocMember.Value : 0m;
+                                            accountRequisitionAmount = glAccountMemosForFiscalYear.GlRequisitionMemosAssocMember.HasValue ? glAccountMemosForFiscalYear.GlRequisitionMemosAssocMember.Value : 0m;
+                                            accountActualAmount = glAccountMemosForFiscalYear.GlActualPostedAssocMember.HasValue ? glAccountMemosForFiscalYear.GlActualPostedAssocMember.Value : 0m;
+                                            accountActualAmount += glAccountMemosForFiscalYear.GlActualMemosAssocMember.HasValue ? glAccountMemosForFiscalYear.GlActualMemosAssocMember.Value : 0m;
+                                        }
+                                        //poolee gl accounts should be assigned with corresponding umbrella gl account amounts
+                                        else
+                                        {
+                                            if (glAccountMemosForFiscalYear.GlPooledTypeAssocMember.ToUpperInvariant() == "U")
+                                            {
+                                                glpId = glAccount;
+                                                PopulateGlAmountFromFaFields(glAccountMemosForFiscalYear, out accountBudgetAmount, out accountActualAmount, out accountEncumbranceAmount, out accountRequisitionAmount);
+                                            }
+                                            else if (glAccountMemosForFiscalYear.GlPooledTypeAssocMember.ToUpperInvariant() == "P")
+                                            {
+                                                // get umbrella for this poolee
+                                                var umbrellaGlAccount = glAccountMemosForFiscalYear.GlBudgetLinkageAssocMember;
+
+                                                // Read the GL.ACCTS record for the umbrella, and get the amounts for fiscal year.
+                                                var umbrellaAccount = await DataReader.ReadRecordAsync<GlAccts>(umbrellaGlAccount);
+                                                if (umbrellaAccount != null)
+                                                {
+                                                    var umbrellaGlAccountAmounts = umbrellaAccount.MemosEntityAssociation.FirstOrDefault(x => x.AvailFundsControllerAssocMember == documentFiscalYr);
+                                                    if (umbrellaGlAccountAmounts != null)
+                                                    {
+                                                        glpId = umbrellaGlAccount;
+                                                        PopulateGlAmountFromFaFields(umbrellaGlAccountAmounts, out accountBudgetAmount, out accountActualAmount, out accountEncumbranceAmount, out accountRequisitionAmount);
+                                                    }
+                                                    else
+                                                    {
+                                                        logger.Debug(string.Format("Cannot get budget pool account for funds availability"));
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    logger.Debug(string.Format("Cannot get budget pool account for fiscal year"));
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // if the requisition status is In Progress, add the GL amounts from the line item 
+                                    // GL distributions to the requisition funds availability information.
+                                    if (requisition.ReqStatus.First().ToUpper() == "U")
+                                    {
+                                        // If the GL account that the user has access to is a part of a budget pool, read the GLP record
+                                        // to get all of the GL numbers associated with the budget pool so that the funds availability can 
+                                        // updated for all of the GL numbers in the budget pool that are on the line items.
+                                        List<string> budgetPoolAccounts = new List<string>();
+                                        if (!string.IsNullOrEmpty(glpId))
+                                        {
+                                            string glpFyrFilename = "GLP." + documentFiscalYr;
+                                            var glpFyrDataContract = await DataReader.ReadRecordAsync<GlpFyr>(glpFyrFilename, glpId);
+                                            budgetPoolAccounts.Add(glpId);
+                                            if (glpFyrDataContract != null && glpFyrDataContract.GlpPooleeAcctsList != null && glpFyrDataContract.GlpPooleeAcctsList.Any())
+                                            {
+                                                foreach (var poolee in glpFyrDataContract.GlpPooleeAcctsList)
+                                                {
+                                                    budgetPoolAccounts.Add(poolee);
+                                                }
+                                            }
+                                        }
+
+                                        foreach (var lineItem in requisitionDomainEntity.LineItems)
+                                        {
+                                            if (lineItem != null)
+                                            {
+                                                foreach (var glDistribution in lineItem.GlDistributions)
+                                                {
+                                                    if (glDistribution != null)
+                                                    {
+                                                        if (glDistribution.GlAccountNumber == glAccount || budgetPoolAccounts.Contains(glDistribution.GlAccountNumber))
+                                                        {
+                                                            accountRequisitionAmount += glDistribution.Amount;
+                                                        }
+                                                    }
+                                                }
+
+                                                // Add tax amounts that are distributed to the GL distribution account to funds availability.
+                                                foreach (var item in lineItemRecords)
+                                                {
+                                                    if ((item.ReqGlTaxesEntityAssociation != null) && (item.ReqGlTaxesEntityAssociation.Any()))
+                                                        {
+                                                        foreach (var taxAssociation in item.ReqGlTaxesEntityAssociation)
+                                                        {
+                                                            if (taxAssociation != null)
+                                                            {
+                                                                if (taxAssociation.ItmReqLineGlNoAssocMember == glAccount || budgetPoolAccounts.Contains(taxAssociation.ItmReqLineGlNoAssocMember))
+                                                                {
+                                                                    if (taxAssociation.ItmReqGlTaxAmtAssocMember.HasValue)
+                                                                    {
+                                                                        accountRequisitionAmount += taxAssociation.ItmReqGlTaxAmtAssocMember.Value;
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Update the funds availability information on the line item GL distributions, and
+                                    // update the line item to indicate that there is GL number on the line item that is
+                                    // overbudget.
+                                    foreach (var lineItem in requisitionDomainEntity.LineItems)
+                                    {
+                                        foreach (var glDistribution in lineItem.GlDistributions)
+                                        {
+                                            if (glDistribution.GlAccountNumber == glAccount)
+                                            {
+                                                glDistribution.BudgetAmount = accountBudgetAmount;
+                                                glDistribution.ActualAmount = accountActualAmount;
+                                                glDistribution.EncumbranceAmount = accountEncumbranceAmount;
+                                                glDistribution.RequisitionAmount = accountRequisitionAmount;
+
+                                                if ((accountBudgetAmount - accountActualAmount - accountEncumbranceAmount - accountRequisitionAmount) < 0)
+                                                {
+                                                    lineItem.OverBudget = true;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        logger.Debug(string.Format("Completed calculating funds availability"));
+                    }
                 }
+
             }
 
             return requisitionDomainEntity;
         }
 
-
-
+        private static void PopulateGlAmountFromFaFields(GlAcctsMemos glAccountMemos, out decimal budgetAmount, out decimal actualAmount, out decimal encumbranceAmount, out decimal requisitionAmount)
+        {
+            budgetAmount = glAccountMemos.FaBudgetPostedAssocMember.HasValue ? glAccountMemos.FaBudgetPostedAssocMember.Value : 0m;
+            budgetAmount += glAccountMemos.FaBudgetMemoAssocMember.HasValue ? glAccountMemos.FaBudgetMemoAssocMember.Value : 0m;
+            encumbranceAmount = glAccountMemos.FaEncumbrancePostedAssocMember.HasValue ? glAccountMemos.FaEncumbrancePostedAssocMember.Value : 0m;
+            encumbranceAmount += glAccountMemos.FaEncumbranceMemoAssocMember.HasValue ? glAccountMemos.FaEncumbranceMemoAssocMember.Value : 0m;
+            requisitionAmount = glAccountMemos.FaRequisitionMemoAssocMember.HasValue ? glAccountMemos.FaRequisitionMemoAssocMember.Value : 0m;
+            actualAmount = glAccountMemos.FaActualPostedAssocMember.HasValue ? glAccountMemos.FaActualPostedAssocMember.Value : 0m;
+            actualAmount += glAccountMemos.FaActualMemoAssocMember.HasValue ? glAccountMemos.FaActualMemoAssocMember.Value : 0m;
+        }
 
         /// <summary>
         /// Get a collection of requisition summary domain entity objects
@@ -613,125 +849,19 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns>collection of requisition summary domain entity objects</returns>
         public async Task<IEnumerable<RequisitionSummary>> GetRequisitionsSummaryByPersonIdAsync(string personId)
         {
-            List<string> filteredRequisitions = new List<string>();
-
             if (string.IsNullOrEmpty(personId))
             {
                 throw new ArgumentNullException("personId");
             }
-
             var cfWebDefaults = await DataReader.ReadRecordAsync<CfwebDefaults>("CF.PARMS", "CFWEB.DEFAULTS");
-            filteredRequisitions = await ApplyFilterCriteriaAsync(personId, filteredRequisitions, cfWebDefaults);
 
-            if (!filteredRequisitions.Any())
+            var filteredRequisitions = await ApplyFilterCriteriaAsync(personId, cfWebDefaults);
+
+            if (filteredRequisitions == null || !filteredRequisitions.Any())
+            {
                 return null;
-            var requisitionData = await DataReader.BulkReadRecordAsync<DataContracts.Requisitions>("REQUISITIONS", filteredRequisitions.ToArray());
-
-            var requisitionList = new List<RequisitionSummary>();
-            if (requisitionData != null && requisitionData.Any())
-            {
-                Dictionary<string, string> hierarchyNameDictionary = await GetPersonHierarchyNamesDictionaryAsync(requisitionData);
-                Dictionary<string, PurchaseOrders> poDictionary = new Dictionary<string, PurchaseOrders>();
-                Dictionary<string, Bpo> bpoDictionary = new Dictionary<string, Bpo>();
-
-                poDictionary = await BuildPurchaseOrderDictionaryAsync(requisitionData);
-                bpoDictionary = await BuildBlanketPODictionaryAsync(requisitionData);
-
-                // Read the OPERS records associated with the approval signatures and 
-                // next approvers on the requisiton, and build approver objects.
-                var operators = new List<string>();
-                Collection<Opers> opersCollection = new Collection<Opers>();
-                // get list of Approvers and next approvers from the entire requisition records
-                var allRequisitionDataApprovers = requisitionData.SelectMany(requisitionContract => requisitionContract.ReqAuthorizations).Distinct().ToList();
-                if (allRequisitionDataApprovers != null && allRequisitionDataApprovers.Any(x => x != null))
-                {
-                    operators.AddRange(allRequisitionDataApprovers);
-                }
-
-                var allRequisitionDataNextApprovers = requisitionData.SelectMany(requisitionContract => requisitionContract.ReqNextApprovalIds).Distinct().ToList();
-                if (allRequisitionDataNextApprovers != null && allRequisitionDataNextApprovers.Any(x => x != null))
-                {
-                    operators.AddRange(allRequisitionDataNextApprovers);
-                }
-                var uniqueOperators = operators.Distinct().ToList();
-                if (uniqueOperators.Count > 0)
-                {
-                    opersCollection = await DataReader.BulkReadRecordAsync<Opers>("UT.OPERS", uniqueOperators.ToArray(), true);
-                }
-
-                foreach (var requisition in requisitionData)
-                {
-                    try
-                    {
-                        //filter out any requisitions with Requisition Number whose values are empty/ whitespace
-                        if (string.IsNullOrWhiteSpace(requisition.ReqNo))
-                        {
-                            logger.Debug(string.Format("The Requisition with the ID \"{0}\" has Requisition Number \"{1}\"; skipped this record for Requisition View on Procurement page for person {2}.", requisition.Recordkey, requisition.ReqNo, personId));
-                        }
-                        else
-                        {
-                            string initiatorName = string.Empty;
-                            if (!string.IsNullOrEmpty(requisition.ReqDefaultInitiator))
-                                hierarchyNameDictionary.TryGetValue(requisition.ReqDefaultInitiator, out initiatorName);
-
-                            string requestorName = string.Empty;
-                            if (!string.IsNullOrEmpty(requisition.ReqRequestor))
-                                hierarchyNameDictionary.TryGetValue(requisition.ReqRequestor, out requestorName);
-
-                            // If there is no vendor name and there is a vendor id, use the PO hierarchy to get the vendor name.
-                            var requisitionVendorName = requisition.ReqMiscName != null && requisition.ReqMiscName.Any() ? requisition.ReqMiscName.FirstOrDefault() : string.Empty;
-                            if ((string.IsNullOrEmpty(requisitionVendorName)) && (!string.IsNullOrEmpty(requisition.ReqVendor)))
-                            {
-                                hierarchyNameDictionary.TryGetValue(requisition.ReqVendor, out requisitionVendorName);
-                            }
-                            requisitionList.Add(BuildRequisitionSummary(requisition, poDictionary, bpoDictionary, requisitionVendorName, initiatorName, requestorName, opersCollection));
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        throw ex;
-                    }
-                }
             }
-            return requisitionList.AsEnumerable();
-        }
-
-        private async Task<Dictionary<string, PurchaseOrders>> BuildPurchaseOrderDictionaryAsync(System.Collections.ObjectModel.Collection<Requisitions> requisitionData)
-        {
-            Dictionary<string, PurchaseOrders> poDictionary = new Dictionary<string, PurchaseOrders>();
-            //fetch purchase order no's from all requisitions
-            var reqPoNos = requisitionData.Where(x => x.ReqPoNo != null && x.ReqPoNo.Any()).Select(s => s.ReqPoNo).ToList();
-            if (reqPoNos != null && reqPoNos.Any())
-            {
-                List<string> purchaseOrderIds = reqPoNos.SelectMany(x => x).Distinct().ToList();
-                //fetch purchase order details and build dictionary
-                var purchaseOrders = await DataReader.BulkReadRecordAsync<DataContracts.PurchaseOrders>("PURCHASE.ORDERS", purchaseOrderIds.ToArray());
-
-
-                if (purchaseOrders != null && purchaseOrders.Any())
-                    poDictionary = purchaseOrders.ToDictionary(x => x.Recordkey);
-            }
-
-            return poDictionary;
-        }
-
-        private async Task<Dictionary<string, Bpo>> BuildBlanketPODictionaryAsync(System.Collections.ObjectModel.Collection<Requisitions> requisitionData)
-        {
-            Dictionary<string, Bpo> bpoDictionary = new Dictionary<string, Bpo>();
-            //fetch blanket purchase order no's from all requisitions
-            var reqBpoNos = requisitionData.Where(x => x.ReqBpoNo != null && x.ReqBpoNo.Any()).Select(s => s.ReqBpoNo).ToList();
-            if (reqBpoNos != null && reqBpoNos.Any())
-            {
-                List<string> blanketPurchaseOrderIds = reqBpoNos.SelectMany(x => x).Distinct().ToList();
-                //fetch blanket purchase order details and build dictionary
-                var Bpos = await DataReader.BulkReadRecordAsync<DataContracts.Bpo>("BPO", blanketPurchaseOrderIds.ToArray());
-
-
-                if (Bpos != null && Bpos.Any())
-                    bpoDictionary = Bpos.ToDictionary(x => x.Recordkey);
-            }
-
-            return bpoDictionary;
+            return await BuildRequisitionSummaryList(personId, filteredRequisitions);
         }
 
         /// <summary>
@@ -740,7 +870,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <param name="offset">Offset for paging results</param>
         /// <param name="limit">Limit for paging results</param>
         /// <returns>collection of requisition domain entity objects</returns>
-        public async Task<Tuple<IEnumerable<Requisition>, int>> GetRequisitionsAsync(int offset, int limit)
+        public async Task<Tuple<IEnumerable<Requisition>, int>> GetRequisitionsAsync(int offset, int limit, string requisitionNumber, string referenceNumber)
         {
             int totalCount = 0;
             string[] subList = null;
@@ -759,6 +889,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                    async () =>
                    {
                        var criteria = "WITH REQ.CURRENT.STATUS NE 'U'";
+                       if (!string.IsNullOrEmpty(requisitionNumber))
+                       {
+                           criteria = string.Format("{0} AND WITH REQ.NO = '{1}'", criteria, requisitionNumber);
+                       }
+                       if (!string.IsNullOrEmpty(referenceNumber))
+                       {
+                           criteria = string.Format("{0} AND WITH REQ.REFERENCE.NO = '{1}'", criteria, referenceNumber);
+                       }
                        var requirements = new CacheSupport.KeyCacheRequirements()
                        {
                            criteria = criteria
@@ -775,8 +913,20 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             subList = keyCache.Sublist.ToArray();
             totalCount = keyCache.TotalCount.Value;
             IEnumerable<Requisition> requisitions = null;
-            var requisitionData = await DataReader.BulkReadRecordAsync<DataContracts.Requisitions>("REQUISITIONS", subList);
-            requisitions = await BuildRequisitionsAsync(requisitionData);
+            try
+            {
+
+                var requisitionData = await DataReader.BulkReadRecordAsync<DataContracts.Requisitions>("REQUISITIONS", subList);
+                requisitions = await BuildRequisitionsAsync(requisitionData);
+            }
+            catch (Exception ex)
+            {
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message));
+            }
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
             return new Tuple<IEnumerable<Requisition>, int>(requisitions, totalCount);
 
         }
@@ -807,9 +957,16 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             // exclude those PO that are inprogress
             if (requisitionData != null && requisitionData.ReqStatus != null && requisitionData.ReqStatus.Any() && requisitionData.ReqStatus.FirstOrDefault().Equals("U", StringComparison.OrdinalIgnoreCase))
             {
-                throw new KeyNotFoundException("The guid specified " + guid + " for record key " + requisitionData.Recordkey + " from file REQUISITIONS is not valid for requisitions.");
+                //throw new RepositoryException("The guid specified " + guid + " for record key " + requisitionData.Recordkey + " from file REQUISITIONS is not valid for requisitions.");
+                throw new RepositoryException("Requisitions at a current status of 'Unfinished' cannot be viewed or modified");
             }
-            return await BuildRequisitionAsync(requisitionData);
+            var retval = await BuildRequisitionAsync(requisitionData);
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+            return retval;
+
         }
 
         /// <summary>
@@ -891,7 +1048,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var personId = deleteRequest.PersonId;
             var requisitionId = deleteRequest.RequisitionId;
             var confirmationEmailAddresses = deleteRequest.ConfirmationEmailAddresses;
-            
+
             if (!string.IsNullOrEmpty(personId))
             {
                 request.AUserId = personId;
@@ -935,7 +1092,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (updateResponse.ReqErrors.Any())
             {
                 var exception = new RepositoryException();
-                updateResponse.ReqErrors.ForEach(e => exception.AddError(new RepositoryError("requisition", e.ErrorMessages)));
+                updateResponse.ReqErrors.ForEach(e => exception.AddError(new RepositoryError("Create.Update.Exception", string.Concat(!string.IsNullOrEmpty(e.ErrorCodes) ? e.ErrorCodes + ": " : "", e.ErrorMessages))));
                 throw exception;
             }
 
@@ -1112,6 +1269,40 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         }
 
         /// <summary>
+        /// Get a list of requisition summary domain entity objects
+        /// </summary>
+        /// <param name="criteria">procurement filter criteria</param>
+        /// <returns>list of requisition summary domain entity objects</returns>
+        public async Task<IEnumerable<RequisitionSummary>> QueryRequisitionSummariesAsync(ProcurementDocumentFilterCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("filterCriteria", "filter criteria must be specified.");
+            }
+
+            var personId = criteria.PersonId;
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId");
+            }
+            var cfWebDefaults = await DataReader.ReadRecordAsync<CfwebDefaults>("CF.PARMS", "CFWEB.DEFAULTS");
+            string queryCriteria = await BuildFilterCriteria(criteria, cfWebDefaults);
+            if (string.IsNullOrEmpty(queryCriteria))
+            {
+                throw new ApplicationException("Invalid query string.");
+            }
+            var filteredRequisitionIds = await DataReader.SelectAsync("REQUISITIONS", queryCriteria);
+
+            if (filteredRequisitionIds == null || !filteredRequisitionIds.Any())
+            {
+                logger.Debug(string.Format("Requisitions not found for query string: '{0}'.", queryCriteria));
+                return null;
+            }
+            logger.Info(string.Format("Requisitions count {0} found.", filteredRequisitionIds.ToList().Count()));
+            return await BuildRequisitionSummaryList(personId, filteredRequisitionIds.ToList());
+        }
+
+        /// <summary>
         /// Build requisition domain entity from a requisitions data contract
         /// </summary>
         /// <param name="requisitionDataContract">requisitions data contract</param>
@@ -1121,30 +1312,62 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             if (requisitionDataContract == null)
             {
-                throw new ArgumentNullException("requisition");
+                //throw new ArgumentNullException("requisition");
+                exception.AddError(new RepositoryError("Bad.Data", "Requisition data contract is required."));
+                return null;
             }
 
             if (string.IsNullOrEmpty(requisitionDataContract.Recordkey))
             {
-                throw new ArgumentNullException("id");
+                exception.AddError(new RepositoryError("Bad.Data", "Requisition record key is required."));
             }
 
             if (!requisitionDataContract.ReqDate.HasValue)
             {
-                throw new ApplicationException("Missing date for requisition id: " + requisitionDataContract.Recordkey);
+                exception.AddError(new RepositoryError("Bad.Data", "Missing date for requisition.")
+                {
+                    SourceId = requisitionDataContract.Recordkey,
+                    Id = requisitionDataContract.RecordGuid
+                });
             }
 
-            if (requisitionDataContract.ReqStatusDate == null || !requisitionDataContract.ReqStatusDate.First().HasValue)
+            if (requisitionDataContract.ReqStatusDate == null || !requisitionDataContract.ReqStatusDate.FirstOrDefault().HasValue)
             {
-                throw new ApplicationException("Missing status date for requisition id: " + requisitionDataContract.Recordkey);
+                exception.AddError(new RepositoryError("Bad.Data", "Missing status date for requisition.")
+                {
+                    SourceId = requisitionDataContract.Recordkey,
+                    Id = requisitionDataContract.RecordGuid
+                });
             }
 
-            var requisitionStatusDate = requisitionDataContract.ReqStatusDate.First().Value;
+            RequisitionStatus? requisitionStatus = null;
+            try
+            {
+                requisitionStatus = ConvertRequisitionStatus(requisitionDataContract.ReqStatus, requisitionDataContract.Recordkey);
+            }
+            catch (Exception ex)
+            {
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message)
+                {
+                    SourceId = requisitionDataContract.Recordkey,
+                    Id = requisitionDataContract.RecordGuid
+                });
+            }
+            // constructor expects record key and guid as required fields. exit prior to constructor errors being thrown.
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                return null;
+            }
 
-            var requisitionStatus = ConvertRequisitionStatus(requisitionDataContract.ReqStatus, requisitionDataContract.Recordkey);
+            DateTime requisitionStatusDate = requisitionDataContract.ReqStatusDate.First().Value;
 
             var requisitionDomainEntity = new Requisition(requisitionDataContract.Recordkey, requisitionDataContract.RecordGuid,
-            requisitionDataContract.ReqNo, string.Empty, requisitionStatus, requisitionStatusDate, requisitionDataContract.ReqDate.Value.Date);
+            requisitionDataContract.ReqNo, string.Empty, requisitionStatus.Value, requisitionStatusDate, requisitionDataContract.ReqDate.Value.Date);
+
+            if (requisitionDataContract.ReqReferenceNo != null && requisitionDataContract.ReqReferenceNo.Any())
+            {
+                requisitionDomainEntity.ReferenceNumbers = requisitionDataContract.ReqReferenceNo;
+            }
 
             var glAccessLevel = GlAccessLevel.Full_Access;
             var expenseAccounts = new List<string>();
@@ -1239,7 +1462,18 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 {
                     if (!string.IsNullOrEmpty(purchaseOrderId))
                     {
-                        requisitionDomainEntity.AddPurchaseOrder(purchaseOrderId);
+                        try
+                        {
+                            requisitionDomainEntity.AddPurchaseOrder(purchaseOrderId);
+                        }
+                        catch (Exception ex)
+                        {
+                            exception.AddError(new RepositoryError("Bad.Data", ex.Message)
+                            {
+                                SourceId = requisitionDataContract.Recordkey,
+                                Id = requisitionDataContract.RecordGuid
+                            });
+                        }
                     }
                 }
             }
@@ -1250,7 +1484,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 if (requisitionDataContract.ReqBpoNo.Count > 1)
                 {
-                    throw new ApplicationException("Only one blanket purchase order can be associated with the requisition: " + requisitionDataContract.Recordkey);
+                    exception.AddError(new RepositoryError("Bad.Data", "Only one blanket purchase order can be associated with the requisition.")
+                    {
+                        SourceId = requisitionDataContract.Recordkey,
+                        Id = requisitionDataContract.RecordGuid
+                    });
                 }
                 else
                 {
@@ -1263,9 +1501,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 await GetLineItems(glAccessLevel, expenseAccounts, requisitionDataContract, requisitionDomainEntity, requisitionDataContract.ReqItemsId);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                throw new RepositoryException(ex.Message + ". Missing GL details for line items for requistion id : " + requisitionDataContract.Recordkey);
+                //throw new RepositoryException(ex.Message + ". Missing GL details for line items for requistion id : " + requisitionDataContract.Recordkey);
+                exception.AddError(new RepositoryError("Bad.Data", "An exception occurred obtaining the GL details for line items for requistion. " + ex.Message)
+                {
+                    SourceId = requisitionDataContract.Recordkey,
+                    Id = requisitionDataContract.RecordGuid
+                });
             }
 
             return requisitionDomainEntity;
@@ -1660,6 +1903,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if (!string.IsNullOrEmpty(requisitionEntity.Number))
                 request.RequisitionNumber = requisitionEntity.Number;
 
+            if (requisitionEntity.ReferenceNumbers != null && requisitionEntity.ReferenceNumbers.Any())
+            {
+                request.ReferenceNumber = requisitionEntity.ReferenceNumbers.FirstOrDefault();
+            }
+
             if (!string.IsNullOrEmpty(requisitionEntity.Type))
                 request.Type = requisitionEntity.Type;
 
@@ -1917,7 +2165,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 Status = requisitionStatus,
                 VendorId = requisitionDataContract.ReqVendor,
                 InitiatorName = initiatorName,
-                RequestorName = requestorName,  
+                RequestorName = requestorName,
                 Amount = requisitionDataContract.ReqTotalAmt.HasValue ? requisitionDataContract.ReqTotalAmt.Value : 0
             };
             // build approvers and add to entity
@@ -2000,58 +2248,190 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             return requisitionSummaryEntity;
         }
 
-        private async Task<List<string>> ApplyFilterCriteriaAsync(string personId, List<string> filteredRequisitions, CfwebDefaults cfWebDefaults)
+        private async Task<List<string>> ApplyFilterCriteriaAsync(string personId, CfwebDefaults cfWebDefaults)
         {
-            string reqStartEndTransDateQuery = string.Empty;
-
-            if (cfWebDefaults != null)
-            {
-                //Filter by CfwebReqStartDate, CfwebReqEndDate values configured in CFWP form
-                //when CfwebReqStartDate & CfwebReqEndDate has a value
-                if (cfWebDefaults.CfwebReqStartDate.HasValue && cfWebDefaults.CfwebReqEndDate.HasValue)
-                {
-                    var startDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebReqStartDate.Value);
-                    var endDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebReqEndDate.Value);
-                    reqStartEndTransDateQuery = string.Format("WITH (REQ.MAINT.GL.TRAN.DATE GE '{0}' AND REQ.MAINT.GL.TRAN.DATE LE '{1}') OR WITH (REQ.DATE GE '{0}' AND REQ.DATE LE '{1}') BY.DSND REQ.NO", startDate, endDate);
-                }
-                //when CfwebReqStartDate has value but CfwebReqEndDate is null
-                else if (cfWebDefaults.CfwebReqStartDate.HasValue && !cfWebDefaults.CfwebReqEndDate.HasValue)
-                {
-                    var startDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebReqStartDate.Value);
-                    reqStartEndTransDateQuery = string.Format("REQ.MAINT.GL.TRAN.DATE GE '{0}' OR WITH REQ.DATE GE '{0}' BY.DSND REQ.NO", startDate);
-                }
-                //when CfwebReqStartDate is null but CfwebReqEndDate has value
-                else if (!cfWebDefaults.CfwebReqStartDate.HasValue && cfWebDefaults.CfwebReqEndDate.HasValue)
-                {
-                    var endDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebReqEndDate.Value);
-                    reqStartEndTransDateQuery = string.Format("WITH ((REQ.MAINT.GL.TRAN.DATE NE '') AND (REQ.MAINT.GL.TRAN.DATE LE '{0}')) OR WITH ((REQ.DATE NE '') AND (REQ.DATE LE '{0}')) BY.DSND REQ.NO", endDate);
-                }
-
-                if (!string.IsNullOrEmpty(reqStartEndTransDateQuery))
-                {
-                    filteredRequisitions = await ExecuteQueryStatementAsync(filteredRequisitions, reqStartEndTransDateQuery);
-                }
-
-                //query by CfwebReqStatuses if statuses are configured in CFWP form.
-                if (cfWebDefaults.CfwebReqStatuses != null && cfWebDefaults.CfwebReqStatuses.Any() && cfWebDefaults.CfwebReqStatuses != null)
-                {
-                    var reqStatusesCriteria = string.Join(" ", cfWebDefaults.CfwebReqStatuses.Select(x => string.Format("'{0}'", x.ToUpper())));
-                    reqStatusesCriteria = "WITH REQ.CURRENT.STATUS EQ " + reqStatusesCriteria;
-                    filteredRequisitions = await ExecuteQueryStatementAsync(filteredRequisitions, reqStatusesCriteria);
-                }
-            }
-
+            List<string> filteredRequisitions = new List<string>();
             //where personId is Initiator OR requestor
             string reqPersonIdQuery = string.Format("WITH REQ.DEFAULT.INITIATOR EQ '{0}' OR WITH REQ.REQUESTOR EQ '{0}' BY.DSND REQ.NO", personId);
             filteredRequisitions = await ExecuteQueryStatementAsync(filteredRequisitions, reqPersonIdQuery);
+
+            if (filteredRequisitions != null && filteredRequisitions.Any())
+            {
+                string reqStartEndTransDateQuery = string.Empty;
+                if (cfWebDefaults != null)
+                {
+                    //Filter by CfwebReqStartDate, CfwebReqEndDate values configured in CFWP form
+                    //when CfwebReqStartDate & CfwebReqEndDate has a value
+                    if (cfWebDefaults.CfwebReqStartDate.HasValue && cfWebDefaults.CfwebReqEndDate.HasValue)
+                    {
+                        var startDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebReqStartDate.Value);
+                        var endDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebReqEndDate.Value);
+                        reqStartEndTransDateQuery = string.Format("WITH (REQ.MAINT.GL.TRAN.DATE GE '{0}' AND REQ.MAINT.GL.TRAN.DATE LE '{1}') OR WITH (REQ.DATE GE '{0}' AND REQ.DATE LE '{1}') BY.DSND REQ.NO", startDate, endDate);
+                    }
+                    //when CfwebReqStartDate has value but CfwebReqEndDate is null
+                    else if (cfWebDefaults.CfwebReqStartDate.HasValue && !cfWebDefaults.CfwebReqEndDate.HasValue)
+                    {
+                        var startDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebReqStartDate.Value);
+                        reqStartEndTransDateQuery = string.Format("REQ.MAINT.GL.TRAN.DATE GE '{0}' OR WITH REQ.DATE GE '{0}' BY.DSND REQ.NO", startDate);
+                    }
+                    //when CfwebReqStartDate is null but CfwebReqEndDate has value
+                    else if (!cfWebDefaults.CfwebReqStartDate.HasValue && cfWebDefaults.CfwebReqEndDate.HasValue)
+                    {
+                        var endDate = await GetUnidataFormatDateAsync(cfWebDefaults.CfwebReqEndDate.Value);
+                        reqStartEndTransDateQuery = string.Format("WITH ((REQ.MAINT.GL.TRAN.DATE NE '') AND (REQ.MAINT.GL.TRAN.DATE LE '{0}')) OR WITH ((REQ.DATE NE '') AND (REQ.DATE LE '{0}')) BY.DSND REQ.NO", endDate);
+                    }
+
+                    if (!string.IsNullOrEmpty(reqStartEndTransDateQuery))
+                    {
+                        filteredRequisitions = await ExecuteQueryStatementAsync(filteredRequisitions, reqStartEndTransDateQuery);
+                    }
+
+                    //query by CfwebReqStatuses if statuses are configured in CFWP form.
+                    if (cfWebDefaults.CfwebReqStatuses != null && cfWebDefaults.CfwebReqStatuses.Any() && cfWebDefaults.CfwebReqStatuses != null)
+                    {
+                        var reqStatusesCriteria = string.Join(" ", cfWebDefaults.CfwebReqStatuses.Select(x => string.Format("'{0}'", x.ToUpper())));
+                        reqStatusesCriteria = "WITH REQ.CURRENT.STATUS EQ " + reqStatusesCriteria;
+                        filteredRequisitions = await ExecuteQueryStatementAsync(filteredRequisitions, reqStatusesCriteria);
+                    }
+                }
+            }
             return filteredRequisitions;
+        }
+
+        private async Task<string> BuildFilterCriteria(ProcurementDocumentFilterCriteria criteria, CfwebDefaults cfWebDefaults)
+        {
+            bool skipCFWPDateRangeFilter = false;
+            bool skipCFWPStatusFilter = false;
+            StringBuilder queryCriteria = new StringBuilder();
+            //personID criteria
+            queryCriteria.Append(string.Format("WITH REQ.DEFAULT.INITIATOR EQ '{0}' OR WITH REQ.REQUESTOR EQ '{0}' ", criteria.PersonId));
+
+            //if SS criteria contains dateFrom or dateTo, CFWP date range filter should be skipped.
+            if (criteria.DateFrom.HasValue || criteria.DateTo.HasValue)
+            {
+                skipCFWPDateRangeFilter = true;
+            }
+
+            List<string> procurementFilterStatuses = new List<string>();
+            if (criteria.Statuses != null && criteria.Statuses.Any())
+            {
+                foreach (var item in criteria.Statuses)
+                {
+                    var status = ConvertRequisitionStatus(item);
+                    if (!string.IsNullOrEmpty(status))
+                    {
+                        procurementFilterStatuses.Add(status);
+                    }
+                }
+            }
+            //if SS criteria contains statuses, CFWP status filter should be skipped
+            if (procurementFilterStatuses.Any())
+            {
+                skipCFWPStatusFilter = true;
+            }
+            if (cfWebDefaults != null)
+            {
+                if (!skipCFWPDateRangeFilter)
+                {
+                    //criteria set in cfwebdefaults - CfwebReqStartDate, CfwebReqEndDate
+                    var cfwpDateRangeCriteria = await BuildDateRangeQueryAsync(cfWebDefaults.CfwebReqStartDate, cfWebDefaults.CfwebReqEndDate);
+                    if (!string.IsNullOrEmpty(cfwpDateRangeCriteria))
+                    {
+                        logger.Debug(string.Format("QueryRequisitionSummaries - CFWP date range - data reader - query string: '{0}'.", cfwpDateRangeCriteria));
+                        queryCriteria.Append(cfwpDateRangeCriteria);
+                    }
+                }
+                if (!skipCFWPStatusFilter)
+                {
+                    //criteria set in cfwebdefaults - CfwebReqStatuses (REQ.CURRENT.STATUS).
+                    var statusesQuery = ProcurementFilterUtility.BuildListQuery(cfWebDefaults.CfwebReqStatuses, "REQ.CURRENT.STATUS");
+                    if (!string.IsNullOrEmpty(statusesQuery))
+                    {
+                        logger.Debug(string.Format("QueryRequisitionSummaries - CFWP statuses - data reader - query string: '{0}'.", statusesQuery));
+                        queryCriteria.Append(statusesQuery);
+                    }
+                }
+            }
+
+            //criteria sent from SS - VendorID's (REQ.VENDOR).
+            var vendorIdCriteria = ProcurementFilterUtility.BuildListQuery(criteria.VendorIds, "REQ.VENDOR");
+            if (!string.IsNullOrEmpty(vendorIdCriteria))
+            {
+                logger.Debug(string.Format("QueryRequisitionSummaries - VendorId's - data reader - query string: '{0}'.", vendorIdCriteria));
+                queryCriteria.Append(!string.IsNullOrEmpty(vendorIdCriteria) ? vendorIdCriteria : string.Empty);
+            }
+            //criteria sent from SS - Min - Max Amount (REQ.TOTAL.AMT).
+            var amountCriteria = ProcurementFilterUtility.BuildAmountRangeQuery(criteria, "REQ.TOTAL.AMT");
+            if (!string.IsNullOrEmpty(amountCriteria))
+            {
+                logger.Debug(string.Format("QueryRequisitionSummaries - Amount range - data reader - query string: '{0}'.", amountCriteria));
+                queryCriteria.Append(amountCriteria);
+            }
+            //criteria sent from SS - From - To date range
+            if (skipCFWPDateRangeFilter)
+            {
+                var procurementDateRangeCriteria = await BuildDateRangeQueryAsync(criteria.DateFrom, criteria.DateTo);
+                if (!string.IsNullOrEmpty(procurementDateRangeCriteria))
+                {
+                    logger.Debug(string.Format("QueryRequisitionSummaries - SS procurement filter date range - data reader - query string: '{0}'.", procurementDateRangeCriteria));
+                    queryCriteria.Append(procurementDateRangeCriteria);
+                }
+            }
+
+
+            if (skipCFWPStatusFilter)
+            {
+                //criteria sent from SS - Statuses
+                var procurementStatusesCriteria = ProcurementFilterUtility.BuildListQuery(procurementFilterStatuses, "REQ.CURRENT.STATUS");
+                if (!string.IsNullOrEmpty(procurementStatusesCriteria))
+                {
+                    logger.Debug(string.Format("QueryRequisitionSummaries - SS procurement filter status - data reader - query string: '{0}'.", procurementStatusesCriteria));
+                    queryCriteria.Append(procurementStatusesCriteria);
+                }
+            }
+
+            queryCriteria.Append("BY.DSND REQ.NO");
+            logger.Debug(string.Format("QueryRequisitionSummaries - data reader - query string: '{0}'.", queryCriteria));
+            return queryCriteria.ToString();
+        }
+
+        private async Task<string> BuildDateRangeQueryAsync(DateTime? dateFrom, DateTime? dateTo)
+        {
+            string startEndTransDateQuery = string.Empty;
+            if (dateFrom != null || dateTo != null)
+            {
+                //when dateFrom & dateTo has a value
+                if (dateFrom.HasValue && dateTo.HasValue)
+                {
+                    var startDate = await GetUnidataFormatDateAsync(dateFrom.Value);
+                    var endDate = await GetUnidataFormatDateAsync(dateTo.Value);
+                    startEndTransDateQuery = string.Format("AND WITH (REQ.MAINT.GL.TRAN.DATE GE '{0}' AND REQ.MAINT.GL.TRAN.DATE LE '{1}') OR (REQ.DATE GE '{0}' AND REQ.DATE LE '{1}') ", startDate, endDate);
+                    logger.Debug(string.Format("date range From - {0}, To - {1}.", dateFrom.Value, dateTo.Value));
+                }
+                //when dateFrom has value but dateTo is null
+                else if (dateFrom.HasValue && !dateTo.HasValue)
+                {
+                    var startDate = await GetUnidataFormatDateAsync(dateFrom.Value);
+                    startEndTransDateQuery = string.Format("AND WITH (REQ.MAINT.GL.TRAN.DATE GE '{0}' OR REQ.DATE GE '{0}') ", startDate);
+                    logger.Debug(string.Format("date range From - {0}.", dateFrom.Value));
+                }
+                //when dateFrom is null but dateTo has value
+                else if (!dateFrom.HasValue && dateTo.HasValue)
+                {
+                    var endDate = await GetUnidataFormatDateAsync(dateTo.Value);
+                    startEndTransDateQuery = string.Format("AND WITH ((REQ.MAINT.GL.TRAN.DATE NE '') AND (REQ.MAINT.GL.TRAN.DATE LE '{0}')) OR ((REQ.DATE NE '') AND (REQ.DATE LE '{0}')) ", endDate);
+                    logger.Debug(string.Format("date range To - {0}.", dateTo.Value));
+                }
+            }
+
+            return startEndTransDateQuery;
         }
 
         private async Task<List<string>> ExecuteQueryStatementAsync(List<string> filteredRequisitions, string queryCriteria)
         {
-            string[] filteredByQueryCriteria = null;
             if (string.IsNullOrEmpty(queryCriteria))
                 return null;
+            string[] filteredByQueryCriteria;
             if (filteredRequisitions != null && filteredRequisitions.Any())
             {
                 filteredByQueryCriteria = await DataReader.SelectAsync("REQUISITIONS", filteredRequisitions.ToArray(), queryCriteria);
@@ -2062,7 +2442,6 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             return filteredByQueryCriteria.ToList();
         }
-
 
         private TxCreateWebRequisitionRequest BuildRequisitionCreateRequest(RequisitionCreateUpdateRequest createUpdateRequest)
         {
@@ -2102,7 +2481,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 request.AApType = requisitionEntity.ApType;
             }
 
-            request.AlPrintedComments = new List<string>() { requisitionEntity.Comments };
+            request.AlPrintedComments = CommentsUtility.ConvertMultiLineTextToList(requisitionEntity.Comments);
             request.AlInternalComments = new List<string>() { requisitionEntity.InternalComments };
 
             if (requisitionEntity.Approvers != null && requisitionEntity.Approvers.Any())
@@ -2135,9 +2514,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                 foreach (var apLineItem in requisitionEntity.LineItems)
                 {
+                    var descriptionList = CommentsUtility.ConvertMultiLineTextToList(apLineItem.Description);
                     var lineItem = new Transactions.AlReqLineItems()
                     {
-                        AlLineItemDescs = apLineItem.Description,
+                        AlLineItemDescs = string.Join(_SM.ToString(), descriptionList),
                         AlLineItemQtys = apLineItem.Quantity.ToString(),
                         AlItemPrices = apLineItem.Price.ToString(),
                         AlUnitOfIssues = apLineItem.UnitOfIssue,
@@ -2206,7 +2586,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 request.AApType = requisitionEntity.ApType;
             }
 
-            request.AlPrintedComments = new List<string>() { requisitionEntity.Comments };
+            request.AlPrintedComments = CommentsUtility.ConvertMultiLineTextToList(requisitionEntity.Comments);
             request.AlInternalComments = new List<string>() { requisitionEntity.InternalComments };
 
             var lineItems = new List<Transactions.AlUpdatedReqLineItems>();
@@ -2244,7 +2624,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                     if (addLineItemToModify)
                     {
-                        lineItem.AlLineItemDescs = apLineItem.Description;
+                        var descriptionList = CommentsUtility.ConvertMultiLineTextToList(apLineItem.Description);
+                        lineItem.AlLineItemDescs = string.Join(_SM.ToString(), descriptionList);
                         lineItem.AlLineItemQtys = apLineItem.Quantity.ToString();
                         lineItem.AlItemPrices = apLineItem.Price.ToString();
                         lineItem.AlItemUnitIssues = apLineItem.UnitOfIssue;
@@ -2352,5 +2733,175 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         {
             return requisitionDomainEntity.Status == RequisitionStatus.InProgress && (requisition.ReqRequestor == personId || requisition.ReqDefaultInitiator == personId);
         }
+
+        private async Task<Dictionary<string, PurchaseOrders>> BuildPurchaseOrderDictionaryAsync(System.Collections.ObjectModel.Collection<Requisitions> requisitionData)
+        {
+            Dictionary<string, PurchaseOrders> poDictionary = new Dictionary<string, PurchaseOrders>();
+            //fetch purchase order no's from all requisitions
+            var reqPoNos = requisitionData.Where(x => x.ReqPoNo != null && x.ReqPoNo.Any()).Select(s => s.ReqPoNo).ToList();
+            if (reqPoNos != null && reqPoNos.Any())
+            {
+                List<string> purchaseOrderIds = reqPoNos.SelectMany(x => x).Distinct().ToList();
+                //fetch purchase order details and build dictionary
+                var purchaseOrders = await DataReader.BulkReadRecordAsync<DataContracts.PurchaseOrders>("PURCHASE.ORDERS", purchaseOrderIds.ToArray());
+
+
+                if (purchaseOrders != null && purchaseOrders.Any())
+                    poDictionary = purchaseOrders.ToDictionary(x => x.Recordkey);
+            }
+
+            return poDictionary;
+        }
+
+        private async Task<Dictionary<string, Bpo>> BuildBlanketPODictionaryAsync(System.Collections.ObjectModel.Collection<Requisitions> requisitionData)
+        {
+            Dictionary<string, Bpo> bpoDictionary = new Dictionary<string, Bpo>();
+            //fetch blanket purchase order no's from all requisitions
+            var reqBpoNos = requisitionData.Where(x => x.ReqBpoNo != null && x.ReqBpoNo.Any()).Select(s => s.ReqBpoNo).ToList();
+            if (reqBpoNos != null && reqBpoNos.Any())
+            {
+                List<string> blanketPurchaseOrderIds = reqBpoNos.SelectMany(x => x).Distinct().ToList();
+                //fetch blanket purchase order details and build dictionary
+                var Bpos = await DataReader.BulkReadRecordAsync<DataContracts.Bpo>("BPO", blanketPurchaseOrderIds.ToArray());
+
+
+                if (Bpos != null && Bpos.Any())
+                    bpoDictionary = Bpos.ToDictionary(x => x.Recordkey);
+            }
+
+            return bpoDictionary;
+        }
+
+        private async Task<IEnumerable<RequisitionSummary>> BuildRequisitionSummaryList(string personId, List<string> filteredRequisitionIds)
+        {
+            var requisitionList = new List<RequisitionSummary>();
+
+            if (!filteredRequisitionIds.Any())
+                return requisitionList;
+
+            var requisitionData = await DataReader.BulkReadRecordAsync<DataContracts.Requisitions>("REQUISITIONS", filteredRequisitionIds.ToArray());
+
+            if (requisitionData != null && requisitionData.Any())
+            {
+                Dictionary<string, string> hierarchyNameDictionary = await GetPersonHierarchyNamesDictionaryAsync(requisitionData);
+                Dictionary<string, PurchaseOrders> poDictionary = new Dictionary<string, PurchaseOrders>();
+                Dictionary<string, Bpo> bpoDictionary = new Dictionary<string, Bpo>();
+
+                poDictionary = await BuildPurchaseOrderDictionaryAsync(requisitionData);
+                bpoDictionary = await BuildBlanketPODictionaryAsync(requisitionData);
+
+                // Read the OPERS records associated with the approval signatures and 
+                // next approvers on the requisiton, and build approver objects.
+                var operators = new List<string>();
+                Collection<Opers> opersCollection = new Collection<Opers>();
+                // get list of Approvers and next approvers from the entire requisition records
+                var allRequisitionDataApprovers = requisitionData.SelectMany(requisitionContract => requisitionContract.ReqAuthorizations).Distinct().ToList();
+                if (allRequisitionDataApprovers != null && allRequisitionDataApprovers.Any(x => x != null))
+                {
+                    operators.AddRange(allRequisitionDataApprovers);
+                }
+
+                var allRequisitionDataNextApprovers = requisitionData.SelectMany(requisitionContract => requisitionContract.ReqNextApprovalIds).Distinct().ToList();
+                if (allRequisitionDataNextApprovers != null && allRequisitionDataNextApprovers.Any(x => x != null))
+                {
+                    operators.AddRange(allRequisitionDataNextApprovers);
+                }
+                var uniqueOperators = operators.Distinct().ToList();
+                if (uniqueOperators.Count > 0)
+                {
+                    opersCollection = await DataReader.BulkReadRecordAsync<Opers>("UT.OPERS", uniqueOperators.ToArray(), true);
+                }
+
+                foreach (var requisition in requisitionData)
+                {
+                    try
+                    {
+                        //filter out any requisitions with Requisition Number whose values are empty/ whitespace
+                        if (string.IsNullOrWhiteSpace(requisition.ReqNo))
+                        {
+                            logger.Debug(string.Format("The Requisition with the ID \"{0}\" has Requisition Number \"{1}\"; skipped this record for Requisition View on Procurement page for person {2}.", requisition.Recordkey, requisition.ReqNo, personId));
+                        }
+                        else
+                        {
+                            string initiatorName = string.Empty;
+                            if (!string.IsNullOrEmpty(requisition.ReqDefaultInitiator))
+                                hierarchyNameDictionary.TryGetValue(requisition.ReqDefaultInitiator, out initiatorName);
+
+                            string requestorName = string.Empty;
+                            if (!string.IsNullOrEmpty(requisition.ReqRequestor))
+                                hierarchyNameDictionary.TryGetValue(requisition.ReqRequestor, out requestorName);
+
+                            // If there is no vendor name and there is a vendor id, use the PO hierarchy to get the vendor name.
+                            var requisitionVendorName = requisition.ReqMiscName != null && requisition.ReqMiscName.Any() ? requisition.ReqMiscName.FirstOrDefault() : string.Empty;
+                            if ((string.IsNullOrEmpty(requisitionVendorName)) && (!string.IsNullOrEmpty(requisition.ReqVendor)))
+                            {
+                                hierarchyNameDictionary.TryGetValue(requisition.ReqVendor, out requisitionVendorName);
+                            }
+                            requisitionList.Add(BuildRequisitionSummary(requisition, poDictionary, bpoDictionary, requisitionVendorName, initiatorName, requestorName, opersCollection));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        throw ex;
+                    }
+                }
+            }
+
+            return requisitionList;
+        }
+
+        private static string ConvertRequisitionStatus(string status)
+        {
+            string requisitionStatus = string.Empty;
+            if (!string.IsNullOrEmpty(status))
+            {
+                switch (status.ToUpper())
+                {
+                    case "INPROGRESS":
+                        requisitionStatus = "U";
+                        break;
+                    case "NOTAPPROVED":
+                        requisitionStatus = "N";
+                        break;
+                    case "OUTSTANDING":
+                        requisitionStatus = "O";
+                        break;
+                    case "POCREATED":
+                        requisitionStatus = "P";
+                        break;
+                }
+            }
+            return requisitionStatus;
+        }
+
+        #region Get VendorAddress
+        private async Task GetVendorAddress(string vendorID, Requisition requisitionDomainEntity)
+        {
+            if (!string.IsNullOrEmpty(vendorID))
+            {
+                GetActiveVendorResultsRequest searchRequest = new GetActiveVendorResultsRequest();
+                searchRequest.ASearchCriteria = vendorID;
+                searchRequest.AApType = string.Empty;
+                try
+                {
+                    GetActiveVendorResultsResponse searchResponse = await transactionInvoker.ExecuteAsync<GetActiveVendorResultsRequest, GetActiveVendorResultsResponse>(searchRequest);
+
+                    if (searchResponse != null && searchResponse.VendorSearchResults != null && searchResponse.VendorSearchResults.Any())
+                    {
+                        requisitionDomainEntity.VendorAddress = searchResponse.VendorSearchResults.FirstOrDefault().AlVendorAddresses;
+                        requisitionDomainEntity.VendorAddressTypeCode = searchResponse.VendorSearchResults.FirstOrDefault().AlVendAddrTypeCodes;
+                        requisitionDomainEntity.VendorAddressTypeDesc = searchResponse.VendorSearchResults.FirstOrDefault().AlVendAddrTypeDesc;
+                    }
+                }
+                catch (Exception)
+                {
+                    var message = string.Format("{0} Unable to get Vendor address.", vendorID);
+                    logger.Error(message);
+                }
+
+            }
+        }
+        #endregion
+
     }
 }

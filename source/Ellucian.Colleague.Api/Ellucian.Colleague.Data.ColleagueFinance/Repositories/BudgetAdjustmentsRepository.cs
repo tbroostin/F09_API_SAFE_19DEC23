@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
@@ -738,7 +738,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 {
                     if (contract.Recordkey == null)
                     {
-                        LogDataError("This budget entry record does not have a key.", null, contract);
+                        logger.Error("This budget entry record does not have a key.");
                     }
                     else
                     {
@@ -818,7 +818,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         var staffIds = await DataReader.SelectAsync("STAFF", staffCriteria, loginIds.ToArray());
                         if (staffIds == null || staffIds.Count() == 0)
                         {
-                            LogDataError("These login IDs do not have a STAFF record", staffIds.ToString(), loginIds);
+                            logger.Error("There are no STAFF records for any of the login IDs provided.");
                         }
                         else
                         {
@@ -834,7 +834,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                     {
                                         if (contract.Recordkey == null)
                                         {
-                                            LogDataError("This staff record does not have a key.", null, contract);
+                                            logger.Error("This staff record does not have a key.");
                                         }
                                         else
                                         {

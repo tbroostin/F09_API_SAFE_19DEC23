@@ -3169,7 +3169,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
                 dicResult = new Dictionary<string, GuidLookupResult>()
                 {
-                    { guid, new GuidLookupResult() { Entity = "PURCHASE.ORDERS", PrimaryKey = "1" } }
+                    { guid, new GuidLookupResult() { Entity = "BPO", PrimaryKey = "1" } }
                 };
 
                 response = new CreateUpdateBpoResponse() { Guid = "1a49eed8-5fe7-4120-b1cf-f23266b9e874" };
@@ -3271,7 +3271,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task BPORepository_CreateBlanketPurchaseOrdersAsync_KeyNotFoundException_Null()
             {
-                dataReaderMock.Setup(r => r.ReadRecordAsync<Bpo>(It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<Bpo>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
 
                 await blanketPurchaseOrderRepository.CreateBlanketPurchaseOrdersAsync(blanketPurchaseOrder);
             }
@@ -3373,7 +3373,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             {
 
                 string[] projs = new string[] { "1", "2" };
-                dataReaderMock.Setup(x => x.BulkReadRecordAsync<DataContracts.Projects>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(x => x.BulkReadRecordAsync<DataContracts.Projects>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 var result = await blanketPurchaseOrderRepository.GetProjectReferenceIds(projs);
                 Assert.IsNotNull(result);
                 Assert.AreEqual(result.Count, 0);
@@ -3407,7 +3407,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                     new Projects() { Recordkey = "2", RecordGuid = "3a46eef8-5fe7-4120-b1cf-f23266b9e002" , PrjRefNo = "002"} };
 
                 var projs = projects.Select(x => x.PrjRefNo).ToArray();
-                dataReaderMock.Setup(x => x.BulkReadRecordAsync<DataContracts.Projects>("PROJECTS", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(x => x.BulkReadRecordAsync<DataContracts.Projects>("PROJECTS", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
 
                 var result = await blanketPurchaseOrderRepository.GetProjectIdsFromReferenceNo(projs);
                 Assert.IsNotNull(result);
@@ -3483,7 +3483,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
                 dicResult = new Dictionary<string, GuidLookupResult>()
                 {
-                    { guid, new GuidLookupResult() { Entity = "PURCHASE.ORDERS", PrimaryKey = "1" } }
+                    { guid, new GuidLookupResult() { Entity = "BPO", PrimaryKey = "1" } }
                 };
 
                 response = new CreateUpdateBpoResponse() { Guid = "1a49eed8-5fe7-4120-b1cf-f23266b9e874" };
@@ -3576,7 +3576,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task BPORepository_UpdateBlanketPurchaseOrdersAsync_KeyNotFoundException_BlanketPurchaseOrder_Null()
             {
-                dataReaderMock.Setup(r => r.ReadRecordAsync<Bpo>(It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<Bpo>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
 
                 await blanketPurchaseOrderRepository.UpdateBlanketPurchaseOrdersAsync(blanketPurchaseOrder);
             }

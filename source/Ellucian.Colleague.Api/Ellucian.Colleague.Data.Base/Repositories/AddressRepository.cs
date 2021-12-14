@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -584,7 +584,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
                         {
                             limitingKeys = limitingKeys != null && limitingKeys.Any() ? limitingKeys.Distinct().ToList() : null,
-                            criteria = "WITH ADDRESS.LINES NE ''"
+                            //criteria = "WITH ADDRESS.LINES NE ''"
                         };
                         return requirements;
                     }
@@ -785,7 +785,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             var repositoryException = new RepositoryException();
             
-
+            /*
             if (!addressData.AddressLines.Any())
             {
                 var errorMessage = string.Format("Invalid Address Record '{0}'.  Missing address Lines.", addressData.RecordGuid);
@@ -798,6 +798,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     Id = addressData.RecordGuid
                 });
             }
+            */
 
             if (string.IsNullOrEmpty(addressData.RecordGuid))
             {
@@ -848,7 +849,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     label.Add(address.AddressModifier);
                 }
-                if (addressData.AddressLines.Count > 0)
+                if (addressData.AddressLines != null && addressData.AddressLines.Count > 0)
                 {
                     label.AddRange(addressData.AddressLines);
                 }
@@ -917,8 +918,23 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 // Update Person Data fields
                 var assoc = person.PseasonEntityAssociation.Where(r => r.PersonAddressesAssocMember == addressId).FirstOrDefault();
 
+                //if multiple address types are specified then 
+                //deal with it separately
+                if (!string.IsNullOrEmpty(assoc.AddrTypeAssocMember) && assoc.AddrTypeAssocMember.Contains(_SM))
+                {
+                    string[] addressTypeCodes = assoc.AddrTypeAssocMember.Split(_SM);
+                    foreach (var typeCode in addressTypeCodes)
+                    {
+                        address.AddressTypeCodes.Add(typeCode);
+                    }
+                }
+
                 address.TypeCode = assoc.AddrTypeAssocMember;
-                address.Type = assoc.AddrTypeAssocMember;
+                if(!address.AddressTypeCodes.Any())
+                {
+                    address.AddressTypeCodes.Add(address.TypeCode);
+                }
+                address.Type = assoc.AddrTypeAssocMember;               
                 if (!string.IsNullOrEmpty(address.Type))
                 {
                     var codeAddressRelationship = GetAddressRelationships().ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == address.Type).FirstOrDefault();
@@ -926,7 +942,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     {
                         address.Type = codeAddressRelationship.ValExternalRepresentationAssocMember;
                     }
-                }
+                }                
                 address.AddressModifier = assoc.AddrModifierLineAssocMember;
                 address.EffectiveStartDate = assoc.AddrEffectiveStartAssocMember;
                 address.EffectiveEndDate = assoc.AddrEffectiveEndAssocMember;
@@ -1204,6 +1220,67 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             var addressId = await GetAddressFromGuidAsync(updateResponse.Guid);
             return await GetAddressbyIDAsync(addressId);
         }
+
+        /// <summary>
+        /// Update an Address Record in Colleague
+        /// </summary>
+        /// <param name="addressEntity">A domain object for Address</param>
+        /// <returns>Primary key</returns>
+        public async Task<Address> Update2Async(string addressKey, Address addressEntity)
+        {
+            if (addressEntity == null)
+            {
+                throw new ArgumentNullException("addressEntity");
+            }
+
+            UpdateAddressRequest updateRequest = new UpdateAddressRequest()
+            {
+                AddressId = addressKey,
+                AddressLines = addressEntity.AddressLines,
+                Guid = addressEntity.Guid,
+                CarrierRoute = addressEntity.CarrierRoute,
+                CorrectionDigit = addressEntity.CorrectionDigit,
+                Country = addressEntity.Country,
+                DeliveryPoint = addressEntity.DeliveryPoint,
+                GeographicArea = addressEntity.AddressChapter,
+                IntlLocality = addressEntity.City,
+                IntlRegion = string.IsNullOrEmpty(addressEntity.State) ? addressEntity.IntlRegion : addressEntity.State,
+                IntlSubRegion = addressEntity.IntlSubRegion,
+                IntlPostalCode = addressEntity.IntlPostalCode,
+                Longitude = addressEntity.Longitude,
+                Latitude = addressEntity.Latitude
+            };
+
+            var extendedDataTuple = GetEthosExtendedDataLists();
+            if (extendedDataTuple != null && extendedDataTuple.Item1 != null && extendedDataTuple.Item2 != null)
+            {
+                updateRequest.ExtendedNames = extendedDataTuple.Item1;
+                updateRequest.ExtendedValues = extendedDataTuple.Item2;
+            }
+
+            var updateResponse = await transactionInvoker.ExecuteAsync<UpdateAddressRequest, UpdateAddressResponse>(updateRequest);
+
+            if (updateResponse.AddressErrors.Any())
+            {
+                var exception = new RepositoryException();
+                updateResponse.AddressErrors.ForEach(e =>
+                {
+                    // It is worth noting here that AddressException.ErrorCodes is a single string, not a list or array
+                    var errorCodes = string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes;
+                    exception.AddError(new RepositoryError(errorCodes, e.ErrorMessages));
+                }
+
+                );
+                updateResponse.AddressErrors.ForEach(error => logger.Error(error.ErrorMessages));
+
+                throw exception;
+            }
+
+            // get the updated address from the database
+            var addressId = await GetAddressFromGuidAsync(updateResponse.Guid);
+            return await GetAddressbyID2Async(addressId);
+        }
+
         #endregion
 
         #region Delete Methods

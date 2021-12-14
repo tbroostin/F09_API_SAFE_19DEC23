@@ -72,5 +72,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>The purchase order void response DTO.</returns>
         Task<Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderVoidResponse> VoidPurchaseOrderAsync(Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderVoidRequest purchaseOrderVoidRequest);
 
+        /// <summary>
+        /// Returns the list of purchase order summary object for the user
+        /// </summary>
+        /// <param name="criteria">procurement filter criteria</param>
+        /// <returns>Purchase order summary DTOs</returns>
+        Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.PurchaseOrderSummary>> QueryPurchaseOrderSummariesAsync(Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria criteria);
+
     }
 }

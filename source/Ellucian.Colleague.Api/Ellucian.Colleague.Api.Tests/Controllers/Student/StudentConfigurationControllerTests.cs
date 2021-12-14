@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -140,6 +140,132 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 gradConfig.AddGraduationTerm("term3");
                 gradConfig.CommencementInformationLink = "commencementURL.com";
                 gradConfig.CapAndGownLink = "capandgown.com";
+                return gradConfig;
+            }
+        }
+
+        [TestClass]
+        public class StudentConfigurationControllerTests_GraduationConfiguration2
+        {
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+
+            private IStudentConfigurationService configurationService;
+            private Mock<IStudentConfigurationService> configurationServiceMock;
+            private IStudentConfigurationRepository studentConfigurationRepo;
+            private Mock<IStudentConfigurationRepository> studentConfigurationRepoMock;
+            private StudentConfigurationController studentConfigurationController;
+            private Ellucian.Colleague.Domain.Student.Entities.GraduationConfiguration graduationConfigurationEntity;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private ILogger logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+                configurationServiceMock = new Mock<IStudentConfigurationService>();
+                configurationService = configurationServiceMock.Object;
+                studentConfigurationRepoMock = new Mock<IStudentConfigurationRepository>();
+                studentConfigurationRepo = studentConfigurationRepoMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                //adapterRegistry = new Mock<IAdapterRegistry>().Object;
+                logger = new Mock<ILogger>().Object;
+
+                graduationConfigurationEntity = BuildGraduationConfiguration();
+
+                studentConfigurationController = new StudentConfigurationController(studentConfigurationRepo, adapterRegistry, logger, configurationService);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                studentConfigurationController = null;
+                studentConfigurationRepo = null;
+            }
+
+            [TestMethod]
+            public async Task GetGraduationConfiguration2Async_ReturnGraduationConfigDto()
+            {
+                // Mock the respository get
+                studentConfigurationRepoMock.Setup(repo => repo.GetGraduationConfigurationAsync()).Returns(Task.FromResult(graduationConfigurationEntity));
+
+                // Mock the adapters
+                var adapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.GraduationConfiguration, Ellucian.Colleague.Dtos.Student.GraduationConfiguration2>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.GraduationConfiguration, Ellucian.Colleague.Dtos.Student.GraduationConfiguration2>()).Returns(adapter);
+                var gradQuestionAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.GraduationQuestion, Ellucian.Colleague.Dtos.Student.GraduationQuestion>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.GraduationQuestion, Ellucian.Colleague.Dtos.Student.GraduationQuestion>()).Returns(gradQuestionAdapter);
+
+                // Take Action
+                var graduationConfiguration2 = await studentConfigurationController.GetGraduationConfiguration2Async();
+
+                // Test Result
+                Assert.AreEqual(graduationConfiguration2.ExpandRequirementSetting,Dtos.Student.ExpandRequirementSetting.Expand);                   
+                Assert.IsTrue(graduationConfiguration2 is Dtos.Student.GraduationConfiguration2);
+                Assert.AreEqual(graduationConfiguration2.ApplicationQuestions.Count(), graduationConfiguration2.ApplicationQuestions.Count());
+                Assert.AreEqual(graduationConfiguration2.GraduationTerms.Count(), graduationConfiguration2.GraduationTerms.Count());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetGraduationConfiguration2Async_KeyNotFoundException_ReturnsHttpResponseException_NotFound()
+            {
+                try
+                {
+                    studentConfigurationRepoMock.Setup(repo => repo.GetGraduationConfigurationAsync()).Throws(new KeyNotFoundException());
+                    var graduationConfiguration2 = await studentConfigurationController.GetGraduationConfiguration2Async();
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.NotFound, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetGraduationConfiguration2Async_AnyOtherException_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    studentConfigurationRepoMock.Setup(repo => repo.GetGraduationConfigurationAsync()).Throws(new ArgumentNullException());
+                    var graduationConfiguration2 = await studentConfigurationController.GetGraduationConfiguration2Async();
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+
+            private Ellucian.Colleague.Domain.Student.Entities.GraduationConfiguration BuildGraduationConfiguration()
+            {
+                var gradConfig = new Ellucian.Colleague.Domain.Student.Entities.GraduationConfiguration();
+                gradConfig.AddGraduationQuestion(Ellucian.Colleague.Domain.Student.Entities.GraduationQuestionType.AttendCommencement, false);
+                gradConfig.AddGraduationQuestion(Ellucian.Colleague.Domain.Student.Entities.GraduationQuestionType.Hometown, true);
+                gradConfig.AddGraduationTerm("term1");
+                gradConfig.AddGraduationTerm("term2");
+                gradConfig.AddGraduationTerm("term3");
+                gradConfig.CommencementInformationLink = "commencementURL.com";
+                gradConfig.CapAndGownLink = "capandgown.com";
+                gradConfig.ExpandRequirementSetting = Domain.Student.Entities.ExpandRequirementSetting.Expand;
                 return gradConfig;
             }
         }
@@ -790,8 +916,21 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.AreEqual(configuration.ProfileFacultyEmailType, ProfileFacultyEmailType);
                 Assert.AreEqual(configuration.ProfileFacultyPhoneType, ProfileFacultyPhoneType);
                 Assert.AreEqual(configuration.ProfileAdvsiorType, ProfileAdvsiorType);
+                Assert.AreEqual(configuration.IsDisplayOfficeHours, true);
             }
 
+            [TestMethod]
+            public async Task GetStudentProfileConfigurationAsync_DisplayOffHours_False()
+            {
+                configurationDto.IsDisplayOfficeHours = false;
+                // Mock the respository get
+                configurationServiceMock.Setup(svc => svc.GetStudentProfileConfigurationAsync()).Returns(Task.FromResult(configurationDto));
+                // Take Action
+                var configuration = await studentConfigurationController.GetStudentProfileConfigurationAsync();
+
+                // Test Result
+                Assert.AreEqual(configuration.IsDisplayOfficeHours, false);
+            }
 
             [TestMethod]
             [ExpectedException(typeof(HttpResponseException))]
@@ -850,6 +989,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 studentConfig.ProfileFacultyEmailType = "PRI";
                 studentConfig.ProfileFacultyPhoneType = "BU";
                 studentConfig.ProfileAdvsiorType = "GEN";
+                studentConfig.IsDisplayOfficeHours = true;
                 return studentConfig;
             }
         }
@@ -1036,5 +1176,93 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
         }
 
+        [TestClass]
+        public class StudentConfigurationControllerTests_GetAcademicRecordConfigurationAsync
+        {
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+
+            private IStudentConfigurationService configurationService;
+            private Mock<IStudentConfigurationService> configurationServiceMock;
+            private IStudentConfigurationRepository studentConfigurationRepo;
+            private Mock<IStudentConfigurationRepository> studentConfigurationRepoMock;
+            private StudentConfigurationController studentConfigurationController;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private ILogger logger;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+                studentConfigurationRepoMock = new Mock<IStudentConfigurationRepository>();
+                studentConfigurationRepo = studentConfigurationRepoMock.Object;
+                configurationServiceMock = new Mock<IStudentConfigurationService>();
+                configurationService = configurationServiceMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                logger = new Mock<ILogger>().Object;
+
+                studentConfigurationController = new StudentConfigurationController(studentConfigurationRepo, adapterRegistry, logger, configurationService);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                studentConfigurationController = null;
+                studentConfigurationRepo = null;
+            }
+
+            [TestMethod]
+            public async Task GetAcademicRecordConfigurationAsync_ReturnConfigDto()
+            {
+                var configurationDto = new Dtos.Student.AcademicRecordConfiguration()
+                { AnonymousGradingType = Dtos.Student.AnonymousGradingType.None};
+
+                // Mock the respository get
+                configurationServiceMock.Setup(svc => svc.GetAcademicRecordConfigurationAsync()).Returns(Task.FromResult(configurationDto));
+
+                // Take Action
+                var configuration = await studentConfigurationController.GetAcademicRecordConfigurationAsync();
+
+                // Test Result
+                Assert.IsTrue(configuration is Dtos.Student.AcademicRecordConfiguration);
+                Assert.AreEqual(Dtos.Student.AnonymousGradingType.None, configuration.AnonymousGradingType);
+            }
+
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task GetAcademicRecordConfigurationAsync_AnyException_ReturnsHttpResponseException_BadRequest()
+            {
+                try
+                {
+                    configurationServiceMock.Setup(svc => svc.GetAcademicRecordConfigurationAsync()).Throws(new Exception());
+                    var configuration = await studentConfigurationController.GetAcademicRecordConfigurationAsync();
+                }
+                catch (HttpResponseException ex)
+                {
+                    Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, ex.Response.StatusCode);
+                    throw ex;
+                }
+            }
+
+        }
     }
 }

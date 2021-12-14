@@ -1,4 +1,4 @@
-﻿//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -62,13 +62,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Collection of <see cref="StudentTranscriptGrades">StudentTranscriptGrade</see> objects</returns>          
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.StudentTranscriptGrades>, int>> GetStudentTranscriptGradesAsync(int offset, int limit,
             Dtos.StudentTranscriptGrades criteriaFilter, bool bypassCache = false)
-        {
-
-            if( !await CheckViewStudentTranscriptGradesPermission() )
-            {
-                throw new PermissionsException( "User " + CurrentUser.UserId + " does not have permission to view student transcript grades." );
-            }
-
+        {       
             string studentGuid = string.Empty;
             string academicPeriodGuid= string.Empty;
             
@@ -143,12 +137,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new ArgumentNullException("guid", "A GUID is required to obtain a student transcript grade.");
             }
             try
-            {
-                if (!await CheckViewStudentTranscriptGradesPermission())
-                {
-                    throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view student transcript grades. ");
-                }
-
+            {             
                 var studentTranscriptGradesEntity = await _studentTranscriptGradesRepository.GetStudentTranscriptGradesByGuidAsync(guid);
                 var studentTranscriptGrades = (await BuildStudentTranscriptGradesDtoAsync(new List<Domain.Student.Entities.StudentTranscriptGrades>()
                 { studentTranscriptGradesEntity }, bypassCache));
@@ -173,12 +162,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new ArgumentNullException("guid", "A GUID is required to obtain a student transcript grade.");
             }
-
-            if (!await CheckViewStudentTranscriptGradesPermission())
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view student transcript grades. ");
-            }
-
+       
             var studentTranscriptGradesEntity = await _studentTranscriptGradesRepository.GetStudentTranscriptGradesByGuidAsync(guid);
 
             Dtos.StudentTranscriptGradesAdjustments studentTranscriptGradesAdjustments = null;
@@ -228,9 +212,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new ArgumentNullException("StudentTranscriptGradesAdjustments.Detail.Grade.Id", "Must provide a grade for StudentTranscriptGradesAdjustments update");
             }
-            // verify the user has the permission to update a studentTranscriptGradesAdjustments
-            CheckCreateStudentTranscriptGradesAdjustmentsPermission();
-
+           
             _studentTranscriptGradesRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
             // map the DTO to entities
@@ -595,12 +577,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                     else
                     {
-                        logger.Warn("Unable to convert historical grade on STUDENT.ACAD.CRED " + id + " for student-transcript-grades resource " + guid + ".");
+                        logger.Error("Unable to convert historical grade on STUDENT.ACAD.CRED " + id + " for student-transcript-grades resource " + guid + ".");
                     }
                 }
                 catch (Exception e)
                 {
-                    logger.Warn("Unable to convert historical grade on STUDENT.ACAD.CRED " + id + " for student-transcript-grades resource " + guid + ".");
+                    logger.Error("Unable to convert historical grade on STUDENT.ACAD.CRED " + id + " for student-transcript-grades resource " + guid + ".");
                 }
             }
 
@@ -1029,37 +1011,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         #endregion
 
-        #region Permission Check
-
-        /// <summary>
-        /// Permissions code that allows an external system to perform the READ operation.
-        /// </summary>
-        /// <returns></returns>
-        private async Task<bool> CheckViewStudentTranscriptGradesPermission()
-        {
-            IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
-            if (userPermissions.Contains(StudentPermissionCodes.ViewStudentTranscriptGrades) || userPermissions.Contains(StudentPermissionCodes.UpdateStudentTranscriptGradesAdjustments))
-            {
-                return true;
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// Helper method to determine if the user has permission to create/update StudentTranscriptGradesAdjustments.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckCreateStudentTranscriptGradesAdjustmentsPermission()
-        {
-            bool hasPermission = HasPermission(StudentPermissionCodes.UpdateStudentTranscriptGradesAdjustments);
-
-            // User is not allowed to create or update StudentTranscriptGradesAdjustments without the appropriate permissions
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to update StudentTranscriptGradesAdjustments.");
-            }
-        }
-
-        #endregion
+       
     }
 }

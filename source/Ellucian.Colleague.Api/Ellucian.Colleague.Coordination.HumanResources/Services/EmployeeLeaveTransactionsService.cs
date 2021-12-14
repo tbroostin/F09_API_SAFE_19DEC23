@@ -1,10 +1,7 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Ellucian.Colleague.Coordination.HumanResources.Adapters;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -14,10 +11,10 @@ using Ellucian.Web.Security;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos;
-using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Colleague.Domain.HumanResources;
+using Ellucian.Colleague.Domain.Exceptions;
+using System.Linq;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Services
 {
@@ -48,37 +45,54 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns>Collection of EmployeeLeaveTransactions DTO objects</returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.EmployeeLeaveTransactions>, int>> GetEmployeeLeaveTransactionsAsync(int offset, int limit, bool bypassCache = false)
         {
-            CheckViewEmployeeLeaveTransactionsPermission();
             var empLeaveTransCollection = new List<Ellucian.Colleague.Dtos.EmployeeLeaveTransactions>();
-            int empLeaveTransCount = 0;
+    
+            Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.PerleaveDetails>, int> empLeaveTransEntities = null;
             try
             {
-                var empLeaveTransEntities = await _employeeLeaveTransactionsRepository.GetEmployeeLeaveTransactionsAsync(offset, limit, bypassCache);
-                if (empLeaveTransEntities != null)
-                {
-                    empLeaveTransCount = empLeaveTransEntities.Item2;
-                    foreach (var trans in empLeaveTransEntities.Item1)
-                    {
-                        var leaveTransDto = await ConvertEmployeeLeaveTransactionsEntityToDto(trans, bypassCache);
-                        if (leaveTransDto != null)
-                        {
-                            empLeaveTransCollection.Add(leaveTransDto);
-                        }
-
-                    }
-                    return new Tuple<IEnumerable<EmployeeLeaveTransactions>, int>(empLeaveTransCollection, empLeaveTransCount);
-
-                }
-                else
-                {
-                    return new Tuple<IEnumerable<EmployeeLeaveTransactions>, int>(new List<Dtos.EmployeeLeaveTransactions>(), 0);
-
-                }
+                empLeaveTransEntities = await _employeeLeaveTransactionsRepository.GetEmployeeLeaveTransactionsAsync(offset, limit, bypassCache);
             }
-            catch (Exception e)
+            catch (RepositoryException ex)
             {
-                throw new ArgumentException(e.Message);
+                IntegrationApiExceptionAddError(ex, "Bad.Data");
+                throw IntegrationApiException;
             }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Bad.Data");
+                throw IntegrationApiException;
+            }
+
+            if (empLeaveTransEntities == null || empLeaveTransEntities.Item1 == null)
+            {
+                return new Tuple<IEnumerable<EmployeeLeaveTransactions>, int>(new List<Dtos.EmployeeLeaveTransactions>(), 0);
+            }
+
+           
+            var employeeLeaveIds = empLeaveTransEntities.Item1
+                .Where(x => (!string.IsNullOrEmpty(x.EmployeeLeaveId)))
+                .Select(x => x.EmployeeLeaveId).Distinct().ToList();
+
+            var perLeaveGuidCollection = await _empLeavePlansRepository.GetPerleaveGuidsCollectionAsync(employeeLeaveIds);
+
+            foreach (var trans in empLeaveTransEntities.Item1)
+            {
+                try
+                {
+                    empLeaveTransCollection.Add(await ConvertEmployeeLeaveTransactionsEntityToDto(trans, perLeaveGuidCollection));
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "Bad.Data");
+                }
+                
+            }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            return new Tuple<IEnumerable<EmployeeLeaveTransactions>, int>(empLeaveTransCollection, empLeaveTransEntities.Item2);
+
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -88,10 +102,33 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns>EmployeeLeaveTransactions DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.EmployeeLeaveTransactions> GetEmployeeLeaveTransactionsByGuidAsync(string guid, bool bypassCache = false)
         {
-            CheckViewEmployeeLeaveTransactionsPermission();
+            PerleaveDetails perLeaveDetailsDomianEntity = null;
             try
             {
-                return await ConvertEmployeeLeaveTransactionsEntityToDto(await _employeeLeaveTransactionsRepository.GetEmployeeLeaveTransactionsByIdAsync(guid), bypassCache);
+                perLeaveDetailsDomianEntity = await _employeeLeaveTransactionsRepository.GetEmployeeLeaveTransactionsByIdAsync(guid);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+            catch (KeyNotFoundException ex)
+            {
+                throw new KeyNotFoundException("No employee-leave-transactions was found for GUID '" + guid + "'", ex);
+            }
+
+            try
+            {
+              
+                var perLeaveGuidCollection = await _empLeavePlansRepository.GetPerleaveGuidsCollectionAsync(new List<string> { perLeaveDetailsDomianEntity.EmployeeLeaveId });
+
+                var retval = await ConvertEmployeeLeaveTransactionsEntityToDto(perLeaveDetailsDomianEntity, perLeaveGuidCollection);
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+                return retval;
+
             }
             catch (KeyNotFoundException ex)
             {
@@ -101,30 +138,53 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw new KeyNotFoundException("employee-leave-transactions not found for GUID " + guid, ex);
             }
+            
         }
-
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
         /// Converts a Perleave domain entity to its corresponding EmployeeLeaveTransactions DTO
         /// </summary>
-        /// <param name="source">Perleave domain entity</param>
+        /// <param name="source">PerleaveDetails domain entity</param>
+        /// <param name="source">Perleave guid collection</param>
         /// <returns>EmployeeLeaveTransactions DTO</returns>
-        private async Task<Ellucian.Colleague.Dtos.EmployeeLeaveTransactions> ConvertEmployeeLeaveTransactionsEntityToDto(PerleaveDetails source, bool bypassCache)
+        private async Task<Ellucian.Colleague.Dtos.EmployeeLeaveTransactions> ConvertEmployeeLeaveTransactionsEntityToDto(PerleaveDetails source,
+            Dictionary<string, string> perLeaveGuidCollection)
         {
             var employeeLeaveTransactions = new Ellucian.Colleague.Dtos.EmployeeLeaveTransactions();
             employeeLeaveTransactions.Id = source.Guid;
             //get employee leave
+            //if (!string.IsNullOrEmpty(source.EmployeeLeaveId))
+            //{
+            //  var employeeLeave = await _empLeavePlansRepository.GetEmployeeLeavePlansByIdAsync(source.EmployeeLeaveId);
+            //    if (employeeLeave == null)
+            //    {
+            //        throw new ArgumentException(string.Concat("Invalid employee leave transaction record '", source.EmployeeLeaveId, "'. Entity: ‘PERLVDTL’, Record ID: '", source.Id, "'"));
+            //    }
+            //    employeeLeaveTransactions.EmployeeLeave = new GuidObject2(employeeLeave.Guid);
+            //}
+
             if (!string.IsNullOrEmpty(source.EmployeeLeaveId))
             {
-                var employeeLeave = await _empLeavePlansRepository.GetEmployeeLeavePlansByIdAsync(source.EmployeeLeaveId);
-                if (employeeLeave == null)
+                if (perLeaveGuidCollection == null)
                 {
-                    throw new ArgumentException(string.Concat("Invalid employee leave transaction record '", source.EmployeeLeaveId, "'. Entity: ‘PERLVDTL’, Record ID: '", source.Id, "'"));
+                    IntegrationApiExceptionAddError(string.Concat("PERLEAVE GUID not found for employeeLeaveId: '", source.EmployeeLeaveId, "'"), "GUID.Not.Found"
+                        , source.Id, source.Guid);
                 }
-                employeeLeaveTransactions.EmployeeLeave = new GuidObject2(employeeLeave.Guid);
-
-
+                else
+                {
+                    var employeeLeaveGuid = string.Empty;
+                    perLeaveGuidCollection.TryGetValue(source.EmployeeLeaveId, out employeeLeaveGuid);
+                    if (string.IsNullOrEmpty(employeeLeaveGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("PERLEAVE GUID not found for arrangement: '", source.EmployeeLeaveId, "'"), "GUID.Not.Found"
+                            , source.Id, source.Guid);
+                    }
+                    else
+                    {
+                        employeeLeaveTransactions.EmployeeLeave = new GuidObject2(employeeLeaveGuid);
+                    }
+                }
             }
 
             //get transaction date
@@ -145,20 +205,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             // get available hours
             employeeLeaveTransactions.Available = source.AvailableHours;
             return employeeLeaveTransactions;
-        }
-
-        /// <summary>
-        /// Permissions code that allows an external system to do view employee leave plans
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckViewEmployeeLeaveTransactionsPermission()
-        {
-            var hasPermission = HasPermission(HumanResourcesPermissionCodes.ViewEmployeeLeaveTransactions);
-
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view employee leave transactions.");
-            }
         }
     }
 }

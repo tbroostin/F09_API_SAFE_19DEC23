@@ -1346,7 +1346,117 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.Requirements
             Assert.IsTrue(grResult.Explanations.Contains(GroupExplanation.Satisfied));
         }
 
+        [TestMethod]
+        public void Related_Courses_With_ShowRelatedCourses_IncludePlannedCourses_WithPossibleReplaceInProgress_Status()
+        {
+            //Any planned course with Possible replace in progress status will also be included as Related course
+            //Before group is evaluated list of academic credits and planned course are already marked with status of possible replace in progress or possible replacement
+            //Group evaluation skips those courses which are possible replace in prgress and mark the Result status as ReplaceInProgress which is included to display as Related. 
+            Requirement requirement = new Requirement("1", "R1", "Req1", "UG", null);
+            Subrequirement sreq = new Subrequirement("sreq-1", "subReq1");
+            sreq.Requirement = requirement;
 
+            //Take 2 courses from MATH
+            Group gr = new Group("group-1", "group1", sreq);
+            gr.MinCourses = 2;
+            gr.FromSubjects = new List<string>() { "MATH" };
+
+            Course course = new Course("2", "short", "long", new List<OfferingDepartment>()
+            {
+                new OfferingDepartment("MATH", 100m)
+            }, "MATH", "100", "2", new List<string>() {"100" }, 3m, null, new List<CourseApproval>()
+            {
+                new CourseApproval("A", DateTime.Today.AddDays(-7), "0000043", "0003315", DateTime.Today.AddDays(-7))
+            });
+
+            //MATH-100 is taken 1 time and planned twice in 2020/fa and 2021/fa terms. Since we are testing group evaluation then the academic credits and planned courses passed to 
+            //evaluate method are already updated properly with Replaced and Replacement status. Therefore in data setup:
+            //MATH-100 have one academic credit and two planned courses - planed courses are always picked over completed courses and IP courses. 
+            //Therefore academic credit is possible be replaced by planned course in 2020/fa which will further possible be replace in progress with planned course in 2021/fa. Hence will be Related courses
+            //Pnly planned course in 2021/fa will be planned applied in group. 
+
+            //other acad credits
+            AcademicCredit acadcredit1 = new AcademicCredit("acadcred-1", course, "sec1");
+            acadcredit1.AcademicLevelCode = "UG";
+            acadcredit1.AddDepartment("MATH");
+            acadcredit1.CompletedCredit = 3m;
+            acadcredit1.CourseName = "MATH-100";
+            acadcredit1.CourseLevelCode = "300";
+            acadcredit1.SubjectCode = "MATH";
+            acadcredit1.ReplacedStatus = ReplacedStatus.ReplaceInProgress;
+            acadcredit1.ReplacementStatus = ReplacementStatus.NotReplacement;
+
+            AcademicCredit acadcredit2 = new AcademicCredit("acadcred-2");
+            acadcredit2.AcademicLevelCode = "UG";
+            acadcredit2.AddDepartment("MATH");
+            acadcredit2.CompletedCredit = 5m;
+            acadcredit2.CourseName = "MATH-500";
+            acadcredit2.CourseLevelCode = "500";
+            acadcredit2.SubjectCode = "MATH";
+            acadcredit2.SectionId = "sec2";
+
+            AcademicCredit acadcredit3 = new AcademicCredit("acadcred-3");
+            acadcredit3.AcademicLevelCode = "UG";
+            acadcredit3.AddDepartment("MATH");
+            acadcredit3.CompletedCredit = 3m;
+            acadcredit3.CourseName = "MATH-200";
+            acadcredit3.CourseLevelCode = "200";
+            acadcredit3.SubjectCode = "MATH";
+            acadcredit3.SectionId = "sec1";
+
+            AcademicCredit acadcredit4 = new AcademicCredit("acadcred-4");
+            acadcredit4.AcademicLevelCode = "UG";
+            acadcredit4.AddDepartment("MATH");
+            acadcredit4.CompletedCredit = 5m;
+            acadcredit4.CourseName = "MATH-300";
+            acadcredit4.CourseLevelCode = "300";
+            acadcredit4.SubjectCode = "MATH";
+            acadcredit4.SectionId = "sec2";
+
+            AcademicCredit acadcredit5 = new AcademicCredit("acadcred-5");
+            acadcredit5.AcademicLevelCode = "UG";
+            acadcredit5.AddDepartment("ENGL");
+            acadcredit5.CompletedCredit = 5m;
+            acadcredit5.CourseName = "ENGL-300";
+            acadcredit5.CourseLevelCode = "300";
+            acadcredit5.SubjectCode = "ENGL";
+            acadcredit5.SectionId = "sec2";
+
+            PlannedCredit plannedCourse1 = new PlannedCredit(course, "2020/FA");
+            plannedCourse1.ReplacedStatus = ReplacedStatus.ReplaceInProgress;
+            plannedCourse1.ReplacementStatus = ReplacementStatus.NotReplacement;
+
+            PlannedCredit plannedCourse2 = new PlannedCredit(course, "2021/FA");
+            plannedCourse2.ReplacedStatus = ReplacedStatus.NotReplaced;
+            plannedCourse2.ReplacementStatus = ReplacementStatus.PossibleReplacement;
+
+
+            //Acad results
+
+            List<AcadResult> acadresults = new List<AcadResult>();
+            acadresults.Add(new CreditResult(acadcredit1));
+            acadresults.Add(new CreditResult(acadcredit2));
+            acadresults.Add(new CreditResult(acadcredit3));
+            acadresults.Add(new CreditResult(acadcredit4));
+            acadresults.Add(new CreditResult(acadcredit5));
+            acadresults.Add(new CourseResult(plannedCourse1));
+            acadresults.Add(new CourseResult(plannedCourse2));
+
+            GroupResult grResult = gr.Evaluate(acadresults, null, new List<Course>() { course }, null, true, false);
+
+            Assert.AreEqual(7, grResult.Results.Count());
+            Assert.AreEqual(2, grResult.GetApplied().Count());
+            Assert.AreEqual(0, grResult.GetPlannedApplied().Count());
+            Assert.AreEqual(4, grResult.GetRelated().Count());
+            Assert.AreEqual("acadcred-2", grResult.GetApplied().ToList()[0].GetAcadCredId());
+            Assert.AreEqual("acadcred-3", grResult.GetApplied().ToList()[1].GetAcadCredId());
+
+            Assert.AreEqual("acadcred-1", grResult.GetRelated().ToList()[0].GetAcadCredId());
+            Assert.AreEqual("acadcred-4", grResult.GetRelated().ToList()[1].GetAcadCredId());
+            Assert.AreEqual("2020/FA",( grResult.GetRelated().ToList()[2] as CourseResult).PlannedCourse.TermCode);
+            Assert.AreEqual("2021/FA", (grResult.GetRelated().ToList()[3] as CourseResult).PlannedCourse.TermCode);
+            Assert.IsTrue(grResult.Explanations.Contains(GroupExplanation.Satisfied));
+        }
     }
 
     [TestClass]

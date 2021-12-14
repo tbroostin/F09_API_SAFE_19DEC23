@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -405,7 +405,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Assert.AreEqual(checkCourse.LocalCreditType, course.LocalCreditType);
         }
 
-
         [TestMethod]
         public async Task CourseRepository_Get_CourseApprovalWithNoStatus()
         {
@@ -416,7 +415,69 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Assert.AreEqual(0, course.CourseApprovals.Count());
         }
 
+        [TestMethod]
+        public async Task CourseRepository_Get_ShowDropRoster_ResponseYes()
+        {
+            string courseId = "139";
+            Course course = await courseRepo.GetAsync(courseId);
+            Assert.IsTrue(course.ShowDropRoster);
+        }
 
+        [TestMethod]
+        public async Task CourseRepository_Get_ShowDropRoster_ResponseLowercaseYes()
+        {
+            string courseId = "42";
+            Course course = await courseRepo.GetAsync(courseId);
+            Assert.IsTrue(course.ShowDropRoster);
+        }
+
+        [TestMethod]
+        public async Task CourseRepository_Get_ShowDropRoster_ResponseNo()
+        {
+            string courseId = "110";
+            Course course = await courseRepo.GetAsync(courseId);
+            Assert.IsFalse(course.ShowDropRoster);
+        }
+
+        [TestMethod]
+        public async Task CourseRepository_Get_ShowDropRoster_ResponseLowercaseNo()
+        {
+            string courseId = "21";
+            Course course = await courseRepo.GetAsync(courseId);
+            Assert.IsFalse(course.ShowDropRoster);
+        }
+
+        [TestMethod]
+        public async Task CourseRepository_Get_ShowDropRoster_ResponseInvalidValue()
+        {
+            string courseId = "47";
+            Course course = await courseRepo.GetAsync(courseId);
+            Assert.IsFalse(course.ShowDropRoster);
+        }
+
+        [TestMethod]
+        public async Task CourseRepository_Get_ShowDropRoster_ResponseWhitespace()
+        {
+            string courseId = "333";
+            Course course = await courseRepo.GetAsync(courseId);
+            Assert.IsFalse(course.ShowDropRoster);
+        }
+
+        [TestMethod]
+        public async Task CourseRepository_Get_ShowDropRoster_ResponseEmtpy()
+        {
+            string courseId = "64";
+            Course course = await courseRepo.GetAsync(courseId);
+            Assert.IsFalse(course.ShowDropRoster);
+        }
+
+        [TestMethod]
+        public async Task CourseRepository_Get_ShowDropRoster_ResponseNull()
+        {
+            string courseId = "143";
+            Course course = await courseRepo.GetAsync(courseId);
+            Assert.IsFalse(course.ShowDropRoster);
+        }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
@@ -1234,6 +1295,36 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 {
                     repoCrs.CourseLocationCyclesEntityAssociation.Add(new CoursesCourseLocationCycles(clc.Location, clc.SessionCycle, clc.YearlyCycle));
                 }
+
+                // Add show drop roster flag values
+                switch (course.Id)
+                {
+                    case "139":
+                        repoCrs.CrsShowDropRosterFlag = "Y";
+                        break;
+                    case "42":
+                        repoCrs.CrsShowDropRosterFlag = "y";
+                        break;
+                    case "110":
+                        repoCrs.CrsShowDropRosterFlag = "N";
+                        break;
+                    case "21":
+                        repoCrs.CrsShowDropRosterFlag = "n";
+                        break;
+                    case "47":
+                        repoCrs.CrsShowDropRosterFlag = "a";
+                        break;
+                    case "333":
+                        repoCrs.CrsShowDropRosterFlag = " ";
+                        break;
+                    case "64":
+                        repoCrs.CrsShowDropRosterFlag = string.Empty;
+                        break;
+                    default:
+                        repoCrs.CrsShowDropRosterFlag = null;
+                        break;
+                }
+
 
                 repoCourses.Add(repoCrs);
             }

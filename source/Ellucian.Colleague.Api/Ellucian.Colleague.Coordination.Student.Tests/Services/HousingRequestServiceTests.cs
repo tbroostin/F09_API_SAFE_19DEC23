@@ -16,6 +16,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 {
@@ -101,6 +103,15 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 housingRequestTuple = new Tuple<IEnumerable<HousingRequest>, int>(housingRequest, 2);
                 personGuids = new Dictionary<string, string>() { { "1", "0ca1a878-3555-4a3f-a17b-20d054d5e461" }, { "2", "0ca1a878-3555-4a3f-a17b-20d054d5e462" }, { "3", "0ca1a878-3555-4a3f-a17b-20d054d5e463" }, { "4", "0ca1a878-3555-4a3f-a17b-20d054d5e464" }, { "5", "0ca1a878-3555-4a3f-a17b-20d054d5e465" } };
+
+                var personGuidDictionary = new Dictionary<string, string>() { };
+                personGuidDictionary.Add("1", "0ca1a878-3555-4a3f-a17b-20d054d5e461");
+                personGuidDictionary.Add("2", "0ca1a878-3555-4a3f-a17b-20d054d5e462");
+                personGuidDictionary.Add("3", "0ca1a878-3555-4a3f-a17b-20d054d5e463");
+                personGuidDictionary.Add("4", "0ca1a878-3555-4a3f-a17b-20d054d5e464");
+                personGuidDictionary.Add("5", "0ca1a878-3555-4a3f-a17b-20d054d5e465");
+                personRepositoryMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>()))
+                    .ReturnsAsync(personGuidDictionary);
                 roommateGuids = new Dictionary<string, string>() { { "11", "6ca1a878-3555-4a3f-a17b-20d054d5e461" }, { "22", "6ca1a878-3555-4a3f-a17b-20d054d5e462" }, { "33", "6ca1a878-3555-4a3f-a17b-20d054d5e463" } };
                 terms = new List<Term>() {
                     new Term("code_1","desc1",DateTime.Now,DateTime.Now,2007,1,false,true,"Rep Term1",false),
@@ -176,17 +187,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             #region GETALL
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task HousingRequestService_GetHousingRequestAsync_PermissionsException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                await housingRequestService.GetHousingRequestsAsync(0, 100, false);
-            }
-
-            [TestMethod]
             public async Task HousingRequestService_GetHousingRequestAsync_When_There_Are_No_HousingRequest_Records()
             {
-                housingRequestRepositoryMock.Setup(i => i.GetHousingRequestsAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ReturnsAsync(null);
+                housingRequestRepositoryMock.Setup(i => i.GetHousingRequestsAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ReturnsAsync(() => null);
                 var result = await housingRequestService.GetHousingRequestsAsync(0, 100, false);
 
                 Assert.IsNotNull(result);
@@ -194,7 +197,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task HousingRequestService_GetHousingRequestAsync_When_Person_Id_As_Null()
             {
                 housingRequest = new List<HousingRequest>() {
@@ -209,29 +212,26 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task HousingRequestService_GetHousingRequestAsync_Person_NotFound()
             {
-                personGuids = new Dictionary<string, string>() { { "7", "0ca1a878-3555-4a3f-a17b-20d054d5e463" } };
-                housingRequestRepositoryMock.Setup(h => h.GetPersonGuidsAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(personGuids);
+                personRepositoryMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>()))
+                    .ReturnsAsync(new Dictionary<string, string>());
 
                 await housingRequestService.GetHousingRequestsAsync(0, 100, false);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task HousingRequestService_GetHousingRequestAsync_AcademicPeriod_NotFound()
             {
-                academicPeriods = new List<AcademicPeriod>() {
-                    new AcademicPeriod("1ca1a878-3555-4a3f-a17b-20d054d5e104","code_3","desc3",DateTime.Now,DateTime.Now,2007,1,"Reporting Term","","", new List<RegistrationDate>() { new RegistrationDate("",DateTime.Now,DateTime.Now,DateTime.Now,null,null,null,null,null,null,null)})
-                };
-                termRepositoryMock.Setup(t => t.GetAcademicPeriods(terms)).Returns(academicPeriods);
+                termRepositoryMock.Setup(t => t.GetAcademicPeriodsGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
 
                 await housingRequestService.GetHousingRequestsAsync(0, 100, false);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task HousingRequestService_GetHousingRequestAsync_Buildings_NotFound()
             {
                 buildings = new List<Building>() {
@@ -245,17 +245,16 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task HousingRequestService_GetHousingRequestAsync_Site_NotFound()
             {
-                locations = new List<Location>() { new Location("3ca1a878-3555-4a3f-a17b-20d054d5e103", "loc_3", "location 3"), new Location("3ca1a878-3555-4a3f-a17b-20d054d5e104", "loc_4", "location 4") };
-                referenceDataRepositoryMock.Setup(h => h.GetLocationsAsync(It.IsAny<bool>())).ReturnsAsync(locations);
+                referenceDataRepositoryMock.Setup(h => h.GetLocationsGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
 
                 await housingRequestService.GetHousingRequestsAsync(0, 100, false);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task HousingRequestService_GetHousingRequestAsync_Room_NotFound()
             {
                 rooms = new List<Room>() {
@@ -269,7 +268,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task HousingRequestService_GetHousingRequestAsync_Wing_NotFound()
             {
                 wings = new List<RoomWing>() { new RoomWing("4ca1a878-3555-4a3f-a17b-20d054d5e103", "wing_code_3", "desc1"), new RoomWing("4ca1a878-3555-4a3f-a17b-20d054d5e104", "wing_code_4", "desc2") };
@@ -280,7 +279,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task HousingRequestService_GetHousingRequestAsync_RoomCharacteristics_NotFound()
             {
                 roomCharacteristics = new List<RoomCharacteristic>() { new RoomCharacteristic("5ca1a878-3555-4a3f-a17b-20d054d5e103", "roomChar_code_3", "desc1"), new RoomCharacteristic("5ca1a878-3555-4a3f-a17b-20d054d5e104", "roomChar_code_4", "desc2") };
@@ -291,18 +290,17 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task HousingRequestService_GetHousingRequestAsync_Roommate_NotFound()
             {
-
-                roommateGuids = new Dictionary<string, string>() { { "1", "7ba1a878-3555-4a3f-a17b-20d054d5e461" }, { "6", "7ba1a878-3555-4a3f-a17b-20d054d5e461" } };
-                housingRequestRepositoryMock.Setup(h => h.GetPersonGuidsAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(roommateGuids);
+                personRepositoryMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>()))
+                    .ReturnsAsync(new Dictionary<string, string>());
 
                 await housingRequestService.GetHousingRequestsAsync(0, 100, false);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task HousingRequestService_GetHousingRequestAsync_RoommateCharacter_NotFound()
             {
 
@@ -313,7 +311,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task HousingRequestService_GetHousingRequestAsync_FloorCharacteristics_NotFound()
             {
                 floorCharacteristics = new List<FloorCharacteristics>() { new FloorCharacteristics("8ca1a878-3555-4a3f-a17b-20d054d5e105", "floor_char_5", "desc1"), new FloorCharacteristics("8ca1a878-3555-4a3f-a17b-20d054d5e106", "floor_char_3", "desc1") };
@@ -334,13 +332,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             #region GETBYID
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task HousingRequestService_GetHousingRequestByGuidAsync_PermissionsException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                await housingRequestService.GetHousingRequestByGuidAsync(guid);
-            }
 
             [TestMethod]
             public async Task HousingRequestService_GetHousingRequestByGuidAsync()
@@ -465,6 +456,11 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 {
                     {"1", "0ca1a878-3555-4a3f-a17b-20d054d5e001"}
                 };
+
+                var personGuidDictionary = new Dictionary<string, string>() { };
+                personGuidDictionary.Add("1", "0ca1a878-3555-4a3f-a17b-20d054d5e001");
+                personRepositoryMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>()))
+                    .ReturnsAsync(personGuidDictionary);
 
                 var preference = new HousingRequestPreferenceProperty()
                 {
@@ -617,14 +613,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             public async Task HousingRequestService_CreateHousingRequestAsync_Dto_Null()
             {
                 await housingRequestService.CreateHousingRequestAsync(null);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task HousingRequestService_CreateHousingRequestAsync_PermissionException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                await housingRequestService.CreateHousingRequestAsync(housingRequest);
             }
 
             [TestMethod]
@@ -1153,7 +1141,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateHousingRequestAsync_ConvertEntityToDto_PersonId_Null()
             {
                 domainHousingRequest.PersonId = null;
@@ -1161,7 +1149,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateHousingRequestAsync_ConvertEntityToDto_Person_Notfound_For_Given_Key()
             {
                 domainHousingRequest.PersonId = "3";
@@ -1169,15 +1157,16 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateHousingRequestAsync_ConvertEntityToDto_AcademicPeriod_Notfound_For_Given_Key()
             {
+                termRepositoryMock.Setup(t => t.GetAcademicPeriodsGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
                 domainHousingRequest.Term = "3";
                 await housingRequestService.CreateHousingRequestAsync(housingRequest);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateHousingRequestAsync_ConvertEntityToDto_Building_Notfound_For_Given_Key()
             {
                 domainHousingRequest.RoomPreferences.FirstOrDefault().Building = "3";
@@ -1185,7 +1174,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateHousingRequestAsync_ConvertEntityToDto_Location_Notfound_For_Given_Key()
             {
                 var buildingsWithInvalidLocationId = new List<Building>()
@@ -1196,13 +1185,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 referenceDataRepositoryMock.SetupSequence(r => r.GetBuildingsAsync(true)).Returns(Task.FromResult<IEnumerable<Building>>(buildings))
                     .Returns(Task.FromResult<IEnumerable<Building>>(buildingsWithInvalidLocationId));
+                referenceDataRepositoryMock.Setup(t => t.GetLocationsGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
 
                 await housingRequestService.CreateHousingRequestAsync(housingRequest);
             }
-            
+
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateHousingRequestAsync_ConvertEntityToDto_Room_Notfound_For_Given_Key()
             {
                 domainHousingRequest.RoomPreferences.FirstOrDefault().Room = "3";
@@ -1210,7 +1200,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateHousingRequestAsync_ConvertEntityToDto_Wing_Notfound_For_Given_Key()
             {
                 domainHousingRequest.RoomPreferences.FirstOrDefault().Wing = "3";
@@ -1218,7 +1208,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateHousingRequestAsync_EntityToDto_RoomCharacterstics_Notfound_For_Given_Key()
             {
                 domainHousingRequest.RoomCharacerstics.FirstOrDefault().RoomCharacteristic = "3";
@@ -1226,7 +1216,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateHousingRequestAsync_EntityToDto_FloorCharacterstics_Notfound_For_Given_Key()
             {
                 domainHousingRequest.FloorCharacteristic = "3";
@@ -1234,7 +1224,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateHousingRequestAsync_EntityToDto_RoommatePreference_Notfound_For_Given_Key()
             {
                 domainHousingRequest.RoommatePreferences.FirstOrDefault().RoommateId = "3";
@@ -1242,7 +1232,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task CreateHousingRequestAsync_EntityToDto_RoommateCharactersticPreference_Notfound()
             {
                 domainHousingRequest.RoommateCharacteristicPreferences.FirstOrDefault().RoommateCharacteristic = "3";

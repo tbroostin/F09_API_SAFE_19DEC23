@@ -51,7 +51,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
             purchaseOrderDto.InternalComments = Source.InternalComments;
             purchaseOrderDto.CommodityCode = Source.CommodityCode;
             purchaseOrderDto.PrepayVoucherId = Source.PrepayVoucherId;
-            
+
+            purchaseOrderDto.VendorAddress = Source.VendorAddress;
+            purchaseOrderDto.VendorAddressTypeCode = Source.VendorAddressTypeCode;
+            purchaseOrderDto.VendorAddressTypeDesc = Source.VendorAddressTypeDesc;
+
             purchaseOrderDto.Requisitions = new List<string>();
             foreach (var req in Source.Requisitions)
             {

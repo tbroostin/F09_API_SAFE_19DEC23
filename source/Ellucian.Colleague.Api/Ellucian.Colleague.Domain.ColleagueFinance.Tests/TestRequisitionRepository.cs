@@ -575,7 +575,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 
         }
 
-        public Task<Tuple<IEnumerable<Requisition>, int>> GetRequisitionsAsync(int offset, int limit)
+        public Task<Tuple<IEnumerable<Requisition>, int>> GetRequisitionsAsync(int offset, int limit, string requisitionNumber, string referenceNumber)
         {
             throw new NotImplementedException();
         }
@@ -641,6 +641,17 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         public Task<RequisitionDeleteResponse> DeleteRequisitionsAsync(RequisitionDeleteRequest deleteRequest)
         {
             throw new NotImplementedException();
+        }
+        public async Task<IEnumerable<RequisitionSummary>> QueryRequisitionSummariesAsync(ProcurementDocumentFilterCriteria criteria)
+        {
+            if (criteria != null && criteria.VendorIds != null && criteria.VendorIds.Any())
+            {
+                return await Task.Run(() => requisitionsSummaryList.Where(x => x.VendorId == criteria.VendorIds.FirstOrDefault()));
+            }
+            else
+            {
+                return await Task.Run(() => requisitionsSummaryList);
+            }
         }
     }
 }

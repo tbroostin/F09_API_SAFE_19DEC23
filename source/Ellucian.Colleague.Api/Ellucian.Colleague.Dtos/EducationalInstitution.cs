@@ -3,6 +3,8 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
+using Ellucian.Colleague.Dtos.Attributes;
+using Ellucian.Colleague.Dtos.DtoProperties;
 using Newtonsoft.Json;
 
 namespace Ellucian.Colleague.Dtos
@@ -29,6 +31,7 @@ namespace Ellucian.Colleague.Dtos
         /// The type of the institution
         /// </summary>
         [DataMember(Name = "type")]
+        [FilterProperty("criteria")]
         public Dtos.EnumProperties.EducationalInstitutionType Type { get; set; }
 
         /// <summary>
@@ -66,6 +69,15 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>
         [DataMember(Name = "socialMedia", EmitDefaultValue = false)]
         public IEnumerable<DtoProperties.PersonSocialMediaDtoProperty> SocialMedia { get; set; }
+
+
+        /// <summary>
+        /// Credentials of the person
+        /// </summary>
+        [FilterProperty("criteria")]
+        [JsonProperty("credentials", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public IEnumerable<Credential3DtoProperty> Credentials { get; set; }
+
 
     }
 }

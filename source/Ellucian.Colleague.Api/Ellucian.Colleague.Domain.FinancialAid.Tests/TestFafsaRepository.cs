@@ -286,5 +286,15 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                     break;
             }          
         }
+
+        public Task<IEnumerable<ProfileEFC>> GetEfcAsync(string studentId, IEnumerable<StudentAwardYear> awardYears)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<ProfileEFC>> GetFafsaEfcAsync(string studentId, IEnumerable<StudentAwardYear> awardYears)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using System;
@@ -921,6 +921,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             course.OnlyPassNoPass = courseParameters.CdOnlyPassNopassFlag == "Y";
                             course.WaitlistRatingCode = courseParameters.CdWaitlistRating;
                             course.ExternalSource = crs.CrsExternalSource;
+                            course.ShowDropRoster = string.Equals(crs.CrsShowDropRosterFlag, "Y", StringComparison.OrdinalIgnoreCase);
                         }
                         catch (Exception e)
                         {

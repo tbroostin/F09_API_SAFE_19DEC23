@@ -127,6 +127,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
                 var payCentralCollection = await DataReader.BulkReadRecordAsync<Paycntrl>("PAYCNTRL", payCntrlKeys.ToArray());
 
+                var exception = new RepositoryException();
                 var totalProcessed = 0;
                 foreach (var keyPlusDate in keysSubList)
                 {
@@ -144,69 +145,128 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                             if (payCyclesDateIndex.Value.Date == dateSelected.Date)
                             {
                                 var compareStartDate = payCyclesDateIndex;
-                                var compareEndDate = payCycles.PcyEndDate[index];
-                                if (!string.IsNullOrEmpty(convertedStartOn) || !string.IsNullOrEmpty(convertedEndOn))
+                                if (payCycles.PcyEndDate != null && payCycles.PcyEndDate.Count > index && payCycles.PcyEndDate.ElementAt(index) != null)
                                 {
-                                    if (!string.IsNullOrEmpty(convertedStartOn))
+                                    var compareEndDate = payCycles.PcyEndDate[index];
+
+                                    if (!string.IsNullOrEmpty(convertedStartOn) || !string.IsNullOrEmpty(convertedEndOn))
                                     {
-                                        try
+                                        if (!string.IsNullOrEmpty(convertedStartOn))
                                         {
-                                            compareStartDate = DateTime.Parse(convertedStartOn).Date;
-                                        }
-                                        catch
-                                        {
-                                            compareStartDate = payCyclesDateIndex;
-                                        }
-                                    }
-                                    if (!string.IsNullOrEmpty(convertedEndOn))
-                                    {
-                                        try
-                                        {
-                                            compareEndDate = DateTime.Parse(convertedEndOn).Date;
-                                        }
-                                        catch
-                                        {
-                                            compareEndDate = payCycles.PcyEndDate[index];
-                                        }
-                                    }
-                                }
-                                if (payCycles.PcyStartDate[index] == compareStartDate && payCycles.PcyEndDate[index] == compareEndDate)
-                                {
-                                    totalProcessed++;
-                                    effectiveStartDate = Convert.ToDateTime(payCyclesDateIndex);
-                                    //convert a datetime to a unidata internal value 
-                                    var offsetStartDate = DmiString.DateTimeToPickDate(effectiveStartDate);
-
-                                    //convert a datetime to a unidata internal value 
-                                    var offsetEndDate = DmiString.DateTimeToPickDate((DateTime)payCycles.PcyEndDate[index]);
-
-
-                                    var payPeriodGuidInfo = await GetGuidFromIdAsync("PAYCYCLE", payCycles.Recordkey, "PCY.START.DATE", offsetStartDate.ToString());
-                                    DateTime? timeEntryEndOnDate = null;
-                                    DateTime? timeEntryEndOnTime = null;
-                                    var timeEntryEndOnConcat = "";
-                                    DateTime? timeEntryEndOnDateTime = null;
-
-                                    var pyCntrlRecord = payCentralCollection.FirstOrDefault(p => (p.Recordkey.Equals(string.Concat(offsetEndDate, "*", key))));
-
-                                    if (pyCntrlRecord != null)
-                                    {
-                                        timeEntryEndOnDate = pyCntrlRecord.PclEmployeeCutoffDate;
-                                        timeEntryEndOnTime = pyCntrlRecord.PclEmployeeCutoffTime;
-                                        if (timeEntryEndOnDate != null && timeEntryEndOnTime != null)
-                                        {
-                                            DateTime dateTimeValue;
-                                            timeEntryEndOnConcat = string.Concat(timeEntryEndOnDate.Value.ToShortDateString(), " ", timeEntryEndOnTime.Value.ToShortTimeString());
-                                            if (DateTime.TryParse(timeEntryEndOnConcat, out dateTimeValue))
+                                            try
                                             {
-                                                timeEntryEndOnDateTime = dateTimeValue;
+                                                compareStartDate = DateTime.Parse(convertedStartOn).Date;
+                                            }
+                                            catch
+                                            {
+                                                compareStartDate = payCyclesDateIndex;
+                                            }
+                                        }
+                                        if (!string.IsNullOrEmpty(convertedEndOn))
+                                        {
+                                            try
+                                            {
+                                                compareEndDate = DateTime.Parse(convertedEndOn).Date;
+                                            }
+                                            catch
+                                            {
+                                                compareEndDate = payCycles.PcyEndDate[index];
                                             }
                                         }
                                     }
-
-                                    payPeriodEntities.Add(new PayPeriod(payPeriodGuidInfo, payCycles.PcyDesc, (DateTime)payCycles.PcyStartDate[index], (DateTime)payCycles.PcyEndDate[index], (DateTime)payCycles.PcyPaycheckDate[index], payCycles.Recordkey)
+                                    if (payCycles.PcyStartDate[index] == compareStartDate && payCycles.PcyEndDate[index] == compareEndDate)
                                     {
-                                        TimeEntryEndOn = timeEntryEndOnDateTime != null ? timeEntryEndOnDateTime : null
+                                        totalProcessed++;
+                                        effectiveStartDate = Convert.ToDateTime(payCyclesDateIndex);
+                                        //convert a datetime to a unidata internal value 
+                                        var offsetStartDate = DmiString.DateTimeToPickDate(effectiveStartDate);
+
+                                        //convert a datetime to a unidata internal value 
+                                        var offsetEndDate = DmiString.DateTimeToPickDate((DateTime)payCycles.PcyEndDate[index]);
+
+
+                                        var payPeriodGuidInfo = await GetGuidFromIdAsync("PAYCYCLE", payCycles.Recordkey, "PCY.START.DATE", offsetStartDate.ToString());
+                                        DateTime? timeEntryEndOnDate = null;
+                                        DateTime? timeEntryEndOnTime = null;
+                                        var timeEntryEndOnConcat = "";
+                                        DateTime? timeEntryEndOnDateTime = null;
+
+                                        var pyCntrlRecord = payCentralCollection.FirstOrDefault(p => (p.Recordkey.Equals(string.Concat(offsetEndDate, "*", key))));
+
+                                        if (pyCntrlRecord != null)
+                                        {
+                                            timeEntryEndOnDate = pyCntrlRecord.PclEmployeeCutoffDate;
+                                            timeEntryEndOnTime = pyCntrlRecord.PclEmployeeCutoffTime;
+                                            if (timeEntryEndOnDate != null && timeEntryEndOnTime != null)
+                                            {
+                                                DateTime dateTimeValue;
+                                                timeEntryEndOnConcat = string.Concat(timeEntryEndOnDate.Value.ToShortDateString(), " ", timeEntryEndOnTime.Value.ToShortTimeString());
+                                                if (DateTime.TryParse(timeEntryEndOnConcat, out dateTimeValue))
+                                                {
+                                                    timeEntryEndOnDateTime = dateTimeValue;
+                                                }
+                                            }
+                                        }
+                                        var paycycleValid = true;
+                                        // check for required data for PayPeriod entity
+                                        if (string.IsNullOrEmpty(payPeriodGuidInfo))
+                                        {
+                                            exception.AddError(new RepositoryError("GUID.Not.Found", string.Concat("GUID not found for pay-periods for paycycle ", key, " for ", dateSelected, "."))
+                                            {
+                                                Id = key
+                                            });
+                                            paycycleValid = false;
+                                        }
+                                        if (string.IsNullOrEmpty(payCycles.PcyDesc))
+                                        {
+                                            exception.AddError(new RepositoryError("Bad.Data", string.Concat("Description not found for pay-periods for paycycle ", key, "."))
+                                            {
+                                                Id = key
+                                            });
+                                            paycycleValid = false;
+                                        }
+                                        if (payCycles.PcyStartDate[index] == null)
+                                        {
+                                            // should never happen since previous logic to extract data is on existing values in start date
+                                            exception.AddError(new RepositoryError("Bad.Data", string.Concat("Start date not found for pay-periods for paycycle ", key, " at position ", index, "."))
+                                            {
+                                                Id = key
+                                            });
+                                            paycycleValid = false;
+                                        }
+                                        if (payCycles.Recordkey == null)
+                                        {
+                                            // should never happen - should never have been able to read record without a key
+                                            exception.AddError(new RepositoryError("Bad.Data", string.Concat("Record not found for pay-periods for paycycle ", key, "."))
+                                            {
+                                                Id = key
+                                            });
+                                            paycycleValid = false;
+                                        }
+                                        if (payCycles.PcyStartDate[index] != null && payCycles.PcyEndDate[index] != null && payCycles.PcyStartDate[index] > payCycles.PcyEndDate[index])
+                                        {
+                                            exception.AddError(new RepositoryError("Bad.Data", string.Concat("Start date ", payCycles.PcyStartDate[index],
+                                                " cannot be greater than end date ", payCycles.PcyEndDate[index], " for pay-periods for paycycle ", key, "."))
+                                            {
+                                                Id = key
+                                            });
+                                            paycycleValid = false;
+                                        }
+
+                                        if (paycycleValid == true)
+                                        {
+                                            payPeriodEntities.Add(new PayPeriod(payPeriodGuidInfo, payCycles.PcyDesc, (DateTime)payCycles.PcyStartDate[index], (DateTime)payCycles.PcyEndDate[index], (DateTime)payCycles.PcyPaycheckDate[index], payCycles.Recordkey)
+                                            {
+                                                TimeEntryEndOn = timeEntryEndOnDateTime != null ? timeEntryEndOnDateTime : null
+                                            });
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    exception.AddError(new RepositoryError("Bad.Data", string.Concat("End date not found for pay-periods for paycycle ", key, " with start date ", payCycles.PcyStartDate[index], "."))
+                                    {
+                                        Id = key
                                     });
                                 }
                             }
@@ -226,6 +286,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     {
                         totalCount = totalProcessed;
                     }
+                }
+                if (exception != null && exception.Errors != null && exception.Errors.Any())
+                {
+                    throw exception;
                 }
             }
             return new Tuple<IEnumerable<PayPeriod>, int>(payPeriodEntities, totalCount);

@@ -1691,7 +1691,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 // sections = new TestSectionRepository().GetCachedSectionsAsync(sectionIds, false).Result;
                 sections = BuildSectionEntities();
                 sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(sectionIds, false)).Returns(Task.FromResult(sections));
-                
+
                 // Mock Adapters
                 var academicHistoryDtoAdapter = new AcademicHistoryEntityToAcademicHistory3DtoAdapter(adapterRegistry, logger);
                 adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.AcademicHistory, Ellucian.Colleague.Dtos.Student.AcademicHistory3>()).Returns(academicHistoryDtoAdapter);
@@ -1755,7 +1755,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList() };
                 var academicCreditDtos = await academicHistoryService.QueryAcademicCreditsAsync(criteria);
                 Assert.AreEqual(1, academicCreditDtos.Count());
-                
+
             }
 
             [TestMethod]
@@ -1797,7 +1797,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             private IEnumerable<Section> BuildSectionEntities()
             {
                 List<Section> sections = new List<Section>();
-                var section1 = new Section("section1", "course1", "01", DateTime.Now.AddDays(-30), 3.0m, null, "Section Title 1", "G", new List<OfferingDepartment>() { new OfferingDepartment("MATH") }, new List<string>() {"100"}, "UG", new List<SectionStatusItem>() {new SectionStatusItem(SectionStatus.Active, "A", DateTime.Now )}, true, true, false, true, false, false);
+                var section1 = new Section("section1", "course1", "01", DateTime.Now.AddDays(-30), 3.0m, null, "Section Title 1", "G", new List<OfferingDepartment>() { new OfferingDepartment("MATH") }, new List<string>() { "100" }, "UG", new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Now) }, true, true, false, true, false, false);
                 section1.AddFaculty("0000894");
 
                 // This section has wrong faculty so it should NOT be in the list of sections when going to repo for academic credits.
@@ -2045,7 +2045,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 sectionIdsWithCrossListed = new List<string>() { "section1", "section3", "section4" };
                 academicCreditsIncludingCrossListed = new TestAcademicCreditRepository().GetAsync(academicCreditIds, false, false, false).Result;
                 var academicCreditsIncludingCrossListedWithDrops = new TestAcademicCreditRepository().GetAsync(academicCreditIds, false, true, true).Result;
-                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult(new AcademicCreditsWithInvalidKeys(academicCreditsIncludingCrossListed,new List<string>() )));
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult(new AcademicCreditsWithInvalidKeys(academicCreditsIncludingCrossListed, new List<string>())));
                 // Return a different number of academic credits when include crosslisted is false.
                 sectionIdsNotCrossListed = new List<string>() { "section1" };
                 academicCreditsExcludingCrossListed = academicCreditsIncludingCrossListed.Where(ac => ac.Id == "1");
@@ -2109,10 +2109,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 IEnumerable<Ellucian.Colleague.Domain.Student.Entities.Section> emptySections = new List<Ellucian.Colleague.Domain.Student.Entities.Section>();
                 sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(sectionIdsNotCrossListed, false)).Returns(Task.FromResult(emptySections));
                 Dtos.Student.AcademicCreditsWithInvalidKeys academicCredits = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
-                Assert.AreEqual(0,academicCredits.AcademicCredits.Count());
-                Assert.AreEqual(0,academicCredits.InvalidAcademicCreditIds.Count());
+                Assert.AreEqual(0, academicCredits.AcademicCredits.Count());
+                Assert.AreEqual(0, academicCredits.InvalidAcademicCreditIds.Count());
             }
-          
+
 
             [TestMethod]
             public async Task ReturnsCredits_ExcludingCrossListedSections()
@@ -2181,7 +2181,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.AreEqual(0, academicCreditWithInvalidKeys.AcademicCredits.Count());
                 Assert.AreEqual(0, academicCreditWithInvalidKeys.InvalidAcademicCreditIds.Count());
             }
-           
+
             [TestMethod]
             public async Task ReturnEmptyAcademicCreditsWithInvalidKeys_Dto_WithEmptyValues_FromRepository()
             {
@@ -2195,7 +2195,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task ReturnEmptyAcademicCreditsWithInvalidKeys_Dto_WithOnlyInvalidKeysValues_FromRepository()
             {
-                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult(new AcademicCreditsWithInvalidKeys(new List<Domain.Student.Entities.AcademicCredit>(), new List<string>() {"999" })));
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult(new AcademicCreditsWithInvalidKeys(new List<Domain.Student.Entities.AcademicCredit>(), new List<string>() { "999" })));
                 var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList(), IncludeCrossListedCredits = true };
                 criteria.IncludeCrossListedCredits = true;
                 var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
@@ -2205,13 +2205,27 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task ReturnEmptyAcademicCreditsWithInvalidKeys_Dto_WithAcademicCreditsAndInvalidKeysValues_FromRepository()
             {
-                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult(new AcademicCreditsWithInvalidKeys(academicCreditsIncludingCrossListed, new List<string>() { "999","9998"})));
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult(new AcademicCreditsWithInvalidKeys(academicCreditsIncludingCrossListed, new List<string>() { "999", "9998" })));
                 var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList(), IncludeCrossListedCredits = true };
                 criteria.IncludeCrossListedCredits = true;
                 var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
                 Assert.AreEqual(9, academicCreditWithInvalidKeys.AcademicCredits.Count());
                 Assert.AreEqual(2, academicCreditWithInvalidKeys.InvalidAcademicCreditIds.Count());
             }
+
+            [TestMethod]
+            public async Task AcademicHistoryService_QueryAcademicCreditsWithInvalidKeysAsync_UseCache_False_Calls_SectionRepository_GetNonCachedSectionsAsync()
+            {
+                sectionRepoMock.Setup(repo => repo.GetCachedSectionsAsync(sectionIds, false)).ThrowsAsync(new ApplicationException("Wrong repo method was called!"));
+                sectionRepoMock.Setup(repo => repo.GetNonCachedSectionsAsync(sectionIds, false)).Returns(Task.FromResult(sections));
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIdsWithCrossListed)).Returns(Task.FromResult(new AcademicCreditsWithInvalidKeys(academicCreditsIncludingCrossListed, new List<string>() { "999", "9998" })));
+                var criteria = new Ellucian.Colleague.Dtos.Student.AcademicCreditQueryCriteria() { SectionIds = sectionIds.ToList(), IncludeCrossListedCredits = true };
+                criteria.IncludeCrossListedCredits = true;
+                var academicCreditWithInvalidKeys = await academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria, false);
+                Assert.AreEqual(9, academicCreditWithInvalidKeys.AcademicCredits.Count());
+                Assert.AreEqual(2, academicCreditWithInvalidKeys.InvalidAcademicCreditIds.Count());
+            }
+
             [TestMethod]
             public async Task ReturnEmptyAcademicCreditsWithInvalidKeys_Dto_WithNull_FromRepository()
             {
@@ -2400,7 +2414,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
                 // Initialize service
                 academicHistoryService = new AcademicHistoryService(adapterRegistry, studentRepo, academicCreditRepo, termRepo, sectionRepo, currentUserFactory, roleRepo, logger, baseConfigurationRepository);
-                
+
                 // Call service method
                 var acadHistoryLevel = await academicHistoryService.GetPilotAcademicHistoryLevelByIdsAsync(new List<string>() { currentUserFactory.CurrentUser.PersonId }, true, true);
             }
@@ -2561,7 +2575,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 academicCreditRepoMock.Setup(acr => acr.GetPilotAcademicCreditsByStudentIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<AcademicCreditDataSubset>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<string>())).ReturnsAsync(acadCreditDict);
 
                 var term1 = new Term("2020/SP1", "2020 Spring Term 1", DateTime.Today.AddDays(-90), DateTime.Today.AddDays(-10), 2020, 1, false, false, "2020", false);
-                term1.AddRegistrationDates(new RegistrationDate("MC", null, null, null, null,null,null,null,null,null, new List<DateTime?>() { DateTime.Today.AddDays(-180)}));
+                term1.AddRegistrationDates(new RegistrationDate("MC", null, null, null, null, null, null, null, null, null, new List<DateTime?>() { DateTime.Today.AddDays(-180) }));
                 var term2 = new Term("2020/SP2", "2020 Spring Term 2", DateTime.Today.AddDays(-10), DateTime.Today.AddDays(80), 2020, 2, false, false, "2020", false);
                 term2.AddRegistrationDates(new RegistrationDate("SC", null, null, null, null, null, null, null, null, null, new List<DateTime?>() { DateTime.Today.AddDays(-270) }));
 
@@ -2635,6 +2649,407 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.AreEqual("2020/SP2", acadHistoryLevel.ElementAt(0).FirstTermEnrolled);
             }
 
+        }
+
+        [TestClass]
+        public class GetAcademicHistory5_AsStudentUser : CurrentUserSetup
+        {
+            private AcademicHistoryService academicHistoryService;
+            private Mock<IAcademicCreditRepository> academicCreditRepoMock;
+            private IAcademicCreditRepository academicCreditRepo;
+            private Mock<IStudentRepository> studentRepoMock;
+            private IStudentRepository studentRepo;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private ILogger logger;
+            private Domain.Student.Entities.Student student1;
+            private Domain.Student.Entities.Student student2;
+            private Mock<IRoleRepository> roleRepoMock;
+            private IRoleRepository roleRepo;
+            private ICurrentUserFactory currentUserFactory;
+            private ITermRepository termRepo;
+            private ISectionRepository sectionRepo;
+            private IConfigurationRepository baseConfigurationRepository;
+            private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                academicCreditRepoMock = new Mock<IAcademicCreditRepository>();
+                academicCreditRepo = academicCreditRepoMock.Object;
+                studentRepoMock = new Mock<IStudentRepository>();
+                studentRepo = studentRepoMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                roleRepoMock = new Mock<IRoleRepository>();
+                roleRepo = roleRepoMock.Object;
+                logger = new Mock<ILogger>().Object;
+                baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
+                baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+
+
+                // Mock good student repo response
+                //1,2,3,4 are from 2009/SP 8, 11from 2009/FA  14 frm 2010/SP
+                List<string> academicCreditIds = new List<string>() { "1", "2", "3", "4", "8", "11", "14" };
+                student1 = new Domain.Student.Entities.Student("0000894", "Smith", 2, new List<string>() { "BA.ENGL" }, academicCreditIds) { FirstName = "Bob", MiddleName = "Blakely" };
+                studentRepoMock.Setup(repo => repo.GetAsync("0000894")).ReturnsAsync(student1);
+
+
+                // Mock another student ....
+                student2 = new Domain.Student.Entities.Student("00004002", "Jones", 802, new List<string>() { "BA.MATH" }, academicCreditIds);
+                studentRepoMock.Setup(repo => repo.GetAsync("00004002")).ReturnsAsync(student2);
+
+
+
+                IEnumerable<Domain.Student.Entities.AcademicCredit> academicCredits = new TestAcademicCreditRepository().GetAsync(academicCreditIds).Result;
+                Dictionary<string, List<Domain.Student.Entities.AcademicCredit>> dictAcademicCredits = new Dictionary<string, List<AcademicCredit>>();
+                dictAcademicCredits.Add("0000894", academicCredits.ToList());
+                IEnumerable<string> studentIds = new List<string>() { "0000894" };
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditByStudentIdsAsync(studentIds, false, false, It.IsAny<bool>())).Returns(Task.FromResult(dictAcademicCredits));
+
+                // Mock get grade restriction
+                GradeRestriction studentGradeRestriction = new GradeRestriction(false);
+                studentRepoMock.Setup(srepo => srepo.GetGradeRestrictionsAsync(It.IsAny<string>())).Returns(Task.FromResult(studentGradeRestriction));
+
+                // Mock Adapters
+                var academicHistoryDtoAdapter = new AcademicHistoryEntityToAcademicHistory4DtoAdapter(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.AcademicHistory, Ellucian.Colleague.Dtos.Student.AcademicHistory4>()).Returns(academicHistoryDtoAdapter);
+
+                var academicTermDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.AcademicTerm, Ellucian.Colleague.Dtos.Student.AcademicTerm3>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.AcademicTerm, Ellucian.Colleague.Dtos.Student.AcademicTerm3>()).Returns(academicTermDtoAdapter);
+
+                var academicCreditDtoAdapter = new AcademicCreditEntityToAcademicCredit2DtoAdapter(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.AcademicCredit, Ellucian.Colleague.Dtos.Student.AcademicCredit2>()).Returns(academicCreditDtoAdapter);
+
+                var midTermGradeDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.MidTermGrade, Ellucian.Colleague.Dtos.Student.MidTermGrade2>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.MidTermGrade, Ellucian.Colleague.Dtos.Student.MidTermGrade2>()).Returns(midTermGradeDtoAdapter);
+
+                var gradeDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.Grade, Ellucian.Colleague.Dtos.Student.Grade>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Grade, Ellucian.Colleague.Dtos.Student.Grade>()).Returns(gradeDtoAdapter);
+
+                // Set up current user
+                currentUserFactory = new CurrentUserSetup.StudentUserFactory();
+                termRepo = null;
+                sectionRepo = null;
+                academicHistoryService = new AcademicHistoryService(adapterRegistry, studentRepo, academicCreditRepo, termRepo, sectionRepo, currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                studentRepo = null;
+                adapterRegistry = null;
+                currentUserFactory = null;
+                roleRepo = null;
+                logger = null;
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task ThrowsErrorIfNotSelf()
+            {
+                Dictionary<string, List<Domain.Student.Entities.AcademicCredit>> dictAcademicCredits = new Dictionary<string, List<AcademicCredit>>();
+                dictAcademicCredits.Add("0004002", new List<AcademicCredit>());
+                IEnumerable<string> studentIds = new List<string>() { "0004002" };
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditByStudentIdsAsync(studentIds, false, false, It.IsAny<bool>())).Returns(Task.FromResult(dictAcademicCredits));
+
+                studentRepoMock.Setup(repo => repo.GetAsync("0004002")).ReturnsAsync(student2);
+                await academicHistoryService.GetAcademicHistory5Async("0004002", false, false);
+            }
+
+            [TestMethod]
+            public async Task GradeRestrictedStudent_NoGrades()
+            {
+                // Mock get grade restriction
+                GradeRestriction studentGradeRestriction = new GradeRestriction(true);
+                studentGradeRestriction.AddReason("Bad");
+                studentRepoMock.Setup(srepo => srepo.GetGradeRestrictionsAsync(It.IsAny<string>())).Returns(Task.FromResult(studentGradeRestriction));
+                // Student is himself.  But he has a grade restriction. should be no grades returned.
+                var result = await academicHistoryService.GetAcademicHistory5Async("0000894", false, false);
+                Assert.IsTrue(result is Dtos.Student.AcademicHistory4);
+                Assert.IsTrue(result.GradeRestriction.IsRestricted);
+                var term = result.AcademicTerms.First();
+                var cred = term.AcademicCredits.First();
+                Assert.IsNull(cred.VerifiedGradeId);
+            }
+
+            [TestMethod]
+            public async Task GetAcademicHistory_WithAllTheAcadCredits()
+            {
+                var result = await academicHistoryService.GetAcademicHistory5Async("0000894", false, false);
+                Assert.IsTrue(result is Dtos.Student.AcademicHistory4);
+                Assert.IsFalse(result.GradeRestriction.IsRestricted);
+                Assert.AreEqual(3, result.AcademicTerms.Count);
+                Assert.AreEqual(4, result.AcademicTerms[0].AcademicCredits.Count);
+                Assert.AreEqual("2009/SP", result.AcademicTerms[0].TermId);
+                Assert.AreEqual(2, result.AcademicTerms[1].AcademicCredits.Count);
+                Assert.AreEqual("2009/FA", result.AcademicTerms[1].TermId);
+                Assert.AreEqual(1, result.AcademicTerms[2].AcademicCredits.Count);
+                Assert.AreEqual("2010/SP", result.AcademicTerms[2].TermId);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
+            public async Task GetAcademicHistory_WhenRepoReturnsNull()
+            {
+                IEnumerable<string> studentIds = new List<string>() { "0000894" };
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditByStudentIdsAsync(studentIds, false, false, It.IsAny<bool>())).ReturnsAsync(() => null);
+
+                var result = await academicHistoryService.GetAcademicHistory5Async("0000894", false, false);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
+            public async Task GetAcademicHistory_WhenRepoReturnsDict_WithNotTheSamestudent()
+            {
+                var result = await academicHistoryService.GetAcademicHistory5Async("isnotthere", false, false);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
+            public async Task GetAcademicHistory_WhenRepoThrowsException()
+            {
+                IEnumerable<string> studentIds = new List<string>() { "0000894" };
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditByStudentIdsAsync(studentIds, false, false, It.IsAny<bool>())).Throws(new Exception("repo error"));
+                var result = await academicHistoryService.GetAcademicHistory5Async("0000894", false, false);
+            }
+
+            [TestMethod]
+            public async Task GetAcademicHistory_FilterOnTerm_WhenTermExits()
+            {
+                var result = await academicHistoryService.GetAcademicHistory5Async("0000894", false, false, term: "2009/SP");
+                Assert.IsTrue(result is Dtos.Student.AcademicHistory4);
+                Assert.IsFalse(result.GradeRestriction.IsRestricted);
+                Assert.AreEqual(1, result.AcademicTerms.Count);
+                Assert.AreEqual(4, result.AcademicTerms[0].AcademicCredits.Count);
+            }
+            [TestMethod]
+            public async Task GetAcademicHistory_FilterOnTerm_WhenTermDoesNotExits()
+            {
+                var result = await academicHistoryService.GetAcademicHistory5Async("0000894", false, false, term: "notexist");
+                Assert.IsTrue(result is Dtos.Student.AcademicHistory4);
+                Assert.IsFalse(result.GradeRestriction.IsRestricted);
+                Assert.AreEqual(0, result.AcademicTerms.Count);
+            }
+
+
+        }
+
+        [TestClass]
+        public class GetAcademicHistory5_AsNonStudent : CurrentUserSetup
+        {
+            private AcademicHistoryService academicHistoryService;
+            private Mock<IAcademicCreditRepository> academicCreditRepoMock;
+            private IAcademicCreditRepository academicCreditRepo;
+            private Mock<IStudentRepository> studentRepoMock;
+            private IStudentRepository studentRepo;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private ILogger logger;
+            private Domain.Student.Entities.Student student1;
+            private Domain.Student.Entities.Student student2;
+            private Mock<IRoleRepository> roleRepoMock;
+            private IRoleRepository roleRepo;
+            private ICurrentUserFactory currentUserFactory;
+            private ITermRepository termRepo;
+            private ISectionRepository sectionRepo;
+            private IConfigurationRepository baseConfigurationRepository;
+            private Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                academicCreditRepoMock = new Mock<IAcademicCreditRepository>();
+                academicCreditRepo = academicCreditRepoMock.Object;
+                studentRepoMock = new Mock<IStudentRepository>();
+                studentRepo = studentRepoMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                roleRepoMock = new Mock<IRoleRepository>();
+                roleRepo = roleRepoMock.Object;
+                logger = new Mock<ILogger>().Object;
+                baseConfigurationRepositoryMock = new Mock<IConfigurationRepository>();
+                baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
+
+                // Mock good student repo response
+                List<string> academicCreditIds = new List<string>() { "1", "2", "3", "4" };
+                student1 = new Domain.Student.Entities.Student("0000894", "Smith", 2, new List<string>() { "BA.ENGL" }, academicCreditIds) { FirstName = "Bob", MiddleName = "Blakely" };
+                studentRepoMock.Setup(repo => repo.GetAsync("0000894")).ReturnsAsync(student1);
+
+                IEnumerable<Domain.Student.Entities.AcademicCredit> academicCredits = new TestAcademicCreditRepository().GetAsync(academicCreditIds).Result;
+                Dictionary<string, List<Domain.Student.Entities.AcademicCredit>> dictAcademicCredits = new Dictionary<string, List<AcademicCredit>>();
+                dictAcademicCredits.Add("0000894", academicCredits.ToList());
+                IEnumerable<string> studentIds = new List<string>() { "0000894" };
+                academicCreditRepoMock.Setup(repo => repo.GetAcademicCreditByStudentIdsAsync(studentIds, false, false, It.IsAny<bool>())).Returns(Task.FromResult(dictAcademicCredits));
+
+                // Mock another student ....
+                student2 = new Domain.Student.Entities.Student("00004002", "Jones", 802, new List<string>() { "BA.MATH" }, academicCreditIds);
+                studentRepoMock.Setup(repo => repo.GetAsync("00004002")).ReturnsAsync(student2);
+
+                // Mock get grade restriction
+                GradeRestriction studentGradeRestriction = new GradeRestriction(true);
+                studentGradeRestriction.AddReason("Bad");
+                studentRepoMock.Setup(srepo => srepo.GetGradeRestrictionsAsync(It.IsAny<string>())).Returns(Task.FromResult(studentGradeRestriction));
+
+                // Mock Adapters
+                var academicHistoryDtoAdapter = new AcademicHistoryEntityToAcademicHistory4DtoAdapter(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.AcademicHistory, Ellucian.Colleague.Dtos.Student.AcademicHistory4>()).Returns(academicHistoryDtoAdapter);
+
+                var academicTermDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.AcademicTerm, Ellucian.Colleague.Dtos.Student.AcademicTerm3>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.AcademicTerm, Ellucian.Colleague.Dtos.Student.AcademicTerm3>()).Returns(academicTermDtoAdapter);
+
+                var academicCreditDtoAdapter = new AcademicCreditEntityToAcademicCredit2DtoAdapter(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.AcademicCredit, Ellucian.Colleague.Dtos.Student.AcademicCredit2>()).Returns(academicCreditDtoAdapter);
+
+                var midTermGradeDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.MidTermGrade, Ellucian.Colleague.Dtos.Student.MidTermGrade2>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.MidTermGrade, Ellucian.Colleague.Dtos.Student.MidTermGrade2>()).Returns(midTermGradeDtoAdapter);
+
+                var gradeDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.Grade, Ellucian.Colleague.Dtos.Student.Grade>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Grade, Ellucian.Colleague.Dtos.Student.Grade>()).Returns(gradeDtoAdapter);
+
+                // Set up current advisor user
+                currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
+                termRepo = null;
+                sectionRepo = null;
+                academicHistoryService = new AcademicHistoryService(adapterRegistry, studentRepo, academicCreditRepo, termRepo, sectionRepo, currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                studentRepo = null;
+                adapterRegistry = null;
+                currentUserFactory = null;
+                roleRepo = null;
+                logger = null;
+            }
+
+
+            [TestMethod]
+            public async Task AllowsAccessIfAdvisorHasViewAnyAdviseesPermission()
+            {
+                // Advisor is permitted to see grades even though student has restriction. 
+                // Set up needed permission
+                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ViewAnyAdvisee));
+                roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
+                var result = await academicHistoryService.GetAcademicHistory5Async("0000894", false, false);
+                Assert.IsTrue(result is Dtos.Student.AcademicHistory4);
+                Assert.IsTrue(result.GradeRestriction.IsRestricted);
+                var term = result.AcademicTerms.First();
+                var cred = term.AcademicCredits.First();
+                Assert.IsNotNull(cred.VerifiedGradeId);
+
+            }
+
+            [TestMethod]
+            public async Task AllowsAccessIfAdvisorHasReviewAnyAdviseesPermission()
+            {
+                // Advisor is permitted to see grades even though student has restriction. 
+                // Set up needed permission
+                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ReviewAnyAdvisee));
+                roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
+                var result = await academicHistoryService.GetAcademicHistory5Async("0000894", false, false);
+                Assert.IsTrue(result is Dtos.Student.AcademicHistory4);
+                Assert.IsTrue(result.GradeRestriction.IsRestricted);
+                var term = result.AcademicTerms.First();
+                var cred = term.AcademicCredits.First();
+                Assert.IsNotNull(cred.VerifiedGradeId);
+
+            }
+
+
+            [TestMethod]
+            public async Task AllowsAccessIfAdvisorHasUpdateAnydviseePermission()
+            {
+                // Advisor is permitted to see grades even though student has restriction. 
+                // Set up needed permission
+                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.UpdateAnyAdvisee));
+                roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
+                // Add advisor to student's advisor list
+                student1.AddAdvisor("0000896");
+                student1.AddAdvisement("0000896", null, null, null);
+                student1.AddAdvisor("0000111");
+                student1.AddAdvisement("0000111", null, null, null);
+                studentRepoMock.Setup(repo => repo.GetAsync("0000894")).ReturnsAsync(student1);
+                var result = await academicHistoryService.GetAcademicHistory5Async("0000894", false, false);
+                Assert.IsTrue(result is Dtos.Student.AcademicHistory4);
+                Assert.IsTrue(result.GradeRestriction.IsRestricted);
+                var term = result.AcademicTerms.First();
+                var cred = term.AcademicCredits.First();
+                Assert.IsNotNull(cred.VerifiedGradeId);
+
+            }
+
+            [TestMethod]
+            public async Task AllowsAccessIfAdvisorHasAllAccessAnydviseePermission()
+            {
+                // Advisor is permitted to see grades even though student has restriction. 
+                // Set up needed permission
+                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.AllAccessAnyAdvisee));
+                roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
+                // Add advisor to student's advisor list
+                student1.AddAdvisor("0000896");
+                student1.AddAdvisement("0000896", null, null, null);
+                student1.AddAdvisor("0000111");
+                student1.AddAdvisement("0000111", null, null, null);
+                studentRepoMock.Setup(repo => repo.GetAsync("0000894")).ReturnsAsync(student1);
+                var result = await academicHistoryService.GetAcademicHistory5Async("0000894", false, false);
+                Assert.IsTrue(result is Dtos.Student.AcademicHistory4);
+                Assert.IsTrue(result.GradeRestriction.IsRestricted);
+                var term = result.AcademicTerms.First();
+                var cred = term.AcademicCredits.First();
+                Assert.IsNotNull(cred.VerifiedGradeId);
+
+            }
+
+            [TestMethod]
+            public async Task AllowsAccessIfPersonHasViewStudentInformationPermission()
+            {
+                // Advisor is permitted to see grades even though student has restriction. 
+                // Set up needed permission
+                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(StudentPermissionCodes.ViewStudentInformation));
+                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Role>() { advisorRole });
+                // Add advisor to student's advisor list
+                student1.AddAdvisor("0000896");
+                student1.AddAdvisement("0000896", null, null, null);
+                student1.AddAdvisor("0000111");
+                student1.AddAdvisement("0000111", null, null, null);
+                studentRepoMock.Setup(repo => repo.GetAsync("0000894")).ReturnsAsync(student1);
+                var result = await academicHistoryService.GetAcademicHistory5Async("0000894", false, false);
+                Assert.IsTrue(result is Dtos.Student.AcademicHistory4);
+                Assert.IsTrue(result.GradeRestriction.IsRestricted);
+                var term = result.AcademicTerms.First();
+                var cred = term.AcademicCredits.First();
+                Assert.IsNotNull(cred.VerifiedGradeId);
+
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task ThrowsErrorIfAdvisorNotInStudentsAdvisorList()
+            {
+                // Set up needed permission. Advisor is personid 0000111
+                advisorRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(PlanningPermissionCodes.ViewAssignedAdvisees));
+                roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
+                // Add advisor to student's advisor list
+                student1.AddAdvisor("0000896");
+                student1.AddAdvisement("0000896", null, null, null);
+                studentRepoMock.Setup(repo => repo.GetAsync("0000894")).ReturnsAsync(student1);
+                var result = await academicHistoryService.GetAcademicHistory5Async("0000894", false, false);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task ThrowsErrorIfPersonNotSelfAndNoPermissions()
+            {
+                // Set up needed permission. Advisor is personid 0000111
+                //roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { advisorRole });
+                // Add advisor to student's advisor list
+                student1.AddAdvisor("0000896");
+                student1.AddAdvisement("0000896", null, null, null);
+                studentRepoMock.Setup(repo => repo.GetAsync("0000894")).ReturnsAsync(student1);
+                var result = await academicHistoryService.GetAcademicHistory5Async("0000894", false, false);
+            }
         }
     }
 }

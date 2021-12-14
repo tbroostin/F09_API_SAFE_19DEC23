@@ -169,5 +169,10 @@ namespace Ellucian.Colleague.Dtos.Finance.Configuration
         /// Flag indicating whether or not to display potential D7 award amounts
         /// </summary>
         public bool DisplayPotentialD7Amounts { get; set; }
+
+        /// <summary>
+        /// Flag that controls whether to display due dates on Make A Payment page
+        /// </summary>
+        public bool DisplayDueDates { get; set; }
     }
 }

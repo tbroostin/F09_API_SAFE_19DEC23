@@ -2,12 +2,14 @@
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Base.Tests;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Tests;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.TestUtil;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -114,29 +116,11 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
                 var actual = await payrollDeductionArrangementService.GetPayrollDeductionArrangementsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>());
                 Assert.IsNotNull(actual);
-            }
+            }        
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task PayrollDeductionArrangement_PermissionsException()
-            {
-                var actuals = await payrollDeductionArrangementService.GetPayrollDeductionArrangementsAsync(0, 100, true, "", "", "", "");
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task PayrollDeductionArrangement_GetById_PermissionsException()
-            {
-                var expected = payrollDeductionArrangementEntities.FirstOrDefault();
-                payrollDeductionArrangementRepositoryMock.Setup(repo => repo.GetIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1028");
-                payrollDeductionArrangementRepositoryMock.Setup(repo => repo.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(expected);
-
-                var actual = await payrollDeductionArrangementService.GetPayrollDeductionArrangementsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>());
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
-            public async Task PayrollDeductionArrangement_GetAll_DeductionEntity_ArgumentException()
+            [ExpectedException(typeof(IntegrationApiException))]
+            public async Task PayrollDeductionArrangement_GetAll_DeductionEntity_RepositoryException()
             {
                 payrollDeductionArrangementEntities = new List<Domain.HumanResources.Entities.PayrollDeductionArrangements>() 
             {
@@ -155,6 +139,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 payrollDeductionArrangementTuple = new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.PayrollDeductionArrangements>, int>(payrollDeductionArrangementEntities, payrollDeductionArrangementEntities.Count());
                 payrollDeductionArrangementRepositoryMock.Setup(repo => repo.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(payrollDeductionArrangementTuple);
 
+                referenceDataRepositoryMock.Setup(repo => repo.GetDeductionTypesAsync(It.IsAny<bool>())).ThrowsAsync(new RepositoryException());
+                referenceDataRepositoryMock.Setup(repo => repo.GetDeductionTypesGuidAsync(It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+
+
                 payrollDeductionArrangementCreateRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(HumanResourcesPermissionCodes.CreatePayrollDeductionArrangements));
                 roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { payrollDeductionArrangementCreateRole });
 
@@ -162,7 +150,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task PayrollDeductionArrangement_GetAll_PersonId_ArgumentException()
             {
                 payrollDeductionArrangementEntities = new List<Domain.HumanResources.Entities.PayrollDeductionArrangements>() 
@@ -190,7 +178,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task PayrollDeductionArrangement_GetAll_DeductionArrangementTypeCode_ArgumentException()
             {
                 payrollDeductionArrangementEntities = new List<Domain.HumanResources.Entities.PayrollDeductionArrangements>() 
@@ -252,6 +240,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 //person id's
                 personRepositoryMock.Setup(repo => repo.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("0218817f-b6e0-4184-83ae-b6815e5d1604");
                 personRepositoryMock.Setup(repo => repo.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("0003582");
+                Dictionary<string, string> personGuidCollection = new Dictionary<string, string>();
+                personGuidCollection.Add("0003582", "73251435-1880-4bbf-aab9-4abe6634b2c5");
+                personRepositoryMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
+
                 //PayrollDeductionArrangements
                 payrollDeductionArrangementEntities = new List<Domain.HumanResources.Entities.PayrollDeductionArrangements>() 
             {
@@ -560,7 +552,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 payrollDeductionArrangementRepositoryMock.Setup(repo => repo.GetIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1028");
                 personRepositoryMock.Setup(repo => repo.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("0003582");
 
-                payrollDeductionArrangementRepositoryMock.Setup(repo => repo.UpdateAsync(It.IsAny<string>(), It.IsAny<Domain.HumanResources.Entities.PayrollDeductionArrangements>())).ReturnsAsync(null);
+                payrollDeductionArrangementRepositoryMock.Setup(repo => repo.UpdateAsync(It.IsAny<string>(), It.IsAny<Domain.HumanResources.Entities.PayrollDeductionArrangements>())).ReturnsAsync(() => null);
 
                 var actuals = await payrollDeductionArrangementService.UpdatePayrollDeductionArrangementsAsync("643edf74-10d3-4d97-800e-9d72c2e3cae7", payrollDeductionArrangementDto);
             }
@@ -749,42 +741,42 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 var actuals = await payrollDeductionArrangementService.UpdatePayrollDeductionArrangementsAsync("643edf74-10d3-4d97-800e-9d72c2e3cae7", payrollDeductionArrangementDto);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task PayrollDeductionArrangement_PUT_PermissionException()
-            {
-                payrollDeductionArrangementDto = new PayrollDeductionArrangements()
-                {
-                    amountPerPayment = new Dtos.DtoProperties.AmountDtoProperty() { Currency = Dtos.EnumProperties.CurrencyCodes.USD, Value = 200 },
-                    ChangeReason = new GuidObject2("bfea651b-8e27-4fcd-abe3-04573443c04c"),
-                    Id = "643edf74-10d3-4d97-800e-9d72c2e3cae7",
-                    PaymentTarget = new Dtos.DtoProperties.PaymentTargetDtoProperty()
-                    {
-                        Deduction = new Dtos.DtoProperties.PaymentTargetDeduction() { DeductionType = new GuidObject2("16f809ba-f266-458f-b7c1-d332eb5bd343") }
-                    },
-                    PayPeriodOccurence = new Dtos.DtoProperties.PayPeriodOccurance()
-                    {
-                        Interval = 123,
-                        MonthlyPayPeriods = new[] { 2 }
-                    },
-                    Person = new GuidObject2("73251435-1880-4bbf-aab9-4abe6634b2c5"),
-                    StartDate = new DateTime(2017, 1, 1),
-                    Status = Dtos.EnumProperties.PayrollDeductionArrangementStatuses.Active,
-                    TotalAmount = new Dtos.DtoProperties.AmountDtoProperty()
-                    {
-                        Currency = CurrencyCodes.USD,
-                        Value = 200
-                    }
-                };
+            //[TestMethod]
+            //[ExpectedException(typeof(PermissionsException))]
+            //public async Task PayrollDeductionArrangement_PUT_PermissionException()
+            //{
+            //    payrollDeductionArrangementDto = new PayrollDeductionArrangements()
+            //    {
+            //        amountPerPayment = new Dtos.DtoProperties.AmountDtoProperty() { Currency = Dtos.EnumProperties.CurrencyCodes.USD, Value = 200 },
+            //        ChangeReason = new GuidObject2("bfea651b-8e27-4fcd-abe3-04573443c04c"),
+            //        Id = "643edf74-10d3-4d97-800e-9d72c2e3cae7",
+            //        PaymentTarget = new Dtos.DtoProperties.PaymentTargetDtoProperty()
+            //        {
+            //            Deduction = new Dtos.DtoProperties.PaymentTargetDeduction() { DeductionType = new GuidObject2("16f809ba-f266-458f-b7c1-d332eb5bd343") }
+            //        },
+            //        PayPeriodOccurence = new Dtos.DtoProperties.PayPeriodOccurance()
+            //        {
+            //            Interval = 123,
+            //            MonthlyPayPeriods = new[] { 2 }
+            //        },
+            //        Person = new GuidObject2("73251435-1880-4bbf-aab9-4abe6634b2c5"),
+            //        StartDate = new DateTime(2017, 1, 1),
+            //        Status = Dtos.EnumProperties.PayrollDeductionArrangementStatuses.Active,
+            //        TotalAmount = new Dtos.DtoProperties.AmountDtoProperty()
+            //        {
+            //            Currency = CurrencyCodes.USD,
+            //            Value = 200
+            //        }
+            //    };
 
-                payrollDeductionArrangementRepositoryMock.Setup(repo => repo.GetIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1028");
-                personRepositoryMock.Setup(repo => repo.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("0003582");
+            //    payrollDeductionArrangementRepositoryMock.Setup(repo => repo.GetIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1028");
+            //    personRepositoryMock.Setup(repo => repo.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("0003582");
 
-                payrollDeductionArrangementRepositoryMock.Setup(repo => repo.UpdateAsync(It.IsAny<string>(), It.IsAny<Domain.HumanResources.Entities.PayrollDeductionArrangements>())).ReturnsAsync(payrollDeductionArrangementEntities.FirstOrDefault());
+            //    payrollDeductionArrangementRepositoryMock.Setup(repo => repo.UpdateAsync(It.IsAny<string>(), It.IsAny<Domain.HumanResources.Entities.PayrollDeductionArrangements>())).ReturnsAsync(payrollDeductionArrangementEntities.FirstOrDefault());
 
-                var actuals = await payrollDeductionArrangementService.UpdatePayrollDeductionArrangementsAsync("643edf74-10d3-4d97-800e-9d72c2e3cae7", payrollDeductionArrangementDto);
-                Assert.IsNotNull(actuals);
-            }
+            //    var actuals = await payrollDeductionArrangementService.UpdatePayrollDeductionArrangementsAsync("643edf74-10d3-4d97-800e-9d72c2e3cae7", payrollDeductionArrangementDto);
+            //    Assert.IsNotNull(actuals);
+            //}
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
@@ -803,14 +795,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 var actuals = await payrollDeductionArrangementService.CreatePayrollDeductionArrangementsAsync(payrollDeductionArrangementDto);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task PayrollDeductionArrangement_PermissionsException()
-            {
-                payrollDeductionArrangementDto = new PayrollDeductionArrangements();
+            //[TestMethod]
+            //[ExpectedException(typeof(PermissionsException))]
+            //public async Task PayrollDeductionArrangement_PermissionsException()
+            //{
+            //    payrollDeductionArrangementDto = new PayrollDeductionArrangements();
 
-                var actuals = await payrollDeductionArrangementService.CreatePayrollDeductionArrangementsAsync(payrollDeductionArrangementDto);
-            }
+            //    var actuals = await payrollDeductionArrangementService.CreatePayrollDeductionArrangementsAsync(payrollDeductionArrangementDto);
+            //}
 
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
@@ -845,7 +837,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 payrollDeductionArrangementRepositoryMock.Setup(repo => repo.GetIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("1028");
                 personRepositoryMock.Setup(repo => repo.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("0003582");
 
-                payrollDeductionArrangementRepositoryMock.Setup(repo => repo.CreateAsync(It.IsAny<Domain.HumanResources.Entities.PayrollDeductionArrangements>())).ReturnsAsync(null);
+                payrollDeductionArrangementRepositoryMock.Setup(repo => repo.CreateAsync(It.IsAny<Domain.HumanResources.Entities.PayrollDeductionArrangements>())).ReturnsAsync(() => null);
 
                 var actuals = await payrollDeductionArrangementService.CreatePayrollDeductionArrangementsAsync(payrollDeductionArrangementDto);
             }
@@ -877,6 +869,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
                 //person id's
                 personRepositoryMock.Setup(repo => repo.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("0003582");
+                Dictionary<string, string> personGuidCollection = new Dictionary<string, string>() ;
+                personGuidCollection.Add("0003582", "73251435-1880-4bbf-aab9-4abe6634b2c5");
+                personRepositoryMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
 
                 //PayrollDeductionArrangements
                 payrollDeductionArrangementEntities = new List<Domain.HumanResources.Entities.PayrollDeductionArrangements>() 

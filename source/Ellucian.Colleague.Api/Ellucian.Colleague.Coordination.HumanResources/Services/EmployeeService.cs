@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2019 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.HumanResources;
@@ -103,16 +103,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             return _payClasses;
         }
 
-        //get positions
-        private IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Position> _positions = null;
-        private async Task<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Position>> GetPositionsAsync(bool bypassCache)
-        {
-            if (_positions == null)
-            {
-                _positions = await positionRepository.GetPositionsAsync();
-            }
-            return _positions;
-        }
+ 
         //get contract types
         private IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.HrStatuses> _contractTypes = null;
         private async Task<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.HrStatuses>> GetContractTypesAsync(bool bypassCache)
@@ -142,7 +133,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         }
 
         /// <summary>
-        /// Get Employee Data based on the permissions of the current user
+        /// Get Employee Data 
         /// </summary>
         /// <param name="bypassCache">Flag to bypass cache and read directly from disk.</param>
         /// <param name="offset">Offset for record index on page reads.</param>
@@ -160,11 +151,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             var employeeDtos = new List<Dtos.Employee>();
             int employeeCount = 0;
             var employeePersonIds = new List<string>();
-
-            if (!HasPermission(HumanResourcesPermissionCodes.ViewEmployeeData) &&  !HasPermission(HumanResourcesPermissionCodes.UpdateEmployee))
-            {
-                throw new PermissionsException("User does not have permission to view Employees.");
-            }
 
             var employeeEntities = new Tuple<IEnumerable<Domain.HumanResources.Entities.Employee>, int>(new List<Domain.HumanResources.Entities.Employee>(), 0);
             string newPerson = string.Empty, newCampus = string.Empty, newStartOn = string.Empty, 
@@ -221,7 +207,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         }
 
         /// <summary>
-        /// Get Employee Data based on the permissions of the current user
+        /// Get Employee Data 
         /// </summary>
         /// <param name="bypassCache">Flag to bypass cache and read directly from disk.</param>
         /// <param name="offset">Offset for record index on page reads.</param>
@@ -243,11 +229,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             var employeeDtos = new List<Dtos.Employee2>();
             int employeeCount = 0;
             var employeePersonIds = new List<string>();
-
-            if (!HasPermission(HumanResourcesPermissionCodes.ViewEmployeeData) &&  !HasPermission(HumanResourcesPermissionCodes.UpdateEmployee))
-            {
-                throw new PermissionsException("User does not have permission to view Employees.");
-            }
 
             var employeeEntities = new Tuple<IEnumerable<Domain.HumanResources.Entities.Employee>, int>(new List<Domain.HumanResources.Entities.Employee>(), 0);
             string newPerson = string.Empty, newCampus = string.Empty, newStartOn = string.Empty, newEndOn = string.Empty, 
@@ -361,7 +342,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         }
 
         /// <summary>
-        /// Get Employee Data based on the permissions of the current user
+        /// Get Employee Data 
         /// </summary>
         /// <param name="bypassCache">Flag to bypass cache and read directly from disk.</param>
         /// <param name="offset">Offset for record index on page reads.</param>
@@ -384,11 +365,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             int employeeCount = 0;
             var employeePersonIds = new List<string>();
 
-            if (!HasPermission(HumanResourcesPermissionCodes.ViewEmployeeData) && !HasPermission(HumanResourcesPermissionCodes.UpdateEmployee))
-            {
-                throw new PermissionsException("User does not have permission to view Employees.");
-            }
-
             var employeeEntities = new Tuple<IEnumerable<Domain.HumanResources.Entities.Employee>, int>(new List<Domain.HumanResources.Entities.Employee>(), 0);
             string newPerson = string.Empty, newCampus = string.Empty, newStartOn = string.Empty, 
                newEndOn = string.Empty, newRehireStatus = string.Empty, newRehireType = string.Empty, newContractDetailTypeCode = string.Empty; 
@@ -396,15 +372,30 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             if (!string.IsNullOrEmpty(person))
             {
-                newPerson = await personRepository.GetPersonIdFromGuidAsync(person);
-                if (string.IsNullOrEmpty(newPerson))
+                try
+                {
+                    newPerson = await personRepository.GetPersonIdFromGuidAsync(person);
+                    if (string.IsNullOrEmpty(newPerson))
+                        return new Tuple<IEnumerable<Dtos.Employee2>, int>(new List<Dtos.Employee2>(), 0);
+                }
+                catch (Exception ex)
+                {
                     return new Tuple<IEnumerable<Dtos.Employee2>, int>(new List<Dtos.Employee2>(), 0);
+                }
             }
             if (!string.IsNullOrEmpty(campus))
             {
-                newCampus = ConvertGuidToCode(await GetLocationsAsync(bypassCache), campus);
-                if (string.IsNullOrEmpty(newCampus))
+                var locations = await GetLocationsAsync(bypassCache);
+                if (locations != null && locations.Any())
+                {
+                    newCampus = ConvertGuidToCode(locations, campus);
+                    if (string.IsNullOrEmpty(newCampus))
+                        return new Tuple<IEnumerable<Dtos.Employee2>, int>(new List<Dtos.Employee2>(), 0);
+                }
+                else
+                {
                     return new Tuple<IEnumerable<Dtos.Employee2>, int>(new List<Dtos.Employee2>(), 0);
+                }
             }
             if (!string.IsNullOrEmpty(status))
             {
@@ -417,12 +408,28 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             newStartOn = (startOn == string.Empty ? string.Empty : await ConvertDateArgument(startOn));
             newEndOn = (endOn == string.Empty ? string.Empty : await ConvertDateArgument(endOn));
-            newRehireStatus = rehireableStatusEligibility == string.Empty ? string.Empty : await ConvertRehireEligibilityToCode(rehireableStatusEligibility, bypassCache);
+            try
+            {
+                newRehireStatus = rehireableStatusEligibility == string.Empty ? string.Empty : await ConvertRehireEligibilityToCode(rehireableStatusEligibility, bypassCache);
+            }
+            catch
+            {
+                return new Tuple<IEnumerable<Dtos.Employee2>, int>(new List<Dtos.Employee2>(), 0);
+            }
             if (!string.IsNullOrEmpty(rehireableStatusType))
             {
-                newRehireType = ConvertGuidToCode(await GetRehireTypesAsync(bypassCache), rehireableStatusType);
-                if (string.IsNullOrEmpty(newRehireType))
+                var rehireTypes = await GetRehireTypesAsync(bypassCache);
+                if (rehireTypes != null && rehireTypes.Any())
+                {
+                    newRehireType = ConvertGuidToCode(rehireTypes, rehireableStatusType);
+                    if (string.IsNullOrEmpty(newRehireType))
+                        return new Tuple<IEnumerable<Dtos.Employee2>, int>(new List<Dtos.Employee2>(), 0);
+                }
+                else
+                {
                     return new Tuple<IEnumerable<Dtos.Employee2>, int>(new List<Dtos.Employee2>(), 0);
+                }
+
             }
             if (!string.IsNullOrEmpty(contractType))
             {
@@ -479,8 +486,16 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     }
                 }                                       
             }
-            employeeEntities = await employeeRepository.GetEmployees2Async(offset, limit, newPerson, newCampus, status, newStartOn, newEndOn, newRehireStatus, newRehireType, 
-                newContractTypeCodes, newContractDetailTypeCode);
+            try
+            {
+                employeeEntities = await employeeRepository.GetEmployees2Async(offset, limit, newPerson, newCampus, status, newStartOn, newEndOn, newRehireStatus, newRehireType,
+                    newContractTypeCodes, newContractDetailTypeCode);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
 
             if (employeeEntities == null)
             {
@@ -488,16 +503,15 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
 
             employeeCount = employeeEntities.Item2;
-
-            foreach (var employeeEntity in employeeEntities.Item1)
+            if (employeeEntities.Item1 != null && employeeEntities.Item1.Any())
             {
-                var employeeDto = await ConvertEmployee3EntityToDtoAsync(employeeEntity, bypassCache);
-                if (employeeDto != null)
-                {
-                    employeeDtos.Add(employeeDto);
-                }
+                employeeDtos = (await ConvertEmployee3EntityToDtoAsync(employeeEntities.Item1, bypassCache)).ToList();
             }
 
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
             return new Tuple<IEnumerable<Dtos.Employee2>, int>(employeeDtos, employeeCount);
         }
 
@@ -548,73 +562,63 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         }
 
         /// <summary>
-        /// Get Employee Data based on the permissions of the current user
+        /// Get Employee Data 
         /// </summary>
         /// <param name="guid">Guid for the employee.</param>
         /// <returns>Employee object <see cref="Dtos.Employee"./></returns>
         public async Task<Dtos.Employee> GetEmployeeByGuidAsync(string guid)
         {
             Dtos.Employee employeeDto = new Dtos.Employee();
-            if (HasPermission(HumanResourcesPermissionCodes.ViewEmployeeData) || HasPermission(HumanResourcesPermissionCodes.UpdateEmployee))
+
+            try
             {
-                try
-                {
-                    var ldmGuid = await referenceDataRepository.GetGuidLookupResultFromGuidAsync(guid);
-                    if (ldmGuid == null)
-                        throw new KeyNotFoundException(string.Format("No employee was found for guid '{0}'.", guid));
-
-                    if (ldmGuid.Entity.ToUpperInvariant() != "HRPER")
-                        throw new KeyNotFoundException(string.Format("No employee was found for guid '{0}'.", guid));
-
-                }
-                catch
-                {
+                var ldmGuid = await referenceDataRepository.GetGuidLookupResultFromGuidAsync(guid);
+                if (ldmGuid == null)
                     throw new KeyNotFoundException(string.Format("No employee was found for guid '{0}'.", guid));
-                }
-                var employeeEntity = await employeeRepository.GetEmployeeByGuidAsync(guid);
-                employeeDto = await ConvertEmployeeEntityToDtoAsync(employeeEntity, false);
-                return employeeDto;
-            }
-            else
-                throw new PermissionsException("User does not have permission to view Employees.");
 
+                if (ldmGuid.Entity.ToUpperInvariant() != "HRPER")
+                    throw new KeyNotFoundException(string.Format("No employee was found for guid '{0}'.", guid));
+
+            }
+            catch
+            {
+                throw new KeyNotFoundException(string.Format("No employee was found for guid '{0}'.", guid));
+            }
+            var employeeEntity = await employeeRepository.GetEmployeeByGuidAsync(guid);
+            employeeDto = await ConvertEmployeeEntityToDtoAsync(employeeEntity, false);
+            return employeeDto;
         }
 
         /// <summary>
-        /// Get Employee Data based on the permissions of the current user
+        /// Get Employee Data 
         /// </summary>
         /// <param name="id">Guid for the employee.</param>
         /// <returns>Employee object <see cref="Dtos.Employee2"./></returns>
         public async Task<Dtos.Employee2> GetEmployee2ByIdAsync(string id)
         {
             Dtos.Employee2 employeeDto = new Dtos.Employee2();
-            if (HasPermission(HumanResourcesPermissionCodes.ViewEmployeeData) || HasPermission(HumanResourcesPermissionCodes.UpdateEmployee))
+
+            try
             {
-                try
-                {
-                    var ldmGuid = await referenceDataRepository.GetGuidLookupResultFromGuidAsync(id);
-                    if (ldmGuid == null)
-                        throw new KeyNotFoundException(string.Format("No employee was found for guid '{0}'.", id));
-
-                    if (ldmGuid.Entity.ToUpperInvariant() != "HRPER")
-                        throw new KeyNotFoundException(string.Format("No employee was found for guid '{0}'.", id));
-
-                }
-                catch
-                {
+                var ldmGuid = await referenceDataRepository.GetGuidLookupResultFromGuidAsync(id);
+                if (ldmGuid == null)
                     throw new KeyNotFoundException(string.Format("No employee was found for guid '{0}'.", id));
-                }
-                var employeeEntity = await employeeRepository.GetEmployeeByGuidAsync(id);
-                employeeDto = await ConvertEmployee2EntityToDtoAsync(employeeEntity, false);
-                return employeeDto;
-            }
-            else
-                throw new PermissionsException("User does not have permission to view Employees.");
 
+                if (ldmGuid.Entity.ToUpperInvariant() != "HRPER")
+                    throw new KeyNotFoundException(string.Format("No employee was found for guid '{0}'.", id));
+
+            }
+            catch
+            {
+                throw new KeyNotFoundException(string.Format("No employee was found for guid '{0}'.", id));
+            }
+            var employeeEntity = await employeeRepository.GetEmployeeByGuidAsync(id);
+            employeeDto = await ConvertEmployee2EntityToDtoAsync(employeeEntity, false);
+            return employeeDto;
         }
 
         /// <summary>
-        /// Get Employee Data based on the permissions of the current user
+        /// Get Employee Data 
         /// </summary>
         /// <param name="id">Guid for the employee.</param>
         /// <returns>Employee object <see cref="Dtos.Employee2"./></returns>
@@ -622,37 +626,42 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         {
             if (string.IsNullOrEmpty(id))
             {
-                throw new ArgumentNullException("id can't be null or empty.");
+                IntegrationApiExceptionAddError("A GUID is required to obtain an employee", "Missing.Required.Property");
+                throw IntegrationApiException;
             }
             Dtos.Employee2 employeeDto = new Dtos.Employee2();
-            if (HasPermission(HumanResourcesPermissionCodes.ViewEmployeeData) || HasPermission(HumanResourcesPermissionCodes.UpdateEmployee))
+            Ellucian.Colleague.Domain.HumanResources.Entities.Employee employeeEntity = null;
+            try
             {
-                try
-                {
-                    var ldmGuid = await referenceDataRepository.GetGuidLookupResultFromGuidAsync(id);
-                    if (ldmGuid == null)
-                        throw new KeyNotFoundException(string.Format("No employee was found for guid '{0}'.", id));
-
-                    if (ldmGuid.Entity.ToUpperInvariant() != "HRPER")
-                        throw new KeyNotFoundException(string.Format("No employee was found for guid '{0}'.", id));
-
-                }
-                catch
-                {
-                    throw new KeyNotFoundException(string.Format("No employee was found for guid '{0}'.", id));
-                }
-                var employeeEntity = await employeeRepository.GetEmployee2ByGuidAsync(id);
-                employeeDto = await ConvertEmployee3EntityToDtoAsync(employeeEntity, false);
-                return employeeDto;
+                employeeEntity = await employeeRepository.GetEmployee2ByGuidAsync(id);
             }
-            else
-                throw new PermissionsException("User does not have permission to view Employees.");
-
+            catch (KeyNotFoundException ex)
+            {
+                throw ex;
+            }
+            catch (RepositoryException ex)
+            {
+                throw ex;
+            }
+            if (employeeEntity != null)
+            {
+                employeeDto = (await ConvertEmployee3EntityToDtoAsync(new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee> { employeeEntity }, false)).FirstOrDefault();
+            }
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+            return employeeDto;
         }
 
         private async Task<Dtos.Employee> ConvertEmployeeEntityToDtoAsync(Domain.HumanResources.Entities.Employee employeeEntity, bool bypassCache)
         {
             var employeeDto = new Dtos.Employee();
+            if ((employeeEntity == null) || (string.IsNullOrEmpty(employeeEntity.Guid)))
+            {
+                throw new ArgumentException("Record not found or GUIDs missing for Entity: 'HRPER'");        
+            }
+
             employeeDto.Id = employeeEntity.Guid;
             employeeDto.Person = new GuidObject2(await personRepository.GetPersonGuidFromIdAsync(employeeEntity.PersonId));
             if (!string.IsNullOrEmpty(employeeEntity.Location))
@@ -839,7 +848,13 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         private async Task<Dtos.Employee2> ConvertEmployee2EntityToDtoAsync(Domain.HumanResources.Entities.Employee employeeEntity, bool bypassCache)
         {
             var employeeDto = new Dtos.Employee2();
+
+            if ((employeeEntity == null) || (string.IsNullOrEmpty(employeeEntity.Guid)))
+            {
+                throw new ArgumentException("Record not found or GUIDs missing for Entity: 'HRPER'");
+            }
             employeeDto.Id = employeeEntity.Guid;
+
             employeeDto.Person = new GuidObject2(await personRepository.GetPersonGuidFromIdAsync(employeeEntity.PersonId));
 
             if (!string.IsNullOrEmpty(employeeEntity.Location))
@@ -1025,223 +1040,289 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             return employeeDto;
         }
 
-
-        private async Task<Dtos.Employee2> ConvertEmployee3EntityToDtoAsync(Domain.HumanResources.Entities.Employee employeeEntity, bool bypassCache)
+        private async Task<IEnumerable<Dtos.Employee2>> ConvertEmployee3EntityToDtoAsync(IEnumerable<Domain.HumanResources.Entities.Employee> employeeEntities, bool bypassCache)
         {
-            var employeeDto = new Dtos.Employee2();
-            if (employeeEntity == null)
+            var employeeDtos = new List<Dtos.Employee2>();
+            //get the list of all the person guids as a collection for performance enhancement
+            var personIds = employeeEntities
+                 .Where(x => (!string.IsNullOrEmpty(x.PersonId)))
+                 .Select(x => x.PersonId).Distinct().ToList();
+            var personGuidCollection = await personRepository.GetPersonGuidsCollectionAsync(personIds);
+            foreach (var employeeEntity in employeeEntities)
             {
-                return employeeDto;
-            }
-            employeeDto.Id = employeeEntity.Guid;
-            employeeDto.Person = new GuidObject2(await personRepository.GetPersonGuidFromIdAsync(employeeEntity.PersonId));
+                var employeeDto = new Dtos.Employee2();
+                if (employeeEntity == null)
+                {
+                    IntegrationApiExceptionAddError("Record not found or GUIDs missing for Entity: 'HRPER'", "Bad.Data");
+                    throw IntegrationApiException;
+                }
+                if (string.IsNullOrEmpty(employeeEntity.Guid))
+                {
+                    IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the employees '{0}'", employeeEntity.PersonId), "Bad.Data", employeeEntity.Guid, employeeEntity.PersonId);
+                }
+                else
+                {
+                    employeeDto.Id = employeeEntity.Guid;
+                }
+                //process personId
+                if (string.IsNullOrEmpty(employeeEntity.PersonId))
+                {
+                    IntegrationApiExceptionAddError(string.Format("Person Id is required."), "Bad.Data", employeeEntity.Guid, employeeEntity.PersonId);
+                }
+                else if (personGuidCollection == null)
+                {
+                    IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the person '{0}'", employeeEntity.PersonId), "GUID.Not.Found", employeeEntity.Guid, employeeEntity.PersonId);
+                }
+                else
+                {
+                    var personGuid = string.Empty;
+                    personGuidCollection.TryGetValue(employeeEntity.PersonId, out personGuid);
+                    if (string.IsNullOrEmpty(personGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the person '{0}'", employeeEntity.PersonId), "GUID.Not.Found", employeeEntity.Guid, employeeEntity.PersonId);
+                    }
+                    else
+                    {
+                        employeeDto.Person = new GuidObject2(personGuid);
+                    }
+                }
+                //process location
+                if (!string.IsNullOrEmpty(employeeEntity.Location))
+                {
+                    try
+                    {
+                        var location = await referenceDataRepository.GetLocationsGuidAsync(employeeEntity.Location);
+                        if (!string.IsNullOrEmpty(location))
+                        {
+                            employeeDto.Campus = new Dtos.GuidObject2(location);
+                        }
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                            employeeEntity.Guid, employeeEntity.PersonId);
+                    }
+                }
 
-            if (!string.IsNullOrEmpty(employeeEntity.Location))
-            {
-                var campuses = await GetLocationsAsync(bypassCache);
-                if (campuses == null)
+                // Contract Type
+                if (!string.IsNullOrEmpty(employeeEntity.StatusCode))
                 {
-                    throw new ArgumentException("Unable to retrieve all locations.");
-                }
-                var campus = campuses.FirstOrDefault(loc => loc.Code == employeeEntity.Location);
-                if (campus == null )
-                {
-                    throw new ArgumentException(string.Concat("Invalid Campus code '", employeeEntity.Location, "'. Entity: 'HRPER', Record ID: '", employeeEntity.Guid, "'"));
-                }
-                // Campus or Location/Site
-                if (!string.IsNullOrEmpty(campus.Guid))
-                {
-                    employeeDto.Campus = new GuidObject2(campus.Guid);
-                }
-                else
-                {
-                    throw new ArgumentException(string.Concat("Invalid Guid for Campus code '", employeeEntity.Location, "'. Entity: 'HRPER', Record ID: '", employeeEntity.Guid, "'"));
-                }
-            }
-            
-            // Contract Type
-            if (!string.IsNullOrEmpty(employeeEntity.StatusCode))
-            {
-                var categories = await GetPersonStatusesAsync(bypassCache);
-                if (categories == null)
-                {
-                    throw new ArgumentException("Unable to retrieve all contract types.");
-                }
-                var category = categories.FirstOrDefault(h => h.Code == employeeEntity.StatusCode);
-                if (category == null)
-                {
-                    throw new ArgumentException(string.Concat("Invalid contract type code '", employeeEntity.StatusCode, "'. Entity: 'HRPER', Record ID: '", employeeEntity.Guid, "'"));
-                }
-               else
-                { 
-                    employeeDto.Contract = new Dtos.DtoProperties.ContractTypeDtoProperty();
-                    employeeDto.Contract.Detail = new GuidObject2(category.Guid);
-                    employeeDto.Contract.Type = Dtos.EnumProperties.ContractType.Contractual;
-                    if (category.Category == ContractType.PartTime)
+                    var categories = await GetPersonStatusesAsync(bypassCache);
+                    if (categories == null)
                     {
-                        employeeDto.Contract.Type = Dtos.EnumProperties.ContractType.PartTime;
+                        IntegrationApiExceptionAddError(string.Format("Unable to retrieve all contract types"), "Bad.Data", employeeEntity.Guid, employeeEntity.PersonId);
+
                     }
-                    if (category.Category == ContractType.FullTime)
+                    var category = categories.FirstOrDefault(h => h.Code == employeeEntity.StatusCode);
+                    if (category == null)
                     {
-                        employeeDto.Contract.Type = Dtos.EnumProperties.ContractType.FullTime;
+                        IntegrationApiExceptionAddError(string.Format("Invalid contract type code '{0}'", employeeEntity.StatusCode), "Bad.Data", employeeEntity.Guid, employeeEntity.PersonId);
                     }
-                    if (category.Category == ContractType.Contractual)
+                    else
                     {
+                        employeeDto.Contract = new Dtos.DtoProperties.ContractTypeDtoProperty();
+                        if (!string.IsNullOrEmpty(category.Guid))
+                        {
+                            employeeDto.Contract.Detail = new GuidObject2(category.Guid);
+                        }
+                        else
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the contract type code '{0}'", employeeEntity.StatusCode), "GUID.Not.Found", employeeEntity.Guid, employeeEntity.PersonId);
+                        }
+
                         employeeDto.Contract.Type = Dtos.EnumProperties.ContractType.Contractual;
+                        if (category.Category == ContractType.PartTime)
+                        {
+                            employeeDto.Contract.Type = Dtos.EnumProperties.ContractType.PartTime;
+                        }
+                        if (category.Category == ContractType.FullTime)
+                        {
+                            employeeDto.Contract.Type = Dtos.EnumProperties.ContractType.FullTime;
+                        }
+                        if (category.Category == ContractType.Contractual)
+                        {
+                            employeeDto.Contract.Type = Dtos.EnumProperties.ContractType.Contractual;
+                        }
                     }
                 }
-            }
-            //Pay Class
-            if (!string.IsNullOrEmpty(employeeEntity.PayClass))
-            {
-                var payClasses = (await GetPayClassesAsync(bypassCache));
-                if (payClasses == null)
+
+
+                //Pay Class
+                if (!string.IsNullOrEmpty(employeeEntity.PayClass))
                 {
-                    throw new ArgumentException("Unable to retrieve all pay classes.");
-                }
-                var payClass = payClasses.FirstOrDefault(pc => pc.Code == employeeEntity.PayClass);
-                if (payClass == null)
-                {
-                    throw new ArgumentException(string.Concat("Invalid payclass code '", employeeEntity.PayClass, "'. Entity: 'HRPER', Record ID: '", employeeEntity.Guid, "'"));
-                }
-                if (!string.IsNullOrEmpty(payClass.Guid))
-                {
-                    employeeDto.PayClass = new GuidObject2(payClass.Guid);
-                }
-                else
-                {
-                    throw new ArgumentException(string.Concat("Invalid Guid for payclass code '", employeeEntity.PayClass, "'. Entity: 'HRPER', Record ID: '", employeeEntity.Guid, "'"));
-                }
-            }
-            // Pay Status
-            if (employeeEntity.PayStatus != null)
-            {
-                switch (employeeEntity.PayStatus)
-                {
-                    case PayStatus.PartialPay:
-                        {
-                            employeeDto.PayStatus = Dtos.EnumProperties.PayStatus.PartialPay;
-                            break;
-                        }
-                    case PayStatus.WithoutPay:
-                        {
-                            employeeDto.PayStatus = Dtos.EnumProperties.PayStatus.WithoutPay;
-                            break;
-                        }
-                    case PayStatus.WithPay:
-                        {
-                            employeeDto.PayStatus = Dtos.EnumProperties.PayStatus.WithPay;
-                            break;
-                        }
-                    default:
-                        break;
-                }
-            }
-            // Benefits Status
-            if (employeeEntity.BenefitsStatus != null)
-            {
-                switch (employeeEntity.BenefitsStatus)
-                {
-                    case BenefitsStatus.WithBenefits:
-                        {
-                            employeeDto.BenefitsStatus = Dtos.EnumProperties.BenefitsStatus.WithBenefits;
-                            break;
-                        }
-                    case BenefitsStatus.WithoutBenefits:
-                        {
-                            employeeDto.BenefitsStatus = Dtos.EnumProperties.BenefitsStatus.WithoutBenefits;
-                            break;
-                        }
-                    default:
-                        break;
-                }
-            }
-            //Hours Per Period
-            var hoursPerPeriod = new List<Dtos.DtoProperties.HoursPerPeriodDtoProperty>();
-            if (employeeEntity.PpwgCycleWorkTimeAmt != null && employeeEntity.PpwgCycleWorkTimeAmt != 0)
-            {
-                var period = new Dtos.DtoProperties.HoursPerPeriodDtoProperty() 
-                { 
-                    Hours = employeeEntity.PpwgCycleWorkTimeAmt, 
-                    Period = Dtos.EnumProperties.PayPeriods.PayPeriod 
-                };
-                hoursPerPeriod.Add(period);
-            }
-            if (employeeEntity.PpwgYearWorkTimeAmt != null && employeeEntity.PpwgYearWorkTimeAmt != 0)
-            {
-                var period = new Dtos.DtoProperties.HoursPerPeriodDtoProperty() 
-                { 
-                    Hours = employeeEntity.PpwgYearWorkTimeAmt, 
-                    Period = Dtos.EnumProperties.PayPeriods.Year 
-                };
-                hoursPerPeriod.Add(period);
-            }
-            if (hoursPerPeriod.Any() && hoursPerPeriod.Count() > 0)
-            {
-                employeeDto.HoursPerPeriod = hoursPerPeriod;
-            }
-            // Employee Status
-            if (employeeEntity.EmploymentStatus != null)
-            {
-                switch (employeeEntity.EmploymentStatus)
-                {
-                    case EmployeeStatus.Active:
-                        {
-                            employeeDto.Status = Dtos.EnumProperties.EmployeeStatus.Active;
-                            break;
-                        }
-                    case EmployeeStatus.Leave:
-                        {
-                            employeeDto.Status = Dtos.EnumProperties.EmployeeStatus.Leave;
-                            break;
-                        }
-                    case EmployeeStatus.Terminated:
-                        {
-                            employeeDto.Status = Dtos.EnumProperties.EmployeeStatus.Terminated;
-                            break;
-                        }
-                    default:
-                        break;
-                }
-            }
-            // Start and End Dates
-            if (employeeEntity.StartDate.HasValue)
-            {
-                employeeDto.StartOn = employeeEntity.StartDate.Value;
-            }
-            else // this is data error as starton is a required properly
-            {
-                throw new ArgumentException(string.Concat("Employee ", employeeEntity.PersonId, " is missing the startOn date found in HRP.EFFECT.EMPLOY.DATE. Entity: 'HRPER', Record ID: '", employeeEntity.Guid, "'"));
-            }
-            if (employeeEntity.EndDate.HasValue) employeeDto.EndOn = employeeEntity.EndDate.Value;
-            // Termination Reason
-            if (!string.IsNullOrEmpty(employeeEntity.StatusEndReasonCode) && employeeEntity.EmploymentStatus == EmployeeStatus.Terminated)
-            {
-                var termReasonId = await hrReferenceDataRepository.GetEmploymentStatusEndingReasonsGuidAsync(employeeEntity.StatusEndReasonCode);
-                if (!string.IsNullOrEmpty(termReasonId))
-                {
-                    employeeDto.TerminationReason = new GuidObject2(termReasonId);
-                }
-            }
-            if (!string.IsNullOrEmpty(employeeEntity.RehireEligibilityCode))
-            {
-                var rehireReason = (await GetRehireTypesAsync(bypassCache)).FirstOrDefault(rr => rr.Code == employeeEntity.RehireEligibilityCode);
-                if (rehireReason != null)
-                {
-                    var eligibilityCategory = Dtos.EnumProperties.RehireEligibility.Ineligible;
-                    if (rehireReason.Category == Colleague.Domain.HumanResources.Entities.RehireTypeCategory.Eligible)
+                    try
                     {
-                        eligibilityCategory = Dtos.EnumProperties.RehireEligibility.Eligible;
+                        var payclass = await hrReferenceDataRepository.GetPayClassesGuidAsync(employeeEntity.PayClass);
+                        if (!string.IsNullOrEmpty(payclass))
+                        {
+                            employeeDto.PayClass = new Dtos.GuidObject2(payclass);
+                        }
                     }
-                    var rehireStatus = new Dtos.DtoProperties.RehireableStatusDtoProperty()
+                    catch (RepositoryException ex)
                     {
-                        Eligibility = eligibilityCategory,
-                        Type = new GuidObject2(rehireReason.Guid)
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                            employeeEntity.Guid, employeeEntity.PersonId);
+                    }
+                }
+                
+                // Pay Status
+                if (employeeEntity.PayStatus != null)
+                {
+                    switch (employeeEntity.PayStatus)
+                    {
+                        case PayStatus.PartialPay:
+                            {
+                                employeeDto.PayStatus = Dtos.EnumProperties.PayStatus.PartialPay;
+                                break;
+                            }
+                        case PayStatus.WithoutPay:
+                            {
+                                employeeDto.PayStatus = Dtos.EnumProperties.PayStatus.WithoutPay;
+                                break;
+                            }
+                        case PayStatus.WithPay:
+                            {
+                                employeeDto.PayStatus = Dtos.EnumProperties.PayStatus.WithPay;
+                                break;
+                            }
+                        default:
+                            break;
+                    }
+                }
+                // Benefits Status
+                if (employeeEntity.BenefitsStatus != null)
+                {
+                    switch (employeeEntity.BenefitsStatus)
+                    {
+                        case BenefitsStatus.WithBenefits:
+                            {
+                                employeeDto.BenefitsStatus = Dtos.EnumProperties.BenefitsStatus.WithBenefits;
+                                break;
+                            }
+                        case BenefitsStatus.WithoutBenefits:
+                            {
+                                employeeDto.BenefitsStatus = Dtos.EnumProperties.BenefitsStatus.WithoutBenefits;
+                                break;
+                            }
+                        default:
+                            break;
+                    }
+                }
+                //Hours Per Period
+                var hoursPerPeriod = new List<Dtos.DtoProperties.HoursPerPeriodDtoProperty>();
+                if (employeeEntity.PpwgCycleWorkTimeAmt != null && employeeEntity.PpwgCycleWorkTimeAmt != 0)
+                {
+                    var period = new Dtos.DtoProperties.HoursPerPeriodDtoProperty()
+                    {
+                        Hours = employeeEntity.PpwgCycleWorkTimeAmt,
+                        Period = Dtos.EnumProperties.PayPeriods.PayPeriod
                     };
-                    employeeDto.RehireableStatus = rehireStatus;
+                    hoursPerPeriod.Add(period);
                 }
+                if (employeeEntity.PpwgYearWorkTimeAmt != null && employeeEntity.PpwgYearWorkTimeAmt != 0)
+                {
+                    var period = new Dtos.DtoProperties.HoursPerPeriodDtoProperty()
+                    {
+                        Hours = employeeEntity.PpwgYearWorkTimeAmt,
+                        Period = Dtos.EnumProperties.PayPeriods.Year
+                    };
+                    hoursPerPeriod.Add(period);
+                }
+                if (hoursPerPeriod.Any() && hoursPerPeriod.Count() > 0)
+                {
+                    employeeDto.HoursPerPeriod = hoursPerPeriod;
+                }
+                // Employee Status
+                if (employeeEntity.EmploymentStatus != null)
+                {
+                    switch (employeeEntity.EmploymentStatus)
+                    {
+                        case EmployeeStatus.Active:
+                            {
+                                employeeDto.Status = Dtos.EnumProperties.EmployeeStatus.Active;
+                                break;
+                            }
+                        case EmployeeStatus.Leave:
+                            {
+                                employeeDto.Status = Dtos.EnumProperties.EmployeeStatus.Leave;
+                                break;
+                            }
+                        case EmployeeStatus.Terminated:
+                            {
+                                employeeDto.Status = Dtos.EnumProperties.EmployeeStatus.Terminated;
+                                break;
+                            }
+                        default:
+                            break;
+                    }
+                }
+                // Start and End Dates
+                if (employeeEntity.StartDate.HasValue)
+                {
+                    employeeDto.StartOn = employeeEntity.StartDate.Value;
+                }
+                else // this is data error as starton is a required properly
+                {
+                    IntegrationApiExceptionAddError(string.Format("Employee is missing the startOn date found in HRP.EFFECT.EMPLOY.DATE"), "Bad.Data", employeeEntity.Guid, employeeEntity.PersonId);
+                }
+                if (employeeEntity.EndDate.HasValue) employeeDto.EndOn = employeeEntity.EndDate.Value;
+                // Termination Reason
+                if (!string.IsNullOrEmpty(employeeEntity.StatusEndReasonCode) && employeeEntity.EmploymentStatus == EmployeeStatus.Terminated)
+                {
+                    try
+                    {
+                        var statusCode = await hrReferenceDataRepository.GetEmploymentStatusEndingReasonsGuidAsync(employeeEntity.StatusEndReasonCode);
+                        if (!string.IsNullOrEmpty(statusCode))
+                        {
+                            employeeDto.TerminationReason = new Dtos.GuidObject2(statusCode);
+                        }
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                            employeeEntity.Guid, employeeEntity.PersonId);
+                    }
+                }
+                if (!string.IsNullOrEmpty(employeeEntity.RehireEligibilityCode))
+                {
+                    var rehireReasons = await GetRehireTypesAsync(bypassCache);
+                    if (rehireReasons != null && rehireReasons.Any())
+                    {
+                        var rehireReason = rehireReasons.FirstOrDefault(rr => rr.Code == employeeEntity.RehireEligibilityCode);
+                        if (rehireReason != null)
+                        {
+                            var eligibilityCategory = Dtos.EnumProperties.RehireEligibility.Ineligible;
+                            if (rehireReason.Category == Colleague.Domain.HumanResources.Entities.RehireTypeCategory.Eligible)
+                            {
+                                eligibilityCategory = Dtos.EnumProperties.RehireEligibility.Eligible;
+                            }
+                            if (!string.IsNullOrEmpty(rehireReason.Guid))
+                            {
+                                var rehireStatus = new Dtos.DtoProperties.RehireableStatusDtoProperty()
+                                {
+                                    Eligibility = eligibilityCategory,
+                                    Type = new GuidObject2(rehireReason.Guid)
+                                };
+                                employeeDto.RehireableStatus = rehireStatus;
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the rehire eligibility code '{0}'", employeeEntity.RehireEligibilityCode), "GUID.Not.Found", employeeEntity.Guid, employeeEntity.PersonId);
+                            }
+                        }
+                        else
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the rehire eligibility code '{0}'", employeeEntity.RehireEligibilityCode), "GUID.Not.Found", employeeEntity.Guid, employeeEntity.PersonId);
+                        }
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the rehire eligibility code '{0}'", employeeEntity.RehireEligibilityCode), "GUID.Not.Found", employeeEntity.Guid, employeeEntity.PersonId);
+                    }
+                }
+                employeeDtos.Add(employeeDto);
             }
-            return employeeDto;
+            return employeeDtos;
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN DATA MODEL</remarks>
@@ -1253,9 +1334,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns><see cref="Dtos.Employee2">Employee</see></returns>
         public async Task<Dtos.Employee2> PutEmployee2Async(string guid, Dtos.Employee2 employeeDto, Dtos.Employee2 origEmployeeDto)
         {
-            // verify the user has the permission to update a Employee
-            CheckUpdateEmployeePermission();
-            if (employeeDto == null)
+             if (employeeDto == null)
                 throw new ArgumentNullException("Employee", "Must provide a Employee for update");
             if (string.IsNullOrEmpty(employeeDto.Id))
                 throw new ArgumentNullException("Employee", "Must provide a guid for Employee update");
@@ -1265,9 +1344,16 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw new ArgumentNullException("Employee", "Must provide a valid guid for Employee update");
             }
-
-            // get the person ID associated with the incoming employee guid
-            var employeeId = await employeeRepository.GetEmployeeIdFromGuidAsync(guid);
+            var employeeId = string.Empty;
+            try
+            {
+                // get the person ID associated with the incoming employee guid
+                employeeId = await employeeRepository.GetEmployeeIdFromGuidAsync(guid);
+            }
+            catch (KeyNotFoundException)
+            {
+                // suppress KeyNotFound.  PUT can be called with an externally-supplied GUID to create a new person
+            }
 
             // verify the GUID exists to perform an update.  If not, perform a create instead
             if (!string.IsNullOrEmpty(employeeId))
@@ -1289,7 +1375,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                         await employeeRepository.UpdateEmployee2Async(employeeEntity);
 
                     // convert the entity to a DTO
-                    var dtoEmployee = await ConvertEmployee3EntityToDtoAsync(updatedEmployeeEntity, true);
+
+                    var dtoEmployee = (await ConvertEmployee3EntityToDtoAsync(new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee> { updatedEmployeeEntity }, true)).ToList().FirstOrDefault();
 
                     // return the newly updated DTO
                     return dtoEmployee;
@@ -1449,9 +1536,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns><see cref="Dtos.Employee2">Employee</see></returns>
         public async Task<Dtos.Employee2> PostEmployee2Async(Dtos.Employee2 employeeDto)
         {
-            // verify the user has the permission to create a Employee
-            CheckUpdateEmployeePermission();
-
             if (employeeDto == null)
                 throw new ArgumentNullException("Employee", "Must provide a Employee for update");
             if (string.IsNullOrEmpty(employeeDto.Id))
@@ -1470,7 +1554,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 var createdEmployee =
                     await employeeRepository.CreateEmployee2Async(employeeEntity);
 
-                var dtoEmployee = await ConvertEmployee3EntityToDtoAsync(createdEmployee, true);
+                var dtoEmployee = (await ConvertEmployee3EntityToDtoAsync(new List<Ellucian.Colleague.Domain.HumanResources.Entities.Employee> { createdEmployee }, true)).ToList().FirstOrDefault();
 
                 // return the newly created Employee
                 return dtoEmployee;
@@ -1722,8 +1806,16 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             if (!string.IsNullOrEmpty(employeeDto.Id) && !employeeDto.Id.Equals(Guid.Empty.ToString()))
             {
-                var employeeId = await employeeRepository.GetEmployeeIdFromGuidAsync(employeeDto.Id);
-                if (employeeId != null && personId != employeeId)
+                var employeeId = string.Empty;
+                try
+                {
+                    employeeId = await employeeRepository.GetEmployeeIdFromGuidAsync(employeeDto.Id);
+                }
+                catch (KeyNotFoundException)
+                {
+                    // suppress KeyNotFound.  PUT can be called with an externally-supplied GUID to create a new person
+                }
+                if (!string.IsNullOrEmpty(employeeId) && personId != employeeId)
                 {
                     throw new ArgumentException(string.Format("The Person Id '{0}' doesn't match the Employee Id '{1}'. ", personId, employeeId), "employees.id");
                 }
@@ -1749,22 +1841,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw new ArgumentException("The start on is a required field for PUT and POST requests. ", "employees.startOn");
             }
-        }
-
-        /// <summary>
-        /// Permissions code that allows an external system to do a UPDATE operation. This API will integrate information related to employees that 
-        /// could be deemed personal.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckUpdateEmployeePermission()
-        {
-            var hasPermission = HasPermission(HumanResourcesPermissionCodes.UpdateEmployee);
-
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to create/update employees.");
-            }
-        }
+        }      
 
         /// <summary>
         /// Gets a list of Employee names
@@ -1786,7 +1863,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 !HasPermission(HumanResourcesPermissionCodes.ViewEmployeeW2) &&
                 !HasPermission(HumanResourcesPermissionCodes.ViewEmployee1095C) &&
                 !HasPermission(HumanResourcesPermissionCodes.ViewAllTimeHistory) &&
-                !HasPermission(HumanResourcesPermissionCodes.ViewAllTotalCompensation))
+                !HasPermission(HumanResourcesPermissionCodes.ViewAllTotalCompensation) &&
+                !HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest))
             {
                 throw new PermissionsException("Current user is not authorized to view employee data");
             }

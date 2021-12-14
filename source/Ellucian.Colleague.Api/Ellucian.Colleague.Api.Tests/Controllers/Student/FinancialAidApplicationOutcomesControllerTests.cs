@@ -18,6 +18,12 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Hosting;
 using System.Net.Http.Headers;
+using System.Web.Http.Routing;
+using System.Web.Http.Controllers;
+using System.Collections;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Web.Security;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -255,5 +261,179 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 Assert.AreEqual(expected.AidYear, actual.AidYear);
             }
         }
+
+
+        //Get
+        //Version 9.0.0 / 9.1.0
+        //GetFinancialAidApplicationOutcomesAsync
+
+        //Example success 
+        [TestMethod]
+        public async Task financialAidApplicationOutcomesController_GetFinancialAidApplicationOutcomesAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AdmissionApplications" },
+                    { "action", "GetFinancialAidApplicationOutcomesAsync" }
+                };
+            HttpRoute route = new HttpRoute("admission-applications", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            financialAidApplicationOutcomesController.Request.SetRouteData(data);
+            financialAidApplicationOutcomesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewFinancialAidApplicationOutcomes);
+
+            var controllerContext = financialAidApplicationOutcomesController.ControllerContext;
+            var actionDescriptor = financialAidApplicationOutcomesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.FinancialAidApplicationOutcome>, int>(financialAidApplicationOutcomeDtos, 5);
+            financialAidApplicationOutcomesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            financialAidApplicationOutcomesServiceMock.Setup(x => x.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<FinancialAidApplicationOutcome>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+            var resp = await financialAidApplicationOutcomesController.GetFinancialAidApplicationOutcomesAsync(new Web.Http.Models.Paging(3, 0), criteriaFilter);
+
+            Object filterObject;
+            financialAidApplicationOutcomesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewFinancialAidApplicationOutcomes));
+
+        }
+
+        //Example exception
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task financialAidApplicationOutcomesController_GetFinancialAidApplicationOutcomesAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AdmissionApplications" },
+                    { "action", "GetFinancialAidApplicationOutcomesAsync" }
+                };
+            HttpRoute route = new HttpRoute("admission-applications", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            financialAidApplicationOutcomesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = financialAidApplicationOutcomesController.ControllerContext;
+            var actionDescriptor = financialAidApplicationOutcomesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.FinancialAidApplicationOutcome>, int>(financialAidApplicationOutcomeDtos, 5);
+
+                financialAidApplicationOutcomesServiceMock.Setup(x => x.GetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<FinancialAidApplicationOutcome>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                financialAidApplicationOutcomesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view financial-aid-application-outcomes."));
+                var resp = await financialAidApplicationOutcomesController.GetFinancialAidApplicationOutcomesAsync(new Web.Http.Models.Paging(3, 0), criteriaFilter);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
+
+        //Get by Id
+        //Version 9.0.0 / 9.1.0
+        //GetFinancialAidApplicationOutcomesByGuidAsync
+
+        //Example success 
+        [TestMethod]
+        public async Task financialAidApplicationOutcomesController_GetFinancialAidApplicationOutcomesByGuidAsync_Permissions()
+        {
+            var id = "bbd216fb-0fc5-4f44-ae45-42d3cdd1e89a";
+            var financialAidApplicationOutcome = financialAidApplicationOutcomeDtos.FirstOrDefault(i => i.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AdmissionApplications" },
+                    { "action", "GetFinancialAidApplicationOutcomesByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("admission-applications", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            financialAidApplicationOutcomesController.Request.SetRouteData(data);
+            financialAidApplicationOutcomesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewFinancialAidApplicationOutcomes);
+
+            var controllerContext = financialAidApplicationOutcomesController.ControllerContext;
+            var actionDescriptor = financialAidApplicationOutcomesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.FinancialAidApplicationOutcome>, int>(financialAidApplicationOutcomeDtos, 5);
+            financialAidApplicationOutcomesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            financialAidApplicationOutcomesServiceMock.Setup(x => x.GetByIdAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(financialAidApplicationOutcome);
+            var resp = await financialAidApplicationOutcomesController.GetFinancialAidApplicationOutcomesByGuidAsync(id);
+
+            Object filterObject;
+            financialAidApplicationOutcomesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewFinancialAidApplicationOutcomes));
+
+        }
+
+        //Example exception
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task financialAidApplicationOutcomesController_GetFinancialAidApplicationOutcomesByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "AdmissionApplications" },
+                    { "action", "GetFinancialAidApplicationOutcomesByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("admission-applications", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            financialAidApplicationOutcomesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = financialAidApplicationOutcomesController.ControllerContext;
+            var actionDescriptor = financialAidApplicationOutcomesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.FinancialAidApplicationOutcome>, int>(financialAidApplicationOutcomeDtos, 5);
+
+                financialAidApplicationOutcomesServiceMock.Setup(x => x.GetByIdAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                financialAidApplicationOutcomesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view financial-aid-application-outcomes."));
+                var resp = await financialAidApplicationOutcomesController.GetFinancialAidApplicationOutcomesByGuidAsync(string.Empty);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
     }
 }

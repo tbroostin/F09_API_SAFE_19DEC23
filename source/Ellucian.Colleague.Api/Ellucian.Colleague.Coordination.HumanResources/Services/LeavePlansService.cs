@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -14,17 +14,15 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Services
 {
     [RegisterType]
     public class LeavePlansService : BaseCoordinationService, ILeavePlansService
     {
-
         private readonly IHumanResourcesReferenceDataRepository _referenceDataRepository;
         private readonly ILeavePlansRepository _leavePlansRepository;
-
-
         public LeavePlansService(
 
             IHumanResourcesReferenceDataRepository referenceDataRepository,
@@ -36,126 +34,145 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, configurationRepository: configurationRepository)
         {
-
             _referenceDataRepository = referenceDataRepository;
             _leavePlansRepository = leavePlansRepository;
         }
 
-        //get leave types
-        private IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.LeaveType> _leaveTypes = null;
-        private async Task<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.LeaveType>> GetLeaveTypesAsync(bool bypassCache)
-        {
-            if (_leaveTypes == null)
-            {
-                _leaveTypes = await _referenceDataRepository.GetLeaveTypesAsync(bypassCache);
-            }
-            return _leaveTypes;
-        }
-        //get employment frequences
-        private IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.EmploymentFrequency> _employFrequencies = null;
-        private async Task<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.EmploymentFrequency>> GetEmplymentFrequencies(bool bypassCache)
-        {
-            if (_employFrequencies == null)
-            {
-                _employFrequencies = await _referenceDataRepository.GetEmploymentFrequenciesAsync(bypassCache);
-            }
-            return _employFrequencies;
-        }
-
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
-        /// Gets all leave-plans
+        /// Gets a collection of LeavePlans DTO objects
         /// </summary>
         /// <returns>Collection of LeavePlans DTO objects</returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.LeavePlans>, int>> GetLeavePlansAsync(int offset, int limit, bool bypassCache = false)
         {
             var leavePlansCollection = new List<Ellucian.Colleague.Dtos.LeavePlans>();
-            int leavePlansCount = 0;
+            Tuple<IEnumerable<LeavePlan>, int> leavePlansEntities = null;
+
             try
             {
-                var leavePlansEntities = await _leavePlansRepository.GetLeavePlansAsync(offset, limit, bypassCache);
-                if (leavePlansEntities != null)
-                {
-                    leavePlansCount = leavePlansEntities.Item2;
-                    foreach (var leavePlans in leavePlansEntities.Item1)
-                    {
-                        var leaveplanDto = await ConvertLeavePlansEntityToDto(leavePlans, bypassCache);
-                        if (leaveplanDto != null)
-                        {
-                            leavePlansCollection.Add(leaveplanDto);
-                        }
-
-                    }
-                    return new Tuple<IEnumerable<LeavePlans>, int>(leavePlansCollection, leavePlansCount);
-
-                }
-                else
-                {
-                    return new Tuple<IEnumerable<LeavePlans>, int>(new List<Dtos.LeavePlans>(), 0);
-
-                }
+                leavePlansEntities = await _leavePlansRepository.GetLeavePlansAsync(offset, limit, bypassCache);
             }
-            catch (Exception e)
+            catch (RepositoryException ex)
             {
-                throw new ArgumentException(e.Message);
+                IntegrationApiExceptionAddError(ex, "Bad.Data");
+                throw IntegrationApiException;
             }
-        }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Bad.Data");
+                throw IntegrationApiException;
+            }
 
+            if ((leavePlansEntities == null) || (leavePlansEntities.Item1 == null) ||(!leavePlansEntities.Item1.Any()))
+            {
+                return new Tuple<IEnumerable<LeavePlans>, int>(new List<Dtos.LeavePlans>(), 0);
+            }
+            foreach (var leavePlans in leavePlansEntities.Item1)
+            {
+                try
+                {
+                    leavePlansCollection.Add(await ConvertLeavePlansEntityToDto(leavePlans, bypassCache));
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "Bad.Data");
+                }
+            }
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            return new Tuple<IEnumerable<LeavePlans>, int>(leavePlansCollection, leavePlansEntities.Item2);
+        }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
-        /// Get a LeavePlans from its GUID
+        /// Get a LeavePlans DTO from its GUID
         /// </summary>
         /// <returns>LeavePlans DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.LeavePlans> GetLeavePlansByGuidAsync(string guid, bool bypassCache = false)
         {
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid", "A GUID is required to obtain a leave-plans.");
+            }
+
+            LeavePlan leavePlanEntity = null;
             try
             {
-                return await ConvertLeavePlansEntityToDto(await _leavePlansRepository.GetLeavePlansByIdAsync(guid),bypassCache);
+                leavePlanEntity = await _leavePlansRepository.GetLeavePlansByIdAsync(guid);
             }
-            catch (KeyNotFoundException ex)
+            catch (RepositoryException ex)
             {
-                throw new KeyNotFoundException("leave-plans not found for GUID " + guid, ex);
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
             }
-            catch (InvalidOperationException ex)
+            catch (KeyNotFoundException)
             {
-                throw new KeyNotFoundException("leave-plans not found for GUID " + guid, ex);
+                throw new KeyNotFoundException(string.Format("No leave-plans was found for GUID '{0}'", guid));
             }
-        }
 
+            Ellucian.Colleague.Dtos.LeavePlans retval = null;
+            try
+            {
+                 retval = await ConvertLeavePlansEntityToDto(leavePlanEntity, bypassCache);
+            }
+            catch (KeyNotFoundException)
+            {
+                throw new KeyNotFoundException(string.Format("No leave-plans was found for GUID '{0}'", guid));
+            }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+            return retval;
+
+        }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
-        /// Converts a Leavplan domain entity to its corresponding LeavePlans DTO
+        /// Converts a LeavePlan domain entity to its corresponding LeavePlans DTO
         /// </summary>
-        /// <param name="source">Leavplan domain entity</param>
+        /// <param name="source">LeavePlan domain entity</param>
         /// <returns>LeavePlans DTO</returns>
-        private async  Task<Ellucian.Colleague.Dtos.LeavePlans> ConvertLeavePlansEntityToDto(LeavePlan source, bool bypassCache)
+        private async Task<Ellucian.Colleague.Dtos.LeavePlans> ConvertLeavePlansEntityToDto(LeavePlan source, bool bypassCache = false)
         {
-            var leavePlans = new Ellucian.Colleague.Dtos.LeavePlans();
+            var leavePlans = new Ellucian.Colleague.Dtos.LeavePlans()
+            {
+                Id = source.Guid,
+                Code = source.Id,
+                Title = source.Title,
+                StartOn = source.StartDate,
+                EndOn = source.EndDate,
+                WaitDays = source.WaitDays
+            };
 
-            leavePlans.Id = source.Guid;
-            leavePlans.Code = source.Id;
-            leavePlans.Title = source.Title;
-            // get type
             if (!string.IsNullOrEmpty(source.Type))
             {
-                var types = await GetLeaveTypesAsync(bypassCache);
-                if (types == null || !types.Any())
+                try
                 {
-                    throw new ArgumentException("Leave Types are missing.");
+                    var leaveTypeGuid = await _referenceDataRepository.GetLeaveTypesGuidAsync(source.Type);
+                    if (string.IsNullOrEmpty(leaveTypeGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("No Guid found, Entity:'HR-VALCODES, LEAVE.TYPES', Record ID:'", source.Type, "'")
+                            , "GUID.Not.Found", source.Guid, source.Id);
+                    }
+                    else
+                    {
+                        leavePlans.Type = new GuidObject2(leaveTypeGuid);
+                    }
                 }
-                var type = types.FirstOrDefault(c => c.Code == source.Type);
-                if (type == null)
+                catch (Exception ex)
                 {
-                    throw new ArgumentException("Invalid leave type '" + source.Type + "' in the arguments");
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", source.Guid, source.Id);
                 }
-                leavePlans.Type = new GuidObject2(type.Guid);
             }
-            // get accrualMethods
+
             if (!string.IsNullOrEmpty(source.AccrualMethod))
-            { 
-                switch(source.AccrualMethod.ToLower())
+            {
+                switch (source.AccrualMethod.ToLower())
                 {
                     case "s":
                         leavePlans.AccrualMethod = Dtos.EnumProperties.LeavePlansAccrualMethod.Payrollaccrual;
@@ -171,8 +188,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                         break;
                 }
             }
-            //get usage. 
-            if (string.Equals(source.AllowNegative, "Y", StringComparison.OrdinalIgnoreCase))
+
+            if ((!string.IsNullOrEmpty(source.AllowNegative)) 
+                && (string.Equals(source.AllowNegative, "Y", StringComparison.OrdinalIgnoreCase)))
             {
                 leavePlans.Usage = Dtos.EnumProperties.LeavePlansUsage.Beforeaccrued;
             }
@@ -180,51 +198,66 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 leavePlans.Usage = Dtos.EnumProperties.LeavePlansUsage.Afteraccrued;
             }
-            //get starton & endOn
-            leavePlans.StartOn = source.StartDate;
-            leavePlans.EndOn = source.EndDate;
+
             //get year start month and day
             if (source.YearlyStartDate.HasValue)
             {
-                var planStart = new Dtos.DtoProperties.DateDtoProperty();
-                planStart.Day = int.Parse(source.YearlyStartDate.Value.ToString().Split("/".ToCharArray())[1]);
-                planStart.Month = int.Parse(source.YearlyStartDate.Value.ToString().Split("/".ToCharArray())[0]);
-                leavePlans.PlanYearStart = planStart;
+                try
+                {
+                    var planStart = new Dtos.DtoProperties.DateDtoProperty();
+                    planStart.Day = int.Parse(source.YearlyStartDate.Value.ToString().Split("/".ToCharArray())[1]);
+                    planStart.Month = int.Parse(source.YearlyStartDate.Value.ToString().Split("/".ToCharArray())[0]);
+                    leavePlans.PlanYearStart = planStart;
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "Bad.Data", source.Guid, source.Id);
+                }
             }
-            //get roll over leave type
+
             if (!string.IsNullOrEmpty(source.RollOverLeaveType))
             {
-                var types = await GetLeaveTypesAsync(bypassCache);
-                if (types == null || !types.Any())
+                try
                 {
-                    throw new ArgumentException("Leave Types are missing.");
+                    var rolloverLeaveTypeGuid = await _referenceDataRepository.GetLeaveTypesGuidAsync(source.RollOverLeaveType);
+                    if (string.IsNullOrEmpty(rolloverLeaveTypeGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("No Guid found, Entity:'HR-VALCODES, LEAVE.TYPES', Record ID:'", source.RollOverLeaveType, "'")
+                            , "GUID.Not.Found", source.Guid, source.Id);
+                    }
+                    else
+                    {
+                        leavePlans.AlternateRolloverLeaveType = new GuidObject2(rolloverLeaveTypeGuid);
+                    }
                 }
-                var type = types.FirstOrDefault(c => c.Code == source.RollOverLeaveType);
-                if (type == null)
+                catch (Exception ex)
                 {
-                    throw new ArgumentException("Invalid leave type '" + source.RollOverLeaveType + "' in the arguments");
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", source.Guid, source.Id);
                 }
-                leavePlans.AlternateRolloverLeaveType = new GuidObject2(type.Guid);
             }
-            //get accural frequency
+
             if (!string.IsNullOrEmpty(source.AccuralFrequency))
             {
-                var frequencies = await GetEmplymentFrequencies(bypassCache);
-                if (frequencies == null || !frequencies.Any())
+                try
                 {
-                    throw new ArgumentException("Employment Frequencies are missing.");
+                    var employmentFrequencyGuid = await _referenceDataRepository.GetEmploymentFrequenciesGuidAsync(source.AccuralFrequency);
+                    if (string.IsNullOrEmpty(employmentFrequencyGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("No Guid found, Entity:'HR-VALCODES, TIME.FREQUENCIES', Record ID:'", source.AccuralFrequency, "'")
+                            , "GUID.Not.Found", source.Guid, source.Id);
+                    }
+                    else
+                    {
+                        leavePlans.AccrualFrequency = new GuidObject2(employmentFrequencyGuid);
+                    }
                 }
-                var type = frequencies.FirstOrDefault(c => c.Code == source.AccuralFrequency);
-                if (type == null)
+                catch (Exception ex)
                 {
-                    throw new ArgumentException("Invalid employment frequency '" + source.Type + "' in the arguments");
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", source.Guid, source.Id);
                 }
-                leavePlans.AccrualFrequency = new GuidObject2(type.Guid);
             }
-            //get wait Days
-            leavePlans.WaitDays = source.WaitDays;
+
             return leavePlans;
         }
-
     }
 }

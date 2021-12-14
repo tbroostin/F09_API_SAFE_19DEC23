@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -22,6 +22,7 @@ using Ellucian.Colleague.Coordination.Base.Services;
 using slf4net;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Text.RegularExpressions;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -40,14 +41,21 @@ namespace Ellucian.Colleague.Api.Controllers
         private const string EEDM_WEBAPI_RESOURCES_CACHE_KEY = "EEDM_WEBAPI_RESOURCES_CACHE_KEY";
         private const string BulkRequestMediaType = "application/vnd.hedtech.integration.bulk-requests.v1.0.0+json";
         private const string IsBulkSupported = "isBulkSupported";
+        private const string appJsonContentType = "application/json";
+        private const string mediaFormat = "application/vnd.hedtech.integration";
+        private const string httpMethodConstraintName = "httpMethod";
+        private const string headerVersionConstraintName = "headerVersion";
+        private const string isEEdmSupported = "isEedmSupported";
 
         private ICacheProvider _cacheProvider;
         private readonly IBulkLoadRequestService _bulkLoadRequestService;
         private readonly ILogger _logger;
         private readonly IEthosApiBuilderService _ethosApiBuilderService;
+        private readonly List<string> versionedSupportedMethods = new List<string>() { "put", "post", "get" };
+        private readonly List<string> versionlessSupportedMethods = new List<string>() { "get", "delete" };
 
         /// <summary>
-        /// 
+        /// ResourcesController
         /// </summary>
         public ResourcesController(IBulkLoadRequestService bulkLoadRequestService,
             IEthosApiBuilderService ethosApiBuilderService, ICacheProvider cacheProvider, ILogger logger)
@@ -65,12 +73,7 @@ namespace Ellucian.Colleague.Api.Controllers
         public async Task<IEnumerable<ApiResources>> GetResources()
         {
             List<ApiResources> resourcesDtoList = new List<ApiResources>();
-            string mediaFormat = "application/vnd.hedtech.integration";
-            string httpMethodConstraintName = "httpMethod";
-            string headerVersionConstraintName = "headerVersion";
-            string isEEdmSupported = "isEedmSupported";
             
-
             var routeCollection = Configuration.Routes;
             var httpRoutes = routeCollection
                 .Where(r => r.Defaults.Keys != null && r.Defaults.Keys.Contains(isEEdmSupported) && r.Defaults[isEEdmSupported].Equals(true))
@@ -126,7 +129,7 @@ namespace Ellucian.Colleague.Api.Controllers
             var keywords = validateQueryStringFilter.ValidQueryParameters.ToList();
             string[] headerVersionConstraintValue = null;
 
-            string appJsonContentType = "application/json";
+           
             Assembly asm = Assembly.GetExecutingAssembly();
 
             var controlleractionlist = asm.GetTypes()
@@ -141,14 +144,26 @@ namespace Ellucian.Colleague.Api.Controllers
                         })
                         .OrderBy(x => x.Controller).ThenBy(x => x.Action).ToList();
 
-            
-            var deprecatedResources = new DeprecatedResourcesRepository().Get();
 
+            List<DeprecatedResources> deprecatedResources = null;
 
-         
+            var deprecatedResourcesCacheKey = string.Concat(EEDM_WEBAPI_RESOURCES_CACHE_KEY, "_DeprecatedResources");
 
+            if (_cacheProvider != null && _cacheProvider.Contains(deprecatedResourcesCacheKey))
+            {
+                deprecatedResources = _cacheProvider[deprecatedResourcesCacheKey] as List<DeprecatedResources>;
+            }
+            else
+            {
+                deprecatedResources = new DeprecatedResourcesRepository().Get();
 
-            //httpRoutes = httpRoutes.Where(x => x.RouteTemplate.StartsWith("ledger-activities")).ToList();
+                _cacheProvider.Add(deprecatedResourcesCacheKey, deprecatedResources, new System.Runtime.Caching.CacheItemPolicy()
+                {
+                    AbsoluteExpiration = DateTimeOffset.Now.AddDays(1)
+                });
+            }
+          
+            //httpRoutes = httpRoutes.Where(x => x.RouteTemplate.StartsWith("admission-applications")).ToList();
             foreach (IHttpRoute httpRoute in httpRoutes)
             {
                 try
@@ -206,13 +221,16 @@ namespace Ellucian.Colleague.Api.Controllers
                     {
                         try
                         {
-                            var contentTypeConstraint = ((Web.Http.Routes.ContentTypeConstraint)constraints["contentType"])
-                                            .GetType();
+                            if (constraints.ContainsKey("contentType"))
+                            {
+                                var contentTypeConstraint = ((Web.Http.Routes.ContentTypeConstraint)constraints["contentType"])
+                                                .GetType();
 
-                            var pField2 = contentTypeConstraint
-                                              .GetField("contentType", BindingFlags.NonPublic | BindingFlags.Instance);
-                            var contentType = (string)pField2.GetValue(((Web.Http.Routes.ContentTypeConstraint)constraints["contentType"]));
-                            headerVersionConstraintValue = new string[] { contentType  };
+                                var pField2 = contentTypeConstraint
+                                                  .GetField("contentType", BindingFlags.NonPublic | BindingFlags.Instance);
+                                var contentType = (string)pField2.GetValue(((Web.Http.Routes.ContentTypeConstraint)constraints["contentType"]));
+                                headerVersionConstraintValue = new string[] { contentType };
+                            }
                         }
                         catch (Exception ex) { //do not throw 
                         }
@@ -241,7 +259,7 @@ namespace Ellucian.Colleague.Api.Controllers
                         }
                     }
 
-                    /* To include PageSize in the response uncomment the follwoing lines:
+                    /* To include PageSize in the response uncomment the following lines:
                             1)  pageSize variable declaration
                             2)  pageSize set using DefaultPageSize()  
                             3) the two instances where pageSize is set one the Dtos.Representation  */
@@ -277,7 +295,7 @@ namespace Ellucian.Colleague.Api.Controllers
                                 )
                             {
                                 filters = LegacyFilters(keywords, type, action.ToString());
-                                //namedQueries = LegacyNamedQueries(keywords, type, action.ToString());
+                                namedQueries = LegacyNamedQueries(keywords, type, controllerAction);
                             }
                             else
                             {
@@ -368,6 +386,8 @@ namespace Ellucian.Colleague.Api.Controllers
                     {
                         var tempXMediaType = headerVersionConstraintValue[0];
 
+                        var versionOnly = ExtractVersionNumberOnly(tempXMediaType);
+
                         if (resourceDto.Representations == null)
                         {
                             resourceDto.Representations = new List<Dtos.Representation>();
@@ -384,14 +404,16 @@ namespace Ellucian.Colleague.Api.Controllers
                                 {
                                     allowedMethod.ToLower()
                                 },
+                                //PageSize = pageSize
                                 Filters = filters.Any() ? filters : null,
                                 NamedQueries = namedQueries.Any() ? namedQueries : null,
                                 DeprecationNotice = deprecationNotice != null ? deprecationNotice : null,
-                                //PageSize = pageSize
+                                VersionNumber = versionOnly
 
                             };
 
                             InsertGetAllPatterns(newRepresentation, tempXMediaType, bulkLoadSupport, isBulkSupportedOnRoute);
+                            AddMajorVersion(resourceDto.Representations, newRepresentation);
 
                             resourceDto.Representations.Add(newRepresentation);
                         }
@@ -403,6 +425,7 @@ namespace Ellucian.Colleague.Api.Controllers
                             representationDto.Methods.Add(allowedMethod.ToLower());
 
                             InsertGetAllPatterns(representationDto, tempXMediaType, bulkLoadSupport, isBulkSupportedOnRoute);
+                            AddMajorVersion(resourceDto.Representations, representationDto);
                         }
                         else if ((representationDto.Methods.Contains(allowedMethod.ToLower())) && (filters.Any()))
                         {
@@ -424,10 +447,18 @@ namespace Ellucian.Colleague.Api.Controllers
             try
             {
                 var allExtendedEthosConfigurations = (await _ethosApiBuilderService.GetAllExtendedEthosConfigurations(bypassCache)).ToList();
+
+                allExtendedEthosConfigurations = allExtendedEthosConfigurations.Where(x => x.HttpMethodsSupported != null && x.HttpMethodsSupported.Any()).ToList();
+
+               // allExtendedEthosConfigurations = (allExtendedEthosConfigurations.Where(x => x.ApiResourceName == "x-parking-tickets")).ToList();
                 foreach (var extendedEthosConfiguration in allExtendedEthosConfigurations)
                 {
-                    var apiName = extendedEthosConfiguration.ApiResourceName;
-                   
+                    var originalApiName = extendedEthosConfiguration.ApiResourceName;
+
+                    var parentAPI = extendedEthosConfiguration.ParentApi;
+
+                    var apiName = (string.IsNullOrEmpty(parentAPI)) ? originalApiName : parentAPI;
+
                     ApiResources resourceDto = null;
                     Dtos.DeprecationNotice deprecationNotice = null;
                     List<string> filters = new List<string>();
@@ -439,6 +470,7 @@ namespace Ellucian.Colleague.Api.Controllers
                         resourceDto = new ApiResources() { Name = apiName };
                         resourcesList.Add(resourceDto);
                     }
+                    
                     if (!string.IsNullOrEmpty(extendedEthosConfiguration.DeprecationNotice))
                     {
                         deprecationNotice = new Dtos.DeprecationNotice()
@@ -472,9 +504,7 @@ namespace Ellucian.Colleague.Api.Controllers
                             }
                         }
                     }
-
-                    resourceDto = resourcesList.FirstOrDefault(res => res.Name.Equals(apiName, StringComparison.OrdinalIgnoreCase));
-                    var allowedMethod = "get";
+                    resourceDto = resourcesList.FirstOrDefault(res => res.Name.Equals(apiName, StringComparison.OrdinalIgnoreCase));                
                     if (resourceDto != null)
                     {
                         if (resourceDto.Representations == null) resourceDto.Representations = new List<Dtos.Representation>();
@@ -482,13 +512,14 @@ namespace Ellucian.Colleague.Api.Controllers
                         var represDto = resourceDto.Representations.FirstOrDefault(repr => repr.XMediaType.Contains(appJsonContentType));
                         if (represDto == null)
                         {
+                            var supported =  extendedEthosConfiguration.HttpMethodsSupported
+                                .Where(z => versionlessSupportedMethods.Contains(z.ToLower()))
+                                .Select(x => x.ToLower()).ToList();
+
                             var newRepresentationVersionless = new Dtos.Representation()
                             {
                                 XMediaType = appJsonContentType,
-                                Methods = new List<string>()
-                                {
-                                    allowedMethod.ToLower()
-                                },
+                                Methods = supported,                               
                                 Filters = filters != null && filters.Any() ? filters : null,
                                 NamedQueries = namedQueries != null && namedQueries.Any() ? namedQueries : null,
                                 DeprecationNotice = deprecationNotice != null ? deprecationNotice : null,
@@ -499,7 +530,8 @@ namespace Ellucian.Colleague.Api.Controllers
                             InsertGetAllPatterns(newRepresentationVersionless, appJsonContentType, bulkLoadSupport, false);
                             resourceDto.Representations.Add(newRepresentationVersionless);
                         }
-                        else
+                        // alternative representations will never be the default route
+                        else if (string.IsNullOrEmpty(parentAPI)) 
                         {
                             // If a custom endpoint has already been added, and defined as versionless, 
                             // then we need to determine if this route should be the versionless instead.  
@@ -519,22 +551,32 @@ namespace Ellucian.Colleague.Api.Controllers
                             }
                         }
 
+
+                        var xMediaType = (string.IsNullOrEmpty(parentAPI))
+                            ? mediaFormat + ".v" + extendedEthosConfiguration.ApiVersionNumber + "+json"
+                            : mediaFormat + "." + originalApiName + ".v" + extendedEthosConfiguration.ApiVersionNumber + "+json";
+
+                        var versionSupported = extendedEthosConfiguration.HttpMethodsSupported
+                            .Where(z => versionedSupportedMethods.Contains(z.ToLower()))
+                            .Select(x => x.ToLower()).ToList();
+
                         var newRepresentation = new Dtos.Representation()
                         {
-                            XMediaType = mediaFormat + ".v" + extendedEthosConfiguration.ApiVersionNumber + "+json",
-                            Methods = new List<string>()
-                                    {
-                                        allowedMethod.ToLower()
-                                    },
+                            XMediaType = xMediaType,
+                            Methods = versionSupported, 
                             Filters = filters != null && filters.Any() ? filters : null,
                             NamedQueries = namedQueries != null && namedQueries.Any() ? namedQueries : null,
                             DeprecationNotice = deprecationNotice != null ? deprecationNotice : null,
                             //PageSize = pageSize
+                            VersionNumber = extendedEthosConfiguration.ApiVersionNumber
                         };
 
-                        InsertGetAllPatterns(newRepresentation, appJsonContentType, bulkLoadSupport, false);
+                        InsertGetAllPatterns(newRepresentation, xMediaType, bulkLoadSupport, false);
 
                         resourceDto.Representations.Add(newRepresentation);
+
+                        AddMajorVersion(resourceDto.Representations, newRepresentation);
+                        
                     }
                 }
             }
@@ -550,7 +592,108 @@ namespace Ellucian.Colleague.Api.Controllers
             });
             return resourcesList;
         }
-        
+
+        /// <summary>
+        /// Extract the version number from a customMediaType.  Extracts integers or semantic versions.
+        /// </summary>
+        /// <param name="original"></param>
+        /// <returns>Version number.  May contain none, or unknown number of decimals</returns>
+        private string ExtractVersionNumberOnly(string original)
+        {
+            var regex = new Regex(@"(?:(\d+)\.)?(?:(\d+)\.)?(?:(\d+)\.\d+)|(?:(\d+))", RegexOptions.Compiled);
+            Match semanticVersion = regex.Match(original);
+            if (semanticVersion.Success)
+            {
+                return semanticVersion.Value;
+            }
+            else return string.Empty;
+        }
+
+        /// <summary>
+        /// publishing the major version route
+        /// </summary>
+        /// <param name="representations"></param>
+        /// <param name="representationToCompare"></param>    
+        private void AddMajorVersion(List<Dtos.Representation> representations , Dtos.Representation representationToCompare)
+        {
+            if (representationToCompare == null || representations == null 
+                || string.IsNullOrEmpty(representationToCompare.VersionNumber)
+                || string.IsNullOrEmpty(representationToCompare.XMediaType))
+                return ;
+            try
+            {
+                //does the major version representation already exist for this mediaType?
+                //var found = representations.Any(r => r.XMediaType == representationToCompare.XMediaType
+                //    && r.MajorVersionAdded);
+                
+                //if (found)
+                //    return;
+
+               
+
+                //versionNumber is expected to be a string in the format {i} or {i.i.i} where i is an integer
+                var versionNumber = representationToCompare.VersionNumber;
+                //var xMediaType = representationToCompare.XMediaType;
+                var first = versionNumber.Split(new char[] { '.' })
+                       .Select(xx => int.Parse(xx)).ToList();
+
+                // if the version isnt found, or is already a single digit, then we dont need to do anything else
+                if (first == null || !first.Any() || first.Count == 1)
+                {
+                    return;
+                }
+                
+                var majorVersionXMediaType = representationToCompare
+                        .XMediaType.Replace(versionNumber, first[0].ToString());
+                //does the major version representation already exist for this mediaType?
+                var found = representations.Any(r => r.XMediaType == majorVersionXMediaType);
+
+                if (found)
+                    return;
+
+                var majorVersionRepresentation = new Dtos.Representation()
+                {
+                    //GetAllPatterns = representationToCompare.GetAllPatterns,
+                    MajorVersionAdded = representationToCompare.MajorVersionAdded,
+                    DeprecationNotice = representationToCompare.DeprecationNotice,
+                    Filters = representationToCompare.Filters,
+                    Methods = representationToCompare.Methods,
+                    NamedQueries = representationToCompare.NamedQueries,
+                    VersionNumber = representationToCompare.VersionNumber,
+                    XMediaType = representationToCompare.XMediaType
+                };
+                majorVersionRepresentation.XMediaType = majorVersionXMediaType;
+                //update InsertGetAllPatterns
+                if ((representationToCompare.GetAllPatterns != null) && (representationToCompare.GetAllPatterns.Any()))
+                {
+                    var getAllPatterns = new List<GetAllPattern>();
+                    foreach (var pattern in representationToCompare.GetAllPatterns)
+                    {
+                        if (pattern.Name.Equals("paging"))
+                        {
+                            GetAllPattern getAllPattern = new GetAllPattern();
+                            getAllPattern.XMediaType = pattern.XMediaType.Replace(versionNumber, first[0].ToString());
+                            getAllPattern.Name = pattern.Name;
+                            getAllPattern.Method = pattern.Method;
+                            getAllPatterns.Add(getAllPattern);
+                        }
+                        else
+                        {
+                            getAllPatterns.Add(pattern);
+                        }
+                    }
+                    if (getAllPatterns.Any())
+                        majorVersionRepresentation.GetAllPatterns = getAllPatterns;
+                }
+               // majorVersionRepresentation.MajorVersionAdded = true;
+                representations.Add(majorVersionRepresentation);
+            }
+            catch (Exception) {  // do nothing 
+            }
+            return;
+
+        }
+
         /// <summary>
         /// check if there is a get, if there is check and see if paging is already in the getallpatterns section, if not add it
         /// </summary>
@@ -628,7 +771,21 @@ namespace Ellucian.Colleague.Api.Controllers
 
                 if (queryStringFilter != null)
                 {
-                    filters = IterateProperties("criteria", queryStringFilter.FilterType).ToList();
+                    var filterCacheKey = string.Concat("criteria_", controllerAction, "_", T.FullName);
+
+                    if (_cacheProvider != null && _cacheProvider.Contains(filterCacheKey))
+                    {
+                        filters = _cacheProvider[filterCacheKey] as List<string>;
+                    }
+                    else
+                    {
+                        filters = IterateProperties("criteria", queryStringFilter.FilterType).ToList();
+
+                        _cacheProvider.Add(filterCacheKey, filters, new System.Runtime.Caching.CacheItemPolicy()
+                        {
+                            AbsoluteExpiration = DateTimeOffset.Now.AddDays(1)
+                        });
+                    }
                 }
 
                 var namedFilters = queryStringFilters.Where(x => x.FilterGroupName != "criteria");
@@ -637,8 +794,29 @@ namespace Ellucian.Colleague.Api.Controllers
                     foreach (var namedFilter in namedFilters)
                     {
                         NamedQuery namedQuery = new NamedQuery();
+                        List<string> namedQueryFilters = null;
+
                         namedQuery.Name = namedFilter.FilterGroupName;
-                        namedQuery.Filters = IterateProperties(namedFilter.FilterGroupName, namedFilter.FilterType).ToList();
+                        var filterCacheKey = string.Concat(namedFilter.FilterGroupName, "_", controllerAction, "_", T.FullName);
+
+                        if (_cacheProvider != null && _cacheProvider.Contains(filterCacheKey))
+                        {
+                            namedQueryFilters = _cacheProvider[filterCacheKey] as List<string>;
+                        }
+                        else
+                        {
+                            //filters = IterateProperties("criteria", queryStringFilter.FilterType).ToList();
+                            namedQueryFilters = IterateProperties(namedFilter.FilterGroupName, namedFilter.FilterType).ToList();
+                            _cacheProvider.Add(filterCacheKey, namedQueryFilters, new System.Runtime.Caching.CacheItemPolicy()
+                            {
+                                AbsoluteExpiration = DateTimeOffset.Now.AddDays(1)
+                            });
+                        }
+
+                        if (namedQueryFilters != null && namedQueryFilters.Any())
+                        {
+                            namedQuery.Filters = namedQueryFilters;
+                        }
                         namedQueries.Add(namedQuery);
                     }
                 }
@@ -665,6 +843,8 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>string</returns>
         private string GetDisplayName(PropertyInfo prop)
         {
+            if (prop == null)
+                return string.Empty;
 
             var dataMemberAttributes = (DataMemberAttribute[])prop.GetCustomAttributes(typeof(DataMemberAttribute), false);
             if (dataMemberAttributes != null && dataMemberAttributes.Any())
@@ -708,11 +888,17 @@ namespace Ellucian.Colleague.Api.Controllers
         private bool IsFilter(PropertyInfo prop, string filtername)
         {
             FilterPropertyAttribute[] customAttributes = (FilterPropertyAttribute[])prop.GetCustomAttributes(typeof(FilterPropertyAttribute), false);  //prop.GetCustomAttributes();
-            foreach (var customAttribute in customAttributes)
+            if (customAttributes != null)
             {
-                if ((customAttribute.Name.Contains(filtername)) && (!customAttribute.Ignore))
+                foreach (var customAttribute in customAttributes)
                 {
-                    return true;
+                    if (customAttribute.Name != null)
+                    {
+                        if ((customAttribute.Name.Contains(filtername)) && (!customAttribute.Ignore))
+                        {
+                            return true;
+                        }
+                    }
                 }
             }
             return false;
@@ -796,11 +982,14 @@ namespace Ellucian.Colleague.Api.Controllers
             {
                 foreach (var attr in attrs)
                 {
-                    var queryParameters = attr.ValidQueryParameters.Where(q => !(string.IsNullOrEmpty(q)) && !keywords.Contains(q));
-                    foreach (var queryParameter in queryParameters)
+                    if (attr.ValidQueryParameters != null)
                     {
-                        if (!(string.IsNullOrEmpty(queryParameter)))
-                            filters.Add(queryParameter);
+                        var queryParameters = attr.ValidQueryParameters.Where(q => !(string.IsNullOrEmpty(q)) && !keywords.Contains(q));
+                        foreach (var queryParameter in queryParameters)
+                        {
+                            if (!(string.IsNullOrEmpty(queryParameter)))
+                                filters.Add(queryParameter);
+                        }
                     }
                 }
             }
@@ -817,19 +1006,28 @@ namespace Ellucian.Colleague.Api.Controllers
         private List<NamedQuery> LegacyNamedQueries(List<string> keywords, Type T, string controllerAction)
         {
             var filters = new List<NamedQuery>();
-
-            ValidateQueryStringFilter[] attrs = (ValidateQueryStringFilter[])T.GetMethod(controllerAction).GetCustomAttributes(typeof(ValidateQueryStringFilter), false);
-            if (attrs != null)
+            try
             {
-                foreach (var attr in attrs)
+                ValidateQueryStringFilter[] attrs = (ValidateQueryStringFilter[])T.GetMethod(controllerAction).GetCustomAttributes(typeof(ValidateQueryStringFilter), false);
+                if (attrs != null)
                 {
-                    var queryParameters = attr.NamedQueries.Where(q => !(string.IsNullOrEmpty(q)) && !keywords.Contains(q));
-                    foreach (var queryParameter in queryParameters)
+                    foreach (var attr in attrs)
                     {
-                        if (!(string.IsNullOrEmpty(queryParameter)))
-                            filters.Add( new NamedQuery() { Name = queryParameter, Filters = new List<string>() { queryParameter }  } );
+                        if (attr.NamedQueries != null)
+                        {
+                            var queryParameters = attr.NamedQueries.Where(q => !(string.IsNullOrEmpty(q)) && !keywords.Contains(q));
+                            foreach (var queryParameter in queryParameters)
+                            {
+                                if (!(string.IsNullOrEmpty(queryParameter)))
+                                    filters.Add(new NamedQuery() { Name = queryParameter, Filters = new List<string>() { queryParameter } });
+                            }
+                        }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                // do not throw error is named queries can not be retrieved on legacy versions. 
             }
             return filters;
         }
@@ -872,6 +1070,8 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <returns>x is greater return 1 else if y is greater return -1</returns>
         public int Compare(string x, string y)
         {
+
+
             if (x == y) return 0;
 
             var first = x.Split(new char[] { '.' }).Select(xx => int.Parse(xx)).ToList();

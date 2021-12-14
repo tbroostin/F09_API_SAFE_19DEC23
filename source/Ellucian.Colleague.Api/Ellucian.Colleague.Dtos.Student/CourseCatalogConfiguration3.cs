@@ -45,5 +45,10 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Default Colleague Self-Service search result view for Course Catalogs
         /// </summary>
         public SelfServiceCourseCatalogSearchResultView DefaultSelfServiceCourseCatalogSearchResultView { get; set; }
+        /// <summary>
+        /// The display options are for the course catalog search result. It idenitifes which header element to display. If this list is
+        /// blank or missing assume all headers in search result should be shown.
+        /// </summary>
+        public List<CatalogSearchResultHeaderOption> CatalogSearchResultHeaderOptions { get; set; }
     }
 }

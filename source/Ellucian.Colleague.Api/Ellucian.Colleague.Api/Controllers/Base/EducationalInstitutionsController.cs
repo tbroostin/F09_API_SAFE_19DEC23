@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -21,6 +21,7 @@ using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http;
+using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -46,17 +47,19 @@ namespace Ellucian.Colleague.Api.Controllers
             _logger = logger;
         }
 
-       
+
         /// <summary>
         /// Return Educational-Institutions 
         /// </summary>
         /// <param name="page">paging information</param>
         /// <param name="type">Type of Educational-Institution ex:"secondary" or "postSecondary"</param>
+        /// <param name="criteria">criteria</param>
         /// <returns>List of EducationalInstitutions <see cref="Dtos.EducationalInstitution"/> objects representing matching educationalInstitutions</returns>
-        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), PermissionsFilter(BasePermissionCodes.ViewEducationalInstitution)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
-        [ValidateQueryStringFilter(new string[] { "type" }, false, true)]
-        public async Task<IHttpActionResult> GetEducationalInstitutionsAsync(Paging page, [FromUri] string type = "")
+        [QueryStringFilterFilter("criteria", typeof(Dtos.EducationalInstitution))]
+        [ValidateQueryStringFilter(new string[] { "type", "credentials.type", "credentials.value" }, false, true)]
+        public async Task<IHttpActionResult> GetEducationalInstitutionsAsync(Paging page, [FromUri] string type = "", QueryStringFilter criteria = null)
         {
            
             var bypassCache = false;
@@ -75,12 +78,20 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                _educationalInstitutionsService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
                 }
 
+                var criteriaObject = GetFilterObject<Dtos.EducationalInstitution>(_logger, "criteria");
+                if (CheckForEmptyFilterParameters())
+                    return new PagedHttpActionResult<IEnumerable<Dtos.EducationalInstitution>>(new List<Dtos.EducationalInstitution>(), page, 0, this.Request);
+
+
+
                 Dtos.EnumProperties.EducationalInstitutionType? typeFilter = null;
+
                 if (!string.IsNullOrEmpty(type))
                 {
                     switch (type.ToLower())
@@ -92,10 +103,52 @@ namespace Ellucian.Colleague.Api.Controllers
                             typeFilter = EducationalInstitutionType.SecondarySchool;
                             break;
                         default:
-                            throw new ArgumentException("type", string.Format("'{0}' is an invalid enumeration value. ", type));
+                            return new PagedHttpActionResult<IEnumerable<Dtos.EducationalInstitution>>(new List<Dtos.EducationalInstitution>(), page, 0, this.Request); ;
                     }
                 }
-                var pageOfItems = await _educationalInstitutionsService.GetEducationalInstitutionsByTypeAsync(page.Offset, page.Limit, typeFilter, bypassCache);
+                else if (criteriaObject.Type != EducationalInstitutionType.NotSet)
+                {
+
+                    switch (criteriaObject.Type)
+                    {
+                        case EducationalInstitutionType.PostSecondarySchool:
+                            typeFilter = EducationalInstitutionType.PostSecondarySchool;
+                            break;
+                        case EducationalInstitutionType.SecondarySchool:
+                            typeFilter = EducationalInstitutionType.SecondarySchool;
+                            break;
+                        default:
+                            return new PagedHttpActionResult<IEnumerable<Dtos.EducationalInstitution>>(new List<Dtos.EducationalInstitution>(), page, 0, this.Request);
+                    }
+                }
+
+                //we need to validate the credentials
+                if (criteriaObject.Credentials != null && criteriaObject.Credentials.Any())
+                {
+                    if (criteriaObject.Credentials.Count() > 1)
+                    {
+                        return new PagedHttpActionResult<IEnumerable<Dtos.EducationalInstitution>>(new List<Dtos.EducationalInstitution>(), page, 0, this.Request);
+                    }
+                    var credential = criteriaObject.Credentials.FirstOrDefault();
+
+                    if ((credential.Type != null) || !string.IsNullOrEmpty(credential.Value))
+                    {
+                        if (!string.IsNullOrEmpty(credential.Type.ToString()) && string.IsNullOrEmpty(credential.Value))
+                        {
+                            throw new ArgumentException("credentialValue", "credentialValue is required when requesting a credentialType");
+                        }
+                        if (string.IsNullOrEmpty(credential.Type.ToString()) && !string.IsNullOrEmpty(credential.Value))
+                        {
+                            throw new ArgumentException("credentialType", "credentialType is required when requesting a credentialValue");
+                        }
+                    }
+                    if (credential.Type != Credential3Type.ColleaguePersonId)
+                    {
+                        return new PagedHttpActionResult<IEnumerable<Dtos.EducationalInstitution>>(new List<Dtos.EducationalInstitution>(), page, 0, this.Request);
+                    }
+                }
+
+                var pageOfItems = await _educationalInstitutionsService.GetEducationalInstitutionsByTypeAsync(page.Offset, page.Limit, criteriaObject, typeFilter, bypassCache);
 
                 AddEthosContextProperties(
                     await _educationalInstitutionsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -108,7 +161,7 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -137,7 +190,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="id">GUID to desired educationalInstitution</param>
         /// <returns>An EducationalInstitutions object <see cref="Dtos.EducationalInstitution"/> in DataModel format</returns>
-        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), EedmResponseFilter, PermissionsFilter(BasePermissionCodes.ViewEducationalInstitution)]
         public async Task<Dtos.EducationalInstitution> GetEducationalInstitutionsByGuidAsync(string id)
         {
             var bypassCache = false;
@@ -156,6 +209,7 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
+                _educationalInstitutionsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                     await _educationalInstitutionsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await _educationalInstitutionsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -171,7 +225,7 @@ namespace Ellucian.Colleague.Api.Controllers
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -200,7 +254,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="educationalInstitution">DTO of the new educationalInstitutionUnits</param>
         /// <returns>A educationalInstitutionUnits object <see cref="Dtos.EducationalInstitution"/> in Data Model format</returns>
-        [HttpPost]
+        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.EducationalInstitution> PostEducationalInstitutionsAsync([FromBody] Dtos.EducationalInstitution educationalInstitution)
         {
             //Post is not supported for Colleague but Data Model requires full crud support.
@@ -216,7 +270,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="id">GUID of the EducationalInstitutions to update</param>
         /// <param name="educationalInstitution">DTO of the updated EducationalInstitutions</param>
         /// <returns>A EducationalInstitutions object <see cref="Dtos.EducationalInstitution"/> in Data Model format</returns>
-        [HttpPut]
+        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.EducationalInstitution> PutEducationalInstitutionsAsync([FromUri] string id, [FromBody] Dtos.EducationalInstitution educationalInstitution)
         {
             //Put is not supported for Colleague but Data Model requires full crud support.
@@ -230,7 +284,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Delete (DELETE) a Educational-Institution
         /// </summary>
         /// <param name="id">GUID to desired EducationalInstitutions</param>
-        [HttpDelete]
+        [HttpDelete, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task DeleteEducationalInstitutionByGuidAsync(string id)
         {
             //Delete is not supported for Colleague but Data Model requires full crud support.

@@ -1,4 +1,4 @@
-﻿/*Copyright 2017-2020 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2021 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
@@ -59,7 +59,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// </summary>
         /// <param name="employeeIds"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<PayrollRegisterEntry>> GetPayrollRegisterByEmployeeIdsAsync(IEnumerable<string> employeeIds, DateTime? startDate = null, DateTime? endDate = null)
+        public async Task<IEnumerable<PayrollRegisterEntry>> GetPayrollRegisterByEmployeeIdsAsync(IEnumerable<string> employeeIds, 
+            DateTime? startDate = null, DateTime? endDate = null)
         {
             if (employeeIds == null || !employeeIds.Any())
             {
@@ -282,14 +283,20 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 logger.Error(string.Format("PaycontrolRecord {0} does not have a valid period start date", paycontrolRecord.Recordkey));
             }
 
-            var registerEntry = new PayrollRegisterEntry(record.Recordkey, employeeId, paycontrolRecord.PclPeriodStartDate, periodEndDate, payCycleId, sequenceNumber, record.PtdCheckNo, record.PtdAdviceNo, !string.IsNullOrEmpty(record.PtdW4NewFlag) && record.PtdW4NewFlag.Equals("Y", StringComparison.CurrentCultureIgnoreCase));
+            bool isAdjustment = !string.IsNullOrEmpty(record.PtdStatus) && record.PtdStatus.Equals("A", StringComparison.CurrentCultureIgnoreCase);
+
+            var registerEntry = new PayrollRegisterEntry(record.Recordkey, employeeId, paycontrolRecord.PclPeriodStartDate, 
+                periodEndDate, payCycleId, sequenceNumber, record.PtdCheckNo, record.PtdAdviceNo, 
+                !string.IsNullOrEmpty(record.PtdW4NewFlag) && record.PtdW4NewFlag.Equals("Y", StringComparison.CurrentCultureIgnoreCase),
+                record.PtdAdviceDate.HasValue ? record.PtdAdviceDate.Value : record.PtdCheckDate.HasValue ? record.PtdCheckDate.Value : (DateTime?)null,
+                isAdjustment);
 
             //build earnings
             foreach (var earningsRecord in record.PtdearnEntityAssociation)
             {
                 try
                 {
-                    registerEntry.EarningsEntries.Add(BuildPayrollRegisterEarningsEntry(earningsRecord));
+                    registerEntry.EarningsEntries.Add(BuildPayrollRegisterEarningsEntry(earningsRecord, isAdjustment));
                 }
                 catch (Exception e)
                 {
@@ -317,7 +324,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
                 try
                 {
-                    registerEntry.TaxEntries.Add(BuildPayrollRegisterTaxEntry(taxRecord, associatedEmployerTaxRecords));
+                    registerEntry.TaxEntries.Add(BuildPayrollRegisterTaxEntry(taxRecord, associatedEmployerTaxRecords, isAdjustment));
                 }
                 catch (Exception e)
                 {
@@ -345,7 +352,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
                 try
                 {
-                    registerEntry.BenefitDeductionEntries.Add(BuildPayrollRegisterBenefitDeductionEntry(benefitDeductionRecord, associatedEmployerBenefitDeductionRecords));
+                    registerEntry.BenefitDeductionEntries.Add(BuildPayrollRegisterBenefitDeductionEntry(benefitDeductionRecord, associatedEmployerBenefitDeductionRecords, isAdjustment));
                 }
                 catch (Exception e)
                 {
@@ -388,7 +395,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <param name="benefitDeductionRecord"></param>
         /// <param name="employerBenefitDeductionRecords"></param>
         /// <returns></returns>
-        private PayrollRegisterBenefitDeductionEntry BuildPayrollRegisterBenefitDeductionEntry(PaytodatPtdbnded benefitDeductionRecord, IEnumerable<PaytodatPtdbdexp> employerBenefitDeductionRecords)
+        private PayrollRegisterBenefitDeductionEntry BuildPayrollRegisterBenefitDeductionEntry(PaytodatPtdbnded benefitDeductionRecord, 
+            IEnumerable<PaytodatPtdbdexp> employerBenefitDeductionRecords, bool isAdjustment)
         {
             if (benefitDeductionRecord == null)
             {
@@ -400,13 +408,28 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 employerBenefitDeductionRecords = new List<PaytodatPtdbdexp>();
             }
 
-            var benefitDeductionEntry = new PayrollRegisterBenefitDeductionEntry(benefitDeductionRecord.PtdBdCodesAssocMember)
+            PayrollRegisterBenefitDeductionEntry benefitDeductionEntry = null;
+            if (!isAdjustment)
             {
-                EmployeeAmount = benefitDeductionRecord.PtdBdEmplyeCalcAmtsAssocMember,
-                EmployeeBasisAmount = benefitDeductionRecord.PtdBdEmplyeBaseAmtsAssocMember,
-                EmployerAmount = employerBenefitDeductionRecords.Any() ? employerBenefitDeductionRecords.Sum(bd => bd.PtdBdExpEmplyrCalcAmtsAssocMember) : null,
-                EmployerBasisAmount = benefitDeductionRecord.PtdBdEmplyrBaseAmtsAssocMember
-            };
+                benefitDeductionEntry = new PayrollRegisterBenefitDeductionEntry(benefitDeductionRecord.PtdBdCodesAssocMember)
+                {
+                    EmployeeAmount = benefitDeductionRecord.PtdBdEmplyeCalcAmtsAssocMember,
+                    EmployeeBasisAmount = benefitDeductionRecord.PtdBdEmplyeBaseAmtsAssocMember,
+                    EmployerAmount = employerBenefitDeductionRecords.Any() ? employerBenefitDeductionRecords.Sum(bd => bd.PtdBdExpEmplyrCalcAmtsAssocMember) : null,
+                    EmployerBasisAmount = benefitDeductionRecord.PtdBdEmplyrBaseAmtsAssocMember
+                };
+            }
+            //adjustment
+            else
+            {
+                benefitDeductionEntry = new PayrollRegisterBenefitDeductionEntry(benefitDeductionRecord.PtdBdCodesAssocMember)
+                {
+                    EmployeeAdjustmentAmount = benefitDeductionRecord.PtdBdEmplyeCalcAmtsAssocMember,
+                    EmployeeBasisAdjustmentAmount = benefitDeductionRecord.PtdBdEmplyeBaseAmtsAssocMember,
+                    EmployerAdjustmentAmount = employerBenefitDeductionRecords.Any() ? employerBenefitDeductionRecords.Sum(bd => bd.PtdBdExpEmplyrCalcAmtsAssocMember) : null,
+                    EmployerBasisAdjustmentAmount = benefitDeductionRecord.PtdBdEmplyrBaseAmtsAssocMember
+                };
+            }
 
             return benefitDeductionEntry;
         }
@@ -417,7 +440,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <param name="taxRecord"></param>
         /// <param name="employerTaxRecords"></param>
         /// <returns></returns>
-        private PayrollRegisterTaxEntry BuildPayrollRegisterTaxEntry(PaytodatPtdtaxes taxRecord, IEnumerable<PaytodatPtdtaxexp> employerTaxRecords)
+        private PayrollRegisterTaxEntry BuildPayrollRegisterTaxEntry(PaytodatPtdtaxes taxRecord, IEnumerable<PaytodatPtdtaxexp> employerTaxRecords, bool isAdjustment)
         {
             if (taxRecord == null)
             {
@@ -428,15 +451,31 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 employerTaxRecords = new List<PaytodatPtdtaxexp>();
             }
 
-            var taxEntry = new PayrollRegisterTaxEntry(taxRecord.PtdTaxCodesAssocMember, ConvertInternalCode(taxRecord.PtdTaxFaterdCodesAssocMember))
+            PayrollRegisterTaxEntry taxEntry = null;
+            if (!isAdjustment) {
+                taxEntry = new PayrollRegisterTaxEntry(taxRecord.PtdTaxCodesAssocMember, ConvertInternalCode(taxRecord.PtdTaxFaterdCodesAssocMember))
+                {
+                    SpecialProcessingAmount = taxRecord.PtdTaxFaterdAmtsAssocMember,
+                    Exemptions = taxRecord.PtdTaxExemptionsAssocMember ?? 0,
+                    EmployeeTaxAmount = taxRecord.PtdEmplyeTaxAmtsAssocMember,
+                    EmployeeTaxableAmount = taxRecord.PtdEmplyeTaxableAmtsAssocMember,
+                    EmployerTaxAmount = employerTaxRecords.Any() ? employerTaxRecords.Sum(t => t.PtdTaxExpEmplyrTaxAmtsAssocMember) : null,
+                    EmployerTaxableAmount = taxRecord.PtdEmplyrTaxableAmtsAssocMember
+                };
+            }
+            //adjustment
+            else
             {
-                SpecialProcessingAmount = taxRecord.PtdTaxFaterdAmtsAssocMember,
-                Exemptions = taxRecord.PtdTaxExemptionsAssocMember ?? 0,
-                EmployeeTaxAmount = taxRecord.PtdEmplyeTaxAmtsAssocMember,
-                EmployeeTaxableAmount = taxRecord.PtdEmplyeTaxableAmtsAssocMember,
-                EmployerTaxAmount = employerTaxRecords.Any() ? employerTaxRecords.Sum(t => t.PtdTaxExpEmplyrTaxAmtsAssocMember) : null,
-                EmployerTaxableAmount = taxRecord.PtdEmplyrTaxableAmtsAssocMember
-            };
+                taxEntry = new PayrollRegisterTaxEntry(taxRecord.PtdTaxCodesAssocMember, ConvertInternalCode(taxRecord.PtdTaxFaterdCodesAssocMember))
+                {
+                    SpecialProcessingAmount = taxRecord.PtdTaxFaterdAmtsAssocMember,
+                    Exemptions = taxRecord.PtdTaxExemptionsAssocMember ?? 0,
+                    EmployeeAdjustmentAmount = taxRecord.PtdEmplyeTaxAmtsAssocMember,
+                    EmployeeTaxableAdjustmentAmount = taxRecord.PtdEmplyeTaxableAmtsAssocMember,
+                    EmployerAdjustmentAmount = employerTaxRecords.Any() ? employerTaxRecords.Sum(t => t.PtdTaxExpEmplyrTaxAmtsAssocMember) : null,
+                    EmployerTaxableAdjustmentAmount = taxRecord.PtdEmplyrTaxableAmtsAssocMember
+                };
+            }
 
             return taxEntry;
         }
@@ -474,7 +513,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// </summary>
         /// <param name="earningsRecord"></param>
         /// <returns></returns>
-        private PayrollRegisterEarningsEntry BuildPayrollRegisterEarningsEntry(PaytodatPtdearn earningsRecord)
+        private PayrollRegisterEarningsEntry BuildPayrollRegisterEarningsEntry(PaytodatPtdearn earningsRecord, bool isAdjustment)
         {
             if (earningsRecord == null)
             {
@@ -505,7 +544,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     earningsRecord.PtdEarnFactorEarningsAssocMember ?? 0,
                     earningsRecord.PtdHoursAssocMember,
                     rate,
-                    hsIndicator);
+                    hsIndicator, isAdjustment);
 
                 if (!string.IsNullOrEmpty(earningsRecord.PtdEarndiffIdAssocMember))
                 {
@@ -518,7 +557,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         throw new ArgumentException("earningsRecord has no value in PTD.EARN.DIFF.RATES column. differential rates are required when differential id is specified");
 
                     }
-                    earningsEntry.SetEarningsDifferential(earningsRecord.PtdEarndiffIdAssocMember, earningsRecord.PtdEarnDiffEarningsAssocMember.Value, earningsRecord.PtdEarnDiffUnitsAssocMember, earningsRecord.PtdEarnDiffRatesAssocMember.Value);
+                    earningsEntry.SetEarningsDifferential(earningsRecord.PtdEarndiffIdAssocMember, earningsRecord.PtdEarnDiffEarningsAssocMember.Value, 
+                        earningsRecord.PtdEarnDiffUnitsAssocMember, earningsRecord.PtdEarnDiffRatesAssocMember.Value);
                 }
 
                 return earningsEntry;
@@ -532,7 +572,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     earningsRecord.PtdEarnFactorEarningsAssocMember ?? 0,
                     earningsRecord.PtdHoursAssocMember,
                     rate,
-                    hsIndicator);
+                    hsIndicator, isAdjustment);
             }
         }
 

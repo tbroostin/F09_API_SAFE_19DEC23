@@ -44,7 +44,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 foreach (var restriction in restrictionEntities)
                 {
-                    personHoldTypeCollection.Add(ConvertRestrictionEntityToPersonHoldTypeDto(restriction));
+                    if (restriction != null)
+                        personHoldTypeCollection.Add(ConvertRestrictionEntityToPersonHoldTypeDto(restriction));
                 }
             }
             return personHoldTypeCollection;

@@ -25,5 +25,13 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
         /// <param name="getActiveYearsOnly"></param>
         /// <returns>A list of ShoppingSheets</returns>
         Task<IEnumerable<ShoppingSheet2>> GetShoppingSheets2Async(string studentId, bool getActiveYearsOnly = false);
+
+        /// <summary>
+        /// Get a collection of Student specific Shopping Sheets
+        /// </summary>
+        /// <param name="studentId"></param>
+        /// <param name="getActiveYearsOnly"></param>
+        /// <returns>A list of ShoppingSheets</returns>
+        Task<IEnumerable<ShoppingSheet3>> GetShoppingSheets3Async(string studentId, bool getActiveYearsOnly = false);
     }
 }

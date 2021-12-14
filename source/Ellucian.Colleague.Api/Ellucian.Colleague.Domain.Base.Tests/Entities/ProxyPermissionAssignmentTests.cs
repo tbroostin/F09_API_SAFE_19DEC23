@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -18,9 +18,9 @@ namespace Ellucian.Colleague.Domain.Base.Tests.Entities
         public void ProxyPermissionAssignment_Initialize()
         {
             proxySubjectId = "0012345";
-            permission1 = new ProxyAccessPermission(null, "0012345", "0098765", "SFMAP", DateTime.Today);
+            permission1 = new ProxyAccessPermission(null, "0012345", "0098765", "SFMAP", DateTime.Today, DateTime.Today.AddDays(1));
             permissions = new List<ProxyAccessPermission>() { permission1 };
-            permission2 = new ProxyAccessPermission(null, "0054321", "0098765", "SFMAP", DateTime.Today);
+            permission2 = new ProxyAccessPermission(null, "0054321", "0098765", "SFMAP", DateTime.Today, DateTime.Today.AddDays(1));
             permissions2 = new List<ProxyAccessPermission>() { permission2 };
         }
 

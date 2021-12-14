@@ -1105,7 +1105,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             public async Task NullFinAidRecord_KeyNotFoundExceptionThrownTest()
             {
                 dataReaderMock.Setup(d => d.ReadRecordAsync<FinAid>(It.IsAny<string>(), true))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
                 await actualRepository.GetStudentAwardYearAsync(studentId, awardYearCode, currentOfficeService);
             }
 
@@ -1123,7 +1123,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             public async Task NoCsAcyrRecord_StudentAwardYearNotNullTest()
             {
                 dataReaderMock.Setup(d => d.ReadRecordAsync<CsAcyr>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
                 Assert.IsNotNull(await actualRepository.GetStudentAwardYearAsync(studentId, awardYearCode, currentOfficeService));
             }
 

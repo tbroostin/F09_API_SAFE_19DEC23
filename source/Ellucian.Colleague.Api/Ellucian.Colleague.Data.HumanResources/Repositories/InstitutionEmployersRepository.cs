@@ -72,7 +72,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         {
             var humanResourcesInstitutionEmployerEntity = await GetGuidValcodeAsync<HumanResourcesInstitutionEmployer>("HR", "INTG.INST.EMPLOYER",
     (cl, g) => new HumanResourcesInstitutionEmployer(g, cl.ValInternalCodeAssocMember, cl.ValExternalRepresentationAssocMember), bypassCache: true);
-
+            var institutionEmployersEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.InstitutionEmployers>();
             if (humanResourcesInstitutionEmployerEntity != null && humanResourcesInstitutionEmployerEntity.Any())
             {
                 var thisEntity = humanResourcesInstitutionEmployerEntity.FirstOrDefault();
@@ -81,18 +81,15 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 {
                     if (bypassCache)
                     {
-                        var institutionEmployersEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.InstitutionEmployers>();
                         var institutionEmployer = await BuildInstitutionEmployerAsync(thisGuid);
                         institutionEmployer.Code = thisEntity.Code;
                         institutionEmployersEntities.Add(institutionEmployer);
-                        return institutionEmployersEntities;
                     }
                     else
                     {
                         return await GetOrAddToCacheAsync<IEnumerable<InstitutionEmployers>>("AllInstitutionEmployers",
                             async () =>
                             {
-                                var institutionEmployersEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.InstitutionEmployers>();
                                 var institutionEmployer = await BuildInstitutionEmployerAsync(thisGuid);
                                 institutionEmployer.Code = thisEntity.Code;
                                 institutionEmployersEntities.Add(institutionEmployer);
@@ -101,19 +98,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                         );
                     }
                 }
-                else
-                {
-                    var errorMessage = "No institution employer was found.  Expecting only 'INST' in INTG.INST.EMPLOIYER";
-                    logger.Error(errorMessage);
-                    throw new KeyNotFoundException(errorMessage);
-                }
             }
-            else
-            {
-                var errorMessage = "No guid found for institution-employers";
-                logger.Error(errorMessage);
-                throw new KeyNotFoundException(errorMessage);
-            }
+            return institutionEmployersEntities;
         }
 
         private async Task<InstitutionEmployers> BuildInstitutionEmployerAsync(string guid)

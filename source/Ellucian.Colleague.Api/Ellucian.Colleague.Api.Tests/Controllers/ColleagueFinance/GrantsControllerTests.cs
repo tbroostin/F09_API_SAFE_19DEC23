@@ -1,5 +1,6 @@
 ﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -7,13 +8,17 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using Ellucian.Colleague.Api.Controllers.ColleagueFinance;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -313,6 +318,85 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
                     Assert.IsNotNull(result);
                     Assert.AreEqual(result.Id, grantCollection.FirstOrDefault().Id);
+                }
+
+                [TestMethod]
+                public async Task GrantsController_GetPersonsActiveHoldsAsync_Permissions()
+                {
+                    var contextPropertyName = "PermissionsFilter";
+
+                    HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                    {
+                        { "controller", "Grants" },
+                        { "action", "GetGrantsAsync" }
+                    };
+                    HttpRoute route = new HttpRoute("person-holds", routeValueDict);
+                    HttpRouteData data = new HttpRouteData(route);
+                    grantsController.Request.SetRouteData(data);
+                    grantsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                    var permissionsFilter = new PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewGrants });
+
+                    var controllerContext = grantsController.ControllerContext;
+                    var actionDescriptor = grantsController.ActionContext.ActionDescriptor
+                             ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                    var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    var tuple = new Tuple<IEnumerable<Dtos.Grant>, int>(grantCollection, 5);
+                    grantsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                           .Returns(true);
+                    grantsServiceMock.Setup(s => s.GetGrantsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+                    var resp = await grantsController.GetGrantsAsync(new Paging(10, 0));
+
+                    Object filterObject;
+                    grantsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                    var cancelToken = new System.Threading.CancellationToken(false);
+                    Assert.IsNotNull(filterObject);
+
+                    var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                         .Select(x => x.ToString())
+                                         .ToArray();
+
+                    Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewGrants));
+
+                }
+
+                [TestMethod]
+                [ExpectedException(typeof(HttpResponseException))]
+                public async Task PersonHoldsController_GetPersonsActiveHoldsAsync_Invalid_Permissions()
+                {
+                    HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                    {
+                        { "controller", "Grants" },
+                        { "action", "GetGrantsAsync" }
+                    };
+                    HttpRoute route = new HttpRoute("grants", routeValueDict);
+                    HttpRouteData data = new HttpRouteData(route);
+                    grantsController.Request.SetRouteData(data);
+
+                    var permissionsFilter = new PermissionsFilter("invalid");
+
+                    var controllerContext = grantsController.ControllerContext;
+                    var actionDescriptor = grantsController.ActionContext.ActionDescriptor
+                             ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                    var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                    try
+                    {
+                        await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                        var tuple = new Tuple<IEnumerable<Dtos.Grant>, int>(grantCollection, 5);
+
+                        grantsServiceMock.Setup(s => s.GetGrantsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+                        grantsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                            .Throws(new PermissionsException("User is not authorized to view person-holds."));
+                        var resp = await grantsController.GetGrantsAsync(new Paging(10, 0));
+                    }
+                    catch (PermissionsException ex)
+                    {
+                        throw ex;
+                    }
                 }
 
                 #endregion

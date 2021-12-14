@@ -17,7 +17,7 @@ using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Dtos.EnumProperties;
-
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -27,7 +27,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private readonly IPersonRepository _personRepository;
         private readonly IAcademicCreditRepository _academicCreditRepository;
         private readonly IStudentReferenceDataRepository _studentReferenceDataRepository;
-        private IEnumerable<Dtos.Student.AcademicLevel> allAcadLevels;
         private readonly IGradeRepository _gradeRepository;
         private readonly ITermRepository _termRepository;
         private readonly ICourseRepository _courseRepository;
@@ -38,7 +37,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private IEnumerable<Domain.Student.Entities.AcademicProgram> _academicPrograms = null;
         private IEnumerable<Domain.Student.Entities.AcademicPeriod> _academicPeriods = null;
         private IEnumerable<Domain.Student.Entities.CreditCategory> _creditCategories = null;
-
+ 
         public StudentCourseTransfersService(
 
             IPersonRepository personRepository,
@@ -59,7 +58,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             _courseRepository = courseRepository;
             _studentReferenceDataRepository = studentReferenceDataRepository;
             _gradeRepository = gradeRepository;
-            _termRepository = termRepository;            
+            _termRepository = termRepository;
         }
 
         private IEnumerable<Domain.Student.Entities.SectionRegistrationStatusItem> _transferStatuses = null;
@@ -80,8 +79,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Collection of StudentCourseTransfers DTO objects</returns>
         public async Task<Tuple<IEnumerable<Dtos.StudentCourseTransfer>, int>> GetStudentCourseTransfersAsync(int offset, int limit, bool bypassCache)
         {
-            await CheckViewPermission();
-
             var studentCourseTransfersCollection = new List<Dtos.StudentCourseTransfer>();
             var studentCourseTransfersData = await _academicCreditRepository.GetStudentCourseTransfersAsync(offset, limit, bypassCache);
             var studentCourseTransfersEntities = studentCourseTransfersData.Item1;
@@ -101,9 +98,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>StudentCourseTransfers DTO object</returns>
         public async Task<Dtos.StudentCourseTransfer> GetStudentCourseTransferByGuidAsync(string guid, bool bypassCache = false)
         {
-
-            await CheckViewPermission();
-
             try
             {
                 var studentCourseTransferEntities = new List<Domain.Student.Entities.StudentCourseTransfer>();
@@ -113,11 +107,11 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             catch (KeyNotFoundException ex)
             {
-                throw new KeyNotFoundException("student-course-transfers not found for GUID " + guid, ex);
+                throw new KeyNotFoundException("No student course transfer was found for GUID " + guid, ex);
             }
             catch (InvalidOperationException ex)
             {
-                throw new InvalidOperationException("student-course-transfers not found for GUID " + guid, ex);
+                throw new InvalidOperationException("No student course transfer was found for GUID " + guid, ex);
             }
         }
 
@@ -128,15 +122,29 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Collection of StudentCourseTransfers DTO objects</returns>
         public async Task<Tuple<IEnumerable<Dtos.StudentCourseTransfer>, int>> GetStudentCourseTransfers2Async(int offset, int limit, bool bypassCache)
         {
-            await CheckViewPermission();
+
 
             var studentCourseTransfersCollection = new List<Dtos.StudentCourseTransfer>();
-            var studentCourseTransfersData = await _academicCreditRepository.GetStudentCourseTransfersAsync(offset, limit, bypassCache);
+            Tuple<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.StudentCourseTransfer>, int> studentCourseTransfersData = null;
+            try
+            {
+                studentCourseTransfersData = await _academicCreditRepository.GetStudentCourseTransfersAsync(offset, limit, bypassCache);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
             var studentCourseTransfersEntities = studentCourseTransfersData.Item1;
-            
+
             if (studentCourseTransfersEntities != null && studentCourseTransfersEntities.Any())
             {
                 studentCourseTransfersCollection = (await ConvertStudentCourseTransfers2EntityToDto(studentCourseTransfersEntities, bypassCache)).ToList();
+            }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
             }
             return new Tuple<IEnumerable<Dtos.StudentCourseTransfer>, int>(studentCourseTransfersCollection, studentCourseTransfersData.Item2);
         }
@@ -148,24 +156,31 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>StudentCourseTransfers DTO object</returns>
         public async Task<Dtos.StudentCourseTransfer> GetStudentCourseTransfer2ByGuidAsync(string guid, bool bypassCache = false)
         {
-
-            await CheckViewPermission();
-
+            Dtos.StudentCourseTransfer studentCourseTransferDto;
             try
             {
                 var studentCourseTransferEntities = new List<Domain.Student.Entities.StudentCourseTransfer>();
                 var studentCourseTransferEntity = await _academicCreditRepository.GetStudentCourseTransferByGuidAsync(guid, bypassCache);
                 studentCourseTransferEntities.Add(studentCourseTransferEntity);
-                return ((await ConvertStudentCourseTransfers2EntityToDto(studentCourseTransferEntities, bypassCache)).ToList()).FirstOrDefault();
+                studentCourseTransferDto = ((await ConvertStudentCourseTransfers2EntityToDto(studentCourseTransferEntities, bypassCache)).ToList()).FirstOrDefault();
             }
             catch (KeyNotFoundException ex)
             {
-                throw new KeyNotFoundException("student-course-transfers not found for GUID " + guid, ex);
+                throw new KeyNotFoundException("No student course transfer was found for GUID " + guid, ex);
             }
             catch (InvalidOperationException ex)
             {
-                throw new InvalidOperationException("student-course-transfers not found for GUID " + guid, ex);
+                throw new InvalidOperationException("No student course transfer was found for GUID " + guid, ex);
             }
+            catch (RepositoryException ex)
+            {
+                throw ex;
+            }
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+            return studentCourseTransferDto;
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -306,14 +321,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                             sct.Credit.CreditCategory.Detail = new GuidObject2(creditCategory.Guid);
                         }
                     }
-                }                
+                }
 
                 // EquivalencyAppliedOn
                 if (source.EquivalencyAppliedOn != null)
                 {
                     sct.EquivalencyAppliedOn = (DateTime)source.EquivalencyAppliedOn;
                 }
-                
+
                 // EquivalentCourse
                 if (string.IsNullOrEmpty(source.Course))
                 {
@@ -369,7 +384,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 sct.TransferredFrom = new GuidObject2(institutionGuid);
 
                 scts.Add(sct);
-            }            
+            }
             return scts;
         }
 
@@ -397,7 +412,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                  .Select(x => x.Course).Distinct().ToList();
             var courseGuidCollection = await this._courseRepository.GetGuidsCollectionAsync(courseIds, "COURSES");
 
-            var scts = new List<Dtos.StudentCourseTransfer>();                        
+            var scts = new List<Dtos.StudentCourseTransfer>();
 
             foreach (var source in sources)
             {
@@ -409,28 +424,36 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // AcademicLevel
                 if (!string.IsNullOrEmpty(source.AcademicLevel))
                 {
-                    var academicLevels = await GetAcademicLevelsAsync(bypassCache);
-                    if (academicLevels != null)
+                    try
                     {
-                        var academicLevel = academicLevels.FirstOrDefault(t => t.Code == source.AcademicLevel);
-                        if (academicLevel != null)
+                        var acadLevel = await _studentReferenceDataRepository.GetAcademicLevelsGuidAsync(source.AcademicLevel);
+                        if (!string.IsNullOrEmpty(acadLevel))
                         {
-                            sct.AcademicLevel = new GuidObject2(academicLevel.Guid);
+                            sct.AcademicLevel = new Dtos.GuidObject2(acadLevel);
                         }
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                            source.Guid, source.Id);
                     }
                 }
 
                 // AcademicPeriod
                 if (!string.IsNullOrEmpty(source.AcademicPeriod))
                 {
-                    var academicPeriods = await GetAcademicPeriodsAsync(bypassCache);
-                    if (academicPeriods != null)
+                    try
                     {
-                        var academicPeriod = academicPeriods.FirstOrDefault(t => t.Code == source.AcademicPeriod);
-                        if (academicPeriod != null)
+                        var acadPeriod = await _termRepository.GetAcademicPeriodsGuidAsync(source.AcademicPeriod);
+                        if (!string.IsNullOrEmpty(acadPeriod))
                         {
-                            sct.AcademicPeriod = new GuidObject2(academicPeriod.Guid);
+                            sct.AcademicPeriod = new Dtos.GuidObject2(acadPeriod);
                         }
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                            source.Guid, source.Id);
                     }
                 }
 
@@ -438,16 +461,20 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (source.AcademicPrograms != null && source.AcademicPrograms.Count() > 0)
                 {
                     sct.AcademicPrograms = new List<GuidObject2>();
-                    var academicPrograms = await GetAcademicProgramsAsync(bypassCache);
-                    if (academicPrograms != null)
+                    foreach (var prog in source.AcademicPrograms)
                     {
-                        foreach (var prog in source.AcademicPrograms)
+                        try
                         {
-                            var academicProgram = academicPrograms.FirstOrDefault(t => t.Code == prog);
-                            if (academicProgram != null)
+                            var academicProgram = await _studentReferenceDataRepository.GetAcademicProgramsGuidAsync(prog);
+                            if (!string.IsNullOrEmpty(academicProgram))
                             {
-                                sct.AcademicPrograms.Add(new GuidObject2(academicProgram.Guid));
+                                sct.AcademicPrograms.Add(new Dtos.GuidObject2(academicProgram));
                             }
+                        }
+                        catch (RepositoryException ex)
+                        {
+                            IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                                source.Guid, source.Id);
                         }
                     }
                 }
@@ -455,36 +482,44 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // AwardGradeScheme
                 if (!string.IsNullOrEmpty(source.GradeScheme))
                 {
-                    var gradeSchemes = await GetGradeSchemesAsync(bypassCache);
-                    if (gradeSchemes != null)
+                    try
                     {
-                        var gradeScheme = gradeSchemes.FirstOrDefault(t => t.Code == source.GradeScheme);
-                        if (gradeScheme != null)
+                        var gradeScheme = await _studentReferenceDataRepository.GetGradeSchemeGuidAsync(source.GradeScheme);
+                        if (!string.IsNullOrEmpty(gradeScheme))
                         {
-                            sct.AwardGradeScheme = new GuidObject2(gradeScheme.Guid);
+                            sct.AwardGradeScheme = new Dtos.GuidObject2(gradeScheme);
                         }
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                            source.Guid, source.Id);
                     }
                 }
 
                 // Grade
                 if (!string.IsNullOrEmpty(source.Grade))
                 {
-                    var grades = await GetGradesAsync(bypassCache);
-                    if (grades != null)
+                    try
                     {
-                        var grade = (await GetGradesAsync(bypassCache)).FirstOrDefault(t => t.Id == source.Grade);
-                        if (grade != null)
+                        var grade = await _gradeRepository.GetGradesGuidAsync(source.Grade);
+                        if (!string.IsNullOrEmpty(grade))
                         {
-                            sct.Grade = new GuidObject2(grade.Guid);
+                            sct.Grade = new Dtos.GuidObject2(grade);
                         }
                     }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                            source.Guid, source.Id);
+                    }
                 }
-                                
+
                 sct.Credit = new Dtos.DtoProperties.StudentCourseTransferCreditDtoProperty();
 
                 // Credit.AwardedCredit
                 sct.Credit.AwardedCredit = source.AwardedCredit;
-                                
+
                 // Credit.Measure                
                 // Per spec sheet:
                 // In Colleague, credits that are awarded for a course equivalency are always stored 
@@ -496,10 +531,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 sct.Credit.CreditCategory = new Dtos.DtoProperties.StudentCourseTransferCreditCategoryDtoProperty();
 
                 // Credit.CreditCategory.CreditType
-                sct.Credit.CreditCategory.CreditType = (StudentCourseTransferCreditType)Enum.Parse(typeof(StudentCourseTransferCreditType),
-                    (await _academicCreditRepository.GetCreditTypeAsync(source.CreditType)).ToString());
+                //sct.Credit.CreditCategory.CreditType = (StudentCourseTransferCreditType)Enum.Parse(typeof(StudentCourseTransferCreditType),
+                // (await _academicCreditRepository.GetCreditTypeAsync(source.CreditType)).ToString());
 
-                // Credit.CreditCategory.Detail
+                // Credit.CreditCategory.Detail;
                 if (!string.IsNullOrEmpty(source.CreditType))
                 {
                     var creditCategories = await GetCreditCategoriesAsync(bypassCache);
@@ -508,33 +543,52 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         var creditCategory = creditCategories.FirstOrDefault(t => t.Code == source.CreditType);
                         if (creditCategory != null)
                         {
-                            sct.Credit.CreditCategory.Detail = new GuidObject2(creditCategory.Guid);
+                            if (!string.IsNullOrEmpty(creditCategory.Guid))
+                            {
+                                sct.Credit.CreditCategory.Detail = new GuidObject2(creditCategory.Guid);
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the credit category '{0}'", source.CreditType), "GUID.Not.Found", source.Guid, source.Id);
+                            }
+                            sct.Credit.CreditCategory.CreditType = (StudentCourseTransferCreditType)Enum.Parse(typeof(StudentCourseTransferCreditType), creditCategory.CreditType.ToString());
+                        }
+                        else
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Unable to find the credit category '{0}'", source.CreditType), "Bad.Data", source.Guid, source.Id);
                         }
                     }
-                }        
+                    
+                }
 
                 // EquivalencyAppliedOn
                 if (source.EquivalencyAppliedOn != null)
                 {
                     sct.EquivalencyAppliedOn = (DateTime)source.EquivalencyAppliedOn;
                 }
-                
+
                 // EquivalentCourse
                 if (string.IsNullOrEmpty(source.Course))
                 {
-                    throw new ArgumentNullException("EquivalentCourse is required. ");
+                    IntegrationApiExceptionAddError(string.Format("Equivalent course is required."), "Bad.Data", source.Guid, source.Id);
                 }
-                if (courseGuidCollection == null)
+                else if (courseGuidCollection == null)
                 {
-                    throw new KeyNotFoundException(string.Format("Unable to locate guid for course ID : {0}", source.Course));
+                    IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the course '{0}'", source.Course), "GUID.Not.Found", source.Guid, source.Id);
                 }
-                var courseGuid = string.Empty;
-                courseGuidCollection.TryGetValue(source.Course, out courseGuid);
-                if (string.IsNullOrEmpty(courseGuid))
+                else
                 {
-                    throw new KeyNotFoundException(string.Format("Unable to locate guid for studentAcadCred ID : {0}", source.Course));
+                    var courseGuid = string.Empty;
+                    courseGuidCollection.TryGetValue(source.Course, out courseGuid);
+                    if (string.IsNullOrEmpty(courseGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the course '{0}'", source.Course), "GUID.Not.Found", source.Guid, source.Id);
+                    }
+                    else
+                    {
+                        sct.EquivalentCourse = new GuidObject2(courseGuid);
+                    }
                 }
-                sct.EquivalentCourse = new GuidObject2(courseGuid);
 
                 // QualityPoints
                 if (source.QualityPoints != null) sct.QualityPoints = source.QualityPoints;
@@ -542,59 +596,69 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // Student
                 if (string.IsNullOrEmpty(source.Student))
                 {
-                    throw new ArgumentNullException("Student is required. ");
+                    IntegrationApiExceptionAddError(string.Format("Student is required."), "Bad.Data", source.Guid, source.Id);
                 }
-                if (studentGuidCollection == null)
+                else if (studentGuidCollection == null)
                 {
-                    throw new KeyNotFoundException(string.Format("Unable to locate guid for student ID : {0}", source.Student));
+                    IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the student '{0}'", source.Student), "GUID.Not.Found", source.Guid, source.Id);
                 }
-                var studentGuid = string.Empty;
-                studentGuidCollection.TryGetValue(source.Student, out studentGuid);
-                if (string.IsNullOrEmpty(studentGuid))
+                else
                 {
-                    throw new KeyNotFoundException(string.Format("Unable to locate guid for student ID : {0}", source.Student));
+                    var studentGuid = string.Empty;
+                    studentGuidCollection.TryGetValue(source.Student, out studentGuid);
+                    if (string.IsNullOrEmpty(studentGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the student '{0}'", source.Student), "GUID.Not.Found", source.Guid, source.Id);
+                    }
+                    else
+                    {
+                        sct.Student = new GuidObject2(studentGuid);
+                    }
                 }
-                sct.Student = new GuidObject2(studentGuid);
 
                 // TransferredFrom (institution)
                 if (string.IsNullOrEmpty(source.TransferredFromInstitution))
                 {
-                    throw new ArgumentNullException("TransferredFrom is required. ");
+                    IntegrationApiExceptionAddError(string.Format("TransferredFrom institution is required."), "Bad.Data", source.Guid, source.Id);
                 }
-                if (institutionGuidCollection == null)
+                else if (institutionGuidCollection == null)
                 {
-                    throw new KeyNotFoundException(string.Format("Unable to locate guid for TransferredFrom Institution ID : {0}", source.TransferredFromInstitution));
+                    IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the institution '{0}'", source.TransferredFromInstitution), "GUID.Not.Found", source.Guid, source.Id);
                 }
-                var institutionGuid = string.Empty;
-                institutionGuidCollection.TryGetValue(source.TransferredFromInstitution, out institutionGuid);
-                if (string.IsNullOrEmpty(institutionGuid))
+                else
                 {
-                    throw new KeyNotFoundException(string.Format("Unable to locate guid for TransferredFrom Institution ID : {0}", source.TransferredFromInstitution));
+                    var institutionGuid = string.Empty;
+                    institutionGuidCollection.TryGetValue(source.TransferredFromInstitution, out institutionGuid);
+                    if (string.IsNullOrEmpty(institutionGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the institution '{0}'", source.TransferredFromInstitution), "GUID.Not.Found", source.Guid, source.Id);
+                    }
+                    else
+                    {
+                        sct.TransferredFrom = new GuidObject2(institutionGuid);
+                    }
                 }
-                sct.TransferredFrom = new GuidObject2(institutionGuid);
 
                 // Status
                 if (!string.IsNullOrEmpty(source.Status))
                 {
-                    var status = (await GetStudentAcademicCreditStatusesAsync(false)).FirstOrDefault(s => s.Code.Equals(source.Status, StringComparison.OrdinalIgnoreCase));
-                    sct.Status = status != null && !status.Category.Equals(Domain.Student.Entities.CourseTransferStatusesCategory.NotSet) ? new GuidObject2(status.Guid) : null;
+                    try
+                    {
+                        var status = await _studentReferenceDataRepository.GetStudentAcademicCreditStatusesGuidAsync(source.Status);
+                        if (!string.IsNullOrEmpty(status))
+                        {
+                            sct.Status = new Dtos.GuidObject2(status);
+                        }
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                            source.Guid, source.Id);
+                    }
                 }
                 scts.Add(sct);
             }
             return scts;
-        }
-
-        /// <summary>
-        /// Check view permission
-        /// </summary>
-        /// <returns></returns>
-        private async Task CheckViewPermission()
-        {
-            var userPermissions = await GetUserPermissionCodesAsync();
-            if (!userPermissions.Contains(StudentPermissionCodes.ViewStudentCourseTransfers))
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view student-course-transfers");
-            }
         }
 
         /// <summary>

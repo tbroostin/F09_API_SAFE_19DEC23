@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -130,7 +130,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new ArgumentNullException("guid", "GUID is required to get an Student Academic Period Profiles.");
             }
-            CheckGetStudentAcademicPeriodProfilesPermission();
+            
             try
             {
                 var studentTermEntity = await _studentTermRepository.GetStudentTermByGuidAsync(guid);
@@ -165,8 +165,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             try
             {
-                //check permissions
-                CheckGetStudentAcademicPeriodProfilesPermission();
+                
                 // Convert and validate all input parameters
                 var newPerson = string.Empty;
                 if (!(string.IsNullOrEmpty(person)))
@@ -544,20 +543,5 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             
         }
-
-        /// <summary>
-        /// Helper method to determine if the user has permission to view Student Academic Period Profiles.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckGetStudentAcademicPeriodProfilesPermission()
-        {
-            var hasPermission = HasPermission(StudentPermissionCodes.ViewStudentAcademicPeriodProfile);
-
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view Student Academic Period Profiles.");
-            }
-        }
-
     }
 }

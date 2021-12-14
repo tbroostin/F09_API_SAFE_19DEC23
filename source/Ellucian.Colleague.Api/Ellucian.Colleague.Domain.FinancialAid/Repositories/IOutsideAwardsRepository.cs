@@ -36,6 +36,13 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Repositories
         Task DeleteOutsideAwardAsync(string outsideAwardId);
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="awardId"></param>
+        /// <returns></returns>
+        Task<OutsideAward> GetOutsideAwardsByAwardIdAsync(string awardId);
+
+        /// <summary>
         /// Updates an outside award record with the specified id
         /// </summary>
         /// <param name="outsideAward">outside award entity</param>

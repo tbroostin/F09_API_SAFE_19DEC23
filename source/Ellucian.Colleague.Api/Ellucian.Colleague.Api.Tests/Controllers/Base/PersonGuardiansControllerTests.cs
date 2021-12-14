@@ -1,17 +1,23 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using Ellucian.Colleague.Api.Controllers.Base;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
+using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
@@ -232,7 +238,178 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 
             var actual = await personGuardianRelationshipsController.GetPersonGuardianRelationshipByIdAsync(id);
         }
-        
+
+        //GET v7
+        //Successful
+        //GetPersonGuardianRelationshipsAllAndFilterAsync
+        [TestMethod]
+        public async Task PersonGuardiansController_GetPersonGuardianRelationshipsAllAndFilterAsync_Permissions()
+        {
+            string subjectPersonId = "32633175-304a-4888-9057-e49a20687e2a";
+            List<Dtos.PersonGuardianRelationship> expectedDto = new List<PersonGuardianRelationship>() { personGuardianRelationshipTuple.Item1.First() };
+            Tuple<IEnumerable<Dtos.PersonGuardianRelationship>, int> filteredExpected = new Tuple<IEnumerable<Dtos.PersonGuardianRelationship>, int>(expectedDto, 1);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonGuardians" },
+                    { "action", "GetPersonGuardianRelationshipsAllAndFilterAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-external-education-credentials", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personGuardianRelationshipsController.Request.SetRouteData(data);
+            personGuardianRelationshipsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(BasePermissionCodes.UpdatePersonExternalEducationCredentials);
+
+            var controllerContext = personGuardianRelationshipsController.ControllerContext;
+            var actionDescriptor = personGuardianRelationshipsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            personGuardianRelationshipServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personGuardianRelationshipServiceMock.Setup(x => x.GetPersonGuardianRelationshipsAllAndFilterAsync(It.IsAny<int>(), It.IsAny<int>(), subjectPersonId)).ReturnsAsync(filteredExpected);
+            var results = await personGuardianRelationshipsController.GetPersonGuardianRelationshipsAllAndFilterAsync(It.IsAny<Paging>(), subjectPersonId);
+
+            Object filterObject;
+            personGuardianRelationshipsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdatePersonExternalEducationCredentials));
+
+
+        }
+
+        //GET v7
+        //Exception
+        //GetPersonGuardianRelationshipsAllAndFilterAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonGuardiansController_GetPersonGuardianRelationshipsAllAndFilterAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonGuardians" },
+                    { "action", "GetPersonGuardianRelationshipsAllAndFilterAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-guardians", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personGuardianRelationshipsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personGuardianRelationshipsController.ControllerContext;
+            var actionDescriptor = personGuardianRelationshipsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                personGuardianRelationshipServiceMock.Setup(x => x.GetPersonGuardianRelationshipsAllAndFilterAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>())).Throws<PermissionsException>();
+                personGuardianRelationshipServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view person-guardians."));
+                var results = await personGuardianRelationshipsController.GetPersonGuardianRelationshipsAllAndFilterAsync(It.IsAny<Paging>());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET by id v7
+        //Successful
+        //GetPersonGuardianRelationshipByIdAsync
+        [TestMethod]
+        public async Task PersonGuardiansController_GetPersonGuardianRelationshipByIdAsync_Permissions()
+        {
+            var expected = personGuardianRelationshipsDtos.FirstOrDefault(i => i.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonGuardians" },
+                    { "action", "GetPersonGuardianRelationshipByIdAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-external-education-credentials", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personGuardianRelationshipsController.Request.SetRouteData(data);
+            personGuardianRelationshipsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(BasePermissionCodes.UpdatePersonExternalEducationCredentials);
+
+            var controllerContext = personGuardianRelationshipsController.ControllerContext;
+            var actionDescriptor = personGuardianRelationshipsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            personGuardianRelationshipServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            personGuardianRelationshipServiceMock.Setup(x => x.GetPersonGuardianRelationshipByIdAsync(id)).ReturnsAsync(expected);
+            var actual = await personGuardianRelationshipsController.GetPersonGuardianRelationshipByIdAsync(id);
+
+            Object filterObject;
+            personGuardianRelationshipsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdatePersonExternalEducationCredentials));
+
+
+        }
+
+        //GET by id v7
+        //Exception
+        //GetPersonGuardianRelationshipByIdAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task PersonGuardiansController_GetPersonGuardianRelationshipByIdAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "PersonGuardians" },
+                    { "action", "GetPersonGuardianRelationshipByIdAsync" }
+                };
+            HttpRoute route = new HttpRoute("person-guardians", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            personGuardianRelationshipsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = personGuardianRelationshipsController.ControllerContext;
+            var actionDescriptor = personGuardianRelationshipsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                personGuardianRelationshipServiceMock.Setup(x => x.GetPersonGuardianRelationshipsAllAndFilterAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>())).Throws<PermissionsException>();
+                personGuardianRelationshipServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view person-guardians."));
+                var results = await personGuardianRelationshipsController.GetPersonGuardianRelationshipsAllAndFilterAsync(It.IsAny<Paging>());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion
 
         #region POST

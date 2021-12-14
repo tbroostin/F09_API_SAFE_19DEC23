@@ -1,4 +1,4 @@
-﻿// Copyright 2013-2014 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2013-2020 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,6 +42,12 @@ namespace Ellucian.Colleague.Domain.Planning.Entities
         /// </summary>
         private List<EmailAddress> _EmailAddresses = new List<EmailAddress>();
         public List<EmailAddress> EmailAddresses { get { return _EmailAddresses; } }
+
+        /// <summary>
+        /// Name that should be used when displaying a person's name on reports and forms.
+        /// This property is based on a Name Address Hierarcy and will be null if none is provided.
+        /// </summary>
+        public PersonHierarchyName PersonDisplayName { get; set; }
 
         /// <summary>
         /// Used to add email addresses to EmailAddresses 

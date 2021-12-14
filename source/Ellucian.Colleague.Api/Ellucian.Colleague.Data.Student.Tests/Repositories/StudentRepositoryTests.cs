@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -3487,7 +3487,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         {
             transManagerMock.Setup(manager => manager
                     .ExecuteAsync<GetPersonSearchKeyListRequest, GetPersonSearchKeyListResponse>(It.IsAny<GetPersonSearchKeyListRequest>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
             var lastName = "Gerbil";
             var result = await studentRepository.GetStudentSearchByNameForExactMatchAsync(lastName);
             Assert.AreEqual(0, result.Count());
@@ -3553,6 +3553,195 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Assert.AreEqual(knownStudentId2, result.ElementAt(0).Id);
             Assert.AreEqual(knownStudentId1, result.ElementAt(1).Id);
             Assert.AreEqual(2, result.Count());
+        }
+    }
+
+    [TestClass]
+    public class StudentRepository_GetStudentAcademicLevelsAsync
+    {
+
+        protected Mock<IColleagueTransactionFactory> transFactoryMock;
+        protected Mock<ObjectCache> localCacheMock;
+        protected Mock<ICacheProvider> cacheProviderMock;
+        protected Mock<IColleagueDataReader> dataReaderMock;
+        protected Mock<IColleagueDataReader> anonymousDataReaderMock;
+        protected Mock<ILogger> loggerMock;
+        protected Mock<IColleagueTransactionInvoker> transManagerMock;
+        ApiSettings apiSettingsMock;
+        protected Mock<StudentRepository> studentRepoMock;
+
+        StudentRepository studentRepository;
+        Collection<Student.DataContracts.StudentAcadLevels> studentAcadLevels;
+
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            // Initialize person setup and Mock framework
+            // transaction factory mock
+            transFactoryMock = new Mock<IColleagueTransactionFactory>();
+            // Cache Mock
+            localCacheMock = new Mock<ObjectCache>();
+            // Cache Provider Mock
+            cacheProviderMock = new Mock<ICacheProvider>();
+            // Set up data accessor for mocking 
+            dataReaderMock = new Mock<IColleagueDataReader>();
+            // Logger mock
+            loggerMock = new Mock<ILogger>();
+            // Set up transaction manager for mocking 
+            transManagerMock = new Mock<IColleagueTransactionInvoker>();
+            apiSettingsMock = new ApiSettings("null");
+            transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataReaderMock.Object);
+            // Set up transManagerMock as the object for the transaction manager
+            transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
+
+
+            cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
+                x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
+                .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
+
+            // Build the test repository
+            BuildMockStudentRepository();
+        }
+
+        private void BuildMockStudentRepository()
+        {
+             studentAcadLevels = new Collection<Student.DataContracts.StudentAcadLevels>();
+            studentAcadLevels.Add(new Student.DataContracts.StudentAcadLevels() { Recordkey = "000111*UG", StaClass = "first class", StaEndDate = DateTime.Today.AddYears(-3), StaStartDate = DateTime.Today.AddYears(-4), StaStartTerm = "2012/FA" }); //end date and start date in past
+            studentAcadLevels.Add(new Student.DataContracts.StudentAcadLevels() { Recordkey = "000111*GR", StaAdmitStatus = "admitted", StaEndDate = DateTime.Today.AddYears(+3), StaStartDate = DateTime.Today.AddYears(-4), StaStartTerm = "2015/FA" }); //start date in past end date in future
+            studentAcadLevels.Add(new Student.DataContracts.StudentAcadLevels() { Recordkey = "000111*CE", StaEndDate = null, StaStartDate = DateTime.Today.AddYears(-4), StaStartTerm = "2016/FA" }); //start date in past, no end date
+            studentAcadLevels.Add(new Student.DataContracts.StudentAcadLevels() { Recordkey = "000111*CERT", StaStudentAcadCred = new List<string>() { "1", "2" } });//no start date and end date and no term
+            studentAcadLevels.Add(new Student.DataContracts.StudentAcadLevels() { Recordkey = "000111*MISSING" });//no start date and end date and no term- this is missing from student acad level pointers
+
+            dataReaderMock.Setup(a => a.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.Students>("000111", true))
+                .ReturnsAsync(new Student.DataContracts.Students() { Recordkey = "000111", StuAcadLevels = new List<string>() { "UG", "GR", "not-found", "CERT", "CE" } }); //Not found pointer does not have acad level data
+
+            //not found student setup
+            dataReaderMock.Setup(a => a.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.Students>("not-found-student", true)).ReturnsAsync(() => null);
+
+            //student with null acad levels
+            dataReaderMock.Setup(a => a.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.Students>("student-with-null-acad-levels", true)).ReturnsAsync(
+                new Student.DataContracts.Students() { Recordkey = "student-with-null-acad-levels", StuAcadLevels = null });
+
+            //student read throws exception
+            dataReaderMock.Setup(a => a.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.Students>("student-with-exception", true)).Throws(
+                new Exception("junk"));
+
+            //student acad levels pointers have no acad level records
+            dataReaderMock.Setup(a => a.ReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.Students>("no-pointer-records", true))
+                .ReturnsAsync(new Student.DataContracts.Students() { Recordkey = "no-pointer-records", StuAcadLevels = new List<string>() { "UG", "GR", "not-found", "CERT", "CE" } });
+
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StudentAcadLevels>(It.IsAny<string[]>(), true)).ReturnsAsync(studentAcadLevels);
+
+            studentRepository = new StudentRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettingsMock);
+
+        }
+
+
+        [TestCleanup]
+        public void TestCleanup()
+        {
+            studentRepository = null;
+        }
+
+        //When student Id is null or empty
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task StudentRepository_GetStudentAcademicLevelsAsync_StudentIdIsNull()
+        {
+            await studentRepository.GetStudentAcademicLevelsAsync(null);
+        }
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public async Task StudentRepository_GetStudentAcademicLevelsAsync_StudentIdIsEmpty()
+        {
+            await studentRepository.GetStudentAcademicLevelsAsync(string.Empty);
+        }
+        //no records in student file
+        [TestMethod]
+        public async Task StudentRepository_GetStudentAcademicLevelsAsync_StudentIdNotFound()
+        {
+            await studentRepository.GetStudentAcademicLevelsAsync("not-found-student");
+            loggerMock.Verify(l => l.Error("Couldn't find student details from STUDENTS file for the id not-found-student"));
+        }
+        //student have null or empty acad level pointers
+        [TestMethod]
+        public async Task StudentRepository_GetStudentAcademicLevelsAsync_StudentWithNullAcadLevelPointers()
+        {
+            await studentRepository.GetStudentAcademicLevelsAsync("student-with-null-acad-levels");
+            loggerMock.Verify(l => l.Error("Cannot find any academic levels pointers for the student student-with-null-acad-levels in STUDENTS file"));
+        }
+        //student dataread throws exception
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
+        public async Task StudentRepository_GetStudentAcademicLevelsAsync_StudentReadThrowsException()
+        {
+            await studentRepository.GetStudentAcademicLevelsAsync("student-with-exception");
+        }
+        //none of the student acad level pointers are in the acad level file
+        [TestMethod]
+        public async Task StudentRepository_GetStudentAcademicLevelsAsync_StudentACadLevelPointersALLMissingFromAcadLevelFile()
+        {
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StudentAcadLevels>(It.IsAny<string[]>(), true)).ReturnsAsync(() => null);
+            var result = await studentRepository.GetStudentAcademicLevelsAsync("no-pointer-records");
+            loggerMock.Verify(l=>l.Error("Cannot find any academic levels for the student no-pointer-records in STUDENT.ACAD.LEVELS file"));
+        }
+        //student academic level file does not have any records for the keys with studentId*acadLevel
+        [TestMethod]
+        public async Task StudentRepository_GetStudentAcademicLevelsAsync_StudentACadLevelPointerMissingFromAcadLevelFile()
+        {
+           var result= await studentRepository.GetStudentAcademicLevelsAsync("000111");
+            Assert.IsNotNull(result);
+            loggerMock.Verify(l => l.Error("Cannot find student's academic level for the key- 000111*not-found"));
+        }
+
+        //student academic file throws exception while retriving records
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
+        public async Task StudentRepository_GetStudentAcademicLevelsAsync_StudentACadLevelFileThrowsException()
+        {
+            dataReaderMock.Setup(d => d.BulkReadRecordAsync<Ellucian.Colleague.Data.Student.DataContracts.StudentAcadLevels>(It.IsAny<string[]>(), true)).Throws(new Exception("issue"));
+            var result = await studentRepository.GetStudentAcademicLevelsAsync("000111");
+        }
+        //happy path- student found, student acad levels pointers found, student acad level records found
+        [TestMethod]
+        public async Task StudentRepository_GetStudentAcademicLevelsAsync_HappyPath()
+        {
+            var result =( await studentRepository.GetStudentAcademicLevelsAsync("000111")).ToList();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(4, result.Count);
+            Assert.AreEqual("UG", result[0].AcademicLevel);
+            Assert.AreEqual(studentAcadLevels[0].StaAdmitStatus, result[0].AdmitStatus);
+            Assert.AreEqual(studentAcadLevels[0].StaClass, result[0].ClassLevel);
+            Assert.AreEqual(studentAcadLevels[0].StaEndDate, result[0].StudentAcademicLevelEndDate);
+            Assert.AreEqual(studentAcadLevels[0].StaStartDate, result[0].StudentAcademicLevelStartDate);
+            Assert.AreEqual(studentAcadLevels[0].StaStartTerm, result[0].StartTerm);
+            Assert.AreEqual(0, result[0].AcademicCredits.Count);
+
+
+            Assert.AreEqual("GR", result[1].AcademicLevel);
+            Assert.AreEqual(studentAcadLevels[1].StaAdmitStatus, result[1].AdmitStatus);
+            Assert.AreEqual(studentAcadLevels[1].StaClass, result[1].ClassLevel);
+            Assert.AreEqual(studentAcadLevels[1].StaEndDate, result[1].StudentAcademicLevelEndDate);
+            Assert.AreEqual(studentAcadLevels[1].StaStartDate, result[1].StudentAcademicLevelStartDate);
+            Assert.AreEqual(studentAcadLevels[1].StaStartTerm, result[1].StartTerm);
+            Assert.AreEqual(0, result[1].AcademicCredits.Count);
+
+            Assert.AreEqual("CERT", result[2].AcademicLevel);
+            Assert.AreEqual(studentAcadLevels[3].StaAdmitStatus, result[2].AdmitStatus);
+            Assert.AreEqual(studentAcadLevels[3].StaClass, result[2].ClassLevel);
+            Assert.AreEqual(studentAcadLevels[3].StaEndDate, result[2].StudentAcademicLevelEndDate);
+            Assert.AreEqual(studentAcadLevels[3].StaStartDate, result[2].StudentAcademicLevelStartDate);
+            Assert.AreEqual(studentAcadLevels[3].StaStartTerm, result[2].StartTerm);
+            Assert.AreEqual(2, result[2].AcademicCredits.Count);
+
+            Assert.AreEqual("CE", result[3].AcademicLevel);
+            Assert.AreEqual(studentAcadLevels[2].StaAdmitStatus, result[3].AdmitStatus);
+            Assert.AreEqual(studentAcadLevels[2].StaClass, result[3].ClassLevel);
+            Assert.AreEqual(studentAcadLevels[2].StaEndDate, result[3].StudentAcademicLevelEndDate);
+            Assert.AreEqual(studentAcadLevels[2].StaStartDate, result[3].StudentAcademicLevelStartDate);
+            Assert.AreEqual(studentAcadLevels[2].StaStartTerm, result[3].StartTerm);
+            Assert.AreEqual(0, result[3].AcademicCredits.Count);
         }
     }
 

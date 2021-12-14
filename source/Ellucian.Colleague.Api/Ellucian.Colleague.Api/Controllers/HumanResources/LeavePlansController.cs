@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -48,10 +48,10 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <summary>
         /// Return all leavePlans
         /// </summary>
-        
+
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
-                /// <returns>List of LeavePlans <see cref="Dtos.LeavePlans"/> objects representing matching leavePlans</returns>
-        [HttpGet, EedmResponseFilter]               
+        /// <returns>List of LeavePlans <see cref="Dtos.LeavePlans"/> objects representing matching leavePlans</returns>
+        [HttpGet, EedmResponseFilter, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetLeavePlansAsync(Paging page)
@@ -87,7 +87,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -116,7 +116,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="guid">GUID to desired leavePlans</param>
         /// <returns>A leavePlans object <see cref="Dtos.LeavePlans"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.LeavePlans> GetLeavePlansByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -148,7 +148,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -177,12 +177,11 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="leavePlans">DTO of the new leavePlans</param>
         /// <returns>A leavePlans object <see cref="Dtos.LeavePlans"/> in EEDM format</returns>
-        [HttpPost]
+        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.LeavePlans> PostLeavePlansAsync([FromBody] Dtos.LeavePlans leavePlans)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
-
         }
 
         /// <summary>
@@ -191,25 +190,22 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="guid">GUID of the leavePlans to update</param>
         /// <param name="leavePlans">DTO of the updated leavePlans</param>
         /// <returns>A leavePlans object <see cref="Dtos.LeavePlans"/> in EEDM format</returns>
-        [HttpPut]
+        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.LeavePlans> PutLeavePlansAsync([FromUri] string guid, [FromBody] Dtos.LeavePlans leavePlans)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
-
         }
 
         /// <summary>
         /// Delete (DELETE) a leavePlans
         /// </summary>
         /// <param name="guid">GUID to desired leavePlans</param>
-        [HttpDelete]
+        [HttpDelete, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task DeleteLeavePlansAsync(string guid)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
-
         }
-
     }
 }

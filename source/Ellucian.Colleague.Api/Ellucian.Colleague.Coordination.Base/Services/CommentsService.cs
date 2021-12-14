@@ -48,8 +48,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>Collection of Comments DTO objects</returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.Comments>, int>> GetCommentsAsync(int offset, int limit, string subjectMatter, string commentSubjectArea, bool bypassCache = false)
         {
-            CheckUserCommentsViewPermissions();
-
+            
             var commentsCollection = new List<Ellucian.Colleague.Dtos.Comments>();
 
             #region  Convert and validate all input parameters
@@ -138,8 +137,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     commentsCollection.Add(remarkDto);
                 }
             }
-            
-            #endregion  
+
+            #endregion
 
             if (IntegrationApiException != null)
             {
@@ -162,9 +161,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 throw new ArgumentNullException("guid", "GUID is required to get a comments.");
             }
 
-
-            CheckUserCommentsViewPermissions();
-
             Remark remark = null;
             try
             {
@@ -178,9 +174,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             catch (KeyNotFoundException)
             {
                 throw new KeyNotFoundException("No comments was found for GUID " + guid);
-                
+
             }
-        
+
             if (remark == null)
             {
                 throw new KeyNotFoundException("No comments was found for GUID " + guid);
@@ -218,8 +214,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 throw new ArgumentNullException("comment", "Comments id required.");
             }
 
-            CheckUserCommentsCreateUpdatePermissions();
-
+         
             _remarkRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
             #region create domain entity from request
@@ -303,8 +298,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 throw new ArgumentNullException("guid", "GUID is required to delete a Comments.");
             }
 
-            CheckUserCommentsDeletePermissions();
-
             try
             {
 
@@ -329,10 +322,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             catch (Exception ex)  //catch InvalidOperationException thrown when record already exists.
             {
                 IntegrationApiExceptionAddError(ex.Message, "Global.Internal.Error", guid);
-                     
+
                 throw IntegrationApiException;
             }
-           
+
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -353,9 +346,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 throw new ArgumentNullException("comments", "Message body required to update a comment");
             }
 
-
-            CheckUserCommentsCreateUpdatePermissions();
-
             _remarkRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
             #region create domain entity from request
@@ -365,7 +355,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 remarkEntityRequest = await this.ConvertCommentsDtoToRemarkEntityAsync(comments);
             }
-   
+
             catch (Exception ex)
             {
                 IntegrationApiExceptionAddError("Record not updated.  Error extracting request. " + ex.Message, "Global.Internal.Error",
@@ -900,49 +890,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
         }
 
-        #endregion
-
-        #region Private Permission Methods
-
-        /// <summary>
-        /// Verifies if the user has the correct permission to view any comment
-        /// </summary>
-        private void CheckUserCommentsViewPermissions()
-        {
-            // access is ok if the current user has the view comments permission 
-            if ((!HasPermission(BasePermissionCodes.ViewComment)) && (!HasPermission(BasePermissionCodes.UpdateComment)))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view comments.");
-                throw new PermissionsException("User '" + CurrentUser.UserId + "' is not authorized to view comments.");
-            }
-        }
-
-        /// <summary>
-        ///Verifies if the user has the correct permission to create/update any comment
-        /// </summary>
-        private void CheckUserCommentsCreateUpdatePermissions()
-        {
-            // access is ok if the current user has the create/update comments permission
-            if (!HasPermission(BasePermissionCodes.UpdateComment))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to create/update comments.");
-                throw new PermissionsException("User '" + CurrentUser.UserId + "' is not authorized to create/update comments.");
-            }
-        }
-
-        /// <summary>
-        /// Verifies if the user has the correct permission to delete any comment
-        /// </summary>
-        private void CheckUserCommentsDeletePermissions()
-        {
-            // access is ok if the current user has the delete comments permission
-            if (!HasPermission(BasePermissionCodes.DeleteComment))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to delete comments.");
-                throw new PermissionsException("User '" + CurrentUser.UserId + "' is not authorized to delete comments.");
-            }
-        }
-      
         #endregion
 
     }

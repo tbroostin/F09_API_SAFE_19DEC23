@@ -865,7 +865,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 ClearCache(new List<string> { cacheControlKey });
             }
-            var allCreditTypes = await GetOrAddToCacheAsync<IEnumerable<CredTypesBase>>(cacheControlKey,
+            IEnumerable<CredTypesBase> allCreditTypes = null;
+            try
+            {
+                allCreditTypes = await GetOrAddToCacheAsync<IEnumerable<CredTypesBase>>(cacheControlKey,
                 async () =>
                 {
                     var credTypes = await DataReader.BulkReadRecordAsync<CredTypesBase>("CRED.TYPES", "");
@@ -876,6 +879,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                     return credTypes;
                 }, Level1CacheTimeoutValue);
+            }
+            catch (Exception ex)
+            {
+                logger.Info("Unable to access CRED.TYPES from database." + ex.Message);
+            }
 
             if (allCreditTypes != null && allCreditTypes.Any())
             {
@@ -911,18 +919,25 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 ClearCache(new List<string> { cacheControlKey });
             }
-            var allAcadLevels = await GetOrAddToCacheAsync<IEnumerable<AcadLevelsBase>>(cacheControlKey,
-                async () =>
-                {
-                    var credTypes = await DataReader.BulkReadRecordAsync<AcadLevelsBase>("ACAD.LEVELS", "");
-                    if (credTypes == null)
+            IEnumerable<AcadLevelsBase> allAcadLevels = null;
+            try
+            {
+                allAcadLevels = await GetOrAddToCacheAsync<IEnumerable<AcadLevelsBase>>(cacheControlKey,
+                    async () =>
                     {
-                        logger.Info("Unable to access ACAD.LEVELS from database.");
-                        credTypes = new Collection<AcadLevelsBase>();
-                    }
-                    return credTypes;
-                }, Level1CacheTimeoutValue);
-
+                        var credTypes = await DataReader.BulkReadRecordAsync<AcadLevelsBase>("ACAD.LEVELS", "");
+                        if (credTypes == null)
+                        {
+                            logger.Info("Unable to access ACAD.LEVELS from database.");
+                            credTypes = new Collection<AcadLevelsBase>();
+                        }
+                        return credTypes;
+                    }, Level1CacheTimeoutValue);
+            }
+            catch (Exception ex)
+            {
+                logger.Info("Unable to access ACAD.LEVELS from database.." + ex.Message);
+            }
             if (allAcadLevels != null && allAcadLevels.Any())
             {
                 foreach (var acadLevel in allAcadLevels)
@@ -957,18 +972,30 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 ClearCache(new List<string> { cacheControlKey });
             }
-            var allAssignmentContractTypes = await GetOrAddToCacheAsync<IEnumerable<AsgmtContractTypesBase>>(cacheControlKey,
+            IEnumerable<AsgmtContractTypesBase> allAssignmentContractTypes = null;
+
+            try
+            {
+                allAssignmentContractTypes = await GetOrAddToCacheAsync<IEnumerable<AsgmtContractTypesBase>>(cacheControlKey,
                 async () =>
                 {
-                    var assignmentContractTypes = await DataReader.BulkReadRecordAsync<AsgmtContractTypesBase>("ASGMT.CONTRACT.TYPES", "");
+                    Collection<AsgmtContractTypesBase> assignmentContractTypes = null;
+
+                    assignmentContractTypes = await DataReader.BulkReadRecordAsync<AsgmtContractTypesBase>("ASGMT.CONTRACT.TYPES", "");
                     if (assignmentContractTypes == null)
                     {
                         logger.Info("Unable to access ASGMT.CONTRACT.TYPES from database.");
                         assignmentContractTypes = new Collection<AsgmtContractTypesBase>();
                     }
+
                     return assignmentContractTypes;
                 }, Level1CacheTimeoutValue);
 
+            }
+            catch (Exception ex)
+            {
+                logger.Info("Unable to access ASGMT.CONTRACT.TYPES from database." + ex.Message);
+            }
             if (allAssignmentContractTypes != null && allAssignmentContractTypes.Any())
             {
                 foreach (var assignmentContractType in allAssignmentContractTypes)
@@ -1003,20 +1030,27 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 ClearCache(new List<string> { cacheControlKey });
             }
-            var allPositions = await GetOrAddToCacheAsync<IEnumerable<PositionBase>>(cacheControlKey,
-                async () =>
-                {
-                    var today = await GetUnidataFormatDateAsync(DateTime.Now);
-                    string criteria = string.Format("WITH POS.END.DATE EQ '' OR POS.END.DATE GT '{0}'", today);
-                    var positions = await DataReader.BulkReadRecordAsync<PositionBase>("POSITION", criteria);
-                    if (positions == null)
+            IEnumerable<PositionBase> allPositions = null;
+            try
+            {
+                allPositions =  await GetOrAddToCacheAsync<IEnumerable<PositionBase>>(cacheControlKey,
+                    async () =>
                     {
-                        logger.Info("Unable to access POSITION from database.");
-                        positions = new Collection<PositionBase>();
-                    }
-                    return positions;
-                }, Level1CacheTimeoutValue);
-
+                        var today = await GetUnidataFormatDateAsync(DateTime.Now);
+                        string criteria = string.Format("WITH POS.END.DATE EQ '' OR POS.END.DATE GT '{0}'", today);
+                        var positions = await DataReader.BulkReadRecordAsync<PositionBase>("POSITION", criteria);
+                        if (positions == null)
+                        {
+                            logger.Info("Unable to access POSITION from database.");
+                            positions = new Collection<PositionBase>();
+                        }
+                        return positions;
+                    }, Level1CacheTimeoutValue);
+            }
+            catch (Exception ex)
+            {
+                logger.Info("Unable to access POSITION from database." + ex.Message);
+            }
             if (allPositions != null && allPositions.Any())
             {
                 foreach (var position in allPositions)
@@ -1051,7 +1085,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 ClearCache(new List<string> { cacheControlKey });
             }
-            var allLoadPeriods = await GetOrAddToCacheAsync<IEnumerable<LoadPeriodsBase>>(cacheControlKey,
+            IEnumerable<LoadPeriodsBase> allLoadPeriods = null;
+
+            try {
+                allLoadPeriods = await GetOrAddToCacheAsync<IEnumerable<LoadPeriodsBase>>(cacheControlKey,
                 async () =>
                 {
                     var loadPeriods = await DataReader.BulkReadRecordAsync<LoadPeriodsBase>("LOAD.PERIODS", "");
@@ -1062,7 +1099,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                     return loadPeriods;
                 }, Level1CacheTimeoutValue);
-
+            }
+            catch (Exception ex)
+            {
+                logger.Info("Unable to access LOAD.PERIODS from database." + ex.Message);
+            }
             if (allLoadPeriods != null && allLoadPeriods.Any())
             {
                 foreach (var loadPeriod in allLoadPeriods)
@@ -1097,7 +1138,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 ClearCache(new List<string> { cacheControlKey });
             }
-            var allBendedCodes = await GetOrAddToCacheAsync<IEnumerable<BendedBase>>(cacheControlKey,
+            IEnumerable<BendedBase> allBendedCodes = null;
+
+            try
+            {
+                allBendedCodes = await GetOrAddToCacheAsync<IEnumerable<BendedBase>>(cacheControlKey,
                 async () =>
                 {
                     var BendedCodes = await DataReader.BulkReadRecordAsync<BendedBase>("BENDED", "WITH BD.CALC.METHOD = 'A''R'");
@@ -1108,7 +1153,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                     return BendedCodes;
                 }, Level1CacheTimeoutValue);
-
+            }
+            catch (Exception ex)
+            {
+                logger.Info("Unable to access BENDED from database." + ex.Message);
+            }
             if (allBendedCodes != null && allBendedCodes.Any())
             {
                 foreach (var bendedCode in allBendedCodes)
@@ -1143,25 +1192,32 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 ClearCache(new List<string> { cacheControlKey });
             }
-            var allStaffApproval = await GetOrAddToCacheAsync<IEnumerable<DataContracts.Person>>(cacheControlKey,
-                async () =>
-                {
-                    string criteria = "WITH APPL.DECISION.BY NE '' BY.EXP APPL.DECISION.BY SAVING APPL.DECISION.BY";
-                    var staffApprovalIds = await DataReader.SelectAsync("APPLICATIONS", criteria);
-                    if (staffApprovalIds == null || !staffApprovalIds.Any())
+            IEnumerable<DataContracts.Person> allStaffApproval = null;
+            try
+            {
+                allStaffApproval = await GetOrAddToCacheAsync<IEnumerable<DataContracts.Person>>(cacheControlKey,
+                    async () =>
                     {
-                        return new Collection<DataContracts.Person>();
-                    }
+                        string criteria = "WITH APPL.DECISION.BY NE '' BY.EXP APPL.DECISION.BY SAVING APPL.DECISION.BY";
+                        var staffApprovalIds = await DataReader.SelectAsync("APPLICATIONS", criteria);
+                        if (staffApprovalIds == null || !staffApprovalIds.Any())
+                        {
+                            return new Collection<DataContracts.Person>();
+                        }
 
-                    var staffApproval = await DataReader.BulkReadRecordAsync<DataContracts.Person>("PERSON", staffApprovalIds);
-                    if (staffApproval == null)
-                    {
-                        logger.Info("Unable to access PERSON from database.");
-                        staffApproval = new Collection<DataContracts.Person>();
-                    }
-                    return staffApproval;
-                }, Level1CacheTimeoutValue);
-
+                        var staffApproval = await DataReader.BulkReadRecordAsync<DataContracts.Person>("PERSON", staffApprovalIds);
+                        if (staffApproval == null)
+                        {
+                            logger.Info("Unable to access PERSON from database.");
+                            staffApproval = new Collection<DataContracts.Person>();
+                        }
+                        return staffApproval;
+                    }, Level1CacheTimeoutValue);
+            }
+            catch (Exception ex)
+            {
+                logger.Info("Unable to access PERSON from database." + ex.Message);
+            }
             if (allStaffApproval != null && allStaffApproval.Any())
             {
                 foreach (var person in allStaffApproval)
@@ -1196,7 +1252,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 ClearCache(new List<string> { cacheControlKey });
             }
-            var allApplicationStatuses = await GetOrAddToCacheAsync<IEnumerable<ApplicationStatusesBase>>(cacheControlKey,
+            IEnumerable<ApplicationStatusesBase> allApplicationStatuses = null;
+            try {
+                allApplicationStatuses = await GetOrAddToCacheAsync<IEnumerable<ApplicationStatusesBase>>(cacheControlKey,
                 async () =>
                 {
                     var loadPeriods = await DataReader.BulkReadRecordAsync<ApplicationStatusesBase>("APPLICATION.STATUSES", "");
@@ -1207,7 +1265,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                     return loadPeriods;
                 }, Level1CacheTimeoutValue);
-
+            }
+            catch (Exception ex)
+            {
+                logger.Info("Unable to access APPLICATION.STATUSES from database." + ex.Message);
+            }
             if (allApplicationStatuses != null && allApplicationStatuses.Any())
             {
                 foreach (var applStatus in allApplicationStatuses)
@@ -1242,18 +1304,25 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 ClearCache(new List<string> { cacheControlKey });
             }
-            var allReceiptTenderGlDistr = await GetOrAddToCacheAsync<IEnumerable<RcptTenderGlDistrBase>>(cacheControlKey,
-                async () =>
-                {
-                    var receiptTenderGlDistrs = await DataReader.BulkReadRecordAsync<RcptTenderGlDistrBase>("RCPT.TENDER.GL.DISTR", "");
-                    if (receiptTenderGlDistrs == null)
+            IEnumerable<RcptTenderGlDistrBase> allReceiptTenderGlDistr = null;
+            try
+            {
+                allReceiptTenderGlDistr = await GetOrAddToCacheAsync<IEnumerable<RcptTenderGlDistrBase>>(cacheControlKey,
+                    async () =>
                     {
-                        logger.Info("Unable to access RCPT.TENDER.GL.DISTR from database.");
-                        receiptTenderGlDistrs = new Collection<RcptTenderGlDistrBase>();
-                    }
-                    return receiptTenderGlDistrs;
-                }, Level1CacheTimeoutValue);
-
+                        var receiptTenderGlDistrs = await DataReader.BulkReadRecordAsync<RcptTenderGlDistrBase>("RCPT.TENDER.GL.DISTR", "");
+                        if (receiptTenderGlDistrs == null)
+                        {
+                            logger.Info("Unable to access RCPT.TENDER.GL.DISTR from database.");
+                            receiptTenderGlDistrs = new Collection<RcptTenderGlDistrBase>();
+                        }
+                        return receiptTenderGlDistrs;
+                    }, Level1CacheTimeoutValue);
+            }
+            catch (Exception ex)
+            {
+                logger.Info("Unable to access RCPT.TENDER.GL.DISTR from database." + ex.Message);
+            }
             if (allReceiptTenderGlDistr != null && allReceiptTenderGlDistr.Any())
             {
                 foreach (var receiptTenderGlDistr in allReceiptTenderGlDistr)
@@ -1288,7 +1357,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 ClearCache(new List<string> { cacheControlKey });
             }
-            var allPaymentMethod = await GetOrAddToCacheAsync<IEnumerable<PaymentMethods>>(cacheControlKey,
+            IEnumerable<PaymentMethods> allPaymentMethod = null;
+            try
+            {
+                allPaymentMethod = await GetOrAddToCacheAsync<IEnumerable<PaymentMethods>>(cacheControlKey,
                 async () =>
                 {
                     var paymentMethods = await DataReader.BulkReadRecordAsync<PaymentMethods>("PAYMENT.METHOD", "WITH PMTH.ECOMM.ENABLED.FLAG NE 'Y'");
@@ -1299,7 +1371,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                     return paymentMethods;
                 }, Level1CacheTimeoutValue);
-
+            }
+            catch (Exception ex)
+            {
+                logger.Info("Unable to access PAYMENT.METHOD from database." + ex.Message);
+            }
             if (allPaymentMethod != null && allPaymentMethod.Any())
             {
                 foreach (var paymentMethod in allPaymentMethod)
@@ -1334,7 +1410,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 ClearCache(new List<string> { cacheControlKey });
             }
-            var allSponsors = await GetOrAddToCacheAsync<IEnumerable<DataContracts.Person>>(cacheControlKey,
+            IEnumerable<DataContracts.Person> allSponsors = null;
+            try { 
+             allSponsors = await GetOrAddToCacheAsync<IEnumerable<DataContracts.Person>>(cacheControlKey,
                 async () =>
                 {
                     string criteria = "WITH SECSPN.SPONSOR NE '' SAVING UNIQUE SECSPN.SPONSOR";
@@ -1356,7 +1434,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                     return staffApproval;
                 }, Level1CacheTimeoutValue);
-
+            }
+            catch (Exception ex)
+            {
+                logger.Info("Unable to access PERSON from database." + ex.Message);
+            }
             if (allSponsors != null && allSponsors.Any())
             {
                 foreach (var person in allSponsors)

@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 
@@ -189,6 +189,11 @@ namespace Ellucian.Colleague.Dtos.Student
         public string StudentCourseSectionId { get; set; }
 
         /// <summary>
+        /// The list of academic credit Ids that are involved in the replacement
+        /// </summary>
+        public IEnumerable<string> RepeatAcademicCreditIds { get; set; }
+
+        /// <summary>
         /// Default constructor for the AcademicCredit transfer object
         /// </summary>
         public AcademicCredit3()
@@ -196,6 +201,7 @@ namespace Ellucian.Colleague.Dtos.Student
             MidTermGrades = new List<MidTermGrade2>();
             // Explicitly set the grading type to graded by default.
             GradingType = Dtos.Student.GradingType.Graded;
+            RepeatAcademicCreditIds = new List<string>();
         }
     }
 }

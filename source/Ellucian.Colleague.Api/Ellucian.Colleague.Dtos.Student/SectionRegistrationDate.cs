@@ -51,5 +51,9 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Date when a drop grade is required for dropping this section
         /// </summary>
         public DateTime? DropGradeRequiredDate { get; set; }
+        /// <summary>
+        /// List of Census Dates for this section
+        /// </summary>
+        public List<DateTime?> CensusDates { get; set; }
     }
 }

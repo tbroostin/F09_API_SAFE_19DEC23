@@ -26,7 +26,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     public class SectionRegistrationRepository : BaseColleagueRepository, ISectionRegistrationRepository
     {
         private RepositoryException exception;
-        const string AllSectionRegistrationsCache = "AllSectionRegistrationsKeys";
+        const string AllSectionRegistrationsCache = "section-registrations";
         const int AllSectionRegistrationsCacheTimeout = 20;
         public SectionRegistrationRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
@@ -409,12 +409,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     async () =>
                     {
                         var studentAcadCredCriteria = string.Empty;
-                        bool hasValidatedRecordsForStudent = false;
-                        bool hasFilterOrNamedQuery = false;
                         // registrant filter
                         if (sectReg != null && !string.IsNullOrEmpty(sectReg.StudentId))
                         {
-                            hasFilterOrNamedQuery = true;
                             criteria = "WITH PST.STUDENT.ACAD.CRED BY.EXP PST.STUDENT.ACAD.CRED SAVING PST.STUDENT.ACAD.CRED";
                             limitingKeys = await DataReader.SelectAsync("PERSON.ST", new string[] { sectReg.StudentId }, criteria);
                             // IF the person is a student, but has never been registered for a section, acadCredIds will come back
@@ -423,25 +420,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             {
                                 return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
                             }
-                            hasValidatedRecordsForStudent = true;
                         }
 
                         // academicPeriod named query
                         if ((!string.IsNullOrWhiteSpace(acadPeriod))
                          || (registrationStatusesByAcademicPeriod != null))
                         {
-                            hasFilterOrNamedQuery = true;
-                            if (hasValidatedRecordsForStudent == false)
-                            {
-                                criteria = "WITH PST.STUDENT.ACAD.CRED BY.EXP PST.STUDENT.ACAD.CRED SAVING PST.STUDENT.ACAD.CRED";
-                                limitingKeys = await DataReader.SelectAsync("PERSON.ST", null, criteria);
-                                if (limitingKeys == null || !limitingKeys.Any())
-                                {
-                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                                }
-                                hasValidatedRecordsForStudent = true;
-                            }
-
                             if (!string.IsNullOrWhiteSpace(acadPeriod))
                             {
                                 studentAcadCredCriteria = string.Format("WITH STC.TERM EQ '{0}'", acadPeriod);
@@ -451,7 +435,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                         if (registrationStatusesByAcademicPeriod != null)
                         {
-                            hasFilterOrNamedQuery = true;
 
                             if (!string.IsNullOrEmpty(registrationStatusesByAcademicPeriod.Item1))
                             {
@@ -484,7 +467,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         // section filter
                         if (sectReg != null && !string.IsNullOrEmpty(sectReg.SectionId))
                         {
-                            hasFilterOrNamedQuery = true;
                             if (studentAcadCredCriteria == string.Empty)
                             {
                                 studentAcadCredCriteria = string.Format("WITH SCS.COURSE.SECTION EQ '{0}'", sectReg.SectionId);
@@ -504,110 +486,27 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         // section instructor named query
                         if (!string.IsNullOrWhiteSpace(sectionInstructor))
                         {
-                            hasFilterOrNamedQuery = true;
                             //get all the ids COURSE.SEC.FACULTY...
                             criteria = string.Format("WITH CSF.FACULTY EQ '{0}' SAVING UNIQUE CSF.COURSE.SECTION", sectionInstructor);
                             var courseSecIds = await DataReader.SelectAsync("COURSE.SEC.FACULTY", criteria);
                             if (courseSecIds == null || !courseSecIds.Any())
                             {
                                 return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                            }
-                            //
-                            // Intentionally not appending studentAcadCredCriteria because this is a named query and 
-                            // should never be invoked with a student filter, term named query, or section filter
-                            //  
+                            } 
                             string stcKeyList = string.Empty;
                             foreach (var stcKey in courseSecIds)
                             {
                                 stcKeyList = stcKeyList + "'" + stcKey + "'";
                             }
-                            studentAcadCredCriteria = "WITH SCS.COURSE.SECTION EQ " + stcKeyList;
-                            limitingKeys = await DataReader.SelectAsync("STUDENT.ACAD.CRED", limitingKeys, studentAcadCredCriteria);
-                            if (limitingKeys == null || !limitingKeys.Any())
+                            if (studentAcadCredCriteria == string.Empty)
                             {
-                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                            }
-                            studentAcadCredCriteria = string.Empty;
-                            //
-                            // Do the validation against PST.STUDENT.ACAD.CRED
-                            //
-                            criteria = "WITH PST.STUDENT.ACAD.CRED BY.EXP PST.STUDENT.ACAD.CRED SAVING PST.STUDENT.ACAD.CRED";
-                            var pstLimitingKeys = await DataReader.SelectAsync("PERSON.ST", null, criteria);
-                            if (pstLimitingKeys == null || !pstLimitingKeys.Any())
-                            {
-                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                            }
-                            //
-                            // Get intersection of STCs by instructor and valid by PST.STUDENT.ACAD.CRED.
-                            //
-                            if (limitingKeys == null)
-                            {
-                                limitingKeys = pstLimitingKeys;
+                                studentAcadCredCriteria = "WITH SCS.COURSE.SECTION EQ " + stcKeyList;
                             }
                             else
                             {
-                                limitingKeys = limitingKeys.Intersect(pstLimitingKeys).ToArray();
+                                studentAcadCredCriteria = studentAcadCredCriteria + " WITH SCS.COURSE.SECTION EQ " + stcKeyList;
                             }
-                            hasValidatedRecordsForStudent = true;
-                        }
-
-                        if (hasFilterOrNamedQuery == false)
-                        {
-                            //
-                            // If there is no filter and no named query, then we want to pre-select based on PERSON.ST.   
-                            // Like Colleague UI, we simply want to ignore/exclude any invalid STUDENT.ACAD.CRED note tied
-                            // to a student (not in PST.STUDENT.ACAD.CRED).
-                            // 
-                            // (This is not quick in a Colleague environment with a large student and student acad cred count.  
-                            // But this is a cached select.)
-                            //
-                            criteria = "WITH PST.STUDENT.ACAD.CRED BY.EXP PST.STUDENT.ACAD.CRED SAVING PST.STUDENT.ACAD.CRED";
-                            limitingKeys = await DataReader.SelectAsync("PERSON.ST", null, criteria);
-                            if (limitingKeys == null)
-                            {
-                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                            }
-                            hasValidatedRecordsForStudent = true;
-                        }
-
-                        if (hasValidatedRecordsForStudent == false)
-                        {
-                            //
-                            // We have not yet validated that each STUDENT.ACAD.CRED can be found on PERSON.ST. We should have a relatively small
-                            // list of limiting keys from a section filter or section instructor named query.  Build a string for comparison 
-                            // against PST.STUDENT.ACAD.CRED.
-                            //
-                            if (limitingKeys != null && limitingKeys.Any())
-                            {
-                                string stcKeyList = string.Empty;
-                                foreach (var stcKey in limitingKeys)
-                                {
-                                    stcKeyList = stcKeyList + "'" + stcKey + "'";
-                                }
-                                criteria = "WITH PST.STUDENT.ACAD.CRED = " + stcKeyList + " BY.EXP PST.STUDENT.ACAD.CRED SAVING PST.STUDENT.ACAD.CRED";
-                                var allStudentsStcKeys = await DataReader.SelectAsync("PERSON.ST", null, criteria);
-                                if (allStudentsStcKeys == null || !allStudentsStcKeys.Any())
-                                {
-                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                                }
-                                //
-                                // Loop through the filtered keys from earlier and make sure they exist in the list from PERSON.ST.  Otherwise,
-                                // excluded them.
-                                //
-                                var validLimitingKeys = new List<string>();
-                                foreach (var stcKey in limitingKeys)
-                                {
-                                    if (allStudentsStcKeys.Contains(stcKey))
-                                    {
-                                        validLimitingKeys.Add(stcKey);
-                                    }
-                                }
-                                limitingKeys = validLimitingKeys.ToArray();
-                                if (limitingKeys == null || !limitingKeys.Any())
-                                {
-                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                                }
-                            }
+                            
                         }
 
                         if (studentAcadCredCriteria == string.Empty)
@@ -616,7 +515,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
                         else
                         {
-                            studentAcadCredCriteria = "WITH STC.STUDENT.COURSE.SEC NE ''" + " " + studentAcadCredCriteria;
+                            studentAcadCredCriteria = "WITH STC.STUDENT.COURSE.SEC NE '' " + studentAcadCredCriteria;
                         }
 
                         return new CacheSupport.KeyCacheRequirements()
@@ -723,18 +622,47 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             sb.Append(" ");
                         });
                         var repositoryError = new RepositoryException("Error(s) reading data from STUDENT.ACAD.CRED");
-                        repositoryError.AddError(new RepositoryError("sectionRegistrations.Id", sb.ToString()));
+                        repositoryError.AddError(new RepositoryError("Bad.Data", sb.ToString()));
                         throw repositoryError;
                     }
 
                     var crsSecIds = studentCourseSecs.Select(i => i.ScsCourseSection);
                     courseSections = await DataReader.BulkReadRecordAsync<CourseSections>(crsSecIds.Distinct().ToArray());
                 }
-               
+
+                //var personStIds = studentAcadCredsPage.Select(i => i.StcPersonId);
+                //var personStColumnValues = await DataReader.BatchReadRecordColumnsAsync("PERSON.ST", personStIds.Distinct().ToArray(), new string[] { "PST.STUDENT.ACAD.CRED" });
+
                 foreach (var studentAcadCred in studentAcadCredsPage)
                 {
                     try
                     {
+                        // Validate the STUDENT.ACAD.CRED key is properly referenced in the PERSON.ST table
+                        //var personStKey = studentAcadCred.StcPersonId;
+                        //if (string.IsNullOrEmpty(personStKey))
+                        //{
+                        //    var message = "The STC.PERSON.ID is missing from the STUDENT.ACAD.CRED record.";
+                        //    if (exception == null)
+                        //        exception = new RepositoryException("Unexpected repository error");
+                        //    exception.AddError(new RepositoryError("Bad.Data", string.Format("Error(s) processing STUDENT.ACAD.CRED record '{0}' with guid '{1}'.  Error: {2}", studentAcadCred.Recordkey, studentAcadCred.RecordGuid, message)));
+                        //}
+                        //else
+                        //{
+                        //    Dictionary<string, string> personStColumnValue = new Dictionary<string, string>();
+                        //    if (personStColumnValues != null)
+                        //    {
+                        //        personStColumnValue = personStColumnValues[studentAcadCred.StcPersonId];
+                        //    }
+                        //    if (personStColumnValue == null || personStColumnValue.Keys == null || personStColumnValue.Values == null ||
+                        //        !personStColumnValue.Keys.Any() || !personStColumnValue.Values.Any() || personStColumnValue["PST.STUDENT.ACAD.CRED"] == null ||
+                        //        !personStColumnValue["PST.STUDENT.ACAD.CRED"].Contains(studentAcadCred.Recordkey))
+                        //    {
+                        //        var message = "The STUDENT.ACAD.CRED key is missing from PST.STUDENT.ACAD.CRED in the PERSON.ST record.";
+                        //        if (exception == null)
+                        //            exception = new RepositoryException("Unexpected repository error");
+                        //        exception.AddError(new RepositoryError("Bad.Data", string.Format("Error(s) processing STUDENT.ACAD.CRED record '{0}' with guid '{1}'.  Error: {2}", studentAcadCred.Recordkey, studentAcadCred.RecordGuid, message)));
+                        //    }
+                        //}
                         SectionRegistrationResponse sectionRegistrationResponse = BuildSectionRegistrationResponse(studentAcadCred, studentCourseSecs, courseSections);
                         // Override credit/ceu values for v16
                         sectionRegistrationResponse.Ceus = studentAcadCred.StcCeus;
@@ -746,7 +674,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     {
                         if (exception == null)
                             exception = new RepositoryException("Unexpected repository error");
-                        exception.AddError(new RepositoryError("sectionRegistrations.id", string.Format("Error(s) processing STUDENT.ACAD.CRED record '{0}' with guid '{1}'.  Error: {2}", studentAcadCred.Recordkey, studentAcadCred.RecordGuid, ex.Message)));
+                        exception.AddError(new RepositoryError("Bad.Data", string.Format("Error(s) processing STUDENT.ACAD.CRED record '{0}' with guid '{1}'.  Error: {2}", studentAcadCred.Recordkey, studentAcadCred.RecordGuid, ex.Message)));
                     }
                 }
                 if (exception != null && exception.Errors.Any())

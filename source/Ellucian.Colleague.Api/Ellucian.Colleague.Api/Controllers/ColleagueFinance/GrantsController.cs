@@ -4,6 +4,7 @@ using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
@@ -53,7 +54,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="criteria"></param>
         /// <param name="fiscalYear"></param>
         /// <returns></returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewGrants })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.Grant))]
@@ -70,6 +71,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                _grantsService.ValidatePermissions(GetPermissionsMetaData());
+
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -115,7 +118,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -144,7 +147,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="guid">GUID to desired grant</param>
         /// <returns>A grant object <see cref="Dtos.Grant"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewGrants })]
         public async Task<Dtos.Grant> GetGrantsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -162,6 +165,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                _grantsService.ValidatePermissions(GetPermissionsMetaData());
+
                 AddEthosContextProperties(
                    await _grantsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                    await _grantsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -176,7 +181,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -205,7 +210,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="grant">DTO of the new grant</param>
         /// <returns>A grants object <see cref="Dtos.Grant"/> in EEDM format</returns>
-        [HttpPost]
+        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.Grant> PostGrantsAsync([FromBody] Dtos.Grant grant)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
@@ -219,7 +224,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="guid">GUID of the grants to update</param>
         /// <param name="grant">DTO of the updated grants</param>
         /// <returns>A grants object <see cref="Dtos.Grant"/> in EEDM format</returns>
-        [HttpPut]
+        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.Grant> PutGrantsAsync([FromUri] string guid, [FromBody] Dtos.Grant grant)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
@@ -231,7 +236,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// Delete (DELETE) a grant.
         /// </summary>
         /// <param name="guid">GUID to desired grants</param>
-        [HttpDelete]
+        [HttpDelete, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task DeleteGrantsAsync(string guid)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.

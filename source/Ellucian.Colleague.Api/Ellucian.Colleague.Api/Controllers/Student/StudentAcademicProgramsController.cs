@@ -1,10 +1,11 @@
-﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Http;
@@ -56,7 +57,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Retrieves an Student Academic Program by ID.
         /// </summary>
         /// <returns>An <see cref="Dtos.StudentAcademicPrograms">StudentAcademicPrograms</see>object.</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentAcademicProgramConsent, StudentPermissionCodes.CreateStudentAcademicProgramConsent })]
         public async Task<Dtos.StudentAcademicPrograms> GetStudentAcademicProgramsByGuidAsync(string id)
         {
             bool bypassCache = false;
@@ -70,6 +71,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                _studentAcademicProgramService.ValidatePermissions(GetPermissionsMetaData());
                 var studentAcademicProgram = await _studentAcademicProgramService.GetStudentAcademicProgramByGuidAsync(id);
 
                 if (studentAcademicProgram != null)
@@ -119,7 +121,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Retrieves an Student Academic Program by ID.
         /// </summary>
         /// <returns>An <see cref="Dtos.StudentAcademicPrograms2">StudentAcademicPrograms</see>object.</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentAcademicProgramConsent, StudentPermissionCodes.CreateStudentAcademicProgramConsent })]
         public async Task<Dtos.StudentAcademicPrograms2> GetStudentAcademicProgramsByGuid2Async(string id)
         {
             bool bypassCache = false;
@@ -133,6 +135,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                _studentAcademicProgramService.ValidatePermissions(GetPermissionsMetaData());
                 var studentAcademicProgram = await _studentAcademicProgramService.GetStudentAcademicProgramByGuid2Async(id);
 
                 if (studentAcademicProgram != null)
@@ -183,7 +186,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <returns>An <see cref="Dtos.StudentAcademicPrograms3">StudentAcademicPrograms</see>object.</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentAcademicProgramConsent, StudentPermissionCodes.CreateStudentAcademicProgramConsent })]
         public async Task<Dtos.StudentAcademicPrograms3> GetStudentAcademicProgramsByGuid3Async(string id)
         {
             bool bypassCache = false;
@@ -197,6 +200,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                _studentAcademicProgramService.ValidatePermissions(GetPermissionsMetaData());
                 var studentAcademicProgram = await _studentAcademicProgramService.GetStudentAcademicProgramByGuid3Async(id);
 
                 if (studentAcademicProgram != null)
@@ -245,7 +249,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <returns>An <see cref="Dtos.StudentAcademicPrograms4">StudentAcademicPrograms</see>object.</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentAcademicProgramConsent, StudentPermissionCodes.CreateStudentAcademicProgramConsent })]
         public async Task<Dtos.StudentAcademicPrograms4> GetStudentAcademicProgramsByGuid4Async(string id)
         {
             bool bypassCache = false;
@@ -259,6 +263,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                _studentAcademicProgramService.ValidatePermissions(GetPermissionsMetaData());
                 var studentAcademicProgram = await _studentAcademicProgramService.GetStudentAcademicProgramByGuid4Async(id);
 
                 if (studentAcademicProgram != null)
@@ -319,7 +324,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="credentials">The academic credentials that can be awarded for completing an academic program</param>
         /// <param name="graduatedAcademicPeriod">Filter to provide the academic period the student graduated in.</param>
         /// <returns>List of StudentAcademicPrograms <see cref="Dtos.StudentAcademicPrograms"/> objects representing matching Student Academic Programs</returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentAcademicProgramConsent, StudentPermissionCodes.CreateStudentAcademicProgramConsent })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         [ValidateQueryStringFilter(new string[] { "student", "startOn", "endOn", "program", "catalog", "enrollmentStatus", "programOwner", "site", "academicLevel", "graduatedOn",
             "credentials", "graduatedAcademicPeriod" }, false, true)]
@@ -381,6 +386,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                _studentAcademicProgramService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -438,7 +444,7 @@ namespace Ellucian.Colleague.Api.Controllers
         ///  <param name="page">page</param>
         /// <param name="criteria">filter criteria</param>
         /// <returns>List of StudentAcademicPrograms <see cref="Dtos.StudentAcademicPrograms2"/> objects representing matching Student Academic Programs</returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentAcademicProgramConsent, StudentPermissionCodes.CreateStudentAcademicProgramConsent })]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.Filters.StudentAcademicProgramsFilter))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
@@ -533,6 +539,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                _studentAcademicProgramService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -586,8 +593,9 @@ namespace Ellucian.Colleague.Api.Controllers
         ///  <param name="page">page</param>
         /// <param name="criteria">filter criteria</param>
         /// <returns>List of StudentAcademicPrograms <see cref="Dtos.StudentAcademicPrograms3"/> objects representing matching Student Academic Programs</returns>
-        [HttpGet]
+        [HttpGet, ]
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentAcademicProgramConsent, StudentPermissionCodes.CreateStudentAcademicProgramConsent })]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.StudentAcademicPrograms3))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
@@ -612,6 +620,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 return new PagedHttpActionResult<IEnumerable<Dtos.StudentAcademicPrograms3>>(new List<Dtos.StudentAcademicPrograms3>(), page, 0, this.Request);
             try
             {
+                _studentAcademicProgramService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -665,8 +674,9 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="criteria">filter criteria</param>
         /// <param name="personFilter">person filter criteria</param>
         /// <returns>List of StudentAcademicPrograms <see cref="Dtos.StudentAcademicPrograms4"/> objects representing matching Student Academic Programs</returns>
-        [HttpGet]
+        [HttpGet,]
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentAcademicProgramConsent, StudentPermissionCodes.CreateStudentAcademicProgramConsent })]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.StudentAcademicPrograms4))]
         [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter2))]
@@ -700,6 +710,7 @@ namespace Ellucian.Colleague.Api.Controllers
                 return new PagedHttpActionResult<IEnumerable<Dtos.StudentAcademicPrograms4>>(new List<Dtos.StudentAcademicPrograms4>(), page, 0, this.Request);
             try
             {
+                _studentAcademicProgramService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -751,7 +762,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="StudentAcademicPrograms"><see cref="Dtos.StudentAcademicPrograms">StudentAcademicPrograms</see> to create</param>
         /// <returns>Newly created <see cref="Dtos.StudentAcademicPrograms">StudentAcademicPrograms</see></returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateStudentAcademicProgramConsent)]
         public async Task<Dtos.StudentAcademicPrograms> CreateStudentAcademicProgramsAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.StudentAcademicPrograms StudentAcademicPrograms)
         {
             bool bypassCache = false;
@@ -781,6 +792,7 @@ namespace Ellucian.Colleague.Api.Controllers
             await ValidateStudentAcademicPrograms(StudentAcademicPrograms);
             try
             {
+                _studentAcademicProgramService.ValidatePermissions(GetPermissionsMetaData());
                 //call import extend method that needs the extracted extension data and the config
                 await _studentAcademicProgramService.ImportExtendedEthosData(await ExtractExtendedData(await _studentAcademicProgramService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
@@ -825,7 +837,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="StudentAcademicPrograms"><see cref="Dtos.StudentAcademicPrograms2">StudentAcademicPrograms</see> to create</param>
         /// <returns>Newly created <see cref="Dtos.StudentAcademicPrograms2">StudentAcademicPrograms</see></returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateStudentAcademicProgramConsent)]
         public async Task<Dtos.StudentAcademicPrograms2> CreateStudentAcademicPrograms2Async([ModelBinder(typeof(EedmModelBinder))]  Dtos.StudentAcademicPrograms2 StudentAcademicPrograms)
         {
             bool bypassCache = false;
@@ -859,6 +871,7 @@ namespace Ellucian.Colleague.Api.Controllers
             await ValidateStudentAcademicPrograms2(StudentAcademicPrograms);
             try
             {
+                _studentAcademicProgramService.ValidatePermissions(GetPermissionsMetaData());
                 //call import extend method that needs the extracted extension data and the config
                 await _studentAcademicProgramService.ImportExtendedEthosData(await ExtractExtendedData(await _studentAcademicProgramService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
@@ -918,7 +931,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="id">Id of the Student Academic Program to update</param>
         /// <param name="studentAcademicPrograms"><see cref="Dtos.StudentAcademicPrograms">StudentAcademicPrograms</see> to create</param>
         /// <returns>Updated <see cref="Dtos.StudentAcademicPrograms">StudentAcademicPrograms</see></returns>
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateStudentAcademicProgramConsent)]
         public async Task<Dtos.StudentAcademicPrograms> UpdateStudentAcademicProgramsAsync([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.StudentAcademicPrograms studentAcademicPrograms)
         {
 
@@ -957,6 +970,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                _studentAcademicProgramService.ValidatePermissions(GetPermissionsMetaData());
                 //get Data Privacy List
                 var dpList = await _studentAcademicProgramService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
@@ -1019,7 +1033,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="id">Id of the Student Academic Program to update</param>
         /// <param name="studentAcademicPrograms"><see cref="Dtos.StudentAcademicPrograms">StudentAcademicPrograms</see> to create</param>
         /// <returns>Updated <see cref="Dtos.StudentAcademicPrograms2">StudentAcademicPrograms</see></returns>
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateStudentAcademicProgramConsent)]
         public async Task<Dtos.StudentAcademicPrograms2> UpdateStudentAcademicPrograms2Async([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.StudentAcademicPrograms2 studentAcademicPrograms)
         {
 
@@ -1058,6 +1072,7 @@ namespace Ellucian.Colleague.Api.Controllers
 
             try
             {
+                _studentAcademicProgramService.ValidatePermissions(GetPermissionsMetaData());
                 //get Data Privacy List
                 var dpList = await _studentAcademicProgramService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
@@ -1149,7 +1164,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="studentAcademicPrograms"><see cref="Dtos.StudentAcademicPrograms">StudentAcademicPrograms</see> to create</param>
         /// <returns>Updated <see cref="Dtos.StudentAcademicPrograms4">StudentAcademicPrograms</see></returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateStudentAcademicProgramConsent)]
         public async Task<Dtos.StudentAcademicPrograms4> UpdateStudentAcademicProgramsSubmissionsAsync([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.StudentAcademicProgramsSubmissions studentAcademicPrograms)
         {
 
@@ -1163,6 +1178,7 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
+                _studentAcademicProgramService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(id))
                 {
                     throw new ArgumentNullException("Null StudentAcademicProgramsSubmissions guid", "guid is a required property.");
@@ -1250,7 +1266,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="StudentAcademicPrograms"><see cref="Dtos.StudentAcademicPrograms2">StudentAcademicPrograms</see> to create</param>
         /// <returns>Newly created <see cref="Dtos.StudentAcademicPrograms2">StudentAcademicPrograms</see></returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateStudentAcademicProgramConsent)]
         public async Task<Dtos.StudentAcademicPrograms4> CreateStudentAcademicProgramsSubmissionsAsync([ModelBinder(typeof(EedmModelBinder))]  Dtos.StudentAcademicProgramsSubmissions StudentAcademicPrograms)
         {
             bool bypassCache = false;
@@ -1263,6 +1279,7 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
+                _studentAcademicProgramService.ValidatePermissions(GetPermissionsMetaData());
                 if (StudentAcademicPrograms == null)
                 {
                     throw new ArgumentNullException("Null StudentAcademicProgramsSubmissions argument", "The request body is required.");
@@ -1338,7 +1355,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// <param name="StudentAcademicPrograms"><see cref="Dtos.StudentAcademicPrograms4">StudentAcademicPrograms</see> to create</param>
         /// <returns>Newly created <see cref="Dtos.StudentAcademicPrograms4">StudentAcademicPrograms</see></returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ReplaceStudentAcademicProgram)]
         public async Task<Dtos.StudentAcademicPrograms4> CreateStudentAcademicProgramsReplacementsAsync([ModelBinder(typeof(EedmModelBinder))]  Dtos.StudentAcademicProgramReplacements StudentAcademicPrograms)
         {
             bool bypassCache = false;
@@ -1351,6 +1368,7 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
+                _studentAcademicProgramService.ValidatePermissions(GetPermissionsMetaData());
                 if (StudentAcademicPrograms == null)
                 {
                     throw new ArgumentNullException("Null StudentAcademicProgramsSubmissions argument", "The request body is required.");

@@ -12,6 +12,7 @@ using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
+using Ellucian.Web.Http.Configuration;
 using slf4net;
 
 namespace Ellucian.Colleague.Data.Finance.Repositories
@@ -27,11 +28,17 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
         private List<string> _masterTermList;
         private FinanceConfigurationRepository _configurationRepository;
         private IEnumerable<FinancialPeriod> _periods = null;
+        private readonly string _colleagueTimeZone;
 
-        public AccountDueRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
+
+        public AccountDueRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings settings)
             : base(cacheProvider, transactionFactory, logger)
         {
             _configurationRepository = new FinanceConfigurationRepository(cacheProvider, transactionFactory, logger);
+            if (settings != null)
+            {
+                _colleagueTimeZone = settings.ColleagueTimeZone;
+            }
         }
 
         public AccountDue Get(string studentId)
@@ -228,6 +235,10 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 arTypeItem.TermDescription = dueItem.RelatedTermDescs;
                 arTypeItem.AccountType = dueItem.ArTypes;
                 arTypeItem.DueDate = dueItem.ArTypeDueDates;
+                if (dueItem.ArTypeDueDates.HasValue)
+                {
+                    arTypeItem.DueDateOffset = dueItem.ArTypeDueDates.ToPointInTimeDateTimeOffset(dueItem.ArTypeDueDates, _colleagueTimeZone).GetValueOrDefault();
+                }
                 arTypeItem.Period = dueItem.Periods;
                 arTypeItem.PeriodDescription = dueItem.PeriodDescs;
                 arTypeItem.Distribution = dueItem.ArTypeDist;
@@ -242,6 +253,10 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 invoiceItem.AmountDue = dueItem.InvoiceBals;
                 invoiceItem.Description = dueItem.InvoiceDescs;
                 invoiceItem.DueDate = dueItem.InvoicesDueDate;
+                if (dueItem.InvoicesDueDate.HasValue)
+                {
+                    invoiceItem.DueDateOffset = dueItem.InvoicesDueDate.ToPointInTimeDateTimeOffset(dueItem.InvoicesDueDate, _colleagueTimeZone).GetValueOrDefault();
+                }
                 invoiceItem.Overdue = dueItem.InvoicesOverdue;
 
                 if (!dueItem.RelatedTerms.Equals("NON-TERM"))
@@ -281,6 +296,10 @@ namespace Ellucian.Colleague.Data.Finance.Repositories
                 payplanItem.AmountDue = (decimal?)dueItem.PaymentPlanUnpaidAmts;
                 payplanItem.Description = dueItem.PaymentPlanDescs;
                 payplanItem.DueDate = dueItem.PaymentPlanDueDates;
+                if (dueItem.PaymentPlanDueDates.HasValue)
+                {
+                    payplanItem.DueDateOffset = dueItem.PaymentPlanDueDates.ToPointInTimeDateTimeOffset(dueItem.PaymentPlanDueDates, _colleagueTimeZone).GetValueOrDefault();
+                }
                 payplanItem.Overdue = dueItem.PaymentPlanOverdue;
                 payplanItem.PaymentPlanCurrent = dueItem.PaymentPlanCurrent;
                 payplanItem.PaymentPlanId = dueItem.PaymentPlanIds;

@@ -1,4 +1,5 @@
-﻿using Ellucian.Colleague.Data.Base.Tests.Repositories;
+﻿// Copyright 2021 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Data.HumanResources.Repositories;
 using Ellucian.Colleague.Data.HumanResources.Transactions;
@@ -45,7 +46,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             #region get mocks
 
             dataReaderMock.Setup(r => r.SelectAsync("PR.DEPOSIT.CODES", It.IsAny<string>()))
-                .Returns<string,string>((file,query) => Task.FromResult(testData.BankRecords.Select(r => r.Code).ToArray()));    
+                .Returns<string, string>((file, query) => Task.FromResult(testData.BankRecords.Select(r => r.Code).ToArray()));
 
 
             dataReaderMock.Setup(d => d.BulkReadRecordAsync<PrDepositCodes>(It.IsAny<string[]>(), It.IsAny<bool>()))
@@ -59,16 +60,17 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                             DdcTransitNo = bankRecord.RoutingNumber,
                             DdcFinInstNumber = bankRecord.InstitutionNumber,
                             DdcBrTransitNumber = bankRecord.BranchNumber,
-                            DdcPriorDescsEntityAssociation = bankRecord.priorNames.Select(n => 
+                            DdcPriorDescsEntityAssociation = bankRecord.priorNames.Select(n =>
                                 new PrDepositCodesDdcPriorDescs()
                                 {
                                     DdcPriorDescEndDatesAssocMember = n.endDate,
                                     DdcPriorDescriptionsAssocMember = n.name
-                                }).ToList()                            
-            }).ToList())));
+                                }).ToList()
+                        }).ToList())));
 
             dataReaderMock.Setup(d => d.ReadRecordAsync<Employes>(It.IsAny<string>(), It.IsAny<bool>()))
-                .Returns<string,bool>((employeeId, b) =>  {
+                .Returns<string, bool>((employeeId, b) =>
+                {
                     var record = testData.employeeRecords.FirstOrDefault(r => r.employeeId == employeeId);
                     if (record == null) return Task.FromResult(new Employes());
                     else return Task.FromResult(new Employes()
@@ -145,7 +147,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             public void Initialize()
             {
                 PayrollDepositDirectiveRepositoryTestsInitialize();
-                
+
             }
 
             [TestMethod]
@@ -160,7 +162,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             public async Task NullEmployeeIdExceptionTest()
             {
                 try
-                { 
+                {
                     await repositoryUnderTest.GetPayrollDepositDirectivesAsync(null);
                 }
                 catch (ArgumentNullException)
@@ -197,7 +199,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                     testData.BankRecords = new List<TestPayrollDepositDirectivesRepository.BankRecord>();
                     await repositoryUnderTest.GetPayrollDepositDirectivesAsync("24601");
                 }
-                catch(ApplicationException)
+                catch (ApplicationException)
                 {
                     loggerMock.Verify(e => e.Error(It.IsAny<string>()));
                     throw;
@@ -207,7 +209,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 
         [TestClass]
         public class GetPayrollDepositDirective : PayrollDepositDirectiveRepositoryTests
-        {            
+        {
             [TestInitialize]
             public void Initialize()
             {
@@ -234,7 +236,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         public class UpdatePayrollDepositDirectives : PayrollDepositDirectiveRepositoryTests
         {
             PayrollDepositDirectiveCollection directivesToUpdate;
-            Mock<IColleagueTransactionInvoker> invokerMock;            
+            Mock<IColleagueTransactionInvoker> invokerMock;
 
             [TestInitialize]
             public void Initialize()
@@ -246,8 +248,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 invokerMock.Setup(i => i.ExecuteAsync<CreatePrDepositCodeRequest, CreatePrDepositCodeResponse>(
                         It.IsAny<CreatePrDepositCodeRequest>()
                     )
-                ).Returns<CreatePrDepositCodeRequest, CreatePrDepositCodeResponse>(
-                    (a, b) => Task.FromResult(
+                ).Returns<CreatePrDepositCodeResponse>(
+                    (a) =>
+                    Task.FromResult(
                         new CreatePrDepositCodeResponse()
                         {
                             ErrorMessage = "",
@@ -266,7 +269,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 );
 
                 transFactoryMock.Setup(t => t.GetTransactionInvoker()).Returns(invokerMock.Object);
-                    
+
 
                 directivesToUpdate = new PayrollDepositDirectiveCollection("24601")
                 {
@@ -287,7 +290,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 {
                     var updated = await repositoryUnderTest.UpdatePayrollDepositDirectivesAsync(directivesToUpdate);
                 }
-                catch(Exception)
+                catch (Exception)
                 {
                     //transFactoryMock.Verify(t =>
                     //    t.GetTransactionInvoker().ExecuteAsync<CreatePrDepositCodeRequest, CreatePrDepositCodeResponse>(
@@ -377,7 +380,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 Assert.AreEqual(expectedExpiration, result.ExpirationDateTimeOffset);
             }
 
-            [TestMethod,ExpectedException(typeof(ArgumentNullException))]
+            [TestMethod, ExpectedException(typeof(ArgumentNullException))]
             public async Task NullEmployeeIdIsHandled()
             {
                 await repositoryUnderTest.AuthenticatePayrollDepositDirective(null, inputDirectiveId, inputAccountId);

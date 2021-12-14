@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 using System;
 
 namespace Ellucian.Colleague.Domain.Student.Entities
@@ -24,6 +24,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// <summary>
         /// Attendance is tracked in cumulative hours and minutes for the course section with no regard for date or time
         /// </summary>
-        CumulativeHours
+        CumulativeHours,
+        /// <summary>
+        /// Attendance is tracked with a flag indicating presence or absence with no associated course section meeting
+        /// </summary>
+        PresentAbsentWithoutSectionMeeting
     }
 }

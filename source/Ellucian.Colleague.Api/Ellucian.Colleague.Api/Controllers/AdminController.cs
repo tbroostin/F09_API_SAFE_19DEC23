@@ -1,4 +1,5 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+using Ellucian.App.Config.Storage.Service.Client;
 using Ellucian.Colleague.Api.Client;
 using Ellucian.Colleague.Api.Models;
 using Ellucian.Colleague.Api.Utility;
@@ -28,6 +29,7 @@ using System.Threading.Tasks;
 using System.Web.Configuration;
 using System.Web.Hosting;
 using System.Web.Mvc;
+using Serilog.Core;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -38,6 +40,7 @@ namespace Ellucian.Colleague.Api.Controllers
     public class AdminController : Controller
     {
         private const int DMI_ALSERVER = 2;
+        private const string PasswordSecretPlaceholder = "*********";
         private ISettingsRepository settingsRepository;
         private IConfigurationService configurationService;
         private ILogger logger;
@@ -87,6 +90,13 @@ namespace Ellucian.Colleague.Api.Controllers
             var domainSettings = settingsRepository.Get();
             var model = BuildSettingsModel(domainSettings);
 
+            if (!string.IsNullOrEmpty(model.DasPassword))
+                model.DasPassword = PasswordSecretPlaceholder;
+            if (!string.IsNullOrEmpty(model.SharedSecret1))
+                model.SharedSecret1 = PasswordSecretPlaceholder;
+            if (!string.IsNullOrEmpty(model.SharedSecret2))
+                model.SharedSecret2 = PasswordSecretPlaceholder;
+
             ViewBag.json = JsonConvert.SerializeObject(model);
             return View();
         }
@@ -100,6 +110,25 @@ namespace Ellucian.Colleague.Api.Controllers
         public ActionResult ConnectionSettings(string model)
         {
             var localSettingsModel = JsonConvert.DeserializeObject<WebApiSettings>(model);
+            if (localSettingsModel.SharedSecret1 == PasswordSecretPlaceholder)
+            {
+                var domainSettings = settingsRepository.Get();
+                var oldModel = BuildSettingsModel(domainSettings);
+                localSettingsModel.SharedSecret1 = oldModel.SharedSecret1;
+            }
+            if (localSettingsModel.SharedSecret2 == PasswordSecretPlaceholder)
+            {
+                var domainSettings = settingsRepository.Get();
+                var oldModel = BuildSettingsModel(domainSettings);
+                localSettingsModel.SharedSecret2 = oldModel.SharedSecret2;
+            }
+            if (localSettingsModel.DasPassword == PasswordSecretPlaceholder)
+            {
+                var domainSettings = settingsRepository.Get();
+                var oldModel = BuildSettingsModel(domainSettings);
+                localSettingsModel.DasPassword = oldModel.DasPassword;
+            }
+
             var settings = BuildSettingsDomain(localSettingsModel);
             settingsRepository.Update(settings);
             PerformBackupConfig();
@@ -116,6 +145,13 @@ namespace Ellucian.Colleague.Api.Controllers
             var domainSettings = settingsRepository.Get();
             var model = BuildSettingsModel(domainSettings);
 
+            if (!string.IsNullOrEmpty(model.DasPassword))
+                model.DasPassword = PasswordSecretPlaceholder;
+            if (!string.IsNullOrEmpty(model.SharedSecret1))
+                model.SharedSecret1 = PasswordSecretPlaceholder;
+            if (!string.IsNullOrEmpty(model.SharedSecret2))
+                model.SharedSecret2 = PasswordSecretPlaceholder;
+
             ViewBag.json = JsonConvert.SerializeObject(model);
             return View();
         }
@@ -129,6 +165,25 @@ namespace Ellucian.Colleague.Api.Controllers
         public ActionResult Logging(string model)
         {
             var localSettingsModel = JsonConvert.DeserializeObject<WebApiSettings>(model);
+            if (localSettingsModel.SharedSecret1 == PasswordSecretPlaceholder)
+            {
+                var domainSettings = settingsRepository.Get();
+                var oldModel = BuildSettingsModel(domainSettings);
+                localSettingsModel.SharedSecret1 = oldModel.SharedSecret1;
+            }
+            if (localSettingsModel.SharedSecret2 == PasswordSecretPlaceholder)
+            {
+                var domainSettings = settingsRepository.Get();
+                var oldModel = BuildSettingsModel(domainSettings);
+                localSettingsModel.SharedSecret2 = oldModel.SharedSecret2;
+            }
+            if (localSettingsModel.DasPassword == PasswordSecretPlaceholder)
+            {
+                var domainSettings = settingsRepository.Get();
+                var oldModel = BuildSettingsModel(domainSettings);
+                localSettingsModel.DasPassword = oldModel.DasPassword;
+            }
+
             var settings = BuildSettingsDomain(localSettingsModel);
             settingsRepository.Update(settings);
             PerformBackupConfig();
@@ -461,6 +516,13 @@ namespace Ellucian.Colleague.Api.Controllers
             var domainSettings = settingsRepository.Get();
             var model = BuildSettingsModel(domainSettings);
 
+            if (!string.IsNullOrEmpty(model.DasPassword))
+                model.DasPassword = PasswordSecretPlaceholder;
+            if (!string.IsNullOrEmpty(model.SharedSecret1))
+                model.SharedSecret1 = PasswordSecretPlaceholder;
+            if (!string.IsNullOrEmpty(model.SharedSecret2))
+                model.SharedSecret2 = PasswordSecretPlaceholder;
+
             ViewBag.json = JsonConvert.SerializeObject(model);
 
             return View();
@@ -482,7 +544,15 @@ namespace Ellucian.Colleague.Api.Controllers
             dmiSettings.IpAddress = model.IpAddress;
             dmiSettings.Port = model.Port;
             dmiSettings.Secure = model.Secure;
-            dmiSettings.SharedSecret = model.SharedSecret1;
+            if (model.SharedSecret1 == PasswordSecretPlaceholder)
+            {
+                var domainSettings = settingsRepository.Get();
+                var oldModel = BuildSettingsModel(domainSettings);
+                dmiSettings.SharedSecret = oldModel.SharedSecret1;
+            }
+            else
+                dmiSettings.SharedSecret = model.SharedSecret1;
+
             collSettings.DmiSettings = dmiSettings;
             var sessionRepo = new ColleagueSessionRepository(dmiSettings);
             string token = null;
@@ -540,7 +610,15 @@ namespace Ellucian.Colleague.Api.Controllers
             dasSettings.Port = model.DasPort.HasValue ? model.DasPort.Value : 1;
             dasSettings.Secure = model.DasSecure;
             dasSettings.DbLogin = model.DasUsername;
-            dasSettings.DbPassword = model.DasPassword;
+            if (model.DasPassword == PasswordSecretPlaceholder)
+            {
+                var domainSettings = settingsRepository.Get();
+                var oldModel = BuildSettingsModel(domainSettings);
+                dasSettings.DbPassword = oldModel.DasPassword;
+            }
+            else
+                dasSettings.DbPassword = model.DasPassword;
+
             collSettings.DasSettings = dasSettings;
 
             // Das session instantiation
@@ -563,7 +641,14 @@ namespace Ellucian.Colleague.Api.Controllers
             // Login
             try
             {
-                await dasSession.LoginAsync(model.DasUsername, model.DasPassword);
+                if (model.DasPassword == PasswordSecretPlaceholder)
+                {
+                    var domainSettings = settingsRepository.Get();
+                    var oldModel = BuildSettingsModel(domainSettings);
+                    await dasSession.LoginAsync(model.DasUsername, oldModel.DasPassword);
+                }
+                else
+                    await dasSession.LoginAsync(model.DasUsername, model.DasPassword);
             }
             catch (Exception ex)
             {
@@ -664,6 +749,13 @@ namespace Ellucian.Colleague.Api.Controllers
                     var result = AppConfigUtility.StorageServiceClient.PostConfigurationAsync(
                         configObject.Namespace, configObject.ConfigData, username,
                         configObject.ConfigVersion, configObject.ProductId, configObject.ProductVersion).GetAwaiter().GetResult();
+
+                    // after submitting a new snapshot, set the lastrestoredchecksum to this new snapshot's checksum.
+                    // This must be done to avoid a looping situation where instances keep performing merges
+                    // in lock step with each other due to lastrestoredchecksum file containing an older checksum, when 
+                    // there are changes that are repeated (e.g. logging toggled on/off).
+                    var currentChecksum = Utilities.GetMd5ChecksumString(configObject.ConfigData);
+                    Utilities.SetLastRestoredChecksum(currentChecksum);
                 }
                 catch (Exception e)
                 {
@@ -696,7 +788,7 @@ namespace Ellucian.Colleague.Api.Controllers
                     logger.Error(e, "Configuration changes have been saved, but the backup action failed. See API log for more details.");
                     throw;
                 }
-            }           
+            }
 
         }
 
@@ -786,18 +878,25 @@ namespace Ellucian.Colleague.Api.Controllers
             model.DasPassword = settings.ColleagueSettings.DasSettings.DbPassword;
 
             string[] levels = new string[5];
-            levels[0] = SourceLevels.Off.ToString();
+            levels[0] = SourceLevels.Off.ToString(); //in serilog there is no off setting, this will be converted to fatal level
             levels[1] = SourceLevels.Error.ToString();
             levels[2] = SourceLevels.Warning.ToString();
             levels[3] = SourceLevels.Information.ToString();
             levels[4] = SourceLevels.Verbose.ToString();
+
             var selectList = levels.Select(x => new SelectListItem
             {
                 Text = x,
                 Value = x
             }).ToList();
+
             model.LogLevels = selectList;
-            model.LogLevel = settings.LogLevel.ToString();
+
+            if (settings.LogLevel.ToString() == "Fatal")
+                model.LogLevel = "Off";
+            else
+                model.LogLevel = settings.LogLevel.ToString();
+
             model.ProfileName = settings.ProfileName;
             string mkError, mkWarning;
             CheckMachineKeySetting(out mkError, out mkWarning);
@@ -836,7 +935,7 @@ namespace Ellucian.Colleague.Api.Controllers
             collSettings.DasSettings = dasSettings;
 
             return new Settings(collSettings,
-                EnterpriseLibraryLoggerAdapter.LevelFromString(webApiSettings.LogLevel))
+                SerilogAdapter.LevelFromString(webApiSettings.LogLevel))
             { ProfileName = webApiSettings.ProfileName };
         }
 

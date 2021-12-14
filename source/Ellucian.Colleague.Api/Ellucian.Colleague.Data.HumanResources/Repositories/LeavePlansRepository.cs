@@ -1,5 +1,9 @@
-﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
+
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
@@ -10,14 +14,20 @@ using Ellucian.Web.Http.Configuration;
 using slf4net;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.HumanResources.Repositories
 {
+        
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class LeavePlansRepository : BaseColleagueRepository, ILeavePlansRepository
     {
+        const string AllLeavePlanCache = "AllLeavePlan";
+        const int AllLeavePlanCacheTimeout = 20; // Clear from cache every 20 minutes
+        RepositoryException exception = null;
+
         public LeavePlansRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)
         {
@@ -32,42 +42,191 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <returns>Tuple of LeavePlans Entity objects <see cref="LeavePlans"/> and a count for paging.</returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.LeavePlan>, int>> GetLeavePlansAsync(int offset, int limit, bool bypassCache = false)
         {
+            int totalCount = 0;
+            string[] subList = null;
+            var leavePlanEntitiesCollection = new List<Domain.HumanResources.Entities.LeavePlan>();
+            Collection<DataContracts.Leavplan> leavePlanDataContractCollection = null;
+
             try
             {
-                string criteria = string.Empty;
-                var leavePlansKeys = await DataReader.SelectAsync("LEAVPLAN", criteria);
-                var leavePlansRecords = new List<LeavePlan>();
-                var totalCount = 0;
-                if (leavePlansKeys == null || !leavePlansKeys.Any())
-                {
-                    return new Tuple<IEnumerable<LeavePlan>, int>(null, 0);
-                }
+                var leavePlanCacheKey = CacheSupport.BuildCacheKey(AllLeavePlanCache);
 
-                totalCount = leavePlansKeys.Count();
-                Array.Sort(leavePlansKeys);
-                var leavePlansubList = leavePlansKeys.Skip(offset).Take(limit);
-                if (leavePlansubList != null && leavePlansubList.Any())
-                {
-                    try
+                var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+                    this,
+                    ContainsKey,
+                    GetOrAddToCacheAsync,
+                    AddOrUpdateCacheAsync,
+                    transactionInvoker,
+                    leavePlanCacheKey,
+                    "LEAVPLAN",
+                    offset,
+                    limit,
+                    AllLeavePlanCacheTimeout,
+                    async () =>
                     {
-                        var leaveplanRecords = await DataReader.BulkReadRecordAsync<DataContracts.Leavplan>(leavePlansubList.ToArray(), bypassCache);
-                        foreach (var plan in leaveplanRecords)
-                        {
+                        return new CacheSupport.KeyCacheRequirements() { };
+                    });
 
-                            leavePlansRecords.Add(BuildLeavePlans(plan));
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        throw ex;
-                    }
+                if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
+                {
+                    return new Tuple<IEnumerable<Domain.HumanResources.Entities.LeavePlan>, int>(null, 0);
                 }
-                return new Tuple<IEnumerable<LeavePlan>, int>(leavePlansRecords, totalCount);
+                subList = keyCache.Sublist.ToArray();
+
+                totalCount = keyCache.TotalCount.Value;
+
+                leavePlanDataContractCollection = await DataReader.BulkReadRecordAsync<DataContracts.Leavplan>("LEAVPLAN", subList);
+                if (leavePlanDataContractCollection == null || leavePlanDataContractCollection.Count == 0)
+                {
+                    if (exception == null)
+                        exception = new RepositoryException();
+                    exception.AddError(new RepositoryError("Bad.Data", "An unexpected error occurred extracting LEAVPLAN data."));
+
+                }
             }
             catch (Exception ex)
             {
-                throw ex;
+                if (exception == null)
+                    exception = new RepositoryException();
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message));
             }
+
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+            
+            foreach (var plan in leavePlanDataContractCollection)
+            {
+                try
+                {
+                    bool error = false;
+                    if (string.IsNullOrWhiteSpace(plan.RecordGuid))
+                    {
+                        if (exception == null)
+                            exception = new RepositoryException();
+                        exception.AddError(new RepositoryError("Bad.Data", "LeavePlans GUID can not be null or empty. Entity: ‘LEAVPLAN’")
+                        {
+                            SourceId = plan.Recordkey,
+                            Id = plan.RecordGuid
+                        });
+                        error = true;
+                    }
+                    if (string.IsNullOrWhiteSpace(plan.Recordkey))
+                    {
+                        if (exception == null)
+                            exception = new RepositoryException();
+                        exception.AddError(new RepositoryError("Bad.Data", "LeavePlans id can not be null or empty. Entity: ‘LEAVPLAN’")
+                        {
+                            SourceId = plan.Recordkey,
+                            Id = plan.RecordGuid
+                        });
+                        error = true;
+                    }
+                    if (string.IsNullOrWhiteSpace(plan.LpnDesc))
+                    {
+                        if (exception == null)
+                            exception = new RepositoryException();
+                        exception.AddError(new RepositoryError("Bad.Data", "LeavePlans description/title can not be null or empty. Entity: ‘LEAVPLAN’")
+                        {
+                            SourceId = plan.Recordkey,
+                            Id = plan.RecordGuid
+                        });
+                        error = true;
+                    }
+                    if (string.IsNullOrWhiteSpace(plan.LpnType))
+                    {
+                        if (exception == null)
+                            exception = new RepositoryException();
+                        exception.AddError(new RepositoryError("Bad.Data", "LeavePlans type can not be null or empty. Entity: ‘LEAVPLAN’")
+                        {
+                            SourceId = plan.Recordkey,
+                            Id = plan.RecordGuid
+                        });
+                        error = true;
+                    }
+                    if (string.IsNullOrWhiteSpace(plan.LpnAccrualMethod))
+                    {
+                        if (exception == null)
+                            exception = new RepositoryException();
+                        exception.AddError(new RepositoryError("Bad.Data", "LeavePlans accrualMethod can not be null or empty. Entity: ‘LEAVPLAN’")
+                        {
+                            SourceId = plan.Recordkey,
+                            Id = plan.RecordGuid
+                        });
+                        error = true;
+
+                    }
+                    if ((plan.LpnStartDate == null) || (!plan.LpnStartDate.HasValue))
+                    {
+                         if (exception == null)
+                            exception = new RepositoryException();
+                        exception.AddError(new RepositoryError("Bad.Data", "LeavePlans startDate can not be null or empty. Entity: ‘LEAVPLAN’")
+                        {
+                            SourceId = plan.Recordkey,
+                            Id = plan.RecordGuid
+                        });
+                        error = true;
+
+                    }
+
+                    if (!error)
+                        leavePlanEntitiesCollection.Add(BuildLeavePlans(plan));
+                }
+                catch (Exception ex)
+                {
+                    if (exception == null)
+                        exception = new RepositoryException();
+                    exception.AddError(new RepositoryError("Bad.Data", ex.Message)
+                    {
+                        SourceId = plan.Recordkey,
+                        Id = plan.RecordGuid
+                    });
+                }
+            }
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+            return new Tuple<IEnumerable<Domain.HumanResources.Entities.LeavePlan>, int>(leavePlanEntitiesCollection, totalCount);
+        }
+
+
+        /// <summary>
+        /// Using a collection of LEAVPLAN ids, get a dictionary collection of associated guids
+        /// </summary>
+        /// <param name="leavplanIds">collection of LEAVPLAN ids</param>
+        /// <returns>Dictionary consisting of a LEAVPLAN (key) and guid (value)</returns>
+        public async Task<Dictionary<string, string>> GetLeavplanGuidsCollectionAsync(IEnumerable<string> leavplanIds)
+        {
+            if ((leavplanIds == null) || (leavplanIds != null && !leavplanIds.Any()))
+            {
+                return new Dictionary<string, string>();
+            }
+            var leavplanGuidCollection = new Dictionary<string, string>();
+
+            var leavplanGuidLookup = leavplanIds
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct().ToList()
+                .ConvertAll(p => new RecordKeyLookup("LEAVPLAN", p, false)).ToArray();
+
+            var recordKeyLookupResults = await DataReader.SelectAsync(leavplanGuidLookup);
+            foreach (var recordKeyLookupResult in recordKeyLookupResults)
+            {
+                try
+                {
+                    var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                    if (!leavplanGuidCollection.ContainsKey(splitKeys[1]))
+                    {
+                        leavplanGuidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
+                    }
+                }
+                catch (Exception) // Do not throw error.
+                {
+                }
+            }
+
+            return leavplanGuidCollection;
         }
 
 
@@ -147,7 +306,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 });
 
             return leaveplans;
-         
+
 
         }
 
@@ -173,7 +332,97 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 throw new KeyNotFoundException("LeavePlan not found with id " + id);
             }
-            return BuildLeavePlans(leavePlanRecord);
+            LeavePlan retval = null;
+            try
+            {
+                bool error = false;
+                if (string.IsNullOrWhiteSpace(leavePlanRecord.RecordGuid))
+                {
+                    if (exception == null)
+                        exception = new RepositoryException();
+                    exception.AddError(new RepositoryError("Bad.Data", "LeavePlans GUID can not be null or empty. Entity: ‘LEAVPLAN’")
+                    {
+                        SourceId = leavePlanRecord.Recordkey,
+                        Id = leavePlanRecord.RecordGuid
+                    });
+                    error = true;
+                }
+                if (string.IsNullOrWhiteSpace(leavePlanRecord.Recordkey))
+                {
+                    if (exception == null)
+                        exception = new RepositoryException();
+                    exception.AddError(new RepositoryError("Bad.Data", "LeavePlans id can not be null or empty. Entity: ‘LEAVPLAN’")
+                    {
+                        SourceId = leavePlanRecord.Recordkey,
+                        Id = leavePlanRecord.RecordGuid
+                    });
+                    error = true;
+                }
+                if (string.IsNullOrWhiteSpace(leavePlanRecord.LpnDesc))
+                {
+                    if (exception == null)
+                        exception = new RepositoryException();
+                    exception.AddError(new RepositoryError("Bad.Data", "LeavePlans description/title can not be null or empty. Entity: ‘LEAVPLAN’")
+                    {
+                        SourceId = leavePlanRecord.Recordkey,
+                        Id = leavePlanRecord.RecordGuid
+                    });
+                    error = true;
+                }
+                if (string.IsNullOrWhiteSpace(leavePlanRecord.LpnType))
+                {
+                    if (exception == null)
+                        exception = new RepositoryException();
+                    exception.AddError(new RepositoryError("Bad.Data", "LeavePlans type can not be null or empty. Entity: ‘LEAVPLAN’")
+                    {
+                        SourceId = leavePlanRecord.Recordkey,
+                        Id = leavePlanRecord.RecordGuid
+                    });
+                    error = true;
+                }
+                if (string.IsNullOrWhiteSpace(leavePlanRecord.LpnAccrualMethod))
+                {
+                    if (exception == null)
+                        exception = new RepositoryException();
+                    exception.AddError(new RepositoryError("Bad.Data", "LeavePlans accrualMethod can not be null or empty. Entity: ‘LEAVPLAN’")
+                    {
+                        SourceId = leavePlanRecord.Recordkey,
+                        Id = leavePlanRecord.RecordGuid
+                    });
+                    error = true;
+
+                }
+                if ((leavePlanRecord.LpnStartDate == null) || (!leavePlanRecord.LpnStartDate.HasValue))
+                {
+                    if (exception == null)
+                        exception = new RepositoryException();
+                    exception.AddError(new RepositoryError("Bad.Data", "LeavePlans startDate can not be null or empty. Entity: ‘LEAVPLAN’")
+                    {
+                        SourceId = leavePlanRecord.Recordkey,
+                        Id = leavePlanRecord.RecordGuid
+                    });
+                    error = true;
+
+                }
+
+                if (!error)
+                    retval = BuildLeavePlans(leavePlanRecord);
+            }
+            catch (Exception ex)
+            {
+                if (exception == null)
+                    exception = new RepositoryException();
+                exception.AddError(new RepositoryError("Bad.Data", ex.Message)
+                {
+                    SourceId = leavePlanRecord.Recordkey,
+                    Id = leavePlanRecord.RecordGuid
+                });
+            }
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+            return retval;
         }
 
         /// <summary>
@@ -185,13 +434,12 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         {
             LeavePlan leaveplanEntity = new LeavePlan(leavePlanRecord.RecordGuid, leavePlanRecord.Recordkey, leavePlanRecord.LpnStartDate, leavePlanRecord.LpnDesc, leavePlanRecord.LpnType, leavePlanRecord.LpnAccrualMethod)
             {
-                //YearlyStartDate = leavePlanRecord.LpnYrStartDate,
                 EndDate = leavePlanRecord.LpnEndDate,
                 RollOverLeaveType = leavePlanRecord.LpnRolloverLeaveType,
                 AccuralFrequency = leavePlanRecord.LpnAccrualFrequency,
                 WaitDays = leavePlanRecord.LpnDaysAllowed,
-                AllowNegative = leavePlanRecord.LpnAllowNegative
-
+                AllowNegative = leavePlanRecord.LpnAllowNegative,
+                IsLeaveReportingPlan = !string.IsNullOrWhiteSpace(leavePlanRecord.LpnLeaveReporting) && leavePlanRecord.LpnLeaveReporting.Equals("Y", StringComparison.OrdinalIgnoreCase)
             };
 
             if (!string.IsNullOrEmpty(leavePlanRecord.LpnYrStartDate))

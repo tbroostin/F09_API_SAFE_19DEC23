@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -70,7 +70,6 @@ namespace Ellucian.Colleague.Api.Controllers
             this.selfservicePreferencesService = selfservicePreferencesService;
         }
 
-
         /// <summary>
         /// Returns the users with login IDs that start with the specified query string.
         /// </summary>
@@ -92,15 +91,24 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Post changes to a user's proxy permissions
         /// </summary>
         /// <param name="assignment">The proxy permissions being changed</param>
+        /// <param name="useEmployeeGroups">Optional parameter used to differentiate between employee proxy and person proxy</param>
         /// <returns>A collection of <see cref="ProxyAccessPermission">proxy access permissions</see>.</returns>
         /// <accessComments>
         /// Only the current user can update proxy permissions
         /// </accessComments>
-        public async Task<IEnumerable<ProxyAccessPermission>> PostUserProxyPermissionsAsync(ProxyPermissionAssignment assignment)
+        public async Task<IEnumerable<ProxyAccessPermission>> PostUserProxyPermissionsAsync(ProxyPermissionAssignment assignment, string useEmployeeGroups = "False")
         {
             try
             {
-                return await proxyService.PostUserProxyPermissionsAsync(assignment);
+                bool isEmployeeProxy;
+                if (bool.TryParse(useEmployeeGroups, out isEmployeeProxy))
+                {
+                    return await proxyService.PostUserProxyPermissionsAsync(assignment, isEmployeeProxy);
+                }
+                else
+                {
+                    return await proxyService.PostUserProxyPermissionsAsync(assignment);
+                }
             }
             catch (PermissionsException ex)
             {
@@ -119,10 +127,11 @@ namespace Ellucian.Colleague.Api.Controllers
         /// </summary>
         /// <param name="userId">The identifier of the entity of interest</param>
         /// <returns>A collection of proxy access permissions for the supplied person</returns>
+        /// <param name="useEmployeeGroups">Optional parameter used to differentiate between employee proxy and person proxy</param>
         /// <accessComments>
         /// Only the current user can get their own proxy access permissions. 
         /// </accessComments>
-        public async Task<IEnumerable<ProxyUser>> GetUserProxyPermissionsAsync(string userId)
+        public async Task<IEnumerable<ProxyUser>> GetUserProxyPermissionsAsync(string userId, string useEmployeeGroups = "False")
         {
             if (string.IsNullOrEmpty(userId))
             {
@@ -130,7 +139,15 @@ namespace Ellucian.Colleague.Api.Controllers
             }
             try
             {
-                return await proxyService.GetUserProxyPermissionsAsync(userId);
+                bool isEmployeeProxy;
+                if (bool.TryParse(useEmployeeGroups, out isEmployeeProxy))
+                {                  
+                    return await proxyService.GetUserProxyPermissionsAsync(userId, isEmployeeProxy);
+                }
+                else
+                {
+                    return await proxyService.GetUserProxyPermissionsAsync(userId);
+                }
             }
             catch (Exception ex)
             {

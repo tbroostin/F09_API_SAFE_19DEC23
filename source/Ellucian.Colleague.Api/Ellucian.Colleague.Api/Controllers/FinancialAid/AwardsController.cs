@@ -114,5 +114,42 @@ namespace Ellucian.Colleague.Api.Controllers.FinancialAid
                 throw CreateHttpResponseException("Unknown error occurred getting Awards resource. See log for details");
             }
         }
+
+        /// <summary>
+        /// Get a list of all Financial Aid Award3 DTOs from Colleague
+        /// </summary>
+        /// <accessComments>
+        /// Any authenticated user can get these resources
+        /// </accessComments>
+        /// <returns>A collection of Award data objects</returns>   
+        public IEnumerable<Award3> GetAwards3()
+        {
+            try
+            {
+                var AwardCollection = _FinancialAidReferenceDataRepository.Awards;
+
+                //Get the adapter for the type mapping
+                var awardDtoAdapter = _AdapterRegistry.GetAdapter<Domain.FinancialAid.Entities.Award, Award3>();
+
+                //Map the award entity to the award2 DTO
+                var awardDtoCollection = new List<Award3>();
+                foreach (var award in AwardCollection)
+                {
+                    awardDtoCollection.Add(awardDtoAdapter.MapToType(award));
+                }
+
+                return awardDtoCollection;
+            }
+            catch (KeyNotFoundException knfe)
+            {
+                _Logger.Error(knfe, knfe.Message);
+                throw CreateNotFoundException("Awards", "");
+            }
+            catch (Exception e)
+            {
+                _Logger.Error(e, e.Message);
+                throw CreateHttpResponseException("Unknown error occurred getting Awards resource. See log for details");
+            }
+        }
     }
 }

@@ -1,4 +1,4 @@
-﻿//Copyright 2016-2020 Ellucian Company L.P. and its affiliates
+﻿//Copyright 2016-2021 Ellucian Company L.P. and its affiliates
 
 using System;
 using System.Collections.Generic;
@@ -176,7 +176,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>Collection of Vendors DTO objects</returns>
         public async Task<Tuple<IEnumerable<Vendors>, int>> GetVendorsAsync(int offset, int limit, VendorFilter criteriaValues, bool bypassCache = false)
         {
-            CheckViewVendorPermission();
+            //CheckViewVendorPermission();
 
             var vendorsCollection = new List<Vendors>();
 
@@ -275,7 +275,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 throw new ArgumentNullException("guid", "GUID is required to get a Vendor.");
             }
-            CheckViewVendorPermission();
+            //CheckViewVendorPermission();
 
             try
             {
@@ -343,7 +343,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 {
 
                     // verify the user has the permission to update a vendor
-                    CheckUpdateVendorPermission();
+                    //CheckUpdateVendorPermission();
 
                     _vendorsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -415,7 +415,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             Domain.ColleagueFinance.Entities.Vendors createdVendor = null;
 
             // verify the user has the permission to create a Vendor
-            CheckUpdateVendorPermission();
+            //CheckUpdateVendorPermission();
 
             _vendorsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -880,7 +880,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         public async Task<Tuple<IEnumerable<Vendors2>, int>> GetVendorsAsync2(int offset, int limit, string vendorDetails, List<string> classifications,
             List<string> statuses, List<string> relatedReferences, List<string> types = null, string taxId = null, bool bypassCache = false)
         {
-            CheckViewVendorPermission();
+            //CheckViewVendorPermission();
 
             var vendorsCollection = new List<Vendors2>();
 
@@ -1015,7 +1015,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 throw new ArgumentNullException("guid", "GUID is required to get a Vendor.");
             }
-            CheckViewVendorPermission();
+            //CheckViewVendorPermission();
 
             try
             {
@@ -1082,7 +1082,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         public async Task<Vendors2> PutVendorAsync2(string guid, Vendors2 vendorDto)
         {
             // verify the user has the permission to update a vendor
-            CheckUpdateVendorPermission();
+            //CheckUpdateVendorPermission();
             if (vendorDto == null)
             {
                 IntegrationApiExceptionAddError("Must provide a vendor for update.", "Validation.Exception");
@@ -1180,7 +1180,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         public async Task<Vendors2> PostVendorAsync2(Vendors2 vendorDto)
         {
             // verify the user has the permission to create a Vendor
-            CheckUpdateVendorPermission();
+            //CheckUpdateVendorPermission();
 
             if (vendorDto == null)
             {
@@ -2146,7 +2146,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>Collection of Vendors DTO objects</returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.VendorsMaximum>, int>> GetVendorsMaximumAsync(int offset, int limit, VendorsMaximum criteriaObj, string vendorDetails, bool bypassCache = false)
         {
-            CheckViewVendorPermission();
+            //CheckViewVendorPermission();
 
             var vendorsCollection = new List<VendorsMaximum>();
 
@@ -2425,7 +2425,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 throw new ArgumentNullException("guid", "GUID is required to get a Vendor.");
             }
-            CheckViewVendorPermission();
+            //CheckViewVendorPermission();
 
             try
             {
@@ -3260,7 +3260,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 return vendorDtos;
             }
             //sorting
-            vendorDomainEntities = vendorDomainEntities.OrderBy(item => item.VendorId).ThenBy(x => x.VendorName);
+            vendorDomainEntities = vendorDomainEntities.OrderBy(item => item.VendorName).ThenBy(item => item.VendorId);
 
             // Convert the vendor search result into DTOs
             var dtoAdapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.VendorSearchResult, Dtos.ColleagueFinance.VendorSearchResult>();
@@ -3302,7 +3302,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 return vendorDtos;
             }
             //sorting
-            vendorDomainEntities = vendorDomainEntities.OrderBy(item => item.VendorId);
+            vendorDomainEntities = vendorDomainEntities.OrderBy(item => item.VendorNameLines.Any() ? item.VendorNameLines.FirstOrDefault() : item.VendorMiscName).ThenBy(item => item.VendorId);
 
             // Convert the vendor search result into DTOs
             var dtoAdapter = _adapterRegistry.GetAdapter<Domain.ColleagueFinance.Entities.VendorsVoucherSearchResult, Dtos.ColleagueFinance.VendorsVoucherSearchResult>();
@@ -4059,7 +4059,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             var hasPermission = HasPermission(ColleagueFinancePermissionCodes.ViewVendor)
                 || HasPermission(ColleagueFinancePermissionCodes.CreateUpdateRequisition)
-                || HasPermission(ColleagueFinancePermissionCodes.CreateUpdatePurchaseOrder);
+                || HasPermission(ColleagueFinancePermissionCodes.CreateUpdatePurchaseOrder)
+                || HasPermission(ColleagueFinancePermissionCodes.CreateUpdateVoucher);
 
             if (!hasPermission)
             {

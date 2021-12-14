@@ -306,7 +306,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task PersonExternalEducationService_GetPersonExternalEducationAsync_Criteria_InvalidPersonIdFilter()
             {
-                _personRepoMock.Setup(repo => repo.GetPersonIdForNonCorpOnly(It.IsAny<string>())).ReturnsAsync("");
+                _personRepoMock.Setup(repo => repo.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("");
 
                 PersonExternalEducation filter = new PersonExternalEducation()
                 {

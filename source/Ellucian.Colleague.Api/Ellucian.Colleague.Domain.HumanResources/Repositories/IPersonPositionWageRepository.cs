@@ -15,6 +15,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Repositories
         /// <param name="personIds">person ids</param>
         /// <param name="lookupStartDate">lookup start date, all records with end date before this date will not be retrieved</param>
         /// <returns></returns>
-        Task<IEnumerable<PersonPositionWage>> GetPersonPositionWagesAsync(IEnumerable<string> personIds, DateTime? lookupStartDate = null);
+        Task<IEnumerable<PersonPositionWage>> GetPersonPositionWagesAsync(IEnumerable<string> personIds, DateTime? lookupStartDate = null, 
+            IEnumerable<string> payCycleIds = null);
     }
 }

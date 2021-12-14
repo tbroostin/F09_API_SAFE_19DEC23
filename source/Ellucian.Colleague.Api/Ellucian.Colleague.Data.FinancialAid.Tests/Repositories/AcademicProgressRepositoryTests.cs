@@ -671,7 +671,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             public async Task NoAcademicProgramRequirementFound_MessageIsLoggedAndNullReturnedTest()
             {
                 dataReaderMock.Setup(r => r.ReadRecordAsync<AcadProgramReqmts>(It.IsAny<string>(), It.IsAny<string>(), true))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
                 try
                 {
                     Assert.IsNull(await actualRepository.GetStudentAcademicProgressProgramDetailAsync(programCode, catalog));                    

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -302,7 +302,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
 
                     // Do not display 1098-T forms that do not have non-zero amounts for box 1, 4, 5, and 6,
-                    // and are for tax year 2019 and beyond.
+                    // and are for tax year 2019 and beyond, that are not a correction.
                     if (parm1098Contract.P1098TTaxForm == pdfDataContract.Tf98fTaxForm)
                     {
                         if (pdfDataContract.Tf98fTaxYear >= 2019)
@@ -310,7 +310,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             if (!(entity.AmountsPaidForTuitionAndExpenses != null && entity.AmountsPaidForTuitionAndExpenses != "0.00") &&
                                 !(entity.AdjustmentsForPriorYear != null && entity.AdjustmentsForPriorYear != "0.00") &&
                                 !(entity.ScholarshipsOrGrants != null && entity.ScholarshipsOrGrants != "0.00") &&
-                                !(entity.AdjustmentsToScholarshipsOrGrantsForPriorYear != null && entity.AdjustmentsToScholarshipsOrGrantsForPriorYear != "0.00"))
+                                !(entity.AdjustmentsToScholarshipsOrGrantsForPriorYear != null && entity.AdjustmentsToScholarshipsOrGrantsForPriorYear != "0.00") &&
+                                !(entity.Correction))
                             {
                                 throw new ApplicationException("1098-T tax form must have values for box 1, 4, 5, or 6.");
                             }

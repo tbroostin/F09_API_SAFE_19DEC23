@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2020 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -60,8 +60,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// </summary>
         /// <param name="id">Guid to General Ledger Transaction</param>
         /// <returns>General Ledger Transaction DTO</returns>
-        public async Task<Ellucian.Colleague.Dtos.GeneralLedgerTransaction> GetByIdAsync(string id)
+        public async Task<Dtos.GeneralLedgerTransaction> GetByIdAsync(string id)
         {
+            await CheckViewGeneralLedgerTransactionPermissions();
+
             // Get the GL Configuration to get the name of the full GL account access role
             // and also provides the information to format the GL accounts
             var glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
@@ -92,7 +94,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
 
             // Convert the general ledger transaction and all its child objects into DTOs.
-            return await BuildGeneralLedgerTransactionDtoAsync(generalLedgerTransactionDomainEntity, glConfiguration);
+            var generalLedgerTransactionDto = await BuildGeneralLedgerTransactionDtoAsync(generalLedgerTransactionDomainEntity, glConfiguration);
+            await CheckViewByTypeGeneralLedgerTransactionPermissions(generalLedgerTransactionDto);
+            return generalLedgerTransactionDto;
         }
 
         /// <summary>
@@ -102,6 +106,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>General Ledger Transaction DTO</returns>
         public async Task<Ellucian.Colleague.Dtos.GeneralLedgerTransaction2> GetById2Async(string id)
         {
+            await CheckViewGeneralLedgerTransactionPermissions();
+
             // Get the GL Configuration to get the name of the full GL account access role
             // and also provides the information to format the GL accounts
             var glConfiguration = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
@@ -132,7 +138,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
 
             // Convert the general ledger transaction and all its child objects into DTOs.
-            return await BuildGeneralLedgerTransactionDto2Async(generalLedgerTransactionDomainEntity, glConfiguration);
+            var generalLedgerTransactionDto = await BuildGeneralLedgerTransactionDto2Async(generalLedgerTransactionDomainEntity, glConfiguration);
+            await CheckViewByTypeGeneralLedgerTransactionPermissions2(generalLedgerTransactionDto);
+            return generalLedgerTransactionDto;
         }
 
         /// <summary>
@@ -141,6 +149,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>Collection of GeneralLedgerTransactions</returns>
         public async Task<IEnumerable<Dtos.GeneralLedgerTransaction>> GetAsync()
         {
+            await CheckViewGeneralLedgerTransactionPermissions();
+
             var generalLedgerTransactionDtos = new List<Dtos.GeneralLedgerTransaction>();
             // Get the GL Configuration to get the name of the full GL account access role
             // and also provides the information to format the GL accounts
@@ -190,6 +200,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>Collection of GeneralLedgerTransactions</returns>
         public async Task<IEnumerable<Dtos.GeneralLedgerTransaction2>> Get2Async()
         {
+            await CheckViewGeneralLedgerTransactionPermissions();
+
             var generalLedgerTransactionDtos = new List<Dtos.GeneralLedgerTransaction2>();
             // Get the GL Configuration to get the name of the full GL account access role
             // and also provides the information to format the GL accounts
@@ -229,7 +241,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 }
             }
             return generalLedgerTransactionDtos;
-        }        
+        }
 
         /// <summary>
         /// Update a single general ledger transaction for the data model version 6
@@ -238,6 +250,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         public async Task<Dtos.GeneralLedgerTransaction> UpdateAsync(string id, Dtos.GeneralLedgerTransaction generalLedgerDto)
         {
             ValidateGeneralLedgerDto(generalLedgerDto);
+
+            await CheckGeneralLedgerTransactionPermissions(generalLedgerDto);
 
             generalLedgerTransactionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -286,6 +300,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             ValidateGeneralLedgerDto2(generalLedgerDto);
 
+            await CheckGeneralLedgerTransactionPermissions2(generalLedgerDto);
+
             generalLedgerTransactionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
             if (!generalLedgerDto.Id.Equals(id, StringComparison.InvariantCultureIgnoreCase))
@@ -325,7 +341,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             return generalLedgerTransactionDto;
         }
 
-        
+
 
         /// <summary>
         /// Create a single general ledger transaction for the data model version 6
@@ -334,6 +350,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         public async Task<Dtos.GeneralLedgerTransaction> CreateAsync(Dtos.GeneralLedgerTransaction generalLedgerDto)
         {
             ValidateGeneralLedgerDto(generalLedgerDto);
+
+            await CheckGeneralLedgerTransactionPermissions(generalLedgerDto);
 
             generalLedgerTransactionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -377,6 +395,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             ValidateGeneralLedgerDto2(generalLedgerDto);
 
+            await CheckGeneralLedgerTransactionPermissions2(generalLedgerDto);
+
             generalLedgerTransactionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
             var generalLedgerTransactionDto = new Dtos.GeneralLedgerTransaction2();
@@ -411,7 +431,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             return generalLedgerTransactionDto;
         }
 
-        
+
 
         /// <summary>
         /// validate general ledger transaction for the data model version 6
@@ -591,14 +611,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 {
                     LedgerDate = transaction.LedgerDate,
                     Type = ConverEntityTypeToDtoType(transaction.Source),
-                    TransactionNumber = transaction.TransactionNumber,
-                    ReferenceNumber = transaction.ReferenceNumber,
-                    Reference = new Dtos.DtoProperties.GeneralLedgerReferenceDtoProperty()
+                    TransactionNumber = !string.IsNullOrEmpty(transaction.TransactionNumber) ? transaction.TransactionNumber : null,
+                    ReferenceNumber = !string.IsNullOrEmpty(transaction.ReferenceNumber) ? transaction.ReferenceNumber : null,
+                    Reference = !string.IsNullOrEmpty(transaction.ReferencePersonId) ? new Dtos.DtoProperties.GeneralLedgerReferenceDtoProperty()
                     {
                         Person = (!string.IsNullOrEmpty(transaction.ReferencePersonId) && !(await personRepository.IsCorpAsync(transaction.ReferencePersonId)) ? new Dtos.GuidObject2(await personRepository.GetPersonGuidFromIdAsync(transaction.ReferencePersonId)) : null),
                         Organization = (!string.IsNullOrEmpty(transaction.ReferencePersonId) && (await personRepository.IsCorpAsync(transaction.ReferencePersonId)) ? new Dtos.GuidObject2(await personRepository.GetPersonGuidFromIdAsync(transaction.ReferencePersonId)) : null),
-                    },
-                    TransactionTypeReferenceDate = transaction.TransactionTypeReferenceDate,
+                    } : null,
+                    TransactionTypeReferenceDate = transaction.TransactionTypeReferenceDate.HasValue ? transaction.TransactionTypeReferenceDate : null,
                     TransactionDetailLines = new List<Dtos.DtoProperties.GeneralLedgerDetailDtoProperty>()
                 };
                 foreach (var transactionDetail in transaction.TransactionDetailLines)
@@ -613,9 +633,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     var genLedgrTransactionDetailDto = new Dtos.DtoProperties.GeneralLedgerDetailDtoProperty()
                     {
                         AccountingString = accountingString,
-                        Amount = new Dtos.DtoProperties.AmountDtoProperty() { Value = transactionDetail.Amount.Value, Currency = (Dtos.EnumProperties.CurrencyCodes)Enum.Parse(typeof(Dtos.EnumProperties.CurrencyCodes), transactionDetail.Amount.Currency.ToString())},
+                        Amount = new Dtos.DtoProperties.AmountDtoProperty() { Value = transactionDetail.Amount.Value, Currency = (Dtos.EnumProperties.CurrencyCodes)Enum.Parse(typeof(Dtos.EnumProperties.CurrencyCodes), transactionDetail.Amount.Currency.ToString()) },
                         Description = transactionDetail.GlAccount.GlAccountDescription,
-                        SequenceNumber = transactionDetail.SequenceNumber,
+                        SequenceNumber = transactionDetail.SequenceNumber.HasValue ? transactionDetail.SequenceNumber : null,
                         Type = (Dtos.EnumProperties.CreditOrDebit)Enum.Parse(typeof(Dtos.EnumProperties.CreditOrDebit), transactionDetail.Type.ToString())
                     };
                     genLedgrTransactionDto.TransactionDetailLines.Add(genLedgrTransactionDetailDto);
@@ -655,14 +675,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 {
                     LedgerDate = transaction.LedgerDate,
                     Type = ConverEntityTypeToDtoType(transaction.Source),
-                    TransactionNumber = transaction.TransactionNumber,
-                    ReferenceNumber = transaction.ReferenceNumber,
-                    Reference = new Dtos.DtoProperties.GeneralLedgerReferenceDtoProperty()
+                    TransactionNumber = !string.IsNullOrEmpty(transaction.TransactionNumber) ? transaction.TransactionNumber : null,
+                    ReferenceNumber = !string.IsNullOrEmpty(transaction.ReferenceNumber) ? transaction.ReferenceNumber : null,
+                    Reference = !string.IsNullOrEmpty(transaction.ReferencePersonId) ? new Dtos.DtoProperties.GeneralLedgerReferenceDtoProperty()
                     {
                         Person = (!string.IsNullOrEmpty(transaction.ReferencePersonId) && !(await personRepository.IsCorpAsync(transaction.ReferencePersonId)) ? new Dtos.GuidObject2(await personRepository.GetPersonGuidFromIdAsync(transaction.ReferencePersonId)) : null),
                         Organization = (!string.IsNullOrEmpty(transaction.ReferencePersonId) && (await personRepository.IsCorpAsync(transaction.ReferencePersonId)) ? new Dtos.GuidObject2(await personRepository.GetPersonGuidFromIdAsync(transaction.ReferencePersonId)) : null),
-                    },
-                    TransactionTypeReferenceDate = transaction.TransactionTypeReferenceDate,
+                    } : null,
+                    TransactionTypeReferenceDate = transaction.TransactionTypeReferenceDate.HasValue ? transaction.TransactionTypeReferenceDate : null,
                     TransactionDetailLines = new List<Dtos.DtoProperties.GeneralLedgerDetailDtoProperty2>()
                 };
                 foreach (var transactionDetail in transaction.TransactionDetailLines)
@@ -674,13 +694,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     {
                         accountingString = ConvertAccountingstringToIncludeProjectRefNo(transactionDetail.ProjectId, accountingString);
                     }
-                                        
+
                     var genLedgrTransactionDetailDto = new Dtos.DtoProperties.GeneralLedgerDetailDtoProperty2()
                     {
                         AccountingString = accountingString,
                         Amount = new Dtos.DtoProperties.AmountDtoProperty() { Value = transactionDetail.Amount.Value, Currency = (Dtos.EnumProperties.CurrencyCodes)Enum.Parse(typeof(Dtos.EnumProperties.CurrencyCodes), transactionDetail.Amount.Currency.ToString()) },
                         Description = transactionDetail.GlAccount.GlAccountDescription,
-                        SequenceNumber = transactionDetail.SequenceNumber,
+                        SequenceNumber = transactionDetail.SequenceNumber.HasValue ? transactionDetail.SequenceNumber : null,
                         Type = (Dtos.EnumProperties.CreditOrDebit)Enum.Parse(typeof(Dtos.EnumProperties.CreditOrDebit), transactionDetail.Type.ToString()),
                         SubmittedBy = !string.IsNullOrEmpty(transactionDetail.SubmittedBy) ? new Dtos.GuidObject2(await personRepository.GetPersonGuidFromIdAsync(transactionDetail.SubmittedBy)) : null
                     };
@@ -741,9 +761,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private async Task<Domain.ColleagueFinance.Entities.GeneralLedgerTransaction> BuildGeneralLedgerTransactionEntityAsync(Dtos.GeneralLedgerTransaction generalLedgerTransactionDto, int GLCompCount)
         {
             var generalLedgerTransactionEntity = new Domain.ColleagueFinance.Entities.GeneralLedgerTransaction()
-                {
-                    Id = (generalLedgerTransactionDto.Id != null && !string.IsNullOrEmpty(generalLedgerTransactionDto.Id)) ? generalLedgerTransactionDto.Id : string.Empty
-                };
+            {
+                Id = (generalLedgerTransactionDto.Id != null && !string.IsNullOrEmpty(generalLedgerTransactionDto.Id)) ? generalLedgerTransactionDto.Id : string.Empty
+            };
 
             generalLedgerTransactionEntity.ProcessMode = generalLedgerTransactionDto.ProcessMode.ToString();
             generalLedgerTransactionEntity.GeneralLedgerTransactions = new List<GenLedgrTransaction>();
@@ -786,7 +806,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     // assuming that the delimiter is an astrisk, So we'll convert that delimiter to something
                     // else while perserving the project code if present.
 
-                    if ((accountingString.Split('*').Length -1) > 1 )
+                    if ((accountingString.Split('*').Length - 1) > 1)
                     {
                         int CountAstrisks = accountingString.Split('*').Length - 1;
                         if ((GLCompCount - 1) < CountAstrisks)
@@ -794,7 +814,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                             int lastIndex = accountingString.LastIndexOf('*');
                             accountingString = accountingString.Substring(0, lastIndex).Replace("*", "")
                                   + accountingString.Substring(lastIndex);
-                        } else
+                        }
+                        else
                         {
                             accountingString = Regex.Replace(accountingString, "[^0-9a-zA-Z]", "");
                         }
@@ -890,7 +911,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     string project = "";
                     var amount = new AmountAndCurrency(transactionDetail.Amount.Value, (Domain.ColleagueFinance.Entities.CurrencyCodes)Enum.Parse(typeof(Domain.ColleagueFinance.Entities.CurrencyCodes), transactionDetail.Amount.Currency.ToString()));
                     var type = (Domain.ColleagueFinance.Entities.CreditOrDebit)Enum.Parse(typeof(Domain.ColleagueFinance.Entities.CreditOrDebit), transactionDetail.Type.ToString());
-                    var submittedById =string.Empty;
+                    var submittedById = string.Empty;
                     if (transactionDetail.SubmittedBy != null && !string.IsNullOrEmpty(transactionDetail.SubmittedBy.Id))
                     {
                         submittedById = await personRepository.GetPersonIdFromGuidAsync(transactionDetail.SubmittedBy.Id);
@@ -983,7 +1004,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             // Convert the general ledger transaction and all its child objects into DTOs.
             var generalLedgerTransactionDto = await ConvertGeneralLedgerTransactionEntityToDto3Async(generalLedgerTransactionDomainEntity, glConfiguration, true);
-            await CheckViewByTypeGeneralLedgerTransactionPermissions(generalLedgerTransactionDto);
+            await CheckViewByTypeGeneralLedgerTransactionPermissions3(generalLedgerTransactionDto);
             return generalLedgerTransactionDto;
         }
 
@@ -1058,7 +1079,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             ValidateGeneralLedgerDto3(generalLedgerDto);
 
-            await CheckGeneralLedgerTransactionPermissions(generalLedgerDto);
+            await CheckGeneralLedgerTransactionPermissions3(generalLedgerDto);
 
             generalLedgerTransactionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -1128,7 +1149,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             ValidateGeneralLedgerDto3(generalLedgerDto);
 
-            await CheckGeneralLedgerTransactionPermissions(generalLedgerDto);
+            await CheckGeneralLedgerTransactionPermissions3(generalLedgerDto);
 
             generalLedgerTransactionRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -1189,7 +1210,117 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// Checks persmissions.
         /// </summary>
         /// <param name="generalLedgerDto"></param>
-        private async Task CheckGeneralLedgerTransactionPermissions(GeneralLedgerTransaction3 generalLedgerDto)
+        private async Task CheckGeneralLedgerTransactionPermissions(Dtos.GeneralLedgerTransaction generalLedgerDto)
+        {
+            var userPermissionList = (await GetUserPermissionCodesAsync()).ToList();
+
+            // This is the overall permission code needed to create anything with this API.
+            if (!userPermissionList.Contains(ColleagueFinancePermissionCodes.CreateGLPostings))
+            {
+                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to create general ledger postings.");
+                throw new PermissionsException("User is not authorized to create general ledger postings.");
+            }
+
+            if (generalLedgerDto.Transactions != null && generalLedgerDto.Transactions.Any())
+            {
+                var transactionTypes = generalLedgerDto.Transactions.Select(t => t.Type);
+
+                if (transactionTypes != null && transactionTypes.Any())
+                {
+                    transactionTypes.ToList().ForEach(type =>
+                    {
+                        if (type == GeneralLedgerTransactionType.ActualOpenBalance || type == GeneralLedgerTransactionType.MiscGeneralLedgerTransaction)
+                        {
+                            if (!userPermissionList.Contains(ColleagueFinancePermissionCodes.CreateJournalEntries))
+                            {
+                                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to create journal entries.");
+                                throw new PermissionsException("User is not authorized to create journal entries.");
+                            }
+                        }
+
+                        if (type == GeneralLedgerTransactionType.ApprovedBudget || type == GeneralLedgerTransactionType.ContingentBudget ||
+                            type == GeneralLedgerTransactionType.ApprovedBudgetAdjustment)
+                        {
+                            if (!userPermissionList.Contains(ColleagueFinancePermissionCodes.CreateBudgetEntries))
+                            {
+                                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to create budget entries.");
+                                throw new PermissionsException("User is not authorized to create budget entries.");
+                            }
+                        }
+
+                        if (type == GeneralLedgerTransactionType.EncumbranceOpenBalance || type == GeneralLedgerTransactionType.GeneralEncumbranceCreate)
+                        {
+                            if (!userPermissionList.Contains(ColleagueFinancePermissionCodes.CreateEncumbranceEntries))
+                            {
+                                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to create encumbrance entries.");
+                                throw new PermissionsException("User is not authorized to create encumbrance entries.");
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        /// <summary>
+        /// Checks persmissions.
+        /// </summary>
+        /// <param name="generalLedgerDto"></param>
+        private async Task CheckGeneralLedgerTransactionPermissions2(GeneralLedgerTransaction2 generalLedgerDto)
+        {
+            var userPermissionList = (await GetUserPermissionCodesAsync()).ToList();
+
+            // This is the overall permission code needed to create anything with this API.
+            if (!userPermissionList.Contains(ColleagueFinancePermissionCodes.CreateGLPostings))
+            {
+                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to create general ledger postings.");
+                throw new PermissionsException("User is not authorized to create general ledger postings.");
+            }
+
+            if (generalLedgerDto.Transactions != null && generalLedgerDto.Transactions.Any())
+            {
+                var transactionTypes = generalLedgerDto.Transactions.Select(t => t.Type);
+
+                if (transactionTypes != null && transactionTypes.Any())
+                {
+                    transactionTypes.ToList().ForEach(type =>
+                    {
+                        if (type == GeneralLedgerTransactionType.ActualOpenBalance || type == GeneralLedgerTransactionType.MiscGeneralLedgerTransaction)
+                        {
+                            if (!userPermissionList.Contains(ColleagueFinancePermissionCodes.CreateJournalEntries))
+                            {
+                                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to create journal entries.");
+                                throw new PermissionsException("User is not authorized to create journal entries.");
+                            }
+                        }
+
+                        if (type == GeneralLedgerTransactionType.ApprovedBudget || type == GeneralLedgerTransactionType.ContingentBudget ||
+                            type == GeneralLedgerTransactionType.ApprovedBudgetAdjustment)
+                        {
+                            if (!userPermissionList.Contains(ColleagueFinancePermissionCodes.CreateBudgetEntries))
+                            {
+                                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to create budget entries.");
+                                throw new PermissionsException("User is not authorized to create budget entries.");
+                            }
+                        }
+
+                        if (type == GeneralLedgerTransactionType.EncumbranceOpenBalance || type == GeneralLedgerTransactionType.GeneralEncumbranceCreate)
+                        {
+                            if (!userPermissionList.Contains(ColleagueFinancePermissionCodes.CreateEncumbranceEntries))
+                            {
+                                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to create encumbrance entries.");
+                                throw new PermissionsException("User is not authorized to create encumbrance entries.");
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        /// <summary>
+        /// Checks persmissions.
+        /// </summary>
+        /// <param name="generalLedgerDto"></param>
+        private async Task CheckGeneralLedgerTransactionPermissions3(GeneralLedgerTransaction3 generalLedgerDto)
         {
             var userPermissionList = (await GetUserPermissionCodesAsync()).ToList();
 
@@ -1247,16 +1378,18 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             var userPermissionList = (await GetUserPermissionCodesAsync()).ToList();
 
-            // This is the overall permission code needed to create anything with this API.
+            // This is the overall permission code needed to create anything with this API. 
+            // This permissions code will also be required to perform a GET.
             if (!userPermissionList.Contains(ColleagueFinancePermissionCodes.CreateGLPostings))
             {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view general ledger postings.");
-                throw new PermissionsException("User is not authorized to view general ledger postings.");
+                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view general-ledger-transactions.");
+                throw new PermissionsException("User '" + CurrentUser.UserId + "' is not authorized to view general-ledger-transactions.");
             }
 
             bool journalEntryPermission = (userPermissionList.Contains(ColleagueFinancePermissionCodes.CreateJournalEntries));
             bool budgetEntryPermission = (userPermissionList.Contains(ColleagueFinancePermissionCodes.CreateBudgetEntries));
             bool encumbrancePermission = (userPermissionList.Contains(ColleagueFinancePermissionCodes.CreateEncumbranceEntries));
+
             return new Tuple<bool, bool, bool>(journalEntryPermission, budgetEntryPermission, encumbrancePermission);
         }
 
@@ -1264,7 +1397,105 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// Checks view persmissions.
         /// </summary>
         /// <param name="generalLedgerDto"></param>
-        private async Task CheckViewByTypeGeneralLedgerTransactionPermissions(GeneralLedgerTransaction3 generalLedgerDto)
+        private async Task CheckViewByTypeGeneralLedgerTransactionPermissions(Dtos.GeneralLedgerTransaction generalLedgerDto)
+        {
+            var userPermissionList = (await GetUserPermissionCodesAsync()).ToList();
+
+            // This is the view journal entries permission code.
+            if (generalLedgerDto.Transactions != null && generalLedgerDto.Transactions.Any())
+            {
+                var transactionTypes = generalLedgerDto.Transactions.Select(t => t.Type);
+
+                if (transactionTypes != null && transactionTypes.Any())
+                {
+                    transactionTypes.ToList().ForEach(type =>
+                    {
+                        if (type == GeneralLedgerTransactionType.ActualOpenBalance || type == GeneralLedgerTransactionType.MiscGeneralLedgerTransaction)
+                        {
+                            if (!userPermissionList.Contains(ColleagueFinancePermissionCodes.CreateJournalEntries))
+                            {
+                                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view journal entries.");
+                                throw new PermissionsException("User is not authorized to view journal entries.");
+                            }
+                        }
+
+                        if (type == GeneralLedgerTransactionType.ApprovedBudget || type == GeneralLedgerTransactionType.ContingentBudget ||
+                            type == GeneralLedgerTransactionType.ApprovedBudgetAdjustment)
+                        {
+                            if (!userPermissionList.Contains(ColleagueFinancePermissionCodes.CreateBudgetEntries))
+                            {
+                                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view budget entries.");
+                                throw new PermissionsException("User is not authorized to view budget entries.");
+                            }
+                        }
+
+                        if (type == GeneralLedgerTransactionType.EncumbranceOpenBalance || type == GeneralLedgerTransactionType.GeneralEncumbranceCreate)
+                        {
+                            if (!userPermissionList.Contains(ColleagueFinancePermissionCodes.CreateEncumbranceEntries))
+                            {
+                                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view encumbrance entries.");
+                                throw new PermissionsException("User is not authorized to view encumbrance entries.");
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        /// <summary>
+        /// Checks view persmissions.
+        /// </summary>
+        /// <param name="generalLedgerDto"></param>
+        private async Task CheckViewByTypeGeneralLedgerTransactionPermissions2(GeneralLedgerTransaction2 generalLedgerDto)
+        {
+            var userPermissionList = (await GetUserPermissionCodesAsync()).ToList();
+
+            // This is the view journal entries permission code.
+            if (generalLedgerDto.Transactions != null && generalLedgerDto.Transactions.Any())
+            {
+                var transactionTypes = generalLedgerDto.Transactions.Select(t => t.Type);
+
+                if (transactionTypes != null && transactionTypes.Any())
+                {
+                    transactionTypes.ToList().ForEach(type =>
+                    {
+                        if (type == GeneralLedgerTransactionType.ActualOpenBalance || type == GeneralLedgerTransactionType.MiscGeneralLedgerTransaction)
+                        {
+                            if (!userPermissionList.Contains(ColleagueFinancePermissionCodes.CreateJournalEntries))
+                            {
+                                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view journal entries.");
+                                throw new PermissionsException("User is not authorized to view journal entries.");
+                            }
+                        }
+
+                        if (type == GeneralLedgerTransactionType.ApprovedBudget || type == GeneralLedgerTransactionType.ContingentBudget ||
+                            type == GeneralLedgerTransactionType.ApprovedBudgetAdjustment)
+                        {
+                            if (!userPermissionList.Contains(ColleagueFinancePermissionCodes.CreateBudgetEntries))
+                            {
+                                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view budget entries.");
+                                throw new PermissionsException("User is not authorized to view budget entries.");
+                            }
+                        }
+
+                        if (type == GeneralLedgerTransactionType.EncumbranceOpenBalance || type == GeneralLedgerTransactionType.GeneralEncumbranceCreate)
+                        {
+                            if (!userPermissionList.Contains(ColleagueFinancePermissionCodes.CreateEncumbranceEntries))
+                            {
+                                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view encumbrance entries.");
+                                throw new PermissionsException("User is not authorized to view encumbrance entries.");
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        /// <summary>
+        /// Checks view persmissions.
+        /// </summary>
+        /// <param name="generalLedgerDto"></param>
+        private async Task CheckViewByTypeGeneralLedgerTransactionPermissions3(GeneralLedgerTransaction3 generalLedgerDto)
         {
             var userPermissionList = (await GetUserPermissionCodesAsync()).ToList();
 
@@ -1416,20 +1647,27 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         try
                         {
                             var year = await this.GetFiscalYear(transaction.LedgerDate.Value.Date, true);
-                            DateTime fiscalYearStartDate;
-                            if (!year.FiscalStartMonth.Value.Equals(1))
+                            if (year == null)
                             {
-                                fiscalYearStartDate = new DateTime(Convert.ToInt32(year.Id) - 1, year.FiscalStartMonth.Value, 1);
+                                IntegrationApiExceptionAddError("The ledgerDate falls within a non-existent fiscal year.", "Validation.Exception", generalLedgerTransactionDto.Id);
                             }
                             else
                             {
-                                fiscalYearStartDate = new DateTime(Convert.ToInt32(year.Id), year.FiscalStartMonth.Value, 1);
-                            }
+                                DateTime fiscalYearStartDate;
+                                if (!year.FiscalStartMonth.Value.Equals(1))
+                                {
+                                    fiscalYearStartDate = new DateTime(Convert.ToInt32(year.Id) - 1, year.FiscalStartMonth.Value, 1);
+                                }
+                                else
+                                {
+                                    fiscalYearStartDate = new DateTime(Convert.ToInt32(year.Id), year.FiscalStartMonth.Value, 1);
+                                }
 
-                            if (!transaction.LedgerDate.Value.Date.Equals(fiscalYearStartDate))
-                            {
-                                // throw new InvalidOperationException("Opening balance transactions must use the first day of the fiscal year as the ledgerDate.");
-                                IntegrationApiExceptionAddError("Opening balance transactions must use the first day of the fiscal year as the ledgerDate.", "Validation.Exception", generalLedgerTransactionDto.Id);
+                                if (!transaction.LedgerDate.Value.Date.Equals(fiscalYearStartDate))
+                                {
+                                    // throw new InvalidOperationException("Opening balance transactions must use the first day of the fiscal year as the ledgerDate.");
+                                    IntegrationApiExceptionAddError("Opening balance transactions must use the first day of the fiscal year as the ledgerDate.", "Validation.Exception", generalLedgerTransactionDto.Id);
+                                }
                             }
                         }
                         catch (Exception ex)
@@ -1794,7 +2032,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     generalLedgerTransactionDto.SubmittedBy = new Dtos.GuidObject2(SubmittedByGuid);
                 }
             }
-            generalLedgerTransactionDto.Comment = string.IsNullOrEmpty(generalLedgerTransactionEntity.Comment)? null : generalLedgerTransactionEntity.Comment;
+            generalLedgerTransactionDto.Comment = string.IsNullOrEmpty(generalLedgerTransactionEntity.Comment) ? null : generalLedgerTransactionEntity.Comment;
             generalLedgerTransactionDto.Transactions = new List<Dtos.DtoProperties.GeneralLedgerTransactionDtoProperty3>();
 
             foreach (var transaction in generalLedgerTransactionEntity.GeneralLedgerTransactions)
@@ -1802,7 +2040,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 var genLedgrTransactionDto = new Dtos.DtoProperties.GeneralLedgerTransactionDtoProperty3()
                 {
                     LedgerDate = transaction.LedgerDate,
-                    Type = ConverEntityTypeToDtoType2(transaction.Source), 
+                    Type = ConverEntityTypeToDtoType2(transaction.Source),
                     TransactionTypeReferenceDate = transaction.TransactionTypeReferenceDate,
                     TransactionDetailLines = new List<Dtos.DtoProperties.GeneralLedgerDetailDtoProperty3>()
                 };
@@ -1821,14 +2059,14 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
                 var person = (!string.IsNullOrEmpty(transaction.ReferencePersonId) && !(await personRepository.IsCorpAsync(transaction.ReferencePersonId)) ? new Dtos.GuidObject2(await personRepository.GetPersonGuidFromIdAsync(transaction.ReferencePersonId)) : null);
                 var organization = (!string.IsNullOrEmpty(transaction.ReferencePersonId) && (await personRepository.IsCorpAsync(transaction.ReferencePersonId)) ? new Dtos.GuidObject2(await personRepository.GetPersonGuidFromIdAsync(transaction.ReferencePersonId)) : null);
-                if(person != null)
+                if (person != null)
                 {
-                    genLedgrTransactionDto.Reference = new Dtos.DtoProperties.GeneralLedgerReferenceDtoProperty() { Person = person};
+                    genLedgrTransactionDto.Reference = new Dtos.DtoProperties.GeneralLedgerReferenceDtoProperty() { Person = person };
                 }
 
-                if(organization != null)
+                if (organization != null)
                 {
-                    if(genLedgrTransactionDto.Reference == null)
+                    if (genLedgrTransactionDto.Reference == null)
                     {
                         genLedgrTransactionDto.Reference = new GeneralLedgerReferenceDtoProperty() { Organization = organization };
                     }
@@ -1893,10 +2131,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns></returns>
         private string ConvertAccountingstringToIncludeProjectRefNo(string projectId, string accountingString)
         {
-            if(_projectReferenceIds != null && _projectReferenceIds.Any())
+            if (_projectReferenceIds != null && _projectReferenceIds.Any())
             {
                 var projectRefId = string.Empty;
-                if(_projectReferenceIds.TryGetValue(projectId, out projectRefId))
+                if (_projectReferenceIds.TryGetValue(projectId, out projectRefId))
                 {
                     return string.Concat(accountingString, "*", projectRefId);
                 }
@@ -1916,7 +2154,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 return null;
             }
 
-           var encumbrance = new Encumbrance()
+            var encumbrance = new Encumbrance()
             {
                 Number = string.IsNullOrEmpty(source.EncRefNumber) ? null : source.EncRefNumber,
                 LineItemNumber = string.IsNullOrEmpty(source.EncLineItemNumber) ? default(int?) : Convert.ToInt32(source.EncLineItemNumber),

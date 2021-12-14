@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.Student;
@@ -98,13 +98,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             catch (KeyNotFoundException kex)
             {
                 var message = "Record not found for add authorization with ID " + addAuthorization.Id;
-                logger.Info(kex, message);
+                logger.Error(kex, message);
                 throw;
             }
             catch (Exception ex)
             {
                 var message = "Exception occurred while trying to update add authorization " + addAuthorization.Id;
-                logger.Info(ex, message);
+                logger.Error(ex, message);
                 throw;
             }
         }
@@ -401,7 +401,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             // User does not have permissions and error needs to be thrown and logged
             var error = string.Format("User {0} cannot retrieve add authorizations for student {1}", CurrentUser.PersonId, studentId);
-            logger.Info(error);
+            logger.Error(error);
             throw new PermissionsException(error);
         }
 

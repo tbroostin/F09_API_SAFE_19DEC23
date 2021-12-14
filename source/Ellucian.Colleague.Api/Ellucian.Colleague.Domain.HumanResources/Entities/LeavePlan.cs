@@ -84,7 +84,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// The default start of the plan in a year.
         /// </summary>
         public DateTime? YearlyStartDate { get; set; }
-        
+
         /// <summary>
         /// The end date of the leave plan
         /// </summary>
@@ -120,6 +120,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         public decimal? WaitDays { get; set; }
 
         /// <summary>
+        /// Indicates if this is a leave reporting plan
+        /// </summary>
+        public bool IsLeaveReportingPlan { get; set; }
+
+        /// <summary>
         /// A list of earnings types associated to this leave plan.
         /// </summary>
         public IEnumerable<string> EarningsTypes { get; set; }
@@ -153,7 +158,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             }
             if (string.IsNullOrEmpty(accuralMethod))
             {
-                throw new ArgumentNullException(string.Concat("LeavePlans accuralMethod can not be null or empty. Entity: ‘LEAVPLAN’, Record ID: '", id, "'"));
+                throw new ArgumentNullException(string.Concat("LeavePlans accrualMethodd can not be null or empty. Entity: ‘LEAVPLAN’, Record ID: '", id, "'"));
             }
             if ((startDate == null) || (!startDate.HasValue))
             {
@@ -161,7 +166,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             }
 
             this.id = id;
-            this.title= title;
+            this.title = title;
             this.type = type;
             this.startDate = startDate;
             this.accrualMethod = accuralMethod;
@@ -169,6 +174,6 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             this.EarningsTypes = earningsType;
         }
 
-      
+
     }
 }

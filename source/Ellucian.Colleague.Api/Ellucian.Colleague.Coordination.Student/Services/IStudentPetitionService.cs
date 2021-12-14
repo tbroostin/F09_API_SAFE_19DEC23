@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.using System;
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,5 +18,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="studentId"></param>
         /// <returns><IEnumerable<Dtos.Student.StudentPetition>></returns>
         Task<IEnumerable<Dtos.Student.StudentPetition>> GetAsync(string studentId);
+
+        /// <summary>
+        /// retrieves student overload petitions asynchronously
+        /// </summary>
+        /// <param name="studentId">Student Id</param>
+        /// <returns>A collection of <see cref="Dtos.Student.StudentOverloadPetition"></see> object.</returns>
+        Task<IEnumerable<Dtos.Student.StudentOverloadPetition>> GetStudentOverloadPetitionsAsync(string studentId);
     }
 }

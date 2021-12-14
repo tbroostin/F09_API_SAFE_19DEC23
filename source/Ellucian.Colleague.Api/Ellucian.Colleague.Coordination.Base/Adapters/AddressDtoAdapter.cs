@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Web.Adapters;
 using slf4net;
 using System;
@@ -56,6 +56,7 @@ namespace Ellucian.Colleague.Coordination.Base.Adapters
             addressEntity.State = source.State;
             addressEntity.Type = source.Type;
             addressEntity.TypeCode = source.TypeCode;
+            addressEntity.AddressTypeCodes = source.AddressTypeCodes;
             var phoneDtoAdapter = adapterRegistry.GetAdapter<Dtos.Base.Phone, Domain.Base.Entities.Phone>();
             if (source.PhoneNumbers != null)
             {   

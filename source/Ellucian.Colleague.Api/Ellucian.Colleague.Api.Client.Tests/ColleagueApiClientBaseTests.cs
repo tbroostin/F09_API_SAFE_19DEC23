@@ -3567,5 +3567,79 @@ namespace Ellucian.Colleague.Api.Client.Tests
         }
 
         #endregion
+
+        #region SyncSessionAsyncTests
+
+        [TestClass]
+        public class SyncSessionAsync
+        {
+            private const string _serviceUrl = "http://service.url";
+            private const string _contentType = "application/json";
+            private const string _token = "1234567890";
+
+            private Mock<ILogger> _loggerMock;
+            private ILogger _logger;
+
+            private SessionConfiguration sessionConfiguration;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                _loggerMock = MockLogger.Instance;
+
+                _logger = _loggerMock.Object;
+
+                sessionConfiguration = new SessionConfiguration()
+                {
+                    PasswordResetEnabled = true,
+                    UsernameRecoveryEnabled = true
+                };
+            }
+
+            [TestMethod]
+            public async Task Client_SyncSessionAsync_Success()
+            {
+                // Arrange
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                await client.SyncSessionAsync();
+
+                // Assert - no exception occurs when response is 200.
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(HttpRequestFailedException))]
+            public async Task Client_SyncSessionAsync_Error()
+            {
+                // Arrange
+                var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+                response.Content = new StringContent(string.Empty, Encoding.UTF8, _contentType);
+                response.RequestMessage = new HttpRequestMessage(HttpMethod.Put, "http://test");
+                var mockHandler = new MockHandler();
+                mockHandler.Responses.Enqueue(response);
+
+                var testHttpClient = new HttpClient(mockHandler);
+                testHttpClient.BaseAddress = new Uri(_serviceUrl);
+
+                var client = new ColleagueApiClient(testHttpClient, _logger);
+
+                // Act
+                await client.SyncSessionAsync();
+
+                // Assert
+                _loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), "Unable to perform session sync."));
+            }
+        }
+
+        #endregion
     }
 }

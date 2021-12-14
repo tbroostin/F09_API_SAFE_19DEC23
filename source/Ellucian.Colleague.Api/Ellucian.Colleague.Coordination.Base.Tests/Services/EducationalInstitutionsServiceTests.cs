@@ -240,15 +240,15 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var tuple = new Tuple<IEnumerable<Institution>, int>(
                   _institutionsCollection, _institutionsCollection.Count);
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>()))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>(), It.IsAny<List<Tuple<string, string>>>()))
                     .ReturnsAsync(tuple);
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null, null))
                     .ReturnsAsync(tuple);
 
                 _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(ids)).ReturnsAsync(idCollection);
 
-                var response = await _educationalInstitutionsService.GetEducationalInstitutionsByTypeAsync(0, 1, null, false);
+                var response = await _educationalInstitutionsService.GetEducationalInstitutionsByTypeAsync(0, 1, null, null, false);
 
                 var actual = response.Item1.FirstOrDefault();
                 // the idCollection dictionary consisting of a Id (key) and guid (value)
@@ -292,15 +292,15 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var tuple = new Tuple<IEnumerable<Institution>, int>(
                   null, _institutionsCollection.Count);
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>()))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>(), It.IsAny<List<Tuple<string, string>>>()))
                     .ReturnsAsync(tuple);
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null, null))
                     .ReturnsAsync(tuple);
 
                 _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(ids)).ReturnsAsync(idCollection);
 
-                await _educationalInstitutionsService.GetEducationalInstitutionsByTypeAsync(0, 1, null, false);
+                await _educationalInstitutionsService.GetEducationalInstitutionsByTypeAsync(0, 1, null,null, false);
             }
 
 
@@ -314,15 +314,15 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>()))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>(), It.IsAny<List<Tuple<string, string>>>()))
                     .ThrowsAsync(new IntegrationApiException());
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null, null))
                     .ThrowsAsync(new IntegrationApiException());
 
                 _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(ids)).ReturnsAsync(idCollection);
 
-                await _educationalInstitutionsService.GetEducationalInstitutionsByTypeAsync(0, 1, null, false);
+                await _educationalInstitutionsService.GetEducationalInstitutionsByTypeAsync(0, 1, null, null, false);
             }
 
             [TestMethod]
@@ -336,15 +336,15 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var tuple = new Tuple<IEnumerable<Institution>, int>(
                   _institutionsCollection, _institutionsCollection.Count);
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>()))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>(), It.IsAny<List<Tuple<string, string>>>()))
                     .ReturnsAsync(tuple);
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null, null))
                     .ReturnsAsync(tuple);
 
-                _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(ids)).ReturnsAsync(null);
+                _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(ids)).ReturnsAsync(() => null);
 
-                await _educationalInstitutionsService.GetEducationalInstitutionsByTypeAsync(0, 1, null, false);
+                await _educationalInstitutionsService.GetEducationalInstitutionsByTypeAsync(0, 1, null, null, false);
             }
 
             #endregion GetEducationalInstitutionsAsync
@@ -370,10 +370,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var tuple = new Tuple<IEnumerable<Institution>, int>(
                   _institutionsCollection, _institutionsCollection.Count);
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>()))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>(), It.IsAny<List<Tuple<string, string>>>()))
                     .ReturnsAsync(tuple);
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null, null))
                     .ReturnsAsync(tuple);
 
                 _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(ids)).ReturnsAsync(idCollection);
@@ -409,10 +409,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var tuple = new Tuple<IEnumerable<Institution>, int>(
                   _institutionsCollection, _institutionsCollection.Count);
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>()))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>(), It.IsAny<List<Tuple<string, string>>>()))
                     .ReturnsAsync(tuple);
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null, null))
                     .ReturnsAsync(tuple);
 
                 _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(ids)).ReturnsAsync(idCollection);
@@ -448,10 +448,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var tuple = new Tuple<IEnumerable<Institution>, int>(
                   _institutionsCollection, _institutionsCollection.Count);
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>()))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>(), It.IsAny<List<Tuple<string, string>>>()))
                     .ReturnsAsync(tuple);
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null, null))
                     .ReturnsAsync(tuple);
 
                 _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(ids)).ReturnsAsync(idCollection);
@@ -487,10 +487,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var tuple = new Tuple<IEnumerable<Institution>, int>(
                   _institutionsCollection, _institutionsCollection.Count);
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>()))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>(), It.IsAny<List<Tuple<string, string>>>()))
                     .ReturnsAsync(tuple);
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null, null))
                     .ReturnsAsync(tuple);
 
                 _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(ids)).ReturnsAsync(idCollection);
@@ -563,10 +563,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var tuple = new Tuple<IEnumerable<Institution>, int>(
                   _institutionsCollection, _institutionsCollection.Count);
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>()))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>(), It.IsAny<List<Tuple<string, string>>>()))
                     .ReturnsAsync(tuple);
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null, null))
                     .ReturnsAsync(tuple);
 
                 _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(ids)).ThrowsAsync(new RepositoryException());
@@ -599,10 +599,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var tuple = new Tuple<IEnumerable<Institution>, int>(
                   _institutionsCollection, _institutionsCollection.Count);
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>()))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>(), It.IsAny<List<Tuple<string, string>>>()))
                     .ReturnsAsync(tuple);
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null, null))
                     .ReturnsAsync(tuple);
 
                 _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(ids)).ReturnsAsync(idCollection);
@@ -633,10 +633,10 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 var tuple = new Tuple<IEnumerable<Institution>, int>(
                   _institutionsCollection, _institutionsCollection.Count);
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>()))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<InstType?>(), It.IsAny<List<Tuple<string, string>>>()))
                     .ReturnsAsync(tuple);
                 _institutionRepositoryMock.Setup(x =>
-                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null))
+                    x.GetInstitutionAsync(It.IsAny<int>(), It.IsAny<int>(), null, null))
                     .ReturnsAsync(tuple);
 
                 _personRepositoryMock.Setup(x => x.GetPersonGuidsCollectionAsync(ids)).ReturnsAsync(idCollection);

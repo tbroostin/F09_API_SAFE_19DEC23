@@ -50,7 +50,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
             // They're allowed to see another's data if they have the admin permission
             if (!CurrentUser.IsPerson(studentId) && !hasAdminPermission && !HasProxyAccessForPerson(studentId))
             {
-                logger.Info(CurrentUser + " does not have permission code " + FinancePermissionCodes.ViewStudentAccountActivity);
+                logger.Error(CurrentUser.PersonId + " does not have permission code " + FinancePermissionCodes.ViewStudentAccountActivity);
                 throw new PermissionsException();
             }
         }

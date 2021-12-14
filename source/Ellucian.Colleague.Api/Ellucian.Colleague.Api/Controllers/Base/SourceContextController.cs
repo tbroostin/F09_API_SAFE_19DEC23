@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Security;
 using Ellucian.Web.Http.Filters;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -49,7 +50,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// If the request header "Cache-Control" attribute is set to "no-cache" the data returned will be pulled fresh from the database, otherwise cached data is returned.
         /// </summary>
         /// <returns>All SourceContext objects</returns>
-        [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<IEnumerable<SourceContext>> GetSourceContextsAsync()
         {
             bool bypassCache = false;
@@ -64,6 +65,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 return await _demographicService.GetSourceContextsAsync(bypassCache);
             }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -76,6 +87,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves a source context by ID.
         /// </summary>
         /// <returns>A <see cref="Ellucian.Colleague.Dtos.SourceContext">SourceContext.</see></returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<SourceContext> GetSourceContextsByIdAsync(string id)
         {
             try
@@ -91,6 +103,16 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+            }
+            catch (IntegrationApiException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+            }
+            catch (RepositoryException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
             }
             catch (Exception ex)
             {
@@ -108,7 +130,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="sourceContext"><see cref="SourceContext">SourceContext</see> to create</param>
         /// <returns>Newly created <see cref="SourceContext">SourceContext</see></returns>
-        [HttpPost]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpPost]        
         public async Task<SourceContext> PostSourceContextsAsync([FromBody] SourceContext sourceContext)
         {
             //Create is not supported for Colleague but Data Model requires full crud support.
@@ -125,6 +148,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="id">Id of the  Source Context to update</param>
         /// <param name="sourceContext"><see cref="SourceContext">SourceContext</see> to create</param>
         /// <returns>Updated <see cref="SourceContext">SourceContext</see></returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPut]
         public async Task<SourceContext> PutSourceContextsAsync([FromUri] string id, [FromBody] SourceContext sourceContext)
         {
@@ -140,6 +164,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Delete (DELETE) an existing  Source Context
         /// </summary>
         /// <param name="id">Id of the  Source Context to delete</param>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpDelete]
         public async Task<SourceContext> DeleteSourceContextsAsync([FromUri] string id)
         {

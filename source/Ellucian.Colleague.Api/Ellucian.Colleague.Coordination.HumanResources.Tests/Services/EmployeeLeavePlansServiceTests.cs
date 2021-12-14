@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
-using Ellucian.Colleague.Dtos;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
@@ -16,6 +15,7 @@ using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.HumanResources;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 {
@@ -116,7 +116,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
                 employeeLeavePlans = new List<EmployeeLeavePlan>();
                 employeeLeavePlans.Add(new EmployeeLeavePlan("foo", "0003914", DateTime.Today, null, "1", "vacation", DateTime.Today, null,
-                    LeaveTypeCategory.Vacation, "VAC", "Vacation", DateTime.Today, 10.00m, 1, 1, earningTypeIdList, 80, 50, 50, true));
+                    LeaveTypeCategory.Vacation, "VAC", "Vacation", DateTime.Today, 10.00m, 1, 1, true, earningTypeIdList, 80, 50, 50, "P", false, true, true));
 
             }
 
@@ -135,8 +135,21 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
                 humanResourcesReferenceDataRepository.Setup(hrrdr => hrrdr.GetEarningTypesAsync(false)).ReturnsAsync(earningTypes2);
                 humanResourcesReferenceDataRepository.Setup(hrrdr => hrrdr.GetLeaveTypesAsync(false)).ReturnsAsync(leaveTypes);
+
+                var personGuidCollection = new Dictionary<string, string>();
+                personGuidCollection.Add("0003914", guid);
+                personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
+
+                var leavePlanGuidCollection = new Dictionary<string, string>();
+                foreach (var lp in domainLeavePlans)
+                {
+                    leavePlanGuidCollection.Add(lp.Id, lp.Guid);
+                }
+                leavePlansRepositoryMock.Setup(p => p.GetLeavplanGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(leavePlanGuidCollection);
+
+
                 empLeavePlansRepositoryMock.Setup(elp => elp.GetEmployeeLeavePlansByEmployeeIdsAsync(It.IsAny<IEnumerable<string>>(),
-                    It.IsAny<IEnumerable<LeavePlan>>(), It.IsAny<IEnumerable<LeaveType>>(), It.IsAny<IEnumerable<EarningType2>>()))
+                    It.IsAny<IEnumerable<LeavePlan>>(), It.IsAny<IEnumerable<LeaveType>>(), It.IsAny<IEnumerable<EarningType2>>(), It.IsAny<bool>()))
                     .ReturnsAsync(employeeLeavePlans);
             }
 
@@ -145,7 +158,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             [TestMethod]
             public async Task EmployeeLeavePlansService_GetEmployeeLeavePlansAsync_Repository_Returns_Null()
             {
-                empLeavePlansRepositoryMock.Setup(l => l.GetEmployeeLeavePlansAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ReturnsAsync(null);
+                empLeavePlansRepositoryMock.Setup(l => l.GetEmployeeLeavePlansAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ReturnsAsync(() => null);
                 var result = await empLeavePlansService.GetEmployeeLeavePlansAsync(0, 100);
 
                 Assert.IsNotNull(result);
@@ -170,33 +183,27 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task EmployeeLeavePlansService_GetEmployeeLeavePlansAsync_Exception_From_Repository()
             {
                 empLeavePlansRepositoryMock.Setup(l => l.GetEmployeeLeavePlansAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ThrowsAsync(new Exception());
                 await empLeavePlansService.GetEmployeeLeavePlansAsync(0, 100);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
-            public async Task EmployeeLeavePlansService_GetEmployeeLeavePlansByGuidAsync_EmpLeave_Null_From_Repos()
-            {
-                empLeavePlansRepositoryMock.Setup(r => r.GetEmployeeLeavePlansByGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
-                await empLeavePlansService.GetEmployeeLeavePlansByGuidAsync(It.IsAny<string>());
-            }
+           
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task EmployeeLeavePlansService_GetEmployeeLeavePlansAsync_Invalid_Leave()
             {
                 tupleEmployeeLeavePlans = new Tuple<IEnumerable<Perleave>, int>(new List<Perleave>() { new Perleave(guid, "1", DateTime.Today, "person1", "leave1") { } }, 1);
-                leavePlansRepositoryMock.Setup(r => r.GetLeavePlansAsync(false)).ReturnsAsync(null);
+                leavePlansRepositoryMock.Setup(r => r.GetLeavePlansAsync(false)).ReturnsAsync(() => null);
                 empLeavePlansRepositoryMock.Setup(l => l.GetEmployeeLeavePlansAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ReturnsAsync(tupleEmployeeLeavePlans);
                 await empLeavePlansService.GetEmployeeLeavePlansAsync(0, 100);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task EmployeeLeavePlansService_GetEmployeeLeavePlansAsync_Invalid_Leave_null()
             {
                 tupleEmployeeLeavePlans = new Tuple<IEnumerable<Perleave>, int>(new List<Perleave>() { new Perleave(guid, "1", DateTime.Today, "person1", "leave1") { } }, 1);
@@ -207,11 +214,11 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task EmployeeLeavePlansService_GetEmployeeLeavePlansAsync_Invalid_Person()
             {
-                tupleEmployeeLeavePlans = new Tuple<IEnumerable<Perleave>, int>(new List<Perleave>() { new Perleave(guid, "1", DateTime.Today, "person1", "leave1") { } }, 1);
-                personRepositoryMock.Setup(p => p.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+                tupleEmployeeLeavePlans = new Tuple<IEnumerable<Perleave>, int>(new List<Perleave>() { new Perleave(guid, "1", DateTime.Today, "invalid", "leave1") { } }, 1);
+                personRepositoryMock.Setup(p => p.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 empLeavePlansRepositoryMock.Setup(l => l.GetEmployeeLeavePlansAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ReturnsAsync(tupleEmployeeLeavePlans);
                 await empLeavePlansService.GetEmployeeLeavePlansAsync(0, 100);
             }
@@ -219,7 +226,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             [TestMethod]
             public async Task EmployeeLeavePlansService_GetEmployeeLeavePlansAsync()
             {
-                tupleEmployeeLeavePlans = new Tuple<IEnumerable<Perleave>, int>(new List<Perleave>() { new Perleave(guid, "1", DateTime.Today, "person1", "leave1") { } }, 1);
+                tupleEmployeeLeavePlans = new Tuple<IEnumerable<Perleave>, int>(new List<Perleave>() { new Perleave(guid, "1", DateTime.Today, "0003914", "leave1") { } }, 1);
                 empLeavePlansRepositoryMock.Setup(l => l.GetEmployeeLeavePlansAsync(It.IsAny<int>(), It.IsAny<int>(), false)).ReturnsAsync(tupleEmployeeLeavePlans);
 
                 var result = await empLeavePlansService.GetEmployeeLeavePlansAsync(0, 100);
@@ -227,16 +234,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 Assert.IsNotNull(result);
                 Assert.AreEqual(result.Item2, 1);
                 Assert.AreEqual(result.Item1.FirstOrDefault().Id, guid);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task EmployeeLeavePlansService_GetEmployeeLeavePlansByGuidAsync_PermissionsException()
-            {
-                getEmpLeavePlansRole = new Ellucian.Colleague.Domain.Entities.Role(1, "Role");
-                getEmpLeavePlansRole.AddPermission(new Domain.Entities.Permission(HumanResourcesPermissionCodes.ViewEmployeeData));
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { getEmpLeavePlansRole });
-                await empLeavePlansService.GetEmployeeLeavePlansByGuidAsync(guid);
             }
 
             [TestMethod]
@@ -253,14 +250,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             [TestMethod, ExpectedException(typeof(ArgumentException))]
             public async Task GetEmployeeLeavePlansV2Async_NoEarnTypesThowsError()
             {
-                humanResourcesReferenceDataRepository.Setup(hrrdr => hrrdr.GetEarningTypesAsync(false)).ReturnsAsync(null);
+                humanResourcesReferenceDataRepository.Setup(hrrdr => hrrdr.GetEarningTypesAsync(false)).ReturnsAsync(() => null);
                 var actual = await empLeavePlansService.GetEmployeeLeavePlansV2Async();
             }
 
             [TestMethod]
             public async Task GetEmployeeLeavePlansV2Async_NoLeaveTypesLogsError()
             {
-                humanResourcesReferenceDataRepository.Setup(hrrdr => hrrdr.GetLeaveTypesAsync(false)).ReturnsAsync(null);
+                humanResourcesReferenceDataRepository.Setup(hrrdr => hrrdr.GetLeaveTypesAsync(false)).ReturnsAsync(() => null);
                 var actual = await empLeavePlansService.GetEmployeeLeavePlansV2Async();
                 Assert.IsNotNull(actual);
                 Assert.AreEqual(0, actual.Count());
@@ -270,7 +267,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             [TestMethod]
             public async Task GetEmployeeLeavePlansV2Async_NoPlansLogsError()
             {
-                leavePlansRepositoryMock.Setup(lp => lp.GetLeavePlansV2Async(false)).ReturnsAsync(null);
+                leavePlansRepositoryMock.Setup(lp => lp.GetLeavePlansV2Async(false)).ReturnsAsync(() => null);
                 var actual = await empLeavePlansService.GetEmployeeLeavePlansV2Async();
                 Assert.IsNotNull(actual);
                 Assert.AreEqual(0, actual.Count());
@@ -298,10 +295,10 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
             public List<EmployeeLeavePlan> employeeLeavePlans = new List<EmployeeLeavePlan>()
             {
-                new EmployeeLeavePlan("1", "0003914", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly", new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1,new List<string> { "VAC", "VAC1" }, 80, 50, 50, true),
-                new EmployeeLeavePlan("1", "0003915", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1,new List<string> { "VAC", "VAC1" }, 80, 50, 50, true),
-                new EmployeeLeavePlan("1", "0003916", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, new List<string> { "VAC", "VAC1" }, 80, 50, 50, true),
-                new EmployeeLeavePlan("5", "0003917", new DateTime(2017, 1, 1), null, "SICH", "Sick Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Sick, "SIC", "", new DateTime(2000,1,1), 20m, 1, 1, new List<string> { "SIC", "SICK" }, 80, 50, 50, true),
+                new EmployeeLeavePlan("1", "0003914", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly", new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, true, new List<string> { "VAC", "VAC1" }, 80, 50, 50, "P", false, true),
+                new EmployeeLeavePlan("1", "0003915", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, true, new List<string> { "VAC", "VAC1" }, 80, 50, 50, "P", false, true),
+                new EmployeeLeavePlan("1", "0003916", new DateTime(2017, 1, 1), null, "VACH", "Vacation Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Vacation, "VAC", "", new DateTime(2000,1,1), 20m, 1, 1, true, new List<string> { "VAC", "VAC1" }, 80, 50, 50, "P", false, true),
+                new EmployeeLeavePlan("5", "0003917", new DateTime(2017, 1, 1), null, "SICH", "Sick Hourly",  new DateTime(2000, 1, 1), null, LeaveTypeCategory.Sick, "SIC", "", new DateTime(2000,1,1), 20m, 1, 1, true, new List<string> { "SIC", "SICK" }, 80, 50, 50, "P", false, true),
             };
 
             public Mock<ISupervisorsRepository> supervisorsRepositoryMock;
@@ -350,14 +347,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 adapterRegistryMock.Setup(ar => ar.GetAdapter<EmployeeLeavePlan, Dtos.HumanResources.EmployeeLeavePlan>())
                     .Returns(new AutoMapperAdapter<EmployeeLeavePlan, Dtos.HumanResources.EmployeeLeavePlan>(adapterRegistryMock.Object, loggerMock.Object));
 
+                employeeLeavePlansRepositoryMock.Setup(r => r.GetEmployeeLeavePlansByEmployeeIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<LeavePlan>>(), It.IsAny<IEnumerable<LeaveType>>(), It.IsAny<IEnumerable<EarningType2>>(), It.IsAny<bool>()))
+                    .Returns<IEnumerable<string>, IEnumerable<LeavePlan>, IEnumerable<LeaveType>, IEnumerable<EarningType2>, bool>(
+                        (employeeIds, plans, types, earnTypes, includeLeavePlansWithNoEarningsTypes) => Task.FromResult(employeeLeavePlans.Where(plan => employeeIds.Contains(plan.EmployeeId))));
 
-
-                employeeLeavePlansRepositoryMock.Setup(r => r.GetEmployeeLeavePlansByEmployeeIdsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<LeavePlan>>(), It.IsAny<IEnumerable<LeaveType>>(), It.IsAny<IEnumerable<EarningType2>>()))
-                    .Returns<IEnumerable<string>, IEnumerable<LeavePlan>, IEnumerable<LeaveType>, IEnumerable<EarningType2>>(
-                        (employeeIds, plans, types, earnTypes) => Task.FromResult(employeeLeavePlans.Where(plan => employeeIds.Contains(plan.EmployeeId))));
-
-                supervisorsRepositoryMock.Setup(r => r.GetSuperviseesBySupervisorAsync(It.IsAny<string>()))
-                    .Returns<string>(supervisorId => Task.FromResult(employeeLeavePlans.Select(plan => plan.EmployeeId)));
+                supervisorsRepositoryMock.Setup(r => r.GetSuperviseesBySupervisorAsync(It.IsAny<string>(), null))
+                    .Returns(Task.FromResult(employeeLeavePlans.Select(plan => plan.EmployeeId)));
 
                 //these next three setups have no effect on the objects returned by the employeeLeavePlansRepositoryMock
                 humanResourcesReferenceDataRepositoryMock.Setup(r => r.GetEarningTypesAsync(It.IsAny<bool>()))
@@ -384,14 +379,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             [TestMethod, ExpectedException(typeof(ArgumentException))]
             public async Task GetEmployeeLeavePlansV2Async_NoEarnTypesThowsError()
             {
-                humanResourcesReferenceDataRepositoryMock.Setup(r => r.GetEarningTypesAsync(It.IsAny<bool>())).ReturnsAsync(null);
+                humanResourcesReferenceDataRepositoryMock.Setup(r => r.GetEarningTypesAsync(It.IsAny<bool>())).ReturnsAsync(() => null);
                 var actual = await serviceUnderTest.GetEmployeeLeavePlansV2Async();
             }
 
             [TestMethod]
             public async Task GetEmployeeLeavePlansV2Async_NoLeaveTypesLogsError()
             {
-                humanResourcesReferenceDataRepositoryMock.Setup(hrrdr => hrrdr.GetLeaveTypesAsync(false)).ReturnsAsync(null);
+                humanResourcesReferenceDataRepositoryMock.Setup(hrrdr => hrrdr.GetLeaveTypesAsync(false)).ReturnsAsync(() => null);
                 var actual = await serviceUnderTest.GetEmployeeLeavePlansV2Async();
                 Assert.IsNotNull(actual);
                 Assert.AreEqual(0, actual.Count());
@@ -401,7 +396,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             [TestMethod]
             public async Task GetEmployeeLeavePlansV2Async_NoPlansLogsError()
             {
-                leavePlansRepositoryMock.Setup(lp => lp.GetLeavePlansV2Async(false)).ReturnsAsync(null);
+                leavePlansRepositoryMock.Setup(lp => lp.GetLeavePlansV2Async(false)).ReturnsAsync(() => null);
                 var actual = await serviceUnderTest.GetEmployeeLeavePlansV2Async();
                 Assert.IsNotNull(actual);
                 Assert.AreEqual(0, actual.Count());
@@ -458,7 +453,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             [TestMethod]
             public async Task GetEmployeeLeavePlansV2Async_GetEffectivePersonData_AdminAccess()
             {
-                
+
                 roleRepositoryMock.Setup(r => r.Roles)
                    .Returns(() => (employeeCurrentUserFactory.CurrentUser.Roles).Select(roleTitle =>
                    {

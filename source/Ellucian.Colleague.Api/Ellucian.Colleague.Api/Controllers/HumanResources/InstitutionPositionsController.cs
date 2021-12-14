@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -21,9 +21,8 @@ using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
-using System.Runtime.Serialization;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Ellucian.Colleague.Domain.HumanResources;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
@@ -54,7 +53,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Retrieves an Institution Positions by ID.
         /// </summary>
         /// <returns>An <see cref="Dtos.InstitutionPosition">InstitutionPosition</see>object.</returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(HumanResourcesPermissionCodes.ViewInstitutionPosition)]
         [EedmResponseFilter]
         public async Task<InstitutionPosition> GetInstitutionPositionsByGuidAsync(string guid)
         {
@@ -69,6 +68,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
+                _institutionPositionService.ValidatePermissions(GetPermissionsMetaData());
                 //AddDataPrivacyContextProperty((await _institutionPositionService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
                 AddEthosContextProperties(
                  await _institutionPositionService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -79,7 +79,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -112,7 +112,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Retrieves an Institution Positions by ID. (v11)
         /// </summary>
         /// <returns>An <see cref="Dtos.InstitutionPosition">InstitutionPosition</see>object.</returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(HumanResourcesPermissionCodes.ViewInstitutionPosition)]
         [EedmResponseFilter]
         public async Task<InstitutionPosition> GetInstitutionPositionsByGuid2Async(string guid)
         {
@@ -127,6 +127,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
+                _institutionPositionService.ValidatePermissions(GetPermissionsMetaData());
                 //AddDataPrivacyContextProperty((await _institutionPositionService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
                 AddEthosContextProperties(
                 await _institutionPositionService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -138,7 +139,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -171,7 +172,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Retrieves an Institution Positions by ID. (v12)
         /// </summary>
         /// <returns>An <see cref="Dtos.InstitutionPosition">InstitutionPosition</see>object.</returns>
-        [HttpGet]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, PermissionsFilter(HumanResourcesPermissionCodes.ViewInstitutionPosition)]
         [EedmResponseFilter]
         public async Task<InstitutionPosition2> GetInstitutionPositionsByGuid3Async(string guid)
         {
@@ -186,6 +188,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
+                _institutionPositionService.ValidatePermissions(GetPermissionsMetaData());
                 //AddDataPrivacyContextProperty((await _institutionPositionService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
                 AddEthosContextProperties(
                 await _institutionPositionService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -197,7 +200,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (KeyNotFoundException e)
             {
@@ -239,7 +242,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="startOn">The date when the position is first available</param>
         /// <param name="endOn">The date when the position is last available</param>
         /// <returns>List of InstitutionPositions <see cref="Dtos.InstitutionPosition"/> objects representing matching Institution Positions</returns>
-        [HttpGet, FilteringFilter(IgnoreFiltering = true)]
+        [HttpGet, FilteringFilter(IgnoreFiltering = true), PermissionsFilter(HumanResourcesPermissionCodes.ViewInstitutionPosition)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
         [ValidateQueryStringFilter(new string[] { "campus", "status", "bargainingUnit", "reportsToPosition", "exemptionType", 
            "compensationType","startOn", "endOn" }, false, true)]
@@ -272,6 +275,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                _institutionPositionService.ValidatePermissions(GetPermissionsMetaData());
                 if (!string.IsNullOrEmpty(status))
                 {
                     if (!status.Equals("active") && !status.Equals("frozen") && !status.Equals("cancelled") && !status.Equals("inactive"))
@@ -304,7 +308,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -334,7 +338,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="page"> - InstitutionPosition page Contains ...page...</param>
         /// <param name="criteria"> - JSON formatted selection criteria.  Can contain:</param>
         /// <returns>List of InstitutionPosition <see cref="Dtos.InstitutionPosition"/> objects representing matching institution positions</returns>
-        [HttpGet, FilteringFilter(IgnoreFiltering = true)]
+        [HttpGet, FilteringFilter(IgnoreFiltering = true), PermissionsFilter(HumanResourcesPermissionCodes.ViewInstitutionPosition)]
         [ValidateQueryStringFilter()]
         [QueryStringFilterFilter("criteria", typeof(Dtos.InstitutionPosition))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
@@ -351,6 +355,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
+                _institutionPositionService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -428,7 +433,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -458,7 +463,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="page"> - InstitutionPosition page Contains ...page...</param>
         /// <param name="criteria"> - JSON formatted selection criteria.  Can contain:</param>
         /// <returns>List of InstitutionPosition <see cref="Dtos.InstitutionPosition"/> objects representing matching institution positions</returns>
-        [HttpGet, FilteringFilter(IgnoreFiltering = true)]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, FilteringFilter(IgnoreFiltering = true), PermissionsFilter(HumanResourcesPermissionCodes.ViewInstitutionPosition)]
         [ValidateQueryStringFilter()]
         [QueryStringFilterFilter("criteria", typeof(Dtos.InstitutionPosition2))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
@@ -475,6 +481,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
+                _institutionPositionService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -554,7 +561,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -578,12 +585,13 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
         }
 
-     
+
         /// <summary>
         /// Creates a Institution Position.
         /// </summary>
         /// <param name="institutionPosition"><see cref="Dtos.InstitutionPosition">InstitutionPosition</see> to create</param>
         /// <returns>Newly created <see cref="Dtos.InstitutionPosition">InstitutionPosition</see></returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPost]
         public async Task<Dtos.InstitutionPosition> CreateInstitutionPositionsAsync([FromBody] Dtos.InstitutionPosition institutionPosition)
         {
@@ -598,6 +606,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="guid">Guid of the Institution Position to update</param>
         /// <param name="institutionPosition"><see cref="Dtos.InstitutionPosition">InstitutionPosition</see> to create</param>
         /// <returns>Updated <see cref="Dtos.InstitutionPosition">InstitutionPosition</see></returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpPut]
         public async Task<Dtos.InstitutionPosition> UpdateInstitutionPositionsAsync([FromUri] string guid, [FromBody] Dtos.InstitutionPosition institutionPosition)
         {
@@ -612,6 +621,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="guid">Guid of the Institution Position to be deleted</param>
         /// <returns></returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpDelete]
         public async Task DefaultDeleteInstitutionPositions(string guid)
         {

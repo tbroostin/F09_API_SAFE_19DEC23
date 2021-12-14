@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliatesusing System
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliatesusing System
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -24,6 +24,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
     public class EmergencyInformationRepository : BaseColleagueRepository, IEmergencyInformationRepository
     {
         public static char _VM = Convert.ToChar(DynamicArray.VM);
+        private RepositoryException repoException = new RepositoryException();
+
         public EmergencyInformationRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings settings)
             : base(cacheProvider, transactionFactory, logger) { }
 
@@ -322,6 +324,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
 
             IEnumerable<PersonContact> personContactList = BuildPersonContacts(personContactDataContracts);
+            
+            if (repoException != null && repoException.Errors != null && repoException.Errors.Any())
+            {
+                throw repoException;
+            }
 
             return new Tuple<IEnumerable<PersonContact>, int>(personContactList, totalCount); 
         }
@@ -500,12 +507,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="personContactDataContracts"></param>
         /// <returns>IEnumerable<PersonContact></returns>
         private IEnumerable<PersonContact> BuildPersonContacts(IEnumerable<PersonEmer> personContactDataContracts)
-        {
+        {            
             List<PersonContact> personContactsList = new List<PersonContact>();
             foreach (var personContactDataContract in personContactDataContracts)
             {
                 PersonContact personContact = BuildPersonContact(personContactDataContract);
-                personContactsList.Add(personContact);
+                if (personContact != null)
+                {
+                    personContactsList.Add(personContact);
+                }
             }
 
             return personContactsList;
@@ -517,29 +527,53 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="personContactDataContract"></param>
         /// <returns>PersonContact</returns>
         private PersonContact BuildPersonContact(PersonEmer personContactDataContract)
-        {
-            PersonContact personContact = new PersonContact(personContactDataContract.RecordGuid, personContactDataContract.Recordkey, personContactDataContract.Recordkey);
-            List<PersonContactDetails> personContactDetailsList = new List<PersonContactDetails>();
-
-            foreach (var contact in personContactDataContract.EmerContactsEntityAssociation)
+        {            
+            if (string.IsNullOrEmpty(personContactDataContract.RecordGuid))
             {
-                PersonContactDetails contactDetails = new PersonContactDetails()
+                repoException.AddError(new RepositoryError("GUID.Not.Found", string.Concat("GUID not found for person-contacts for person ", personContactDataContract.Recordkey, "."))
                 {
-                    ContactAddresses = contact.EmerContactAddressAssocMember,
-                    ContactFlag = contact.EmerEmergencyContactFlagAssocMember,
-                    ContactName = contact.EmerNameAssocMember,
-                    DaytimePhone = contact.EmerDaytimePhoneAssocMember,
-                    EveningPhone = contact.EmerEveningPhoneAssocMember,
-                    MissingContactFlag = contact.EmerMissingContactFlagAssocMember,
-                    OtherPhone = contact.EmerOtherPhoneAssocMember,
-                    Relationship = contact.EmerRelationshipAssocMember
-                };
-                personContactDetailsList.Add(contactDetails);
+                    Id = personContactDataContract.Recordkey
+                });
             }
-            if (personContact.PersonContactDetails == null) personContact.PersonContactDetails = new List<PersonContactDetails>();
-            personContact.PersonContactDetails = personContactDetailsList;
+            if (string.IsNullOrEmpty(personContactDataContract.Recordkey))
+            {
+                // should never happen - data contract with no record key
+                repoException.AddError(new RepositoryError("Bad.Data", string.Concat("Record key not found for personContact data contract."))
+                {
+                    Id = personContactDataContract.Recordkey
+                });
+            }
+            if (!string.IsNullOrEmpty(personContactDataContract.RecordGuid) && !string.IsNullOrEmpty(personContactDataContract.Recordkey))
+            {
+                PersonContact personContact = new PersonContact(personContactDataContract.RecordGuid, personContactDataContract.Recordkey, personContactDataContract.Recordkey);
 
-            return personContact;
+
+                List<PersonContactDetails> personContactDetailsList = new List<PersonContactDetails>();
+
+                foreach (var contact in personContactDataContract.EmerContactsEntityAssociation)
+                {
+                    PersonContactDetails contactDetails = new PersonContactDetails()
+                    {
+                        ContactAddresses = contact.EmerContactAddressAssocMember,
+                        ContactFlag = contact.EmerEmergencyContactFlagAssocMember,
+                        ContactName = contact.EmerNameAssocMember,
+                        DaytimePhone = contact.EmerDaytimePhoneAssocMember,
+                        EveningPhone = contact.EmerEveningPhoneAssocMember,
+                        MissingContactFlag = contact.EmerMissingContactFlagAssocMember,
+                        OtherPhone = contact.EmerOtherPhoneAssocMember,
+                        Relationship = contact.EmerRelationshipAssocMember
+                    };
+                    personContactDetailsList.Add(contactDetails);
+                }
+
+                if (personContact.PersonContactDetails == null) personContact.PersonContactDetails = new List<PersonContactDetails>();
+                personContact.PersonContactDetails = personContactDetailsList;
+                return personContact;
+            }
+            else
+            {
+                return null;
+            }               
         }
 
         /// <summary>
@@ -566,110 +600,130 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 foreach (var personContactDataContract in personContactDataContracts)
                 {
-                    PersonContact personContact = new PersonContact(personContactDataContract.RecordGuid, personContactDataContract.Recordkey, personContactDataContract.Recordkey);
-                    List<PersonContactDetails> personContactDetailsList = new List<PersonContactDetails>();
-
-                    foreach (var contact in personContactDataContract.EmerContactsEntityAssociation)
+                    if (string.IsNullOrEmpty(personContactDataContract.RecordGuid))
                     {
-                        //we need to make sure person.emer.id|key is in the list of valid Keys
-                        var key = string.Concat(personContactDataContract.Recordkey, "|", contact.EmerNameAssocMember);
-                        var validRecord = validKeys.FirstOrDefault(x => x.Equals(key, StringComparison.Ordinal));
-                        if (validRecord != null)
+                        exception.AddError(new RepositoryError("GUID.Not.Found", string.Concat("GUID not found for person-contacts for person ", personContactDataContract.Recordkey, "."))
                         {
-                            PersonContactDetails contactDetails = new PersonContactDetails()
+                            Id = personContactDataContract.Recordkey
+                        });
+                    }
+                    if (string.IsNullOrEmpty(personContactDataContract.Recordkey))
+                    {
+                        // should never happen - data contract with no record key
+                        exception.AddError(new RepositoryError("Bad.Data", string.Concat("Record key not found for personContact data contract."))
+                        {
+                            Id = personContactDataContract.Recordkey
+                        });
+                    }
+                    if (!string.IsNullOrEmpty(personContactDataContract.RecordGuid) && !string.IsNullOrEmpty(personContactDataContract.Recordkey))
+                    {
+
+                        PersonContact personContact = new PersonContact(personContactDataContract.RecordGuid, personContactDataContract.Recordkey, personContactDataContract.Recordkey);
+                        List<PersonContactDetails> personContactDetailsList = new List<PersonContactDetails>();
+
+                        foreach (var contact in personContactDataContract.EmerContactsEntityAssociation)
+                        {
+                            //we need to make sure person.emer.id|key is in the list of valid Keys
+                            var key = string.Concat(personContactDataContract.Recordkey, "|", contact.EmerNameAssocMember);
+                            var validRecord = validKeys.FirstOrDefault(x => x.Equals(key, StringComparison.Ordinal));
+                            if (validRecord != null)
                             {
-                                ContactAddresses = contact.EmerContactAddressAssocMember,
-                                ContactFlag = contact.EmerEmergencyContactFlagAssocMember,
-                                ContactName = contact.EmerNameAssocMember,
-                                DaytimePhone = contact.EmerDaytimePhoneAssocMember,
-                                EveningPhone = contact.EmerEveningPhoneAssocMember,
-                                MissingContactFlag = contact.EmerMissingContactFlagAssocMember,
-                                OtherPhone = contact.EmerOtherPhoneAssocMember,
-                                Relationship = contact.EmerRelationshipAssocMember
-                            };       
-
-                            var emerNameGuid = string.Empty;
-                            guidList.TryGetValue(key, out emerNameGuid);
-                            if (string.IsNullOrEmpty(emerNameGuid))
-                            {
-                                exception.AddError(new RepositoryError("GUID.Not.Found", string.Concat("Unable to locate person-emergency-contact GUID for emergency contact name ", key.Split('|')[1], "."))
-                                {
-                                    SourceId = key.Split('|')[0]
-                            });
-                            }
-                            else
-                            {
-                                contactDetails.Guid = emerNameGuid;
-                            }
-
-                            // do some data validation
-                            //the emergency contact flag cannot be null.
-                            if (string.IsNullOrEmpty(contactDetails.ContactFlag))
-                            {
-                                exception.AddError(new RepositoryError("Bad.Data", string.Concat("Emergency Contact cannot be null. It must be Yes or No for emergency contact name ", key.Split('|')[1], "."))
-                                {
-                                    SourceId = key.Split('|')[0],
-                                    Id = contactDetails.Guid
-
-                                });
-                            }
-
-                            //the missing contact flag cannot be null.
-                            if (string.IsNullOrEmpty(contactDetails.MissingContactFlag))
-                            {
-                                exception.AddError(new RepositoryError("Bad.Data", string.Concat("Missing-Person Contact cannot be null. It must be Yes or No for emergency contact name ", key.Split('|')[1], "."))
-                                {
-                                    SourceId = key.Split('|')[0],
-                                    Id = contactDetails.Guid
-
-                                });
-                            }
-
-                            //one of emergency contact flag or missing contact flag should be set to Y
-
-                            if (!string.IsNullOrEmpty(contactDetails.MissingContactFlag) && !string.IsNullOrEmpty(contactDetails.ContactFlag) && contactDetails.ContactFlag.Equals("N", StringComparison.OrdinalIgnoreCase) && contactDetails.MissingContactFlag.Equals("N", StringComparison.OrdinalIgnoreCase))
-                            {
-                                exception.AddError(new RepositoryError("Bad.Data", string.Concat("The emergency contact needs to be designated as an emergency contact or a missing person contact (or both) for emergency contact name ", key.Split('|')[1], "."))
-                                {
-                                    SourceId = key.Split('|')[0],
-                                    Id = contactDetails.Guid
-
-                                });
-                            }
-
-                            //the missing contact flag cannot be null.
-                            if (string.IsNullOrEmpty(contactDetails.ContactName))
-                            {
-                                exception.AddError(new RepositoryError("Bad.Data", string.Concat("Contact Name is required for emergency contact name ", key.Split('|')[1], "."))
-                                {
-                                    SourceId = key.Split('|')[0],
-                                    Id = contactDetails.Guid
-
-                                });
-                            }
-                            else
-                            {
-                                // there should not be any dupilcate emer name 
-                                var emerName = personContactDataContract.EmerContactsEntityAssociation.Where(x => x.EmerNameAssocMember.Equals(contactDetails.ContactName));
-                                if (emerName.Count() >  1)
-                                {
-                                    exception.AddError(new RepositoryError("Bad.Data", string.Concat("Duplicate Emergency Contact Names found for emergency contact name ", key.Split('|')[1], "."))
+                                var emerNameGuid = string.Empty;
+                                guidList.TryGetValue(key, out emerNameGuid);
+                                if (string.IsNullOrEmpty(emerNameGuid))
+                                {                                       
+                                    exception.AddError(new RepositoryError("GUID.Not.Found", string.Concat("GUID not found for person-emergency-contacts for ", personContactDataContract.Recordkey,
+                                        " for emergency contact name ", key.Split('|')[1], "."))
                                     {
-                                        SourceId = key.Split('|')[0],
-                                        Id = contactDetails.Guid
-
+                                        SourceId = key.Split('|')[0]
                                     });
                                 }
+                                else
+                                {                
+                                    PersonContactDetails contactDetails = new PersonContactDetails()
+                                    {
+                                        ContactAddresses = contact.EmerContactAddressAssocMember,
+                                        ContactFlag = contact.EmerEmergencyContactFlagAssocMember,
+                                        ContactName = contact.EmerNameAssocMember,
+                                        DaytimePhone = contact.EmerDaytimePhoneAssocMember,
+                                        EveningPhone = contact.EmerEveningPhoneAssocMember,
+                                        MissingContactFlag = contact.EmerMissingContactFlagAssocMember,
+                                        OtherPhone = contact.EmerOtherPhoneAssocMember,
+                                        Relationship = contact.EmerRelationshipAssocMember
+                                    };
+                                    
+                                    contactDetails.Guid = emerNameGuid;
+                                    
+                                    // do some data validation
+                                    //the emergency contact flag cannot be null.
+                                    if (string.IsNullOrEmpty(contactDetails.ContactFlag))
+                                    {
+                                        exception.AddError(new RepositoryError("Bad.Data", string.Concat("Emergency Contact cannot be null. It must be Yes or No for emergency contact name ", key.Split('|')[1], "."))
+                                        {
+                                            SourceId = key.Split('|')[0],
+                                            Id = contactDetails.Guid
 
+                                        });
+                                    }
+
+                                    //the missing contact flag cannot be null.
+                                    if (string.IsNullOrEmpty(contactDetails.MissingContactFlag))
+                                    {
+                                        exception.AddError(new RepositoryError("Bad.Data", string.Concat("Missing-Person Contact cannot be null. It must be Yes or No for emergency contact name ", key.Split('|')[1], "."))
+                                        {
+                                            SourceId = key.Split('|')[0],
+                                            Id = contactDetails.Guid
+
+                                        });
+                                    }
+
+                                    //one of emergency contact flag or missing contact flag should be set to Y
+
+                                    if (!string.IsNullOrEmpty(contactDetails.MissingContactFlag) && !string.IsNullOrEmpty(contactDetails.ContactFlag) && contactDetails.ContactFlag.Equals("N", StringComparison.OrdinalIgnoreCase) && contactDetails.MissingContactFlag.Equals("N", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        exception.AddError(new RepositoryError("Bad.Data", string.Concat("The emergency contact needs to be designated as an emergency contact or a missing person contact (or both) for emergency contact name ", key.Split('|')[1], "."))
+                                        {
+                                            SourceId = key.Split('|')[0],
+                                            Id = contactDetails.Guid
+
+                                        });
+                                    }
+
+                                    //the missing contact flag cannot be null.
+                                    if (string.IsNullOrEmpty(contactDetails.ContactName))
+                                    {
+                                        exception.AddError(new RepositoryError("Bad.Data", string.Concat("Contact Name is required for emergency contact name ", key.Split('|')[1], "."))
+                                        {
+                                            SourceId = key.Split('|')[0],
+                                            Id = contactDetails.Guid
+
+                                        });
+                                    }
+                                    else
+                                    {
+                                        // there should not be any dupilcate emer name 
+                                        var emerName = personContactDataContract.EmerContactsEntityAssociation.Where(x => x.EmerNameAssocMember.Equals(contactDetails.ContactName));
+                                        if (emerName.Count() > 1)
+                                        {
+                                            exception.AddError(new RepositoryError("Bad.Data", string.Concat("Duplicate Emergency Contact Names found for emergency contact name ", key.Split('|')[1], "."))
+                                            {
+                                                SourceId = key.Split('|')[0],
+                                                Id = contactDetails.Guid
+
+                                            });
+                                        }
+
+                                    }
+
+                                    personContactDetailsList.Add(contactDetails);
+                                }
                             }
-
-                            personContactDetailsList.Add(contactDetails);
                         }
-                    }
-                    if (personContactDetailsList != null && personContactDetailsList.Any())
-                    {
-                        personContact.PersonContactDetails = personContactDetailsList;
-                        personContacts.Add(personContact);
+                        if (personContactDetailsList != null && personContactDetailsList.Any())
+                        {
+                            personContact.PersonContactDetails = personContactDetailsList;
+                            personContacts.Add(personContact);
+                        }
                     }
                 }
             }

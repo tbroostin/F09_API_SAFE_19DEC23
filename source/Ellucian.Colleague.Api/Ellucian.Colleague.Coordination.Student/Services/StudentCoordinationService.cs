@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -102,6 +102,24 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         }
 
         /// <summary>
+        /// If the current user does not have permissions to access the given student, throws an error.
+        /// This method checks for View.Person.Information permission
+        /// </summary>
+        /// <param name="student"></param>
+        public async Task CheckUserAccessAndViewPersonPermissionAsync(string studentId, Domain.Student.Entities.StudentAccess student = null)
+        {
+            var proxySubject = CurrentUser.ProxySubjects.FirstOrDefault();
+
+            // They're allowed to see another's data if they are a proxy for that user or have the admin permission
+            if (UserIsSelf(studentId) || (await UserIsAdvisorAsync(studentId, student)) || HasPermission(StudentPermissionCodes.ViewPersonInformation) || HasProxyAccessForPerson(studentId))
+            {
+                return;
+            }
+            // If not one of the above conditions is true, the user does not have permissions to access this student and we throw this exception
+            throw new PermissionsException("User does not have permissions to access to this student");
+        }
+
+        /// <summary>
         /// If the current user does not have permissions to access the given student (by virtue of either being the student or having correct advisor permissions), then throw a permission exception.
         /// Proxy access is not allowed for methods using this access check.
         /// </summary>
@@ -154,7 +172,26 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
 
             // User does not have permissions and error needs to be thrown and logged
-            logger.Error("User" + CurrentUser.PersonId + " does not have permissions to register for this student");
+            logger.Error("User " + CurrentUser.PersonId + " does not have permissions to register for this student");
+            throw new PermissionsException();
+        }
+
+        /// <summary>
+        /// Determines if the user has permission to perform section drop registration on the student's degree plan - will throw a PermissionException if not permitted.
+        /// </summary>
+        public async Task CheckDropRegisterPermissionsAsync()
+        {
+            // Get user permissions
+            IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
+
+            //Access is Ok if this is an advisor with full access to any student or has full access to their assigned advisees and this an an assigned advisee.
+            if (userPermissions.Contains(StudentPermissionCodes.CanDropStudent))
+            {
+                return;
+            }
+
+            // User does not have permissions and error needs to be thrown and logged
+            logger.Error("User " + CurrentUser.PersonId + " does not have permissions to drop section registration for this student");
             throw new PermissionsException();
         }
 

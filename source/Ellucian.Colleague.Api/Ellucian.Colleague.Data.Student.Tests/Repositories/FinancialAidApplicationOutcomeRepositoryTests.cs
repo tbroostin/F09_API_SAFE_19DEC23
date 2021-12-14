@@ -641,7 +641,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // var csAcyrIds = await DataReader.SelectAsync("CS." + year, "WITH CS.FED.ISIR.ID NE '' OR WITH CS.INST.ISIR.ID NE ''");
                 var csAcyrIds = new string[] { "2" };
-                dataReaderMock.Setup(i => i.SelectAsync("CS." + year, "WITH CS.FED.ISIR.ID NE '' OR WITH CS.INST.ISIR.ID NE ''")).ReturnsAsync(null);
+                dataReaderMock.Setup(i => i.SelectAsync("CS." + year, "WITH CS.FED.ISIR.ID NE '' OR WITH CS.INST.ISIR.ID NE ''")).ReturnsAsync(() => null);
 
                 //var records = await DataReader.BulkReadRecordAsync<CsAcyr>("CS." + year, subList.ToArray());
                 var csAcyr = new CsAcyr() { Recordkey = studentId, CsFedIsirId = "2", CsInstIsirId = "2", CsInstAdj = 25000 };
@@ -649,7 +649,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(i => i.BulkReadRecordAsync<CsAcyr>("CS." + year, It.IsAny<string[]>(), true)).ReturnsAsync(records);
 
                 var validApplicationIds = new string[] { "2" };
-                dataReaderMock.Setup(i => i.SelectAsync("ISIR.FAFSA", "WITH IFAF.STUDENT.ID NE '' AND WITH IFAF.IMPORT.YEAR NE ''")).ReturnsAsync(null);
+                dataReaderMock.Setup(i => i.SelectAsync("ISIR.FAFSA", "WITH IFAF.STUDENT.ID NE '' AND WITH IFAF.IMPORT.YEAR NE ''")).ReturnsAsync(() => null);
                 // var validApplicationIds = await DataReader.SelectAsync("ISIR.FAFSA", "WITH IFAF.STUDENT.ID NE '' AND WITH IFAF.IMPORT.YEAR NE ''");
 
                 var isirFafsa = new IsirFafsa()
@@ -718,7 +718,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup<FaSysParams>(acc => acc.ReadRecord<FaSysParams>("ST.PARMS", "FA.SYS.PARAMS", true)).Returns(faSystemParamsResponseData);
                                
                 transManagerMock.Setup(acc => acc.ExecuteAsync<GetCacheApiKeysRequest,
-                    GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>())).ReturnsAsync(null);
+                    GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>())).ReturnsAsync(() => null);
 
                 var faSuiteYears = new List<string>() { year };
                 var tuple = await actualRepository.GetAsync(0, 1, false, null, null, null, null, faSuiteYears);

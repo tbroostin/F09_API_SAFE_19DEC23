@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -13,6 +13,7 @@ using Microsoft.Practices.EnterpriseLibrary.Common.Utility;
 using Ellucian.Web.Http.EthosExtend;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Domain.Exceptions;
+using System.Text;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
@@ -59,6 +60,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// value is value to save in, if empty string then this means it is meant to remove the data from colleague
         /// </summary>
         public Dictionary<string, string> EthosExtendedDataDictionary { get; set; }
+
 
         /// <summary>
         /// IntegrationApiException object for error collection
@@ -366,10 +368,69 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             if (!CurrentUser.IsPerson(personId))
             {
-                logger.Info(CurrentUser + " is not person " + personId);
+                logger.Error(CurrentUser + " is not person " + personId);
                 throw new PermissionsException();
             }
             return;
+        }
+        
+        /// <summary>
+        /// Check for permissions and build error message.
+        /// If multiple permissions are assigned, then only one is required for access.
+        /// Used to provide consistent error message when permission denied
+        /// </summary>
+        /// <param name="permissionsTuple">Tuple consisting of:
+        /// 1. string[]: array of valid permissions
+        /// 2. string: http method (ex: "GET")
+        /// 3. string: resource name (ex: 'person-holds')</param>
+        /// <returns>bool</returns>
+        public bool ValidatePermissions(Tuple<string[], string,string> permissionsTuple)
+        {
+            bool hasPermission = false; 
+            
+            if (permissionsTuple == null)
+            {
+                return hasPermission;
+            }
+
+            if (permissionsTuple.Item1 != null && permissionsTuple.Item1.Any())
+            {
+                // if multiple permissions are assigned, then only one is required for access.
+                foreach (var p in permissionsTuple.Item1)
+                {
+                    hasPermission = HasPermission(p);
+                    if (hasPermission)
+                        break;
+                }
+            }
+             if (!hasPermission)
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.Append("User '" + CurrentUser.UserId + "' does not have permission");
+               
+                switch (permissionsTuple.Item2)
+                {
+                    case ("GET"):
+                        sb.Append(" to view"); break;
+                    case ("PUT"):
+                        sb.Append(" to update"); break;
+                    case ("POST"):
+                        sb.Append(" to create"); break;
+                    case ("DELETE"):
+                        sb.Append(" to delete"); break;
+                    default:
+                        break;
+                }
+                if (!string.IsNullOrEmpty(permissionsTuple.Item3))
+                {
+                    sb.Append(" " + permissionsTuple.Item3.ToLower());
+                }
+                sb.Append(".");
+                
+                logger.Error(sb.ToString());
+                throw new PermissionsException(sb.ToString());
+            }
+            return hasPermission;
         }
 
         /// <summary>
@@ -555,7 +616,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <param name="ethosResourceRouteInfo">Ethos Resource Route Info </param>
         /// <param name="resourceIds">IEnumerable of the ids for the resources in guid form</param>
         /// <returns>List with all of the extended data if aavailable. Returns an empty list if none available or none configured</returns>
-        public async Task<IList<EthosExtensibleData>> GetExtendedEthosDataByResource(EthosResourceRouteInfo ethosResourceRouteInfo, IEnumerable<string> resourceIds, bool bypassCache = false)
+        public async Task<IList<EthosExtensibleData>> GetExtendedEthosDataByResource(EthosResourceRouteInfo ethosResourceRouteInfo, IEnumerable<string> resourceIds, bool bypassCache = false, bool useRecordKey = false)
         {
             if (!bypassCache)
             {
@@ -563,10 +624,18 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             ReportEthosApiErrors = ethosResourceRouteInfo.ReportEthosExtendedErrors;
 
+            var resourceName = ethosResourceRouteInfo.ResourceName;
+            if (!string.IsNullOrEmpty(ethosResourceRouteInfo.ExtendedSchemaResourceId) && !ethosResourceRouteInfo.ExtendedSchemaResourceId.Equals(ethosResourceRouteInfo.ResourceName, StringComparison.OrdinalIgnoreCase))
+            {
+                resourceName = ethosResourceRouteInfo.ExtendedSchemaResourceId.ToLowerInvariant();
+            }
+
+
             if (configurationRepository != null)
             {
-                var extendDataFromRepo = await configurationRepository.GetExtendedEthosDataByResource(ethosResourceRouteInfo.ResourceName,
-                    ethosResourceRouteInfo.ResourceVersionNumber, ethosResourceRouteInfo.ExtendedSchemaResourceId, resourceIds, ReportEthosApiErrors, bypassCache);
+                var extendDataFromRepo = await configurationRepository.GetExtendedEthosDataByResource(resourceName,
+                    ethosResourceRouteInfo.ResourceVersionNumber, ethosResourceRouteInfo.ExtendedSchemaResourceId,
+                    resourceIds, ReportEthosApiErrors, bypassCache, useRecordKey);
 
                 return ConvertExtendedDataFromDomainToPlatform(extendDataFromRepo);
             }
@@ -601,7 +670,12 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             if (configurationRepository != null)
             {
-                var extendDataFromRepo = await configurationRepository.GetExtendedEthosConfigurationByResource(ethosResourceRouteInfo.ResourceName,
+                var resourceName = ethosResourceRouteInfo.ResourceName;
+                if (!string.IsNullOrEmpty(ethosResourceRouteInfo.ExtendedSchemaResourceId) && !ethosResourceRouteInfo.ExtendedSchemaResourceId.Equals(ethosResourceRouteInfo.ResourceName, StringComparison.OrdinalIgnoreCase))
+                {
+                    resourceName = ethosResourceRouteInfo.ExtendedSchemaResourceId.ToLowerInvariant();
+                }
+                var extendDataFromRepo = await configurationRepository.GetExtendedEthosConfigurationByResource(resourceName,
                     ethosResourceRouteInfo.ResourceVersionNumber, ethosResourceRouteInfo.ExtendedSchemaResourceId, bypassCache);
 
                 if (extendDataFromRepo == null)
@@ -707,8 +781,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         JsonPath = dataRow.JsonPath,
                         JsonTitle = dataRow.JsonTitle,
                         ExtendedDataValue = dataRow.ExtendedDataValue,
-
-
                         AssociationController = dataRow.associationController,
                         UsageType = dataRow.databaseUsageType,
                         TransType = dataRow.transType
@@ -744,6 +816,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     var row = new EthosExtensibleDataFilter
                     {
                         ColleagueColumnName = filterRow.ColleagueColumnName,
+                        DatabaseUsageType = filterRow.DatabaseUsageType,
                         ColleagueFileName = filterRow.ColleagueFileName,
                         ColleaguePropertyLength = filterRow.ColleaguePropertyLength,
                         FullJsonPath = filterRow.FullJsonPath,
@@ -762,7 +835,10 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                         TransFileName = filterRow.TransFileName,
                         TransTableName = filterRow.TransTableName,
                         FilterValue = filterRow.FilterValue,
-                        SelectRules = filterRow.SelectRules
+                        FilterOper = filterRow.FilterOper,
+                        ValidFilterOpers = filterRow.ValidFilterOpers,
+                        SelectRules = filterRow.SelectRules,
+                        QueryName = filterRow.NamedQuery ? filterRow.JsonTitle : "criteria"
                     };
 
                     switch (filterRow.JsonPropertyType.ToLower())
@@ -832,7 +908,12 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             if (configurationRepository != null)
             {
-                var extendDataFromRepo = await configurationRepository.GetEthosApiConfigurationByResource(ethosResourceRouteInfo.ResourceName, bypassCache);
+                var resourceName = ethosResourceRouteInfo.ResourceName;
+                if (!string.IsNullOrEmpty(ethosResourceRouteInfo.ExtendedSchemaResourceId) && !ethosResourceRouteInfo.ExtendedSchemaResourceId.Equals(ethosResourceRouteInfo.ResourceName, StringComparison.OrdinalIgnoreCase))
+                {
+                    resourceName = ethosResourceRouteInfo.ExtendedSchemaResourceId.ToLowerInvariant();
+                }
+                var extendDataFromRepo = await configurationRepository.GetEthosApiConfigurationByResource(resourceName, bypassCache);
 
                 if (extendDataFromRepo == null)
                 {
@@ -859,9 +940,15 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                 var newEthosDataItem = new EthosApiConfiguration()
                 {
                     ResourceName = extDataItem.ResourceName,
+                    ApiType = extDataItem.ApiType,
+                    ProcessId = extDataItem.ProcessId,
+                    ParentResourceName = extDataItem.ParentResourceName,
                     PrimaryEntity = extDataItem.PrimaryEntity,
                     PrimaryApplication = extDataItem.PrimaryApplication,
                     PrimaryTableName = extDataItem.PrimaryTableName,
+                    PrimaryKeyName = extDataItem.PrimaryKeyName,
+                    SecondaryKeyName = extDataItem.SecondaryKeyName,
+                    SecondaryKeyPosition = extDataItem.SecondaryKeyPosition,
                     PrimaryGuidSource = extDataItem.PrimaryGuidSource,
                     PrimaryGuidDbType = extDataItem.PrimaryGuidDbType,
                     PrimaryGuidFileName = extDataItem.PrimaryGuidFileName,

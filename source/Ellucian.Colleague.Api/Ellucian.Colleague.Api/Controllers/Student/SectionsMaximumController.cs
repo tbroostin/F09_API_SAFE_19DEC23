@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates
 
 using System;
 using System.Linq;
@@ -394,6 +394,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="page">Section page Contains ...page...</param>
         /// <param name="criteria"> filter criteria</param>
         /// <returns>List of SectionMaximum <see cref="Dtos.SectionMaximum5"/> objects representing matching SectionMaximum</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, FilteringFilter(IgnoreFiltering = true)]
         [ValidateQueryStringFilter()]
         [QueryStringFilterFilter("criteria", typeof(Dtos.SectionMaximum5))]
@@ -724,6 +725,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="id">GUID to desired section</param>
         /// <returns>A SectionMaximum object <see cref="Dtos.SectionMaximum5"/> in HeDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         public async Task<Dtos.SectionMaximum5> GetHedmSectionMaximumByGuid5Async(string id)
         {

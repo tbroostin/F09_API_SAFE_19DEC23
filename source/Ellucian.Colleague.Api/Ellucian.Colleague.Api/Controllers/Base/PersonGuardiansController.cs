@@ -1,4 +1,4 @@
-﻿// Copyright 2016 - 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016 - 2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -20,6 +20,8 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Ellucian.Colleague.Domain.Base;
+using Ellucian.Web.Security;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -54,7 +56,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves active personal guardian relationship for relationship id
         /// </summary>
         /// <returns>PersonGuardianRelationship object for a personal guardian relationship.</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(BasePermissionCodes.ViewAnyPersonGuardian)]
         public async Task<Dtos.PersonGuardianRelationship> GetPersonGuardianRelationshipByIdAsync([FromUri] string id)
         {
             var bypassCache = false;
@@ -68,6 +70,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _personGuardianRelationshipService.ValidatePermissions(GetPermissionsMetaData());
                 if (string.IsNullOrEmpty(id))
                 {
                     throw new ArgumentNullException("Id cannot be null.");
@@ -89,6 +92,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
             }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }
             catch (Exception e)
             {
                 _logger.Error(e.ToString());
@@ -102,7 +110,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <param name="person"></param>
         /// <returns>Tuple containing list of PersonGuardianRelationships <see cref="Dtos.PersonGuardianRelationship"/> objects.</returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(BasePermissionCodes.ViewAnyPersonGuardian)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         [FilteringFilter(IgnoreFiltering = true)]
         [ValidateQueryStringFilter(new string[] { "person" }, false, true)]
@@ -119,6 +127,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
             try
             {
+                _personGuardianRelationshipService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(200, 0);
@@ -141,6 +150,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             {
                 _logger.Error(e.ToString());
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (Exception e)
             {

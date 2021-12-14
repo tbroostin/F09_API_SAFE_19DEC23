@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
@@ -12,7 +12,7 @@ namespace Ellucian.Colleague.Dtos.Student.DegreePlans
     public class PlannedCourse4
     {
         /// <summary>
-        /// Id of the course that is being planned. Required.
+        /// Id of the course that is being planned. Required when course placeholder is not present.
         /// </summary>
         public string CourseId { get; set; }
 
@@ -68,6 +68,11 @@ namespace Ellucian.Colleague.Dtos.Student.DegreePlans
         /// Boolean which shows whether the planned course is protected. If protected it can only be removed or moved by an authorized advisor or staff person.
         /// </summary>
         public bool IsProtected { get; set; }
+
+        /// <summary>
+        /// Id of the course placeholder that is being planned. Required when course is not present.
+        /// </summary>
+        public string CoursePlaceholderId { get; set; }
     }
 }
 

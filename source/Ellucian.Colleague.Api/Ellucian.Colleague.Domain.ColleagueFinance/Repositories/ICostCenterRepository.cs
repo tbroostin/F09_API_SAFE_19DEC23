@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -21,7 +21,8 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         /// <param name="fiscalYear">The fiscal year requested.</param>
         /// <param name="criteria">Cost center filter criteria.</param>
         /// <param name="personId">ID of the user.</param>
+        /// <param name="includeJustificationNotes">Show Justification Notes flag.</param>
         /// <returns>List of GL cost center domain entities.</returns>
-        Task<IEnumerable<CostCenter>> GetCostCentersAsync(GeneralLedgerUser generalLedgerUser, CostCenterStructure costCenterStructure, GeneralLedgerClassConfiguration glClassConfiguration, string costCenterId, string fiscalYear, CostCenterQueryCriteria criteria, string personId);
+        Task<IEnumerable<CostCenter>> GetCostCentersAsync(GeneralLedgerUser generalLedgerUser, CostCenterStructure costCenterStructure, GeneralLedgerClassConfiguration glClassConfiguration, string costCenterId, string fiscalYear, CostCenterQueryCriteria criteria, string personId, bool includeJustificationNotes = false);
     }
 }

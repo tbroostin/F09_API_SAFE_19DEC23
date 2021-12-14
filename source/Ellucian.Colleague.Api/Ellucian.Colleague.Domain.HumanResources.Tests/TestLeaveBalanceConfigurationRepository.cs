@@ -1,9 +1,6 @@
-﻿/*Copyright 2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2018-2021 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 
@@ -15,7 +12,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
         {
             LeaveBalanceConfiguration leaveBalanceConfiguration = new LeaveBalanceConfiguration()
             {
-                ExcludedLeavePlanIds = new List<string>()// { "INAC", "CMPS" }
+                ExcludedLeavePlanIds = new List<string>(),// { "INAC", "CMPS" }
+                LeaveRequestLookbackDays = 60  //default value
             };
             return leaveBalanceConfiguration;
         }

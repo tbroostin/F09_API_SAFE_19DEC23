@@ -374,6 +374,15 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.InstantEnrollment
                 payerPostal);
             Assert.IsNotNull(reg);
         }
+        [TestMethod]
+        public void InstantEnrollmentRegistrationEcheckRegistrationTests_Constructor_ZeroConvenienceFees()
+        {
+            var reg = new InstantEnrollmentEcheckRegistration(null, demo, acadProgram, catalog, sections, payAmount,
+                payMethod, providerAccount, bankAcctOwner, routingNumber, bankAcctNumber, bankAccountCheckNumber,
+                bankAcctType, String.Empty, 0, String.Empty, payerEmailAddress, payerAddress, payerCity, payerState,
+                payerPostal);
+            Assert.IsNotNull(reg);
+        }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
@@ -394,6 +403,37 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.InstantEnrollment
                 payMethod, providerAccount, bankAcctOwner, routingNumber, bankAcctNumber, bankAccountCheckNumber,
                 bankAcctType, String.Empty, convFeeAmount, String.Empty, payerEmailAddress, payerAddress, payerCity, payerState,
                 payerPostal);
+        }
+
+        [TestMethod]
+        public void InstantEnrollmentRegistrationEcheckRegistrationTests_Constructor_ConvFeeGlAccount()
+        {
+            var reg = new InstantEnrollmentEcheckRegistration(null, demo, acadProgram, catalog, sections, payAmount,
+                payMethod, providerAccount, bankAcctOwner, routingNumber, bankAcctNumber, bankAccountCheckNumber,
+                bankAcctType, String.Empty, 0, String.Empty, payerEmailAddress, payerAddress, payerCity, payerState,
+                payerPostal);
+            Assert.IsNotNull(reg);
+
+        }
+        [TestMethod]
+        public void InstantEnrollmentRegistrationEcheckRegistrationTests_Constructor_ConvFeesIsNull_ConvFeeGlAccountIsNotNull()
+        {
+            var reg = new InstantEnrollmentEcheckRegistration(null, demo, acadProgram, catalog, sections, payAmount,
+                payMethod, providerAccount, bankAcctOwner, routingNumber, bankAcctNumber, bankAccountCheckNumber,
+                bankAcctType, String.Empty, null, "gl account", payerEmailAddress, payerAddress, payerCity, payerState,
+                payerPostal);
+            Assert.IsNotNull(reg);
+
+        }
+        [TestMethod]
+        public void InstantEnrollmentRegistrationEcheckRegistrationTests_Constructor_ConvFeesIsZero_ConvFeeGlAccountIsNotNull()
+        {
+            var reg = new InstantEnrollmentEcheckRegistration(null, demo, acadProgram, catalog, sections, payAmount,
+                payMethod, providerAccount, bankAcctOwner, routingNumber, bankAcctNumber, bankAccountCheckNumber,
+                bankAcctType, String.Empty, 0, "gl account", payerEmailAddress, payerAddress, payerCity, payerState,
+                payerPostal);
+            Assert.IsNotNull(reg);
+
         }
 
         [TestMethod]

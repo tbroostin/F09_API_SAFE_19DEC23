@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -271,7 +271,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
                 catch (Exception e)
                 {
-                    LogDataError("TaxFormConsent2", record.PersonId, record, e, e.Message);
+                    logger.Error(e, "Could not convert Temporary Consent object to TaxFormConsent2 type.");
                 }
             }
 
@@ -497,7 +497,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
                 catch (Exception e)
                 {
-                    LogDataError("TaxFormConsent", record.PersonId, record, e, e.Message);
+                    logger.Error(e, "Could not convert Temporary Consent object to TaxFormConsent type.");
                 }
             }
 

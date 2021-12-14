@@ -18,6 +18,11 @@ using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Http.Models;
+using System.Web.Http.Routing;
+using Ellucian.Web.Http.Filters;
+using System.Web.Http.Controllers;
+using System.Collections;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -339,6 +344,186 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 {
                     await prospectOpportunitiesController.DeleteProspectOpportunitiesAsync(prospectOpportunitiesCollection.FirstOrDefault().Id);
                 }
+
+
+
+        // Permissions tests
+
+        //Get
+        //Version 16.0.0
+        //GetProspectOpportunitiesAsync
+
+        //Example success 
+        [TestMethod]
+        public async Task ProspectOpportunitiesController_GetProspectOpportunitiesAsync_Permissions()
+        {
+            Ellucian.Web.Http.Models.QueryStringFilter criteriaFilter = new Web.Http.Models.QueryStringFilter("criteria", "");
+            Ellucian.Web.Http.Models.QueryStringFilter personFilter = new Web.Http.Models.QueryStringFilter("personFilter", "");
+
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "ProspectOpportunities" },
+                    { "action", "GetProspectOpportunitiesAsync" }
+                };
+            HttpRoute route = new HttpRoute("admission-decisions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            prospectOpportunitiesController.Request.SetRouteData(data);
+            prospectOpportunitiesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.ViewProspectOpportunity, StudentPermissionCodes.UpdateProspectOpportunity });
+
+            var controllerContext = prospectOpportunitiesController.ControllerContext;
+            var actionDescriptor = prospectOpportunitiesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.ProspectOpportunities>, int>(prospectOpportunitiesCollection, 5);
+            prospectOpportunitiesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            prospectOpportunitiesServiceMock.Setup(ci => ci.GetProspectOpportunitiesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<ProspectOpportunities>(), person, It.IsAny<bool>())).ReturnsAsync(tuple);
+            var prospectOpportunities = await prospectOpportunitiesController.GetProspectOpportunitiesAsync(new Paging(limit, offset), criteriaFilter, personFilter);
+
+            Object filterObject;
+            prospectOpportunitiesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewProspectOpportunity));
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewProspectOpportunity));
+
+        }
+
+        //Example exception
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ProspectOpportunitiesController_GetProspectOpportunitiesAsync_Invalid_Permissions()
+        {
+            Ellucian.Web.Http.Models.QueryStringFilter criteriaFilter = new Web.Http.Models.QueryStringFilter("criteria", "");
+            Ellucian.Web.Http.Models.QueryStringFilter personFilter = new Web.Http.Models.QueryStringFilter("personFilter", "");
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "ProspectOpportunities" },
+                    { "action", "GetProspectOpportunitiesAsync" }
+                };
+            HttpRoute route = new HttpRoute("admission-applications", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            prospectOpportunitiesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = prospectOpportunitiesController.ControllerContext;
+            var actionDescriptor = prospectOpportunitiesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                prospectOpportunitiesServiceMock.Setup(x => x.GetProspectOpportunitiesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<ProspectOpportunities>(), person, It.IsAny<bool>())).Throws<PermissionsException>(); 
+                prospectOpportunitiesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view prospect-opportunities."));
+                var prospectOpportunities = await prospectOpportunitiesController.GetProspectOpportunitiesAsync(new Paging(limit, offset), criteriaFilter, personFilter);
+
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //Get by Id
+        //Version 16.0.0
+        //GetProspectOpportunitiesByGuidAsync
+
+        //Example success 
+        [TestMethod]
+        public async Task ProspectOpportunitiesController_GetProspectOpportunitiesByGuidAsync_Permissions()
+        {
+
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "ProspectOpportunities" },
+                    { "action", "GetProspectOpportunitiesByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("admission-decisions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            prospectOpportunitiesController.Request.SetRouteData(data);
+            prospectOpportunitiesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.ViewProspectOpportunity, StudentPermissionCodes.UpdateProspectOpportunity });
+
+            var controllerContext = prospectOpportunitiesController.ControllerContext;
+            var actionDescriptor = prospectOpportunitiesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.ProspectOpportunities>, int>(prospectOpportunitiesCollection, 5);
+            prospectOpportunitiesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            //prospectOpportunitiesServiceMock.Setup(x => x.GetProspectOpportunitiesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(Dtos);
+            var resp = await prospectOpportunitiesController.GetProspectOpportunitiesByGuidAsync(expectedGuid);
+
+            Object filterObject;
+            prospectOpportunitiesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewProspectOpportunity));
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewProspectOpportunity));
+
+        }
+
+        //Example exception
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task ProspectOpportunitiesController_GetProspectOpportunitiesByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "ProspectOpportunities" },
+                    { "action", "GetProspectOpportunitiesByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("admission-applications", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            prospectOpportunitiesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = prospectOpportunitiesController.ControllerContext;
+            var actionDescriptor = prospectOpportunitiesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                prospectOpportunitiesServiceMock.Setup(x => x.GetProspectOpportunitiesByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>(); 
+                prospectOpportunitiesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view prospect-opportunities."));
+                await prospectOpportunitiesController.GetProspectOpportunitiesByGuidAsync(expectedGuid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
 
         #region prospect-opportunities-submissions
         [TestMethod]

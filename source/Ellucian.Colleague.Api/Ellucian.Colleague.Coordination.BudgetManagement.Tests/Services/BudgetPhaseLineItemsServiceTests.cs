@@ -1,4 +1,5 @@
-﻿using Ellucian.Colleague.Coordination.BudgetManagement.Services;
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Coordination.BudgetManagement.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.BudgetManagement;
 using Ellucian.Colleague.Domain.BudgetManagement.Entities;
@@ -7,6 +8,7 @@ using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -119,35 +121,22 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Tests.Services
                 .ReturnsAsync(accountingStringComponentValues);
 
             referenceDataRepositoryMock.Setup(r => r.GetAccountingStringComponentValueByGuid(It.IsAny<string>())).ReturnsAsync(accountingStringComponentValues);
+
+            var glAccounts = new Dictionary<string, string>();
+            glAccounts.Add("1", "1");
+            referenceDataRepositoryMock.Setup(repo => repo.GetGuidsForPooleeGLAcctsInFiscalYearsAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(glAccounts);
+
+            var budgetIds = new Dictionary<string, string>();
+            budgetIds.Add("1", "1");
+            budgetRepositoryMock.Setup(repo => repo.GetBudgetGuidCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(budgetIds);
+
+
+
         }
 
         #endregion
 
         #region GETALL
-
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task BudgetPhaseLineItemService_GetBudgetPhaseLineItemsAsync_PermissionException()
-        {
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-            await budgetPhaseLineItemsService.GetBudgetPhaseLineItemsAsync(0, 2, null, null);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public async Task BudgetPhaseLineItemService_GetBudgetPhaseLineItemsAsync_BudgetPhaseGuid_NotFound()
-        {
-            budgetRepositoryMock.Setup(b => b.GetBudgetPhasesGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(null);
-            await budgetPhaseLineItemsService.GetBudgetPhaseLineItemsAsync(0, 2, null, null);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public async Task BudgetPhaseLineItemService_GetBudgetPhaseLineItemsAsync_AccountingStringComponentValue_NotFound()
-        {
-            referenceDataRepositoryMock.Setup(r => r.GetAccountingStringComponentValuesGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(null);
-            await budgetPhaseLineItemsService.GetBudgetPhaseLineItemsAsync(0, 2, null, null);
-        }
 
         [TestMethod]
         public async Task BudgetPhaseLineItemService_GetBudgetPhaseLineItemsAsync()
@@ -203,7 +192,7 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Tests.Services
         [TestMethod]
         public async Task BudgetPhaseLineItemService_GetAll_With_AccountingStringComponentValue_Filter_Returns_Null()
         {
-            referenceDataRepositoryMock.Setup(r => r.GetAccountingStringComponentValueByGuid(It.IsAny<string>())).ReturnsAsync(null);
+            referenceDataRepositoryMock.Setup(r => r.GetAccountingStringComponentValueByGuid(It.IsAny<string>())).ReturnsAsync(() => null);
 
             var result = await budgetPhaseLineItemsService.GetBudgetPhaseLineItemsAsync(0, 2, null, new List<string>() { guid });
 
@@ -235,14 +224,7 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Tests.Services
 
         #region GET
 
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task BudgetPhaseLineItemService_GetBudgetPhaseLineItemsByGuidAsync_PermissionException()
-        {
-            roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-            await budgetPhaseLineItemsService.GetBudgetPhaseLineItemsByGuidAsync(guid);
-        }
-
+        
         [TestMethod]
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task BudgetPhaseLineItemService_GetBudgetPhaseLineItemsByGuidAsync_KeyNotFoundException()
@@ -251,14 +233,7 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Tests.Services
             await budgetPhaseLineItemsService.GetBudgetPhaseLineItemsByGuidAsync(guid);
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
-        public async Task BudgetPhaseLineItemService_GetBudgetPhaseLineItemsByGuidAsync_InvalidOperationException()
-        {
-            budgetRepositoryMock.Setup(b => b.GetBudgetPhaseLineItemsByGuidAsync(It.IsAny<string>())).ThrowsAsync(new InvalidOperationException());
-            await budgetPhaseLineItemsService.GetBudgetPhaseLineItemsByGuidAsync(guid);
-        }
-
+       
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public async Task BudgetPhaseLineItemService_GetBudgetPhaseLineItemsByGuidAsync_ArgumentException()
@@ -268,18 +243,25 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task BudgetPhaseLineItemService_GetByGuid_BudgetPhase_Notfound()
         {
-            budgetRepositoryMock.Setup(b => b.GetBudgetPhasesGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+            //budgetRepositoryMock.Setup(b => b.GetBudgetPhasesGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
+            var budgetIds = new Dictionary<string, string>();
+           
+            budgetRepositoryMock.Setup(repo => repo.GetBudgetGuidCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(budgetIds);
+
             await budgetPhaseLineItemsService.GetBudgetPhaseLineItemsByGuidAsync(guid);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(IntegrationApiException))]
         public async Task BudgetPhaseLineItemService_GetByGuid_AccoutingStringComponentValue_Notfound()
         {
-            referenceDataRepositoryMock.Setup(b => b.GetAccountingStringComponentValuesGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+            //referenceDataRepositoryMock.Setup(b => b.GetAccountingStringComponentValuesGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
+            var glAccounts = new Dictionary<string, string>();
+            referenceDataRepositoryMock.Setup(repo => repo.GetGuidsForPooleeGLAcctsInFiscalYearsAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(glAccounts);
+
             await budgetPhaseLineItemsService.GetBudgetPhaseLineItemsByGuidAsync(guid);
         }
 

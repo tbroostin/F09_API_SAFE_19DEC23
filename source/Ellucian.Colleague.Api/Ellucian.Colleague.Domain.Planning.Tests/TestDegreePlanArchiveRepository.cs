@@ -87,7 +87,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests
             List<ArchivedCourse> archiveCourses = new List<ArchivedCourse>();
             foreach (var term in plan.TermIds)
             {
-                var plannedCourses = plan.GetPlannedCourses(term);
+                var plannedCourses = plan.GetPlannedCourses(term).Where(c => !string.IsNullOrEmpty(c.CourseId));
                 foreach (var pc in plannedCourses)
                 {
                     ArchivedCourse ac = new ArchivedCourse(pc.CourseId);

@@ -71,9 +71,8 @@
       <HintPath>..\packages\Unity.Interception.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Interception.Configuration.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net40\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="slf4net, Version=0.1.32.1, Culture=neutral, PublicKeyToken=592edb3b6b36b5ba, processorArchitecture=MSIL">
       <HintPath>..\packages\slf4net.0.1.32.1\lib\net35\slf4net.dll</HintPath>
@@ -155,7 +154,11 @@
     <Compile Include="LoanRequestStatus.cs" />
     <Compile Include="OfferLetterHousingEnrollmentItem.cs" />
     <Compile Include="OutsideAward.cs" />
+    <Compile Include="PlusApplicationItem.cs" />
+    <Compile Include="PlusLoanItem.cs" />
+    <Compile Include="PlusMpnItem.cs" />
     <Compile Include="ProfileApplication.cs" />
+    <Compile Include="ShoppingSheet3.cs" />
     <Compile Include="ShoppingSheet2.cs" />
     <Compile Include="ShoppingSheet.cs" />
     <Compile Include="ShoppingSheetAwardItem2.cs" />

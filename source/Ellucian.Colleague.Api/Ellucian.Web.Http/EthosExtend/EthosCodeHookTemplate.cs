@@ -25,7 +25,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
         char _SM = Convert.ToChar(DynamicArray.SM);
         char _TM = Convert.ToChar(DynamicArray.TM);
         char _XM = Convert.ToChar(250);
-        public async Task<CodeBuilderObject> EvalCode(CodeBuilderObject inputData, IColleagueTransactionInvoker transactionInvoker, IColleagueDataReader dataReader)
+        public async Task<CodeBuilderObject> EvalCode(CodeBuilderObject inputData, IColleagueTransactionInvoker transactionInvoker, IColleagueDataReader dataReader, BaseCachingRepository baseCachingRepository, Func<string, Func<object>, double?, object> GetOrAddToCacheFunc, double? cacheTimeOut, bool bypassCache)
         {
             var outputData = new CodeBuilderObject();
             try
@@ -37,6 +37,79 @@ namespace Ellucian.Colleague.Domain.Base.Services
                 outputData.LimitingKeys = dataReader.Select("PERSON", limitingKeys, "WITH PERSON.CORP.INDICATOR NE 'Y'");
                 outputData.SelectEntity = inputData.SelectEntity;
                 // This is the end of the code hook.
+                var vlPersonArIds = new List<string>();
+                if (inputData != null && inputData.DataDictionary != null && inputData.DataDictionary.Any())
+                {
+                    if (inputData.DataDictionary.TryGetValue("PERSON.AR.ID", out vlPersonArIds))
+                    {
+                        foreach (var vPersonArId in vlPersonArIds)
+                        {
+                            var parCacheKey = "PERSON.AR+" + vPersonArId;
+                            var personArData = GetOrAddToCacheFunc(parCacheKey,
+                               () =>
+                               {
+                                   return dataReader.ReadRecordColumns("PERSON.AR", vPersonArId, new string[] { "PAR.AR.TYPES" });
+                               }
+                            , cacheTimeOut) as Dictionary<string, string>;
+                            var arTypes = string.Empty;
+                            if (personArData != null && personArData.TryGetValue("PAR.AR.TYPES", out arTypes))
+                            {
+                                var vlArTypes = arTypes.Split(_VM);
+                                foreach (var vArType in vlArTypes)
+                                {
+                                    var vArAcctsId = string.Concat(vPersonArId, "*", vArType);
+                                    var arCacheKey = "AR.ACCTS+" + vArAcctsId;
+                                    var arAcctsData = GetOrAddToCacheFunc(arCacheKey,
+                                       () =>
+                                       {
+                                           return dataReader.ReadRecordColumns("AR.ACCTS", vArAcctsId, new string[] { "ARA.PAYMENTS" });
+                                       }
+                                    , cacheTimeOut) as Dictionary<string, string>;
+                                    if (arAcctsData != null && arAcctsData.Any())
+                                    {
+                                        var arPaymentIds = string.Empty;
+                                        if (arAcctsData.TryGetValue("ARA.PAYMENTS", out arPaymentIds))
+                                        {
+                                            var vlPaymentIds = arPaymentIds.Split(_VM);
+                                            foreach (var paymentId in vlPaymentIds)
+                                            {
+                                                if (!string.IsNullOrEmpty(paymentId))
+                                                {
+                                                    var arpayCacheKey = "AR.PAYMENTS+" + paymentId;
+                                                    var arPaymentsData = GetOrAddToCacheFunc(arpayCacheKey,
+                                                       () =>
+                                                       {
+                                                           return dataReader.ReadRecordColumns("AR.PAYMENTS", paymentId, new string[] { "ARP.AR.TYPE", "ARP.AMT", "ARP.DATE", "ARP.TERM" });
+                                                       }
+                                                    , cacheTimeOut) as Dictionary<string, string>;
+                                                    var type = string.Empty;
+                                                    if (arPaymentsData.TryGetValue("ARP.AR.TYPE", out type))
+                                                    {
+                                                        if (!string.IsNullOrEmpty(type))
+                                                        {
+                                                            var artCacheKey = "AR.TYPES+" + type;
+                                                            var arTypesData = GetOrAddToCacheFunc(artCacheKey,
+                                                               () =>
+                                                               {
+                                                                   return dataReader.ReadRecordColumns("AR.TYPES", type, new string[] { "ART.DESC" });
+                                                               }
+                                                            , cacheTimeOut) as Dictionary<string, string>;
+                                                            var typeDesc = string.Empty;
+                                                            if (arTypesData.TryGetValue("ART.DESC", out typeDesc))
+                                                            {
+                                                                outputData.DataValues.Add(typeDesc);
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 // This hook gets the list of extended address types and returns a list of categories "home".
                 var vlAddressTypes = new List<string>();
                 if (inputData != null && inputData.DataDictionary != null && inputData.DataDictionary.Any())

@@ -1,4 +1,4 @@
-﻿//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -68,8 +68,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <summary>
         /// Retreives list of Supervisees for a Leave Approver/Supervisor
         /// </summary>
+        /// <param name="effectivePersonId">Optional parameter for passing effective person Id</param>
         /// <returns>List of HumanDemographics DTOs containing supervisee information</returns>
-        Task<IEnumerable<Dtos.HumanResources.HumanResourceDemographics>> GetSuperviseesByPrimaryPositionForSupervisorAsync();
+        Task<IEnumerable<Dtos.HumanResources.HumanResourceDemographics>> GetSuperviseesByPrimaryPositionForSupervisorAsync(string effectivePersonId = null);
 
         /// <summary>
         /// Gets the Approved Leave Requests for a timecard week based on the date range. 

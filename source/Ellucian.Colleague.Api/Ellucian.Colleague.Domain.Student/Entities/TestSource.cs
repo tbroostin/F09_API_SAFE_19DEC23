@@ -10,6 +10,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities
     [Serializable]
     public class TestSource : GuidCodeItem
     {
+        public string actionCode1;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="TestSource"/> class.
         /// </summary>

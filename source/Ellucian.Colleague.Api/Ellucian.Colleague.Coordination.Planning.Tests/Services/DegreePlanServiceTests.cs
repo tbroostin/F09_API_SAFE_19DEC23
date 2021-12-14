@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -148,6 +148,8 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
         protected Mock<IConfigurationRepository> baseConfigurationRepositoryMock;
         protected IStudentConfigurationRepository studentConfigurationRepository;
         protected Mock<IStudentConfigurationRepository> studentConfigurationRepositoryMock;
+        protected IProgramEvaluationService programEvaluationService;
+        protected Mock<IProgramEvaluationService> programEvaluationServiceMock;
 
         protected IAcademicHistoryService academicHistoryService;
         protected Mock<IAcademicHistoryService> academicHistoryServiceMock;
@@ -236,10 +238,11 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             baseConfigurationRepository = baseConfigurationRepositoryMock.Object;
             studentConfigurationRepositoryMock = new Mock<IStudentConfigurationRepository>();
             studentConfigurationRepository = studentConfigurationRepositoryMock.Object;
+            programEvaluationServiceMock = new Mock<IProgramEvaluationService>();
+            programEvaluationService = programEvaluationServiceMock.Object;
 
             // Set up student 0000894 as the current user.
             currentUserFactory = new CurrentUserSetup.StudentUserFactory();
-
         }
 
         public void SetupCleanup()
@@ -355,7 +358,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
             }
 
             [TestCleanup]
@@ -677,7 +680,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
             }
 
             [TestCleanup]
@@ -864,7 +867,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
             }
 
             [TestCleanup]
@@ -1081,7 +1084,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
             }
 
             [TestCleanup]
@@ -1279,7 +1282,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo,
                     academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
             }
 
             [TestCleanup]
@@ -1326,7 +1329,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo,
                     academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
 
                 var degreePlan = degreePlans.Where(d => d.Id == 2).FirstOrDefault();
                 var degreePlanDto = degreePlanEntityToDtoAdapter.MapToType(degreePlan);
@@ -1356,7 +1359,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService,
                     studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
 
                 var degreePlanDto = degreePlanEntityToDtoAdapter.MapToType(degreePlans.First());
 
@@ -1441,9 +1444,9 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                 degreePlanService = new DegreePlanService(
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
-                    currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo, academicHistoryService, 
+                    currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo, academicHistoryService,
                     studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
             }
 
             [TestCleanup]
@@ -1504,7 +1507,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo,
                     academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
 
                 var degreePlan = degreePlans.Where(d => d.Id == 2).FirstOrDefault();
 
@@ -1540,7 +1543,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
 
                 var degreePlanEntity = degreePlans.First();
                 var degreePlanDto = degreePlanEntityToDtoAdapter.MapToType(degreePlanEntity);
@@ -1630,7 +1633,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo, academicHistoryService,
                     studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
             }
 
             [TestCleanup]
@@ -1697,7 +1700,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo, academicHistoryService,
                     studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
 
                 var degreePlan = degreePlans.Where(d => d.Id == 2).FirstOrDefault();
                 // Need to mock get cache for data verification while checking permissions
@@ -1736,7 +1739,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
 
                 var degreePlanEntity = degreePlans.First();
                 var degreePlanDto = degreePlanEntityToDtoAdapter.MapToType(degreePlanEntity);
@@ -1802,7 +1805,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
             }
 
             [TestCleanup]
@@ -1839,7 +1842,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
 
 #pragma warning disable 618
                 var archives = await degreePlanService.GetDegreePlanArchivesAsync(degreePlan.Id);
@@ -1864,7 +1867,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
 
 #pragma warning disable 618
                 var archives = await degreePlanService.GetDegreePlanArchivesAsync(degreePlan.Id);
@@ -1927,7 +1930,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
             }
 
             [TestCleanup]
@@ -1963,7 +1966,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo, academicHistoryService,
                     studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
 
                 var archives = await degreePlanService.GetDegreePlanArchives2Async(degreePlan.Id);
 
@@ -1987,7 +1990,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, null, gradeRepo, academicHistoryService,
                     studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
 
                 var archives = await degreePlanService.GetDegreePlanArchives2Async(degreePlan.Id);
             }
@@ -2081,9 +2084,9 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                 degreePlanService = new DegreePlanService(
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
-                    currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, advisorRepo, gradeRepo, 
+                    currTrackRepo, configRepo, catalogRepo, degreePlanArchiveRepo, advisorRepo, gradeRepo,
                     academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
             }
 
             [TestCleanup]
@@ -2227,9 +2230,9 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                 degreePlanService = new DegreePlanService(
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
-                    currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService, 
+                    currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService,
                     studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
             }
 
             [TestCleanup]
@@ -2399,6 +2402,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     }
                 }
             }
+
             [TestMethod]
             public async Task PreviewSamplePlan6Async_IncludesAcademicHistory()
             {
@@ -2497,6 +2501,252 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
 
                 var dp = await degreePlanService.PreviewSampleDegreePlan6Async(1, programCode, string.Empty);
             }
+
+
+            // PreviewSamplePlan7Async tests
+            [TestMethod]
+            public async Task PreviewSamplePlan7Async_UsingDefaultSamplePlan()
+            {
+                var studentProgramIds = new List<string>() { "0000894" };
+                var studentPrograms = await new TestStudentProgramRepository().GetStudentProgramsByIdsAsync(studentIds: studentProgramIds, includeInactivePrograms: false);
+                studentProgramRepoMock.Setup(x => x.GetStudentProgramsByIdsAsync(studentProgramIds, false, null, false)).Returns(Task.FromResult(studentPrograms));
+
+                var programCode = "MATH.BA";
+                var catalogCode = "2013";
+                var programReq = await new TestProgramRequirementsRepository().GetAsync(programCode, catalogCode);
+                progReqRepoMock.Setup(x => x.GetAsync(programCode, catalogCode)).Returns(Task.FromResult(programReq));
+
+                var currTrack = await new TestSampleDegreePlanRepository().GetAsync("TRACK3");
+                currTrackRepoMock.Setup(x => x.GetAsync("TRACK3")).Returns(Task.FromResult(currTrack));
+
+                // Mock no academic credits because we don't want anything in the academic history to cause something to not be applied.
+                var academicCreditDict = new Dictionary<string, List<Domain.Student.Entities.AcademicCredit>>();
+                academicCreditRepoMock.Setup(x => x.GetAcademicCreditByStudentIdsAsync(It.IsAny<List<string>>(), false, true, It.IsAny<bool>())).Returns(Task.FromResult<Dictionary<string, List<Domain.Student.Entities.AcademicCredit>>>(academicCreditDict));
+
+                IEnumerable<string> depts = new List<string>() { "Dept1" };
+                List<string> catalogYears = new List<string>() { "2012", "2013" };
+                Domain.Student.Entities.Requirements.Program emptyReqProgram = new Domain.Student.Entities.Requirements.Program(programCode, "Empty Requirements", depts, true, "UG", new CreditFilter(), false);
+                emptyReqProgram.Catalogs = catalogYears;
+                programRepoMock.Setup(pr => pr.GetAsync(programCode)).Returns(Task.FromResult(emptyReqProgram));
+
+                var dpp = await degreePlanService.PreviewSampleDegreePlan7Async(1, currTrack.Code, string.Empty);
+
+                Assert.IsInstanceOfType(dpp, typeof(Dtos.Planning.DegreePlanPreview6));
+                // Verify that every term and course on the preview is also on the merged plan in the same term
+                foreach (var term in dpp.Preview.Terms)
+                {
+                    var mergedTerm = dpp.MergedDegreePlan.Terms.Where(t => t.TermId == term.TermId).FirstOrDefault();
+                    Assert.IsNotNull(mergedTerm);
+                    foreach (var courseId in term.GetPlannedCourseIds())
+                    {
+                        Assert.IsTrue(mergedTerm.GetPlannedCourseIds().Contains(courseId));
+                    }
+                }
+            }
+
+            // PreviewSamplePlan7Async tests
+            [TestMethod]
+            public async Task PreviewSamplePlan7Async_UsingDefaultSamplePlanWithCourseAndCoursePlaceholders()
+            {
+                var studentProgramIds = new List<string>() { "0000894" };
+                var studentPrograms = await new TestStudentProgramRepository().GetStudentProgramsByIdsAsync(studentIds: studentProgramIds, includeInactivePrograms: false);
+                studentProgramRepoMock.Setup(x => x.GetStudentProgramsByIdsAsync(studentProgramIds, false, null, false)).Returns(Task.FromResult(studentPrograms));
+
+                var programCode = "MATH.BA";
+                var catalogCode = "2013";
+                var programReq = await new TestProgramRequirementsRepository().GetAsync(programCode, catalogCode);
+                progReqRepoMock.Setup(x => x.GetAsync(programCode, catalogCode)).Returns(Task.FromResult(programReq));
+
+                var currTrack = await new TestSampleDegreePlanRepository().GetAsync("TRACK4");
+                currTrackRepoMock.Setup(x => x.GetAsync("TRACK4")).Returns(Task.FromResult(currTrack));
+
+                // Mock no academic credits because we don't want anything in the academic history to cause something to not be applied.
+                var academicCreditDict = new Dictionary<string, List<Domain.Student.Entities.AcademicCredit>>();
+                academicCreditRepoMock.Setup(x => x.GetAcademicCreditByStudentIdsAsync(It.IsAny<List<string>>(), false, true, It.IsAny<bool>())).Returns(Task.FromResult<Dictionary<string, List<Domain.Student.Entities.AcademicCredit>>>(academicCreditDict));
+
+                IEnumerable<string> depts = new List<string>() { "Dept1" };
+                List<string> catalogYears = new List<string>() { "2012", "2013" };
+                Domain.Student.Entities.Requirements.Program emptyReqProgram = new Domain.Student.Entities.Requirements.Program(programCode, "Empty Requirements", depts, true, "UG", new CreditFilter(), false);
+                emptyReqProgram.Catalogs = catalogYears;
+                programRepoMock.Setup(pr => pr.GetAsync(programCode)).Returns(Task.FromResult(emptyReqProgram));
+
+                var dpp = await degreePlanService.PreviewSampleDegreePlan7Async(1, currTrack.Code, string.Empty);
+
+                Assert.IsInstanceOfType(dpp, typeof(Dtos.Planning.DegreePlanPreview6));
+
+                // Verify that every term and course on the preview is also on the merged plan in the same term
+                foreach (var term in dpp.Preview.Terms)
+                {
+                    var mergedTerm = dpp.MergedDegreePlan.Terms.Where(t => t.TermId == term.TermId).FirstOrDefault();
+                    Assert.IsNotNull(mergedTerm);
+
+                    var courseIds = term.GetPlannedCourseIds();
+                    var mergedCourseIds = mergedTerm.GetPlannedCourseIds();
+                    foreach (var courseId in courseIds)
+                    {
+                        Assert.IsTrue(mergedCourseIds.Contains(courseId));
+                    }
+
+                    // Verify that every course placeholder on the preview is also on the merged plan in the same term
+                    var coursePlaceholderIds = term.GetPlannedCoursePlaceholderIds();
+                    var mergedCoursePlaceholderIds = mergedTerm.GetPlannedCoursePlaceholderIds();
+                    foreach (var coursePlaceholderId in coursePlaceholderIds)
+                    {
+                        Assert.IsTrue(mergedCoursePlaceholderIds.Contains(coursePlaceholderId));
+                    }
+                }
+            }
+
+            // PreviewSamplePlan7Async tests
+            [TestMethod]
+            public async Task PreviewSamplePlan7Async_UsingDefaultSamplePlanWithCoursePlaceholders()
+            {
+                var studentProgramIds = new List<string>() { "0000894" };
+                var studentPrograms = await new TestStudentProgramRepository().GetStudentProgramsByIdsAsync(studentIds: studentProgramIds, includeInactivePrograms: false);
+                studentProgramRepoMock.Setup(x => x.GetStudentProgramsByIdsAsync(studentProgramIds, false, null, false)).Returns(Task.FromResult(studentPrograms));
+
+                var programCode = "MATH.BA";
+                var catalogCode = "2013";
+                var programReq = await new TestProgramRequirementsRepository().GetAsync(programCode, catalogCode);
+                progReqRepoMock.Setup(x => x.GetAsync(programCode, catalogCode)).Returns(Task.FromResult(programReq));
+
+                var currTrack = await new TestSampleDegreePlanRepository().GetAsync("TRACK5");
+                currTrackRepoMock.Setup(x => x.GetAsync("TRACK5")).Returns(Task.FromResult(currTrack));
+
+                // Mock no academic credits because we don't want anything in the academic history to cause something to not be applied.
+                var academicCreditDict = new Dictionary<string, List<Domain.Student.Entities.AcademicCredit>>();
+                academicCreditRepoMock.Setup(x => x.GetAcademicCreditByStudentIdsAsync(It.IsAny<List<string>>(), false, true, It.IsAny<bool>())).Returns(Task.FromResult<Dictionary<string, List<Domain.Student.Entities.AcademicCredit>>>(academicCreditDict));
+
+                IEnumerable<string> depts = new List<string>() { "Dept1" };
+                List<string> catalogYears = new List<string>() { "2012", "2013" };
+                Domain.Student.Entities.Requirements.Program emptyReqProgram = new Domain.Student.Entities.Requirements.Program(programCode, "Empty Requirements", depts, true, "UG", new CreditFilter(), false);
+                emptyReqProgram.Catalogs = catalogYears;
+                programRepoMock.Setup(pr => pr.GetAsync(programCode)).Returns(Task.FromResult(emptyReqProgram));
+
+                var dpp = await degreePlanService.PreviewSampleDegreePlan7Async(1, currTrack.Code, string.Empty);
+
+                Assert.IsInstanceOfType(dpp, typeof(Dtos.Planning.DegreePlanPreview6));
+
+                // Verify that every term and course on the preview is also on the merged plan in the same term
+                foreach (var term in dpp.Preview.Terms)
+                {
+                    var mergedTerm = dpp.MergedDegreePlan.Terms.Where(t => t.TermId == term.TermId).FirstOrDefault();
+                    Assert.IsNotNull(mergedTerm);
+
+                    var courseIds = term.GetPlannedCourseIds();
+                    var mergedCourseIds = mergedTerm.GetPlannedCourseIds();
+                    foreach (var courseId in courseIds)
+                    {
+                        Assert.IsTrue(mergedCourseIds.Contains(courseId));
+                    }
+
+                    // Verify that every course placeholder on the preview is also on the merged plan in the same term
+                    var coursePlaceholderIds = term.GetPlannedCoursePlaceholderIds();
+                    var mergedCoursePlaceholderIds = mergedTerm.GetPlannedCoursePlaceholderIds();
+                    foreach (var coursePlaceholderId in coursePlaceholderIds)
+                    {
+                        Assert.IsTrue(mergedCoursePlaceholderIds.Contains(coursePlaceholderId));
+                    }
+                }
+            }
+
+            [TestMethod]
+            public async Task PreviewSamplePlan7Async_IncludesAcademicHistory()
+            {
+                var studentProgramIds = new List<string>() { "0000894" };
+                var studentPrograms = await new TestStudentProgramRepository().GetStudentProgramsByIdsAsync(studentIds: studentProgramIds, includeInactivePrograms: false);
+                studentProgramRepoMock.Setup(x => x.GetStudentProgramsByIdsAsync(studentProgramIds, false, null, false)).Returns(Task.FromResult(studentPrograms));
+
+                var programCode = "MATH.BA";
+                var catalogCode = "2013";
+                var programReq = await new TestProgramRequirementsRepository().GetAsync(programCode, catalogCode);
+                progReqRepoMock.Setup(x => x.GetAsync(programCode, catalogCode)).Returns(Task.FromResult(programReq));
+
+                var currTrack = await new TestSampleDegreePlanRepository().GetAsync("TRACK3");
+                currTrackRepoMock.Setup(x => x.GetAsync("TRACK3")).Returns(Task.FromResult(currTrack));
+
+                IEnumerable<string> depts = new List<string>() { "Dept1" };
+                List<string> catalogYears = new List<string>() { "2012", "2013" };
+                Domain.Student.Entities.Requirements.Program emptyReqProgram = new Domain.Student.Entities.Requirements.Program(programCode, "Empty Requirements", depts, true, "UG", new CreditFilter(), false);
+                emptyReqProgram.Catalogs = catalogYears;
+                programRepoMock.Setup(pr => pr.GetAsync(programCode)).Returns(Task.FromResult(emptyReqProgram));
+
+                var dpp = await degreePlanService.PreviewSampleDegreePlan7Async(1, currTrack.Code, string.Empty);
+
+                // Verify that academic history is also tacked onto the merged degree plan
+                Assert.AreEqual("0000894", dpp.AcademicHistory.StudentId);
+                Assert.IsTrue(dpp.AcademicHistory.AcademicTerms.Count() > 0);
+                Assert.AreEqual(historyEntity.AcademicTerms.Count(), dpp.AcademicHistory.AcademicTerms.Count());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task PreviewSamplePlan7Async_ZeroDegreePlanId()
+            {
+                var currTrack = await new TestSampleDegreePlanRepository().GetAsync("TRACK3");
+                currTrackRepoMock.Setup(x => x.GetAsync("TRACK3")).Returns(Task.FromResult(currTrack));
+                await degreePlanService.PreviewSampleDegreePlan7Async(0, currTrack.Code, string.Empty);
+            }
+
+            [ExpectedException(typeof(ArgumentNullException))]
+            [TestMethod]
+            public async Task PreviewSamplePlan7Async_NullCurriculumTrackCode()
+            {
+                await degreePlanService.PreviewSampleDegreePlan7Async(1, null, string.Empty);
+            }
+
+            [ExpectedException(typeof(ArgumentNullException))]
+            [TestMethod]
+            public async Task PreviewSamplePlan7Async_EmptyCurriculumTrackCode()
+            {
+                await degreePlanService.PreviewSampleDegreePlan7Async(1, "", string.Empty);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(KeyNotFoundException))]
+            public async Task PreviewSamplePlan7Async_UnableToGetPlan()
+            {
+                var currTrack = await new TestSampleDegreePlanRepository().GetAsync("TRACK3");
+                currTrackRepoMock.Setup(x => x.GetAsync("TRACK3")).Returns(Task.FromResult(currTrack));
+                studentDegreePlanRepoMock.Setup(x => x.GetAsync(2)).Throws(new ArgumentException("Degree plan Not Found"));
+
+                await degreePlanService.PreviewSampleDegreePlan7Async(2, currTrack.Code, string.Empty);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(PermissionsException))]
+            public async Task PreviewSamplePlan7Async_NotAuthorized()
+            {
+                var currTrack = await new TestSampleDegreePlanRepository().GetAsync("TRACK3");
+                currTrackRepoMock.Setup(x => x.GetAsync("TRACK3")).Returns(Task.FromResult(currTrack));
+
+                DegreePlan dpApplied3 = new DegreePlan(3, "0000899", 0);
+                studentDegreePlanRepoMock.Setup(x => x.GetAsync(3)).Returns(Task.FromResult(dpApplied3));
+
+                await degreePlanService.PreviewSampleDegreePlan7Async(3, currTrack.Code, string.Empty);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(Exception))]
+            public async Task PreviewSamplePlan7Async_NoSamplePlanForCurriculumTrack()
+            {
+                var programCode = "MATH.BA";
+                var catalogCode = "2013";
+                var programReq = await new TestProgramRequirementsRepository().GetAsync(programCode, catalogCode);
+                programReq.CurriculumTrackCode = null;
+                progReqRepoMock.Setup(x => x.GetAsync(programCode, catalogCode)).Returns(Task.FromResult(programReq));
+
+                var invalidCurriculumTrackCode = "blah";
+
+                // Mock the planningConfiguration to return no default.
+                var planningConfig = new PlanningConfiguration() { DefaultCatalogPolicy = CatalogPolicy.StudentCatalogYear, DefaultCurriculumTrack = "" };
+                configRepoMock.Setup(x => x.GetPlanningConfigurationAsync()).Returns(Task.FromResult(planningConfig));
+
+                DegreePlan dpApplied = new DegreePlan(1, "0000894", 0);
+                studentDegreePlanRepoMock.Setup(x => x.GetAsync(1)).Returns(Task.FromResult(dpApplied));
+
+                await degreePlanService.PreviewSampleDegreePlan7Async(1, invalidCurriculumTrackCode, string.Empty);
+            }
         }
 
         [TestClass]
@@ -2581,7 +2831,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
             }
 
             [TestCleanup]
@@ -2773,7 +3023,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
 
                 // Act--Apply sample degree plan
 #pragma warning disable 618
@@ -2987,8 +3237,8 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                 var degreePlanDtoAdapter = new AutoMapperAdapter<DegreePlan, Dtos.Student.DegreePlans.DegreePlan2>(adapterRegistry, logger);
                 adapterRegistryMock.Setup(x => x.GetAdapter<DegreePlan, Dtos.Student.DegreePlans.DegreePlan2>()).Returns(degreePlanDtoAdapter);
 
-                var degreePlanApprovalDtoAdapter = new AutoMapperAdapter<DegreePlanApproval, Dtos.Student.DegreePlans.DegreePlanApproval2>(adapterRegistry, logger);
-                adapterRegistryMock.Setup(reg => reg.GetAdapter<DegreePlanApproval, Dtos.Student.DegreePlans.DegreePlanApproval2>()).Returns(degreePlanApprovalDtoAdapter);
+                var degreePlanApprovalDtoAdapter = new AutoMapperAdapter<DegreePlanApproval, Dtos.Student.DegreePlans.DegreePlanApproval>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(reg => reg.GetAdapter<DegreePlanApproval, Dtos.Student.DegreePlans.DegreePlanApproval>()).Returns(degreePlanApprovalDtoAdapter);
 
                 // Mock student degree plan service
                 studentDegreePlanService = new StudentDegreePlanService(
@@ -3352,7 +3602,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                     adapterRegistry, degreePlanRepo, termRepo, studentRepo, planningStudentRepo, studentProgramRepo,
                     courseRepo, sectionRepo, programRepo, academicCreditRepo, requirementRepo, ruleRepo, progReqRepo,
                     currTrackRepo, configRepo, catalogRepo, null, null, gradeRepo, academicHistoryService, studentDegreePlanRepo, studentDegreePlanService,
-                    currentUserFactory, roleRepo, logger, baseConfigurationRepository);
+                    currentUserFactory, roleRepo, logger, baseConfigurationRepository, programEvaluationService);
             }
 
             [TestCleanup]

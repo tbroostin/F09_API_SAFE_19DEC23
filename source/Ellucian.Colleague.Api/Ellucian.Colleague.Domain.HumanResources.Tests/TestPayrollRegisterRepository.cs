@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates.*/
+﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using System;
 using System.Collections.Generic;
@@ -31,6 +31,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             public List<PayToDateLeaveRecord> leave;
             public List<PayToDateLeaveTakenRecord> leaveTaken;
             public List<PayToDateTaxableBenefitRecord> expandedTaxableBenefits;
+            public string status;
         }
 
         public class PayToDateEarningsRecord
@@ -122,6 +123,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                     adviceNumber = "333",
                     checkNumber = "111",
                     isUsingNewW4Flag = "n",
+                    status="",
                     earnings = new List<PayToDateEarningsRecord>()
                     {
                         new PayToDateEarningsRecord()
@@ -265,6 +267,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                     adviceNumber = "334",
                     checkNumber = "111",
                     isUsingNewW4Flag = "n",
+                    status="",
                     earnings = new List<PayToDateEarningsRecord>()
                     {
                         new PayToDateEarningsRecord()
@@ -408,6 +411,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                     adviceNumber = "335",
                     checkNumber = "111",
                     isUsingNewW4Flag = "",
+                    status="",
                     earnings = new List<PayToDateEarningsRecord>()
                     {
                         new PayToDateEarningsRecord()
@@ -539,6 +543,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                     adviceNumber = "336",
                     checkNumber = "111",
                     isUsingNewW4Flag = "",
+                    status="",
                     earnings = new List<PayToDateEarningsRecord>()
                     {
                         new PayToDateEarningsRecord()
@@ -670,6 +675,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                     adviceNumber = "444",
                     checkNumber = "111",
                     isUsingNewW4Flag = "",
+                    status="",
                     earnings = new List<PayToDateEarningsRecord>()
                     {
                         new PayToDateEarningsRecord()
@@ -791,7 +797,72 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                         }
                     },
                     expandedTaxableBenefits = new List<PayToDateTaxableBenefitRecord>(){ }
+                },
+                #endregion
+
+                #region record 6
+                new PayToDateRecord()
+                {
+                    id = string.Format("12346*{0}*{1}*1", payCycleId, employeeId),
+                    adviceNumber = "",
+                    checkNumber = "",
+                    isUsingNewW4Flag = "",
+                    status="A",
+                    earnings = new List<PayToDateEarningsRecord>()
+                    {
+                        new PayToDateEarningsRecord()
+                        {
+                            earningsCode = "REG",
+                            hourlySalaryFlag = "H",
+                            totalAmount = 50,
+                            baseAmount = 0,
+                            hours = 0,
+                            rate = 0,
+                        },
+                        new PayToDateEarningsRecord()
+                        {
+                            earningsCode = "OVT",
+                            hourlySalaryFlag = "H",
+                            totalAmount = 100,
+                            baseAmount = 0,
+                            earningsFactorAmount = 0,
+                            hours = 0,
+                            rate = 0,
+
+                        }
+                    },
+                    taxes = new List<PayToDateTaxRecord>()
+                    {
+                        new PayToDateTaxRecord()
+                        {
+                            exemptions = 0,
+                            specialProcessingAmount = 0,
+                            processingCode = "A",
+                            taxCode = "MEDI",
+                            employeeTaxableAmount = -10
+                        }
+                    },
+                    benefits = new List<PayToDateBenefitRecord>()
+                    {
+                        new PayToDateBenefitRecord()
+                        {
+                            benefitCode = "BEN",
+                            employeeAmount = -20,
+                            employeeBaseAmount = -20
+                        },
+                        new PayToDateBenefitRecord()
+                        {
+                            benefitCode = "DED",
+                            employerBaseAmount = 200
+                        }
+                    },
+                    expandedBenefits = new List<PayToDateExpandedBenefitRecord>(),
+                    expandedTaxableBenefits = new List<PayToDateTaxableBenefitRecord>(),
+                    expandedTaxes = new List<PayToDateExpandedTaxRecord>(),
+                    leave = new List<PayToDateLeaveRecord>(),
+                    leaveTaken = new List<PayToDateLeaveTakenRecord>()                    
                 }
+
                 #endregion
             };
             payToDateRecords.AddRange(list);
@@ -808,6 +879,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 new PayControlRecord()
                 {
                     id = "12345*BW", //matches records 1-5
+                    periodStartDate = new DateTime(2010, 1, 1)
+                },
+                new PayControlRecord()
+                {
+                    id = "12346*BW", //matches records 6
                     periodStartDate = new DateTime(2010, 1, 1)
                 }
             };
@@ -836,7 +912,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                         var keyParts = ptd.id.Split('*');
 
                         var payControl = payControlRecords.FirstOrDefault(pc => pc.id == string.Format("{0}*{1}", keyParts[0], keyParts[1]));
-                        var entry = new PayrollRegisterEntry(ptd.id, employeeId, payControl.periodStartDate.Value, DmiString.PickDateToDateTime(int.Parse(keyParts[0])), keyParts[1], int.Parse(keyParts[3]), ptd.checkNumber, ptd.adviceNumber, true);
+                        var entry = new PayrollRegisterEntry(ptd.id, employeeId, payControl.periodStartDate.Value, DmiString.PickDateToDateTime(int.Parse(keyParts[0])), 
+                            keyParts[1], int.Parse(keyParts[3]), ptd.checkNumber, ptd.adviceNumber, true, null);
 
                         foreach (var earn in ptd.earnings)
                         {
@@ -850,7 +927,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                                     earn.earningsFactorAmount ?? 0,
                                     earn.hours,
                                     earn.rate.Value,
-                                    hsIndicator);
+                                    hsIndicator, false);
                                 //new PayrollRegisterEarningsEntry(earn.earningsCode, earn.amount.Value, earn.hours, );
                                 if (!string.IsNullOrEmpty(earn.differentialId))
                                 {
@@ -867,7 +944,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                                     earn.earningsFactorAmount ?? 0,
                                     earn.hours,
                                     earn.rate.Value,
-                                    hsIndicator);
+                                    hsIndicator, false);
                             }
                         }
 

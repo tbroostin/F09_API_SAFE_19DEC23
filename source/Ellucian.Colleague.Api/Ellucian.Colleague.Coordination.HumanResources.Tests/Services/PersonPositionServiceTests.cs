@@ -151,7 +151,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             public async Task RepositoryReturnsNullTest()
             {
                 personPositionRepositoryMock.Setup(r => r.GetPersonPositionsAsync(It.IsAny<IEnumerable<string>>(), null))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 try
                 {

@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,6 +17,12 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using Ellucian.Colleague.Dtos.EnumProperties;
+using Ellucian.Web.Http.Filters;
+using System.Web.Http.Controllers;
+using Ellucian.Colleague.Dtos.DtoProperties;
+using System.Web.Http.Routing;
+using System.Collections;
+using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 {
@@ -33,7 +39,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 
         private EducationalInstitutionsController educationalInstitutionsController;
         private List<Dtos.EducationalInstitution> educationalInstitutionCollection;
-
+        private Ellucian.Web.Http.Models.QueryStringFilter criteria = new Web.Http.Models.QueryStringFilter("criteria", "");
         [TestInitialize]
         public void Initialize()
         {
@@ -70,9 +76,89 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
+        public async Task EducationalInstitutionsController_GetEducationalInstitutions_CredentialFilter_EmptyValue()
+        {
+            var filterGroupName = "criteria";
+            var page = new Paging(10, 0);
+
+            educationalInstitutionsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.EducationalInstitution()
+                  {
+                      Credentials = new List<Credential3DtoProperty> {
+                      new Credential3DtoProperty { Type  = Credential3Type.ColleaguePersonId, Value = null } }
+                  });
+
+            var result = await educationalInstitutionsController.GetEducationalInstitutionsAsync(new Paging(0, 4), "", criteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task EducationalInstitutionsController_GetEducationalInstitutions_CredentialFilter_EmptyType()
+        {
+            var filterGroupName = "criteria";
+            var page = new Paging(10, 0);
+
+            educationalInstitutionsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.EducationalInstitution()
+                  {
+                      Credentials = new List<Credential3DtoProperty> {
+                      new Credential3DtoProperty { Type = null, Value = "00009999" } }
+                  });
+
+            var result = await educationalInstitutionsController.GetEducationalInstitutionsAsync(new Paging(0, 4), "", criteria);
+        }
+
+        [TestMethod]
+        public async Task EducationalInstitutionsController_GetEducationalInstitutions_CredentialFilter_InvalidType()
+        {
+            var filterGroupName = "criteria";
+            var page = new Paging(10, 0);
+
+            educationalInstitutionsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.EducationalInstitution()
+                  {
+                      Credentials = new List<Credential3DtoProperty> {
+                      new Credential3DtoProperty { Type  = Credential3Type.BannerUdcId, Value = "00009999" } }
+                  });
+
+            var result = await educationalInstitutionsController.GetEducationalInstitutionsAsync(new Paging(0, 4), "", criteria);
+            Assert.IsNotNull(result);
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            System.Net.Http.HttpResponseMessage httpResponseMessage = await result.ExecuteAsync(cancelToken);
+            IEnumerable<Dtos.EducationalInstitution> results = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.EducationalInstitution>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.EducationalInstitution>;
+            Assert.AreEqual(0, results.Count());
+        }
+
+        [TestMethod]
+        public async Task EducationalInstitutionsController_GetEducationalInstitutions_CredentialFilter_Multiple()
+        {
+            var filterGroupName = "criteria";
+            var page = new Paging(10, 0);
+
+            educationalInstitutionsController.Request.Properties.Add(string.Format("FilterObject{0}", filterGroupName),
+                  new Dtos.EducationalInstitution()
+                  {
+                      Credentials = new List<Credential3DtoProperty> {
+                      new Credential3DtoProperty { Type  = Credential3Type.ColleaguePersonId, Value = "00009999" },
+                      new Credential3DtoProperty { Type  = Credential3Type.ColleaguePersonId, Value = "00009998" }}
+                  });
+
+            var result = await educationalInstitutionsController.GetEducationalInstitutionsAsync(new Paging(0, 4), "", criteria);
+            Assert.IsNotNull(result);
+            var cancelToken = new System.Threading.CancellationToken(false);
+
+            System.Net.Http.HttpResponseMessage httpResponseMessage = await result.ExecuteAsync(cancelToken);
+            IEnumerable<Dtos.EducationalInstitution> results = ((ObjectContent<IEnumerable<Ellucian.Colleague.Dtos.EducationalInstitution>>)httpResponseMessage.Content).Value as IEnumerable<Dtos.EducationalInstitution>;
+            Assert.AreEqual(0, results.Count());
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
         public async Task EducationalInstitutionsController_GetEducationalInstitutions_PermissionsException()
         {
-            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<EducationalInstitutionType>(), It.IsAny<bool>())).Throws<PermissionsException>();
+            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(),
+                 It.IsAny<Dtos.EducationalInstitution>(), It.IsAny<EducationalInstitutionType>(), It.IsAny<bool>())).Throws<PermissionsException>();
             await educationalInstitutionsController.GetEducationalInstitutionsAsync(new Paging(0, 4));
         }
 
@@ -80,7 +166,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         [ExpectedException(typeof(HttpResponseException))]
         public async Task EducationalInstitutionsController_GetEducationalInstitutions_ArgumentException()
         {
-            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<EducationalInstitutionType>(), It.IsAny<bool>())).Throws<ArgumentException>();
+            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(), 
+                It.IsAny<Dtos.EducationalInstitution>(), It.IsAny<EducationalInstitutionType>(), It.IsAny<bool>())).Throws<ArgumentException>();
             await educationalInstitutionsController.GetEducationalInstitutionsAsync(new Paging(0, 4));
         }
 
@@ -88,7 +175,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         [ExpectedException(typeof(HttpResponseException))]
         public async Task EducationalInstitutionsController_GetEducationalInstitutions_RepositoryException()
         {
-            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<EducationalInstitutionType>(), It.IsAny<bool>())).Throws<RepositoryException>();
+            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(),
+                It.IsAny<Dtos.EducationalInstitution>(), It.IsAny<EducationalInstitutionType>(), It.IsAny<bool>())).Throws<RepositoryException>();
             await educationalInstitutionsController.GetEducationalInstitutionsAsync(new Paging(0, 4));
         }
 
@@ -96,7 +184,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         [ExpectedException(typeof(HttpResponseException))]
         public async Task EducationalInstitutionsController_GetEducationalInstitutions_IntegrationApiException()
         {
-            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<EducationalInstitutionType>(), It.IsAny<bool>())).Throws<IntegrationApiException>();
+            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(),
+                It.IsAny<Dtos.EducationalInstitution>(), It.IsAny<EducationalInstitutionType>(), It.IsAny<bool>())).Throws<IntegrationApiException>();
             await educationalInstitutionsController.GetEducationalInstitutionsAsync(new Paging(0, 4));
         }
 
@@ -104,8 +193,101 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         [ExpectedException(typeof(HttpResponseException))]
         public async Task EducationalInstitutionsController_GetEducationalInstitutions_Exception()
         {
-            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<EducationalInstitutionType>(), It.IsAny<bool>())).Throws<Exception>();
+            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(),
+                It.IsAny<Dtos.EducationalInstitution>(), It.IsAny<EducationalInstitutionType>(), It.IsAny<bool>())).Throws<Exception>();
             await educationalInstitutionsController.GetEducationalInstitutionsAsync(new Paging(0, 4));
+        }
+
+        //GET v6.1.0 / v6
+        //Successful
+        //GetEducationalInstitutionsAsync
+
+        [TestMethod]
+        public async Task EducationalInstitutionsController_GetEducationalInstitutionsAsync_Permissions()
+        {
+            var educationalInsitutionsCollection = new List<Dtos.EducationalInstitution>()
+            {
+                new Dtos.EducationalInstitution() { Id = "id1", Title = "title1", Type = Dtos.EnumProperties.EducationalInstitutionType.PostSecondarySchool, HomeInstitution = Dtos.EnumProperties.HomeInstitutionType.Home },
+                new Dtos.EducationalInstitution() { Id = "id2", Title = "title2", Type = Dtos.EnumProperties.EducationalInstitutionType.PostSecondarySchool, HomeInstitution = Dtos.EnumProperties.HomeInstitutionType.Home },
+                new Dtos.EducationalInstitution() { Id = "id3", Title = "title3", Type = Dtos.EnumProperties.EducationalInstitutionType.PostSecondarySchool, HomeInstitution = Dtos.EnumProperties.HomeInstitutionType.Home }
+            };
+
+            var expectedCollection = new Tuple<IEnumerable<Dtos.EducationalInstitution>, int>(educationalInsitutionsCollection, educationalInsitutionsCollection.Count);
+
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "EducationalInstitutions" },
+                    { "action", "GetEducationalInstitutionsAsync" }
+                };
+            HttpRoute route = new HttpRoute("educational-institutions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            educationalInstitutionsController.Request.SetRouteData(data);
+            educationalInstitutionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(BasePermissionCodes.ViewEducationalInstitution);
+
+            var controllerContext = educationalInstitutionsController.ControllerContext;
+            var actionDescriptor = educationalInstitutionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            educationalInstitutionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.EducationalInstitution>(), It.IsAny<EducationalInstitutionType?>(), It.IsAny<bool>())).ReturnsAsync(expectedCollection);
+            await educationalInstitutionsController.GetEducationalInstitutionsAsync(new Paging(0, 4));
+
+            Object filterObject;
+            educationalInstitutionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewEducationalInstitution));
+
+        }
+
+        //GET v6.1.0 / v6
+        //Exception
+        //GetEducationalInstitutionsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task EducationalInstitutionsController_GetEducationalInstitutionsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "EducationalInstitutions" },
+                    { "action", "GetEducationalInstitutionsAsync" }
+                };
+            HttpRoute route = new HttpRoute("educational-institutions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            educationalInstitutionsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = educationalInstitutionsController.ControllerContext;
+            var actionDescriptor = educationalInstitutionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(),It.IsAny<Dtos.EducationalInstitution>(), It.IsAny<EducationalInstitutionType>(), It.IsAny<bool>())).Throws<PermissionsException>();
+                educationalInstitutionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view educational-institutions."));
+                await educationalInstitutionsController.GetEducationalInstitutionsAsync(new Paging(0, 4));
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
         }
 
         #endregion GetEducationalInstitutions
@@ -211,7 +393,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         public async Task EducationalInstitutionsController_GetEducationalInstitutionsByType_PermissionsException()
         {
             var expected = educationalInstitutionCollection.FirstOrDefault();
-            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.EnumProperties.EducationalInstitutionType>(), It.IsAny<bool>())).Throws<PermissionsException>();
+            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(),
+                It.IsAny<Dtos.EducationalInstitution>(), It.IsAny<Dtos.EnumProperties.EducationalInstitutionType>(), It.IsAny<bool>())).Throws<PermissionsException>();
             await educationalInstitutionsController.GetEducationalInstitutionsAsync(new Paging(0, 4), "secondarySchool");
 
         }
@@ -221,7 +404,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         public async Task EducationalInstitutionsController_GetEducationalInstitutionsByType_ArgumentException()
         {
             var expected = educationalInstitutionCollection.FirstOrDefault();
-            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.EnumProperties.EducationalInstitutionType>(), It.IsAny<bool>())).Throws<ArgumentException>();
+            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(),
+                It.IsAny<Dtos.EducationalInstitution>(), It.IsAny<Dtos.EnumProperties.EducationalInstitutionType>(), It.IsAny<bool>())).Throws<ArgumentException>();
             await educationalInstitutionsController.GetEducationalInstitutionsAsync(new Paging(0, 4), "secondarySchool");
         }
 
@@ -230,7 +414,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         public async Task EducationalInstitutionsController_GetEducationalInstitutionsByType_RepositoryException()
         {
             var expected = educationalInstitutionCollection.FirstOrDefault();
-            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.EnumProperties.EducationalInstitutionType>(), It.IsAny<bool>())).Throws<RepositoryException>();
+            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(),
+                It.IsAny<Dtos.EducationalInstitution>(), It.IsAny<Dtos.EnumProperties.EducationalInstitutionType>(), It.IsAny<bool>())).Throws<RepositoryException>();
             await educationalInstitutionsController.GetEducationalInstitutionsAsync(new Paging(0, 4), "secondarySchool");
         }
 
@@ -239,7 +424,8 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         public async Task EducationalInstitutionsController_GetEducationalInstitutionsByType_IntegrationApiException()
         {
             var expected = educationalInstitutionCollection.FirstOrDefault();
-            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.EnumProperties.EducationalInstitutionType>(), It.IsAny<bool>())).Throws<IntegrationApiException>();
+            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(),
+                It.IsAny<Dtos.EducationalInstitution>(), It.IsAny<Dtos.EnumProperties.EducationalInstitutionType>(), It.IsAny<bool>())).Throws<IntegrationApiException>();
             await educationalInstitutionsController.GetEducationalInstitutionsAsync(new Paging(0, 4), "secondarySchool");
         }
 
@@ -248,10 +434,95 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         public async Task EducationalInstitutionsController_GetEducationalInstitutionsByType_Exception()
         {
             var expected = educationalInstitutionCollection.FirstOrDefault();
-            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.EnumProperties.EducationalInstitutionType>(), It.IsAny<bool>())).Throws<Exception>();
+            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionsByTypeAsync(It.IsAny<int>(), It.IsAny<int>(),
+                It.IsAny<Dtos.EducationalInstitution>(), It.IsAny<Dtos.EnumProperties.EducationalInstitutionType>(), It.IsAny<bool>())).Throws<Exception>();
             await educationalInstitutionsController.GetEducationalInstitutionsAsync(new Paging(0, 4), "secondarySchool");
         }
 
+        //GET by id v6.1.0 / v6
+        //Successful
+        //GetEducationalInstitutionsByGuidAsync
+
+        [TestMethod]
+        public async Task EducationalInstitutionsController_GetEducationalInstitutionsByGuidAsync_Permissions()
+        {
+            var expected = educationalInstitutionCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "EducationalInstitutions" },
+                    { "action", "GetEducationalInstitutionsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("educational-institutions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            educationalInstitutionsController.Request.SetRouteData(data);
+            educationalInstitutionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(BasePermissionCodes.ViewEducationalInstitution);
+
+            var controllerContext = educationalInstitutionsController.ControllerContext;
+            var actionDescriptor = educationalInstitutionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            educationalInstitutionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionByGuidAsync(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
+            var actual = (await educationalInstitutionsController.GetEducationalInstitutionsByGuidAsync(expected.Id));
+
+            Object filterObject;
+            educationalInstitutionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewEducationalInstitution));
+
+        }
+
+        //GET by id v6.1.0 / v6
+        //Exception
+        //GetEducationalInstitutionsByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task EducationalInstitutionsController_GetEducationalInstitutionsByGuidAsync_Invalid_Permissions()
+        {
+            var expected = educationalInstitutionCollection.FirstOrDefault();
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "EducationalInstitutions" },
+                    { "action", "GetEducationalInstitutionsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("educational-institutions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            educationalInstitutionsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = educationalInstitutionsController.ControllerContext;
+            var actionDescriptor = educationalInstitutionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                educationalInstitutionsServiceMock.Setup(x => x.GetEducationalInstitutionByGuidAsync(expected.Id, It.IsAny<bool>())).Throws<PermissionsException>();
+                educationalInstitutionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view educational-institutions."));
+                await educationalInstitutionsController.GetEducationalInstitutionsByGuidAsync(expected.Id);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
         #endregion GetEducationalInstitutionsByType
 
         #region Put

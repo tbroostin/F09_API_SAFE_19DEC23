@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates */
+﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -16,7 +16,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         public decimal basePeriodAmount;
         public decimal earningsFactorPeriodAmount;
         public decimal? units;
-        public decimal rate;
+        public decimal rate;       
 
 
         public string earnDiffId;
@@ -24,12 +24,14 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         public decimal diffPeriodAmount;
         public decimal diffRate;
         public decimal? diffUnits;
-
+        public bool isAdj;
+        
         public PayrollRegisterEarningsEntry standardEarnings
         {
             get
             {
-                return new PayrollRegisterEarningsEntry(earnTypeId, totalPeriodAmount, basePeriodAmount, earningsFactorPeriodAmount, units, rate, HourlySalaryIndicator.Hourly);
+                return new PayrollRegisterEarningsEntry(earnTypeId, totalPeriodAmount, basePeriodAmount, 
+                    earningsFactorPeriodAmount, units, rate, HourlySalaryIndicator.Hourly, isAdj);
             }
         }
 
@@ -37,7 +39,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         {
             get
             {
-                return new PayrollRegisterEarningsEntry(earnTypeId, stipendId, totalPeriodAmount, basePeriodAmount, earningsFactorPeriodAmount, units, rate, HourlySalaryIndicator.Salary);
+                return new PayrollRegisterEarningsEntry(earnTypeId, stipendId, totalPeriodAmount, basePeriodAmount, 
+                    earningsFactorPeriodAmount, units, rate, HourlySalaryIndicator.Salary, isAdj);
             }
             
         }
@@ -69,6 +72,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             Assert.AreEqual(earningsFactorPeriodAmount, standardEarnings.EarningsFactorPeriodAmount);
             Assert.AreEqual(units, standardEarnings.StandardUnitsWorked);
             Assert.AreEqual(rate, standardEarnings.StandardRate);
+            Assert.AreEqual(0, standardEarnings.EarningsAdjustmentAmount);
         }
 
         [TestMethod, ExpectedException(typeof(ArgumentNullException))]
@@ -123,6 +127,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             Assert.AreEqual(units, stipendEarnings.StandardUnitsWorked);
             Assert.AreEqual(rate, stipendEarnings.StandardRate);
             Assert.AreEqual(HourlySalaryIndicator.Salary, stipendEarnings.HourlySalaryIndication);
+            Assert.AreEqual(0, stipendEarnings.EarningsAdjustmentAmount);
         }
 
         [TestMethod]
@@ -130,6 +135,16 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         {
             Assert.IsTrue(stipendEarnings.IsStipendEarnings);
             Assert.IsFalse(standardEarnings.IsStipendEarnings);
+        }
+
+        [TestMethod]
+        public void AdjustmentRecord_CorrectAmountIsBeingSetTest()
+        {
+            isAdj = true;
+            Assert.AreEqual(totalPeriodAmount, standardEarnings.EarningsAdjustmentAmount);
+            Assert.IsTrue(standardEarnings.TotalPeriodEarningsAmount == 0);
+            Assert.AreEqual(totalPeriodAmount, stipendEarnings.EarningsAdjustmentAmount);
+            Assert.IsTrue(stipendEarnings.TotalPeriodEarningsAmount == 0);
         }
     }
 }

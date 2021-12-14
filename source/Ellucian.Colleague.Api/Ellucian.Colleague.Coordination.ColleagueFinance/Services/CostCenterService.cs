@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -25,11 +25,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private IGeneralLedgerUserRepository generalLedgerUserRepository;
         private IGeneralLedgerConfigurationRepository generalLedgerConfigurationRepository;
         private ICostCenterRepository costCenterRepository;
+        private IColleagueFinanceWebConfigurationsRepository colleagueFinanceWebConfigurationsRepository;
 
         // This constructor initializes the private attributes.
         public CostCenterService(ICostCenterRepository costCenterRepository,
             IGeneralLedgerUserRepository generalLedgerUserRepository,
             IGeneralLedgerConfigurationRepository generalLedgerConfigurationRepository,
+            IColleagueFinanceWebConfigurationsRepository colleagueFinanceWebConfigurationsRepository,
             IAdapterRegistry adapterRegistry,
             ICurrentUserFactory currentUserFactory,
             IRoleRepository roleRepository,
@@ -39,69 +41,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             this.generalLedgerUserRepository = generalLedgerUserRepository;
             this.generalLedgerConfigurationRepository = generalLedgerConfigurationRepository;
             this.costCenterRepository = costCenterRepository;
-        }
-
-        /// <summary>
-        /// Returns the GL cost center DTOs that are associated with the user logged into self-service for the 
-        /// specified fiscal year. We want all the cost centers for the user, so no cost center id is passed in.
-        /// </summary>
-        /// <param name="fiscalYear">General Ledger fiscal year; it can be null.</param>
-        /// <returns>List of GL cost center DTOs for the fiscal year.</returns>
-        [Obsolete("Obsolete as of API verson 1.29; use the QueryCostCenters endpoint")]
-        public async Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.CostCenter>> GetAsync(string fiscalYear)
-        {
-            // The first time the user gets to the cost center view we need to default the fiscal year to
-            // the one for today's date because the user does not yet get a change to select one from the list.
-            // Get the fiscal year configuration data to get the fiscal year for today's date.
-            if (string.IsNullOrEmpty(fiscalYear))
-            {
-                var fiscalYearConfiguration = await generalLedgerConfigurationRepository.GetFiscalYearConfigurationAsync();
-                fiscalYear = fiscalYearConfiguration.FiscalYearForToday.ToString();
-            }
-
-            // Get the account structure configuration.
-            var glAccountStructure = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
-
-            // Get cost center configuration so we know how to calculate the cost center.
-            var costCenterStructure = await generalLedgerConfigurationRepository.GetCostCenterStructureAsync();
-
-            // Get the GL class configuration because it is used by the GL user repository.
-            var glClassConfiguration = await generalLedgerConfigurationRepository.GetClassConfigurationAsync();
-
-            // Get the ID for the person who is logged in, and use the ID to get his list of assigned expense and revenue GL accounts.
-            var generalLedgerUser = await generalLedgerUserRepository.GetGeneralLedgerUserAsync2(CurrentUser.PersonId, glAccountStructure.FullAccessRole, glClassConfiguration);
-
-            // If the user does not have any expense or revenue accounts assigned, return an empty list of DTOs.
-            // Create the adapter to convert cost center domain entities to DTOs.
-            var costCenterAdapter = new CostCenterEntityToDtoAdapter(_adapterRegistry, logger);
-            var costCenterDtos = new List<Dtos.ColleagueFinance.CostCenter>();
-
-            // If the user does not have any expense or revenue accounts assigned, return an empty list of DTOs.
-            if ((generalLedgerUser.ExpenseAccounts != null && generalLedgerUser.ExpenseAccounts.Any()) || (generalLedgerUser.RevenueAccounts != null && generalLedgerUser.RevenueAccounts.Any()))
-            {
-                // We are using the same repository method to get a list of cost centers for the user or the one cost center they selected.
-                // Do not pass a cost center ID so all cost centers are returned.
-
-                CostCenterQueryCriteria criteria = new CostCenterQueryCriteria();
-                // Convert the filter criteria DTO into a domain entity, and pass it into the cost center repository.
-                var costCenterCriteriaAdapter = new CostCenterQueryCriteriaDtoToEntityAdapter(_adapterRegistry, logger);
-                var queryCriteriaEntity = costCenterCriteriaAdapter.MapToType(criteria);
-
-                var costCenters = await costCenterRepository.GetCostCentersAsync(generalLedgerUser, costCenterStructure, glClassConfiguration,
-                    null, fiscalYear, queryCriteriaEntity, CurrentUser.PersonId);
-
-                // Convert the domain entities into DTOs
-                foreach (var entity in costCenters)
-                {
-                    if (entity != null)
-                    {
-                        var costCenterDto = costCenterAdapter.MapToType(entity, glAccountStructure.MajorComponentStartPositions);
-                        costCenterDtos.Add(costCenterDto);
-                    }
-                }
-            }
-
-            return costCenterDtos;
+            this.colleagueFinanceWebConfigurationsRepository = colleagueFinanceWebConfigurationsRepository;
         }
 
         /// <summary>
@@ -125,25 +65,37 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 costCenterId = criteria.Ids.FirstOrDefault();
             }
             // The first time the user gets to the cost center view we need to default the fiscal year to
-            // the one for today's date because the user does not yet get a change to select one from the list.
+            // the one for today's date because the user does not yet get a chance to select one from the list.
             // Get the fiscal year configuration data to get the fiscal year for today's date.
             var fiscalYear = criteria.FiscalYear;
             if (string.IsNullOrEmpty(fiscalYear))
             {
+                logger.Debug("==> Getting the fiscal year configuration. <==");
                 var fiscalYearConfiguration = await generalLedgerConfigurationRepository.GetFiscalYearConfigurationAsync();
                 fiscalYear = fiscalYearConfiguration.FiscalYearForToday.ToString();
+                logger.Debug(string.Format("==> criteria.FiscalYear is {0} <==", fiscalYear));
             }
 
             // Get the account structure configuration.
+            logger.Debug("==> Getting the account structure configuration. <==");
             var glAccountStructure = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
 
             // Get cost center configuration so we know how to calculate the cost center.
+            logger.Debug("==> Getting the cost center configuration. <==");
             var costCenterStructure = await generalLedgerConfigurationRepository.GetCostCenterStructureAsync();
 
             // Get the GL class configuration because it is used by the GL user repository.
+            logger.Debug("==> Getting the GL class configuration. <==");
             var glClassConfiguration = await generalLedgerConfigurationRepository.GetClassConfigurationAsync();
 
+            // Get the Justification Notes flag.
+            logger.Debug("==> Getting the Justification Notes flag. <==");
+            var showJustificationNotes = await colleagueFinanceWebConfigurationsRepository.GetShowJustificationNotesFlagAsync();
+
+            logger.Debug(string.Format("==> Show Justification Notes flag {0}. <==", showJustificationNotes));
+
             // Get the ID for the person who is logged in, and use the ID to get his list of assigned expense and revenue GL accounts.
+            logger.Debug("==> Getting the GL User for the logged in person. <==");
             var generalLedgerUser = await generalLedgerUserRepository.GetGeneralLedgerUserAsync2(CurrentUser.PersonId, glAccountStructure.FullAccessRole, glClassConfiguration);
 
             // If the user does not have any expense or revenue accounts assigned, return an empty list of DTOs.
@@ -154,22 +106,26 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             // If the user does not have any expense or revenue accounts assigned, return an empty list of DTOs.
             if ((generalLedgerUser.ExpenseAccounts != null && generalLedgerUser.ExpenseAccounts.Any()) || (generalLedgerUser.RevenueAccounts != null && generalLedgerUser.RevenueAccounts.Any()))
             {
+                logger.Debug("==> Mapping criteria DTO to entity. <==");
                 // If we have expense or revenue accounts for the general ledger user, convert the filter criteria DTO
                 // into a domain entity, and pass it into the cost center repository.
                 var costCenterCriteriaAdapter = new CostCenterQueryCriteriaDtoToEntityAdapter(_adapterRegistry, logger);
                 var queryCriteriaEntity = costCenterCriteriaAdapter.MapToType(criteria);
 
+                logger.Debug("==> Invoking the cost center repository. <==");
                 // We are using the same repository method to get a list of cost centers for the user or the one cost center they selected.
-                // Do not pass a cost center ID so all cost centers are returned.
+                // If the cost center ID argument is null, all cost centers are returned. If it contains an ID, the resulting list will only contain that cost center.
                 var costCenters = await costCenterRepository.GetCostCentersAsync(generalLedgerUser, costCenterStructure, glClassConfiguration,
-                    costCenterId, fiscalYear, queryCriteriaEntity, CurrentUser.PersonId);
+                    costCenterId, fiscalYear, queryCriteriaEntity, CurrentUser.PersonId, showJustificationNotes);
 
+                logger.Debug("==> Mapping each cost center entity to its DTO form. <==");
                 // Convert the domain entities into DTOs
                 foreach (var entity in costCenters)
                 {
                     if (entity != null)
                     {
                         var costCenterDto = costCenterAdapter.MapToType(entity, glAccountStructure.MajorComponentStartPositions);
+                        costCenterDto.ShowJustificationNotes = showJustificationNotes;
                         costCenterDtos.Add(costCenterDto);
                     }
                 }
@@ -259,5 +215,81 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             return fiscalYearForToday.ToString();
         }
+
+
+
+
+        //////////////////////////////////////////////////////
+        //                                                  //
+        //               DEPRECATED / OBSOLETE              //
+        //                                                  //
+        //////////////////////////////////////////////////////
+
+        #region DEPRECATED / OBSOLETE
+
+        /// <summary>
+        /// Returns the GL cost center DTOs that are associated with the user logged into self-service for the 
+        /// specified fiscal year. We want all the cost centers for the user, so no cost center id is passed in.
+        /// </summary>
+        /// <param name="fiscalYear">General Ledger fiscal year; it can be null.</param>
+        /// <returns>List of GL cost center DTOs for the fiscal year.</returns>
+        [Obsolete("Obsolete as of API verson 1.29; use the QueryCostCenters endpoint")]
+        public async Task<IEnumerable<Ellucian.Colleague.Dtos.ColleagueFinance.CostCenter>> GetAsync(string fiscalYear)
+        {
+            // The first time the user gets to the cost center view we need to default the fiscal year to
+            // the one for today's date because the user does not yet get a change to select one from the list.
+            // Get the fiscal year configuration data to get the fiscal year for today's date.
+            if (string.IsNullOrEmpty(fiscalYear))
+            {
+                var fiscalYearConfiguration = await generalLedgerConfigurationRepository.GetFiscalYearConfigurationAsync();
+                fiscalYear = fiscalYearConfiguration.FiscalYearForToday.ToString();
+            }
+
+            // Get the account structure configuration.
+            var glAccountStructure = await generalLedgerConfigurationRepository.GetAccountStructureAsync();
+
+            // Get cost center configuration so we know how to calculate the cost center.
+            var costCenterStructure = await generalLedgerConfigurationRepository.GetCostCenterStructureAsync();
+
+            // Get the GL class configuration because it is used by the GL user repository.
+            var glClassConfiguration = await generalLedgerConfigurationRepository.GetClassConfigurationAsync();
+
+            // Get the ID for the person who is logged in, and use the ID to get his list of assigned expense and revenue GL accounts.
+            var generalLedgerUser = await generalLedgerUserRepository.GetGeneralLedgerUserAsync2(CurrentUser.PersonId, glAccountStructure.FullAccessRole, glClassConfiguration);
+
+            // If the user does not have any expense or revenue accounts assigned, return an empty list of DTOs.
+            // Create the adapter to convert cost center domain entities to DTOs.
+            var costCenterAdapter = new CostCenterEntityToDtoAdapter(_adapterRegistry, logger);
+            var costCenterDtos = new List<Dtos.ColleagueFinance.CostCenter>();
+
+            // If the user does not have any expense or revenue accounts assigned, return an empty list of DTOs.
+            if ((generalLedgerUser.ExpenseAccounts != null && generalLedgerUser.ExpenseAccounts.Any()) || (generalLedgerUser.RevenueAccounts != null && generalLedgerUser.RevenueAccounts.Any()))
+            {
+                // We are using the same repository method to get a list of cost centers for the user or the one cost center they selected.
+                // Do not pass a cost center ID so all cost centers are returned.
+
+                CostCenterQueryCriteria criteria = new CostCenterQueryCriteria();
+                // Convert the filter criteria DTO into a domain entity, and pass it into the cost center repository.
+                var costCenterCriteriaAdapter = new CostCenterQueryCriteriaDtoToEntityAdapter(_adapterRegistry, logger);
+                var queryCriteriaEntity = costCenterCriteriaAdapter.MapToType(criteria);
+
+                var costCenters = await costCenterRepository.GetCostCentersAsync(generalLedgerUser, costCenterStructure, glClassConfiguration,
+                    null, fiscalYear, queryCriteriaEntity, CurrentUser.PersonId);
+
+                // Convert the domain entities into DTOs
+                foreach (var entity in costCenters)
+                {
+                    if (entity != null)
+                    {
+                        var costCenterDto = costCenterAdapter.MapToType(entity, glAccountStructure.MajorComponentStartPositions);
+                        costCenterDtos.Add(costCenterDto);
+                    }
+                }
+            }
+
+            return costCenterDtos;
+        }
+
+        #endregion
     }
 }

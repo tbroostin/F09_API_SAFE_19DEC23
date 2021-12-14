@@ -1,4 +1,4 @@
-﻿/* Copyright 2016 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.HumanResources;
@@ -16,6 +16,7 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Dtos.EnumProperties;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Services
 {
@@ -110,7 +111,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw new ArgumentNullException("guid", "GUID is required to get an Institution Position.");
             }
-            CheckGetInstitutionPositionsPermission();
+           
             var positionEntity = (await _positionRepository.GetPositionByGuidAsync(guid));
             if (positionEntity == null)
             {
@@ -131,7 +132,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw new ArgumentNullException("guid", "GUID is required to get an Institution Position.");
             }
-            CheckGetInstitutionPositionsPermission();
+            
             var positionEntity = (await _positionRepository.GetPositionByGuidAsync(guid));
             if (positionEntity == null)
             {
@@ -152,15 +153,33 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw new ArgumentNullException("guid", "GUID is required to get an Institution Position.");
             }
-            CheckGetInstitutionPositionsPermission();
-            var positionEntity = (await _positionRepository.GetPositionByGuidAsync(guid));
-            if (positionEntity == null)
+            Domain.HumanResources.Entities.Position positionEntity = null;
+            InstitutionPosition2 institutionPositionDto = null;
+            try
             {
-                throw new KeyNotFoundException("Institution Position not found for GUID " + guid);
+                positionEntity = (await _positionRepository.GetPositionByGuidAsync(guid));
+                if (positionEntity == null)
+                {
+                    throw new KeyNotFoundException("Institution Position not found for GUID " + guid);
 
+                }
+                institutionPositionDto = await ConvertPositionEntityToInstitutionPositionDto3(positionEntity, ignoreCache);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+            }
+            catch (Exception)
+            {
+                IntegrationApiExceptionAddError(string.Format("No institution-positions was found for GUID '{0}'.", guid), "GUID.Not.Found", guid, "", System.Net.HttpStatusCode.NotFound);
             }
 
-            return (await ConvertPositionEntityToInstitutionPositionDto3(positionEntity, ignoreCache));
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+
+            return institutionPositionDto;
         }
 
         /// <summary>
@@ -183,9 +202,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         {
             try
             {
-                //check permissions
-                CheckGetInstitutionPositionsPermission();
-
                 var code = string.Empty;
 
                 //if campus filter present find code for location
@@ -202,7 +218,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                         }
                         else
                         {
-                            //throw new ArgumentException(string.Concat("Invalid value for campus filter sent in. No campus was found for id '", campus, "'"));
                             return new Tuple<IEnumerable<Dtos.InstitutionPosition>, int> (new List<Dtos.InstitutionPosition>(), 0);
                         }
                     }
@@ -222,7 +237,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                         }
                         else
                         {
-                            //throw new ArgumentException(string.Concat("Invalid value for bargainingUnit filter sent in. No bargainingUnit was found for id '", bargainingUnit, "'"));
                             return new Tuple<IEnumerable<Dtos.InstitutionPosition>, int>(new List<Dtos.InstitutionPosition>(), 0);
                         }
                     }
@@ -239,7 +253,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     }
                     catch (Exception)
                     {
-                        //throw new ArgumentException(string.Concat("Invalid value for reportsToPosition filter sent in. No position was found for id '", reportsToPosition, "'"));
                         return new Tuple<IEnumerable<Dtos.InstitutionPosition>, int>(new List<Dtos.InstitutionPosition>(), 0);
                     }
                 }
@@ -419,10 +432,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     endOnFilter = await ConvertDateArgument(endOn);
                 }
 
-
-                //check permissions
-                CheckGetInstitutionPositionsPermission();
-
                 var positionEntitiesTuple = await _positionRepository.GetPositionsAsync(offset, limit, code, campusCode, status,
                             bargainingUnitCode, positionIdFilter, exemptionType, compensationType, startOnFilter, endOnFilter, bypassCache);
                 if (positionEntitiesTuple != null)
@@ -470,10 +479,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.InstitutionPosition2>, int>> GetInstitutionPositions3Async(int offset, int limit, string code, string campus = "", string status = "", string bargainingUnit = "",
             List<string> reportsToPositions = null, string exemptionType = "", string compensationType = "", string startOn = "", string endOn = "", bool bypassCache = false)
         {
+            var campusCode = string.Empty;
+            var bargainingUnitCode = string.Empty;
+            List<string> positionIdFilter = null;
+            var startOnFilter = string.Empty;
+            var endOnFilter = string.Empty;            
             try
             {
                 //if campus filter present find code for location
-                var campusCode = string.Empty;
                 if (!string.IsNullOrEmpty(campus))
                 {
                     var allLocations = (await GetAllLocationsAsync(bypassCache)).ToList();
@@ -491,8 +504,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                     }
                 }
 
-                //if bargainingUnit filter is present get the code
-                var bargainingUnitCode = string.Empty;
+                //if bargainingUnit filter is present get the 
                 if (!string.IsNullOrEmpty(bargainingUnit))
                 {
                     var allBargainingUnits = (await GetAllGetBargainingUnitsAsync(bypassCache)).ToList();
@@ -511,7 +523,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 }
 
                 //if reportsToPosition filter is present, get the positionid
-                List<string> positionIdFilter = null;
                 if (reportsToPositions != null && reportsToPositions.Any())
                 {
                     positionIdFilter = new List<string>();
@@ -550,50 +561,58 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 }
 
                 //convert the start on if supplied
-                var startOnFilter = string.Empty;
                 if (!string.IsNullOrEmpty(startOn))
                 {
                     startOnFilter = await ConvertDateArgument(startOn);
                 }
 
                 //convert the end of if supplied
-                var endOnFilter = string.Empty;
                 if (!string.IsNullOrEmpty(endOn))
                 {
                     endOnFilter = await ConvertDateArgument(endOn);
                 }
-
-
-                //check permissions
-                CheckGetInstitutionPositionsPermission();
-
-                var positionEntitiesTuple = await _positionRepository.GetPositionsAsync(offset, limit, code, campusCode, status,
-                            bargainingUnitCode, positionIdFilter, exemptionType, compensationType, startOnFilter, endOnFilter, bypassCache);
-                if (positionEntitiesTuple != null)
-                {
-                    var positionEntities = positionEntitiesTuple.Item1.ToList();
-                    var totalCount = positionEntitiesTuple.Item2;
-
-                    if (positionEntities.Any())
-                    {
-                        var institutionPositions = new List<Colleague.Dtos.InstitutionPosition2>();
-
-                        foreach (var positionEntity in positionEntities)
-                        {
-                            institutionPositions.Add(await ConvertPositionEntityToInstitutionPositionDto3(positionEntity, bypassCache));
-                        }
-                        return new Tuple<IEnumerable<Dtos.InstitutionPosition2>, int>(institutionPositions, totalCount);
-                    }
-                    // no results
-                    return new Tuple<IEnumerable<Dtos.InstitutionPosition2>, int>(new List<Dtos.InstitutionPosition2>(), totalCount);
-                }
-                //no results
-                return new Tuple<IEnumerable<Dtos.InstitutionPosition2>, int>(new List<Dtos.InstitutionPosition2>(), 0);
             }
-            catch (Exception e)
+            catch (RepositoryException ex)
             {
-                throw new ArgumentException(e.Message);
+                IntegrationApiExceptionAddError(ex);
             }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Bad.Data");
+            }
+            var totalCount = 0;
+            var institutionPositions = new List<Colleague.Dtos.InstitutionPosition2>(); 
+            Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.Position>, int> positionEntitiesTuple = null;
+            try
+            {
+                positionEntitiesTuple = await _positionRepository.GetPositionsAsync(offset, limit, code, campusCode, status,
+                    bargainingUnitCode, positionIdFilter, exemptionType, compensationType, startOnFilter, endOnFilter, bypassCache);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+
+            if (positionEntitiesTuple != null)
+            {
+                var positionEntities = positionEntitiesTuple.Item1.ToList();
+                totalCount = positionEntitiesTuple.Item2;
+
+                if (positionEntities.Any())
+                {
+                    foreach (var positionEntity in positionEntities)
+                    {
+                        institutionPositions.Add(await ConvertPositionEntityToInstitutionPositionDto3(positionEntity, bypassCache));
+                    }
+                }
+            }
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+            
+            return new Tuple<IEnumerable<Dtos.InstitutionPosition2>, int>(institutionPositions, totalCount);
         }
 
         /// <summary>
@@ -1132,280 +1151,293 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns>A <see cref="InstitutionPosition">InstitutionPositions</see> DTO</returns>
         private async Task<InstitutionPosition2> ConvertPositionEntityToInstitutionPositionDto3(Ellucian.Colleague.Domain.HumanResources.Entities.Position positionEntity, bool bypassCache)
         {
-
+            var institutionPositionDto = new Colleague.Dtos.InstitutionPosition2();
             if (positionEntity == null)
             {
-                throw new ArgumentNullException("Position Entity is required.");
+                IntegrationApiExceptionAddError("Position Entity is required.", "Validation.Exception", "", "");
             }
-
-            if (string.IsNullOrEmpty(positionEntity.Guid))
+            else
             {
-                throw new ArgumentNullException("Position GUID is required.");
-            }
-
-            Domain.HumanResources.Entities.PositionPay currentPositionPay = null;
-            var posPayIDs = positionEntity.PositionPayScheduleIds;
-            if (posPayIDs != null && posPayIDs.Any())
-            {
-                var positionPayCollection = (await _positionRepository.GetPositionPayByIdsAsync(posPayIDs)).ToList();
-                var currentDate = DateTime.Now.Date;
-                if (positionPayCollection.Any())
+                if (string.IsNullOrEmpty(positionEntity.Guid))
                 {
-                    currentPositionPay =
-                       positionPayCollection.FirstOrDefault(posPay => !posPay.EndDate.HasValue
-                                          && posPay.StartDate <= currentDate)
-                        ?? positionPayCollection.FirstOrDefault(posPay => posPay.EndDate.HasValue
-                                          && posPay.StartDate <= currentDate && posPay.EndDate >= currentDate);
+                    IntegrationApiExceptionAddError("The position entity is missing the GUID.", "Validation.Exception", "", positionEntity.Id);
                 }
-            }
 
-            var institutionPositionDto = new Colleague.Dtos.InstitutionPosition2();
-            try
-            {
-                institutionPositionDto.Id = positionEntity.Guid;
-                institutionPositionDto.Code = positionEntity.Id;
-                institutionPositionDto.Title = positionEntity.Title;
-                institutionPositionDto.Description = string.IsNullOrWhiteSpace(positionEntity.PositionJobDesc) ? null : positionEntity.PositionJobDesc;
-
-                if (!string.IsNullOrEmpty(positionEntity.PositionLocation))
+                Domain.HumanResources.Entities.PositionPay currentPositionPay = null;
+                var posPayIDs = positionEntity.PositionPayScheduleIds;
+                if (posPayIDs != null && posPayIDs.Any())
                 {
-                    var allLocations = (await GetAllLocationsAsync(bypassCache)).ToList();
-                    if (allLocations.Any())
+                    var positionPayCollection = (await _positionRepository.GetPositionPayByIdsAsync(posPayIDs)).ToList();
+                    var currentDate = DateTime.Now.Date;
+                    if (positionPayCollection.Any())
                     {
-                        var location = allLocations.FirstOrDefault(sc => sc.Code == positionEntity.PositionLocation);
-                        if (location != null)
-                        {
-                            institutionPositionDto.Campus = new GuidObject2(location.Guid);
-                        }
+                        currentPositionPay =
+                           positionPayCollection.FirstOrDefault(posPay => !posPay.EndDate.HasValue
+                                              && posPay.StartDate <= currentDate)
+                            ?? positionPayCollection.FirstOrDefault(posPay => posPay.EndDate.HasValue
+                                              && posPay.StartDate <= currentDate && posPay.EndDate >= currentDate);
                     }
                 }
 
-                if (!string.IsNullOrEmpty(positionEntity.PositionDept))
+                //                var institutionPositionDto = new Colleague.Dtos.InstitutionPosition2();
+                try
                 {
-                    var allDepartments = (await GetAllEmploymentDepartmentsAsync(bypassCache)).ToList();
-                    if (allDepartments.Any())
+                    institutionPositionDto.Id = positionEntity.Guid;
+                    institutionPositionDto.Code = positionEntity.Id;
+                    institutionPositionDto.Title = positionEntity.Title;
+                    institutionPositionDto.Description = string.IsNullOrWhiteSpace(positionEntity.PositionJobDesc) ? null : positionEntity.PositionJobDesc;
+
+                    if (!string.IsNullOrEmpty(positionEntity.PositionLocation))
                     {
-                        var department = allDepartments.FirstOrDefault(sc => sc.Code == positionEntity.PositionDept);
-                        if (department != null)
+                        var allLocations = (await GetAllLocationsAsync(bypassCache)).ToList();
+                        if (allLocations.Any())
                         {
-                            institutionPositionDto.Departments = new List<GuidObject2>() { new GuidObject2(department.Guid) };
-                        }
-                    }                   
-
-                    if (institutionPositionDto.Departments == null || institutionPositionDto.Departments.Count == 0)
-                    {
-                        logger.Error(string.Concat("Unable to translate postition entity department {0} to a department GUID for postition {1}, id {2}, title {3}.", positionEntity.PositionDept, institutionPositionDto.Id, positionEntity.Id, positionEntity.Title));
-                    }
-                }
-
-                // If the request date is on or after the position start date (POS.START.DATE)
-                // AND the position end date (POS.END.DATE) is null or the request date is on or before the end date, 
-                // then return "active".
-                if ((DateTime.Now.Date.CompareTo(positionEntity.StartDate) >= 0)
-                    && ((!positionEntity.EndDate.HasValue) || (DateTime.Now.Date <= positionEntity.EndDate)))
-                {
-                    institutionPositionDto.Status = PositionStatus.Active;
-                }
-                //If the position start date (POS.START.DATE) is after the request date, then return "inactive".
-                else if (positionEntity.StartDate.CompareTo(DateTime.Now.Date) > 0)
-                {
-                    institutionPositionDto.Status = PositionStatus.Inactive;
-                }
-                //If the request date is after the position end date (POS.END.DATE) then return "cancelled".
-                else if ((positionEntity.EndDate.HasValue) || (DateTime.Now.Date > positionEntity.EndDate))
-                {
-                    institutionPositionDto.Status = PositionStatus.Cancelled;
-                }
-                // Default - shouldnt hit, but this is a required field
-                else
-                {
-                    throw new Exception("Unable to determine institution position status." + positionEntity.Id);
-                }
-
-                if (currentPositionPay != null)
-                {
-
-                    var accountingStrings = new List<AccountingStringAllocationsDtoProperty>();
-                    var idx = 0;
-                    foreach (var source in currentPositionPay.FundingSource)
-                    {
-                        if (!string.IsNullOrEmpty(source.FundingSourceId))
-                        {
-                            var fundingSource = source.FundingSourceId.Replace("_", "-");
-
-                            var accountAllocation = new AccountingStringAllocationsDtoProperty()
+                            var location = allLocations.FirstOrDefault(sc => sc.Code == positionEntity.PositionLocation);
+                            if (location != null && !string.IsNullOrEmpty(location.Guid))
                             {
-                                AccountingString = string.IsNullOrEmpty(source.ProjectRefNumber) ?
-                                    fundingSource : string.Concat(fundingSource, '*', source.ProjectRefNumber),
-                                AllocatedPercentage = currentPositionPay.PospayFndgPct.ElementAt(idx)
-                            };
-                            idx++;
-
-                            accountingStrings.Add(accountAllocation);
-                        }
-                    }
-                    if (accountingStrings.Any())
-                        institutionPositionDto.AccountingStringAllocations = accountingStrings;
-
-
-                    var hoursPerPeriodDtoProperties = new List<HoursPerPeriodDtoProperty>();
-                    if ((currentPositionPay.CycleWorkTimeUnits == "HRS") && (currentPositionPay.CycleWorkTimeAmount.HasValue))
-                    {
-                        hoursPerPeriodDtoProperties.Add(new HoursPerPeriodDtoProperty()
-                        {
-                            Hours = currentPositionPay.CycleWorkTimeAmount,
-                            Period = Ellucian.Colleague.Dtos.EnumProperties.PayPeriods.PayPeriod
-                        });
-                    }
-                    if ((currentPositionPay.YearWorkTimeUnits == "HRS") && (currentPositionPay.YearWorkTimeAmount.HasValue))
-                    {
-                        hoursPerPeriodDtoProperties.Add(new HoursPerPeriodDtoProperty()
-                        {
-                            Hours = currentPositionPay.YearWorkTimeAmount,
-                            Period = Ellucian.Colleague.Dtos.EnumProperties.PayPeriods.Year
-                        });
-                    }
-                    institutionPositionDto.HoursPerPeriod = hoursPerPeriodDtoProperties.Any() ? hoursPerPeriodDtoProperties : null;
-
-
-                    if (!string.IsNullOrEmpty(currentPositionPay.BargainingUnit))
-                    {
-                        var allBargainingUnits = (await GetAllGetBargainingUnitsAsync(bypassCache)).ToList();
-                        if (allBargainingUnits.Any())
-                        {
-                            var bargainingUnit = allBargainingUnits.FirstOrDefault(bu => bu.Code == currentPositionPay.BargainingUnit);
-                            if (bargainingUnit != null)
+                                institutionPositionDto.Campus = new GuidObject2(location.Guid);
+                            }
+                            else
                             {
-                                institutionPositionDto.BargainingUnit = new GuidObject2(bargainingUnit.Guid);
+                                IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the location '{0}'", positionEntity.PositionLocation), "Bad.Data", positionEntity.Guid, positionEntity.Id);
                             }
                         }
                     }
 
-                    if ((!string.IsNullOrEmpty(currentPositionPay.SalaryMinimum)) && (!string.IsNullOrEmpty(currentPositionPay.SalaryMaximum)))
+                    if (!string.IsNullOrEmpty(positionEntity.PositionDept))
                     {
-                        // Salary information may actually reflect an hourly wage that is stored up to four decimal 
-                        // places, or a salary amount that is stored up to two decimals. As a result, to publish the upper/lower Bound 
-                        // properly, we need to convert the data to the appropriate format depending on how POS.HRLY.OR.SLRY is set. 
-                        var lowerBound = FormatSalary(currentPositionPay.SalaryMinimum, positionEntity.IsSalary);
-                        var upperBound = FormatSalary(currentPositionPay.SalaryMaximum, positionEntity.IsSalary);
-
-                        var hostCountry = currentPositionPay.HostCountry;
-
-                        var currencyCode = ((hostCountry == "CAN") || (hostCountry == "CANADA")) ? CurrencyIsoCode.CAD :
-                            CurrencyIsoCode.USD;
-
-                        if ((lowerBound.HasValue) && (upperBound.HasValue))
+                        var allDepartments = (await GetAllEmploymentDepartmentsAsync(bypassCache)).ToList();
+                        if (allDepartments.Any())
                         {
-                            institutionPositionDto.Compensation = new CompensationDtoProperty
+                            var department = allDepartments.FirstOrDefault(sc => sc.Code == positionEntity.PositionDept);
+                            if (department != null && !string.IsNullOrEmpty(department.Guid))
                             {
-                                Type = positionEntity.IsSalary ? CompensationType.Salary : CompensationType.Wages,
-                                Range = new CompensationRangeDtoProperty()
+                                institutionPositionDto.Departments = new List<GuidObject2>() { new GuidObject2(department.Guid) };
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the department '{0}'", positionEntity.PositionDept), "Bad.Data", positionEntity.Guid, positionEntity.Id);
+                            }
+                        }
+
+                        if (institutionPositionDto.Departments == null || institutionPositionDto.Departments.Count == 0)
+                        {
+                            logger.Error(string.Concat("Unable to translate postition entity department {0} to a department GUID for postition {1}, id {2}, title {3}.", positionEntity.PositionDept, institutionPositionDto.Id, positionEntity.Id, positionEntity.Title));
+                        }
+                    }
+
+                    // If the request date is on or after the position start date (POS.START.DATE)
+                    // AND the position end date (POS.END.DATE) is null or the request date is on or before the end date, 
+                    // then return "active".
+                    if ((DateTime.Now.Date.CompareTo(positionEntity.StartDate) >= 0)
+                        && ((!positionEntity.EndDate.HasValue) || (DateTime.Now.Date <= positionEntity.EndDate)))
+                    {
+                        institutionPositionDto.Status = PositionStatus.Active;
+                    }
+                    //If the position start date (POS.START.DATE) is after the request date, then return "inactive".
+                    else if (positionEntity.StartDate.CompareTo(DateTime.Now.Date) > 0)
+                    {
+                        institutionPositionDto.Status = PositionStatus.Inactive;
+                    }
+                    //If the request date is after the position end date (POS.END.DATE) then return "cancelled".
+                    else if ((positionEntity.EndDate.HasValue) || (DateTime.Now.Date > positionEntity.EndDate))
+                    {
+                        institutionPositionDto.Status = PositionStatus.Cancelled;
+                    }
+                    // Default - shouldnt hit, but this is a required field
+                    else
+                    {
+                        IntegrationApiExceptionAddError("Unable to determine institution position status.", "Bad.Data", positionEntity.Guid, positionEntity.Id);
+                        //throw new Exception("Unable to determine institution position status." + positionEntity.Id);
+                    }
+
+                    if (currentPositionPay != null)
+                    {
+
+                        var accountingStrings = new List<AccountingStringAllocationsDtoProperty>();
+                        var idx = 0;
+                        foreach (var source in currentPositionPay.FundingSource)
+                        {
+                            if (!string.IsNullOrEmpty(source.FundingSourceId))
+                            {
+                                var fundingSource = source.FundingSourceId.Replace("_", "-");
+
+                                var accountAllocation = new AccountingStringAllocationsDtoProperty()
                                 {
-                                    CurrencyCode = currencyCode,
-                                    LowerBound = lowerBound,
-                                    UpperBound = upperBound
+                                    AccountingString = string.IsNullOrEmpty(source.ProjectRefNumber) ?
+                                        fundingSource : string.Concat(fundingSource, '*', source.ProjectRefNumber),
+                                    AllocatedPercentage = currentPositionPay.PospayFndgPct.ElementAt(idx)
+                                };
+                                idx++;
+
+                                accountingStrings.Add(accountAllocation);
+                            }
+                        }
+                        if (accountingStrings.Any())
+                            institutionPositionDto.AccountingStringAllocations = accountingStrings;
+
+
+                        var hoursPerPeriodDtoProperties = new List<HoursPerPeriodDtoProperty>();
+                        if ((currentPositionPay.CycleWorkTimeUnits == "HRS") && (currentPositionPay.CycleWorkTimeAmount.HasValue))
+                        {
+                            hoursPerPeriodDtoProperties.Add(new HoursPerPeriodDtoProperty()
+                            {
+                                Hours = currentPositionPay.CycleWorkTimeAmount,
+                                Period = Ellucian.Colleague.Dtos.EnumProperties.PayPeriods.PayPeriod
+                            });
+                        }
+                        if ((currentPositionPay.YearWorkTimeUnits == "HRS") && (currentPositionPay.YearWorkTimeAmount.HasValue))
+                        {
+                            hoursPerPeriodDtoProperties.Add(new HoursPerPeriodDtoProperty()
+                            {
+                                Hours = currentPositionPay.YearWorkTimeAmount,
+                                Period = Ellucian.Colleague.Dtos.EnumProperties.PayPeriods.Year
+                            });
+                        }
+                        institutionPositionDto.HoursPerPeriod = hoursPerPeriodDtoProperties.Any() ? hoursPerPeriodDtoProperties : null;
+
+
+                        if (!string.IsNullOrEmpty(currentPositionPay.BargainingUnit))
+                        {
+                            var allBargainingUnits = (await GetAllGetBargainingUnitsAsync(bypassCache)).ToList();
+                            if (allBargainingUnits.Any())
+                            {
+                                var bargainingUnit = allBargainingUnits.FirstOrDefault(bu => bu.Code == currentPositionPay.BargainingUnit);
+                                if (bargainingUnit != null)
+                                {
+                                    institutionPositionDto.BargainingUnit = new GuidObject2(bargainingUnit.Guid);
                                 }
-                            };
+                            }
                         }
-                    }
-                }
 
-                var reportsToDtoProperties = new List<ReportsToDtoProperty>();
-                if (!string.IsNullOrEmpty(positionEntity.SupervisorPositionId))
-                {
-                    try
-                    {
-                        var supervisorPositionGuid = await _positionRepository.GetPositionGuidFromIdAsync(positionEntity.SupervisorPositionId);
-                        if (!string.IsNullOrEmpty(supervisorPositionGuid))
+                        if ((!string.IsNullOrEmpty(currentPositionPay.SalaryMinimum)) && (!string.IsNullOrEmpty(currentPositionPay.SalaryMaximum)))
                         {
-                            var reportsToDtoProperty = new ReportsToDtoProperty
+                            // Salary information may actually reflect an hourly wage that is stored up to four decimal 
+                            // places, or a salary amount that is stored up to two decimals. As a result, to publish the upper/lower Bound 
+                            // properly, we need to convert the data to the appropriate format depending on how POS.HRLY.OR.SLRY is set. 
+                            var lowerBound = FormatSalary(currentPositionPay.SalaryMinimum, positionEntity.IsSalary);
+                            var upperBound = FormatSalary(currentPositionPay.SalaryMaximum, positionEntity.IsSalary);
+
+                            var hostCountry = currentPositionPay.HostCountry;
+
+                            var currencyCode = ((hostCountry == "CAN") || (hostCountry == "CANADA")) ? CurrencyIsoCode.CAD :
+                                CurrencyIsoCode.USD;
+
+                            if ((lowerBound.HasValue) && (upperBound.HasValue))
                             {
-                                Postition = new GuidObject2(supervisorPositionGuid),
-                                Type = PositionReportsToType.Primary
-                            };
-                            reportsToDtoProperties.Add(reportsToDtoProperty);
-                        }
-                    }
-                    catch (ArgumentOutOfRangeException ex)
-                    {
-                        if (logger.IsErrorEnabled)
-                        {
-                            logger.Error(ex, "Institution Position exception occurred:");
+                                institutionPositionDto.Compensation = new CompensationDtoProperty
+                                {
+                                    Type = positionEntity.IsSalary ? CompensationType.Salary : CompensationType.Wages,
+                                    Range = new CompensationRangeDtoProperty()
+                                    {
+                                        CurrencyCode = currencyCode,
+                                        LowerBound = lowerBound,
+                                        UpperBound = upperBound
+                                    }
+                                };
+                            }
                         }
                     }
 
-                }
-                if (!string.IsNullOrEmpty(positionEntity.AlternateSupervisorPositionId))
-                {
-                    try
+                    var reportsToDtoProperties = new List<ReportsToDtoProperty>();
+                    if (!string.IsNullOrEmpty(positionEntity.SupervisorPositionId))
                     {
-                        var altSupervisorPositionGuid = await _positionRepository.GetPositionGuidFromIdAsync(positionEntity.AlternateSupervisorPositionId);
-                        if (!string.IsNullOrEmpty(altSupervisorPositionGuid))
+                        try
                         {
-                            var reportsToDtoProperty = new ReportsToDtoProperty
+                            var supervisorPositionGuid = await _positionRepository.GetPositionGuidFromIdAsync(positionEntity.SupervisorPositionId);
+                            if (!string.IsNullOrEmpty(supervisorPositionGuid))
                             {
-                                Postition = new GuidObject2(altSupervisorPositionGuid),
-                                Type = PositionReportsToType.Alternative
-                            };
-                            reportsToDtoProperties.Add(reportsToDtoProperty);
+                                var reportsToDtoProperty = new ReportsToDtoProperty
+                                {
+                                    Postition = new GuidObject2(supervisorPositionGuid),
+                                    Type = PositionReportsToType.Primary
+                                };
+                                reportsToDtoProperties.Add(reportsToDtoProperty);
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the supervisor position '{0}'", positionEntity.SupervisorPositionId), "Bad.Data", positionEntity.Guid, positionEntity.Id);
+                            }
                         }
-                    }
-                    catch (ArgumentOutOfRangeException ex)
-                    {
-                        if (logger.IsErrorEnabled)
+                        catch (ArgumentOutOfRangeException ex)
                         {
-                            logger.Error(ex, "Institution Position exception occurred:");
+                            IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the supervisor position '{0}'", positionEntity.SupervisorPositionId), "Bad.Data", positionEntity.Guid, positionEntity.Id);
+                            if (logger.IsErrorEnabled)
+                            {
+                                logger.Error(ex, "Institution Position exception occurred:");
+                            }
                         }
                     }
-                }
-                institutionPositionDto.ReportsTo = reportsToDtoProperties.Any() ? reportsToDtoProperties : null;
-
-
-                institutionPositionDto.ExemptionType = positionEntity.IsExempt ? ExemptionType.Exempt : ExemptionType.NonExempt;
-
-                institutionPositionDto.StartOn = positionEntity.StartDate;
-                institutionPositionDto.EndOn = positionEntity.EndDate;
-                institutionPositionDto.AuthorizedOn = positionEntity.PositionAuthorizedDate;
-
-                if (!string.IsNullOrEmpty(positionEntity.PositionClass))
-                {
-                    var allStudentClassification = (await GetAllEmploymentClassificationAsync(bypassCache)).ToList();
-                    if (allStudentClassification.Any())
+                    if (!string.IsNullOrEmpty(positionEntity.AlternateSupervisorPositionId))
                     {
-                        var studentClassification = allStudentClassification.FirstOrDefault(sc => sc.Code == positionEntity.PositionClass);
-                        if (studentClassification != null)
+                        try
                         {
-                            institutionPositionDto.Classification = new GuidObject2(studentClassification.Guid);
+                            var altSupervisorPositionGuid = await _positionRepository.GetPositionGuidFromIdAsync(positionEntity.AlternateSupervisorPositionId);
+                            if (!string.IsNullOrEmpty(altSupervisorPositionGuid))
+                            {
+                                var reportsToDtoProperty = new ReportsToDtoProperty
+                                {
+                                    Postition = new GuidObject2(altSupervisorPositionGuid),
+                                    Type = PositionReportsToType.Alternative
+                                };
+                                reportsToDtoProperties.Add(reportsToDtoProperty);
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the alternate supervisor position '{0}'", positionEntity.AlternateSupervisorPositionId), "Bad.Data", positionEntity.Guid, positionEntity.Id);
+                            }
+                        }
+                        catch (ArgumentOutOfRangeException ex)
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the alternate supervisor position '{0}'", positionEntity.AlternateSupervisorPositionId), "Bad.Data", positionEntity.Guid, positionEntity.Id);
+                            if (logger.IsErrorEnabled)
+                            {
+                                logger.Error(ex, "Institution Position exception occurred:");
+                            }
+                        }
+                    }
+                    institutionPositionDto.ReportsTo = reportsToDtoProperties.Any() ? reportsToDtoProperties : null;
+                    institutionPositionDto.ExemptionType = positionEntity.IsExempt ? ExemptionType.Exempt : ExemptionType.NonExempt;
+                    institutionPositionDto.StartOn = positionEntity.StartDate;
+                    institutionPositionDto.EndOn = positionEntity.EndDate;
+                    institutionPositionDto.AuthorizedOn = positionEntity.PositionAuthorizedDate;
+
+                    if (!string.IsNullOrEmpty(positionEntity.PositionClass))
+                    {
+                        var allStudentClassification = (await GetAllEmploymentClassificationAsync(bypassCache)).ToList();
+                        if (allStudentClassification.Any())
+                        {
+                            var studentClassification = allStudentClassification.FirstOrDefault(sc => sc.Code == positionEntity.PositionClass);
+                            if (studentClassification != null && !string.IsNullOrEmpty(studentClassification.Guid))
+                            {
+                                institutionPositionDto.Classification = new GuidObject2(studentClassification.Guid);
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the position classification '{0}'", positionEntity.PositionClass), "Bad.Data", positionEntity.Guid, positionEntity.Id);
+                            }
                         }
                     }
                 }
-
-                return institutionPositionDto;
-            }
-            catch (Exception ex)
-            {
-                if (logger.IsErrorEnabled)
+                catch (RepositoryException ex)
                 {
-                    logger.Error(ex, "Institution Position exception occurred:");
+                    IntegrationApiExceptionAddError(ex, "Bad.Data", positionEntity.Guid, positionEntity.Id);
                 }
-                throw new Exception("Institution Position exception occurred." + ex.Message);
+                catch (Exception ex)
+                {
+                    if (logger.IsErrorEnabled)
+                    {
+                        logger.Error(ex, "Institution Position exception occurred:");
+                    }
+                    IntegrationApiExceptionAddError(string.Format("Unable to retrieve the institution-positions resource. {0}", ex.Message), "Bad.Data", positionEntity.Guid, positionEntity.Id);
+                    //throw new Exception("Institution Position exception occurred." + ex.Message);
+                }
             }
+
+            return institutionPositionDto;
         }
 
-        /// <summary>
-        /// Helper method to determine if the user has permission to view Institution Position.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckGetInstitutionPositionsPermission()
-        {
-            var hasPermission = HasPermission(HumanResourcesPermissionCodes.ViewInstitutionPosition);
-
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view Institution Position.");
-            }
-        }
-
+      
         private Decimal? FormatSalary(string amount, bool isSalary)
         {
             if (string.IsNullOrWhiteSpace(amount) || amount == "0") return null;

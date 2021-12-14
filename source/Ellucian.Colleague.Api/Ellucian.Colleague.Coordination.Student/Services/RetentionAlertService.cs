@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using slf4net;
@@ -25,6 +25,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
     {
         private readonly IReferenceDataRepository _referenceDataRepository;
         private readonly IRetentionAlertRepository _retentionAlertRepository;
+        private readonly IPersonBaseRepository _personBaseRepository;
+        private readonly IRoleRepository _roleRepository;
         private readonly ILogger _logger;
 
         /// <summary>
@@ -38,11 +40,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="roleRepository"></param>
         /// <param name="logger"></param>
         public RetentionAlertService(IAdapterRegistry adapterRegistry, IReferenceDataRepository referenceDataRepository, IStudentRepository studentRepository,IConfigurationRepository configurationRepository,
-            ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger, IRetentionAlertRepository retentionAlertRepository)
+            ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, IPersonBaseRepository personBaseRepository, ILogger logger, IRetentionAlertRepository retentionAlertRepository)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, studentRepository:studentRepository, configurationRepository: configurationRepository)
         {
             _referenceDataRepository = referenceDataRepository;
             _retentionAlertRepository = retentionAlertRepository;
+            _personBaseRepository = personBaseRepository;
+            _roleRepository = roleRepository;
             _logger = logger;
         }
 
@@ -364,6 +368,143 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             foreach (var retentionAlertCase in retentionAlertCollection)
             {
+                retentionAlertTypeDtoCollection.Add(retentionAlertDtoAdapter.MapToType(retentionAlertCase));
+            }
+            return retentionAlertTypeDtoCollection;
+        }
+
+        /// <summary>
+        /// Retrieves retention alert work cases
+        /// </summary>
+        /// <param name="retentionAlertQueryCriteria">Retention Alert Query Criteria</param>
+        /// <returns>Retention Alert Work Case 2 List</returns>
+        public async Task<IEnumerable<RetentionAlertWorkCase2>> GetRetentionAlertCases2Async(RetentionAlertQueryCriteria retentionAlertQueryCriteria)
+        {
+            var retentionAlertTypeDtoCollection = new List<RetentionAlertWorkCase2>();
+
+            await CheckforWorkCasePermission();
+            List<string> roles = CurrentUser.Roles.ToList();
+            IEnumerable<Domain.Entities.Role> rolesMaster = (await _roleRepository.GetRolesAsync());
+            IEnumerable<string> roleIds = rolesMaster.Where(r => roles.Contains(r.Title)).Select(r=>r.Id.ToString());
+            List<Domain.Base.Entities.RetentionAlertWorkCase2> retentionAlertCollection;
+            if (!string.IsNullOrEmpty(retentionAlertQueryCriteria.StudentSearchKeyword))
+            {
+                // Remove extra blank spaces
+                var tempString = retentionAlertQueryCriteria.StudentSearchKeyword.Trim();
+                Regex regEx = new Regex(@"\s+");
+                retentionAlertQueryCriteria.StudentSearchKeyword = regEx.Replace(tempString, @" ");
+
+                // If search string is a numeric ID and it is for a particular student, return only that
+                double personId;
+                bool isId = double.TryParse(retentionAlertQueryCriteria.StudentSearchKeyword, out personId);
+
+                if (isId)
+                {
+                    retentionAlertCollection = await _retentionAlertRepository.GetRetentionAlertCases2Async(CurrentUser.PersonId, new List<string>() { retentionAlertQueryCriteria.StudentSearchKeyword }, retentionAlertQueryCriteria.CaseIds, roleIds, retentionAlertQueryCriteria.IsIncludeClosedCases);
+                }
+                else
+                {
+                    // Otherwise, we are doing a name search of students - parse the search string into name parts
+                    string lastName = null;
+                    string firstName = null;
+                    string middleName = null;
+                    // Regular expression for all punctuation and numbers to remove from name string
+                    Regex regexNotPunc = new Regex(@"[!-&(-,.-@[-`{-~]");
+                    Regex regexNotSpace = new Regex(@"\s");
+
+                    var nameStrings = retentionAlertQueryCriteria.StudentSearchKeyword.Split(',');
+                    // If there was a comma, set the first item to last name
+                    if (nameStrings.Count() > 1)
+                    {
+                        lastName = nameStrings.ElementAt(0).Trim();
+                        if (nameStrings.Count() >= 2)
+                        {
+                            // parse the two items after  (last) or (first last) or (first middle last). 
+                        // Blank values don't hurt anything.the comma using a space. Ignore anything else
+                            var nameStrings2 = nameStrings.ElementAt(1).Trim().Split(' ');
+                            if (nameStrings2.Count() >= 1) { firstName = nameStrings2.ElementAt(0).Trim(); }
+                            if (nameStrings2.Count() >= 2) { middleName = nameStrings2.ElementAt(1).Trim(); }
+                        }
+                    }
+                    else
+                    {
+                        // Parse entry using spaces, assume entered
+                        nameStrings = retentionAlertQueryCriteria.StudentSearchKeyword.Split(' ');
+                        switch (nameStrings.Count())
+                        {
+                            case 1:
+                                lastName = nameStrings.ElementAt(0).Trim();
+                                break;
+                            case 2:
+                                firstName = nameStrings.ElementAt(0).Trim();
+                                lastName = nameStrings.ElementAt(1).Trim();
+                                break;
+                            default:
+                                firstName = nameStrings.ElementAt(0).Trim();
+                                middleName = nameStrings.ElementAt(1).Trim();
+                                lastName = nameStrings.ElementAt(2).Trim();
+                                break;
+                        }
+                    }
+                    // Remove characters that won't make sense for each name part, including all punctuation and numbers 
+                    if (lastName != null)
+                    {
+                        lastName = regexNotPunc.Replace(lastName, "");
+                        lastName = regexNotSpace.Replace(lastName, "");
+                    }
+                    if (firstName != null)
+                    {
+                        firstName = regexNotPunc.Replace(firstName, "");
+                        firstName = regexNotSpace.Replace(firstName, "");
+                    }
+                    if (middleName != null)
+                    {
+                        middleName = regexNotPunc.Replace(middleName, "");
+                        middleName = regexNotSpace.Replace(middleName, "");
+                    }
+
+                    var matchingStudents = await _retentionAlertRepository.SearchStudentsByNameForExactMatchAsync(lastName, firstName, middleName);
+
+                    if (matchingStudents.Any())
+                    {
+
+                        retentionAlertCollection = await _retentionAlertRepository.GetRetentionAlertCases2Async(CurrentUser.PersonId, matchingStudents, retentionAlertQueryCriteria.CaseIds, roleIds, retentionAlertQueryCriteria.IsIncludeClosedCases);
+                    }
+                    else
+                    {
+                        retentionAlertQueryCriteria.CaseIds = new List<string>() { "" };
+                        retentionAlertCollection = await _retentionAlertRepository.GetRetentionAlertCases2Async(CurrentUser.PersonId, null, retentionAlertQueryCriteria.CaseIds, roleIds, retentionAlertQueryCriteria.IsIncludeClosedCases);
+                    }
+                }
+            }
+            else
+            {
+                retentionAlertCollection = await _retentionAlertRepository.GetRetentionAlertCases2Async(CurrentUser.PersonId, null, retentionAlertQueryCriteria.CaseIds, roleIds, retentionAlertQueryCriteria.IsIncludeClosedCases);
+            }
+
+            // Get the right adapter for the type mapping
+            var retentionAlertDtoAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.RetentionAlertWorkCase2, RetentionAlertWorkCase2>();
+
+            List<string> roleOwners = (retentionAlertCollection != null && retentionAlertCollection.Any()) ? 
+                                    retentionAlertCollection.Where(x => x.CaseOwnerIds != null && x.CaseOwnerIds.Any()).SelectMany(x => x.CaseOwnerIds).ToList() : new List<string>();
+
+            var personBaseObjects = roleOwners.Any() ? await _personBaseRepository.GetPersonsBaseAsync(roleOwners.Distinct()) : null;
+
+            foreach (var retentionAlertCase in retentionAlertCollection)
+            {
+                List<string> caseOwners = new List<string>();
+                if(personBaseObjects != null && personBaseObjects.Any() && retentionAlertCase.CaseOwnerIds.Any())
+                {
+                    caseOwners.AddRange(personBaseObjects.Where(p => retentionAlertCase.CaseOwnerIds.Contains(p.Id)).Select(p => (p.FirstName + " " + p.LastName)).ToList());
+                }
+                if (retentionAlertCase.CaseRoleIds.Any())
+                {
+                    caseOwners.AddRange(rolesMaster.Where(r => retentionAlertCase.CaseRoleIds.Contains(r.Id)).Select(r => r.Title).ToList());
+                }
+
+                if (caseOwners.Any())
+                    retentionAlertCase.CaseOwner = string.Join("; ", caseOwners);
+
                 retentionAlertTypeDtoCollection.Add(retentionAlertDtoAdapter.MapToType(retentionAlertCase));
             }
             return retentionAlertTypeDtoCollection;

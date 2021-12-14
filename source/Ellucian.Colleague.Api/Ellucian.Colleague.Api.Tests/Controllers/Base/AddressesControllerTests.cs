@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -22,6 +22,11 @@ using Ellucian.Colleague.Api.Controllers.Base;
 using System.Net.Http.Headers;
 using Ellucian.Web.Http.Models;
 using Newtonsoft.Json.Linq;
+using System.Web.Http.Routing;
+using System.Collections;
+using Ellucian.Web.Http.Filters;
+using System.Web.Http.Controllers;
+using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 {
@@ -283,6 +288,188 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             addressesServiceMock.Setup(i => i.GetAddressesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
             await addressesController.GetAddressesAsync(It.IsAny<Paging>());
         }
+
+
+        //GET v11.1.0 / v11
+        //Successful
+        //GetAddresses2Async
+
+        [TestMethod]
+        public async Task AddressesController_GetAddresses2Async_Permissions()
+        {
+            var AddressesTuple = new Tuple<IEnumerable<Dtos.Addresses>, int>(addressesCollection.Take(4), addressesCollection.Count());
+            int Offset = 0;
+            int Limit = 4;
+            Paging paging = new Paging(Limit, Offset);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Addresses" },
+                    { "action", "GetAddresses2Async" }
+                };
+            HttpRoute route = new HttpRoute("addresses", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            addressesController.Request.SetRouteData(data);
+            addressesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BasePermissionCodes.ViewAddress, BasePermissionCodes.UpdateAddress });
+
+            var controllerContext = addressesController.ControllerContext;
+            var actionDescriptor = addressesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+
+            addressesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            addressesServiceMock.Setup(i => i.GetAddresses2Async(Offset, Limit, It.IsAny<string>(), false)).ReturnsAsync(AddressesTuple);
+            var actuals = await addressesController.GetAddresses2Async(paging, It.IsAny<QueryStringFilter>());
+
+            Object filterObject;
+            addressesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewAddress));
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdateAddress));
+
+        }
+
+        //GET v11.1.0 / v11
+        //Exception
+        //GetAddresses2Async
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AddressesController_GetAddresses2Async_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Addresses" },
+                    { "action", "GetAddresses2Async" }
+                };
+            HttpRoute route = new HttpRoute("addresses", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            addressesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = addressesController.ControllerContext;
+            var actionDescriptor = addressesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                addressesServiceMock.Setup(i => i.GetAddresses2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), false)).ThrowsAsync(new PermissionsException());
+                addressesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view Addresses."));
+                await addressesController.GetAddresses2Async(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET v6
+        //Successful
+        //GetAddressesAsync
+
+        [TestMethod]
+        public async Task AddressesController_GetAddressesAsync_Permissions()
+        {
+            int Offset = 0;
+            int Limit = 4;
+            var AddressesTuple = new Tuple<IEnumerable<Dtos.Addresses>, int>(addressesCollection.Take(4), addressesCollection.Count());
+            Paging paging = new Paging(Limit, Offset);
+
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Addresses" },
+                    { "action", "GetAddressesAsync" }
+                };
+            HttpRoute route = new HttpRoute("addresses", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            addressesController.Request.SetRouteData(data);
+            addressesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BasePermissionCodes.ViewAddress, BasePermissionCodes.UpdateAddress });
+
+            var controllerContext = addressesController.ControllerContext;
+            var actionDescriptor = addressesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            addressesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            addressesServiceMock.Setup(i => i.GetAddressesAsync(Offset, Limit, false)).ReturnsAsync(AddressesTuple);
+            var actuals = await addressesController.GetAddressesAsync(paging);
+
+            Object filterObject;
+            addressesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewAddress));
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdateAddress));
+
+        }
+
+        //GET v6
+        //Exception
+        //GetAddressesAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AddressesController_GetAddressesAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Addresses" },
+                    { "action", "GetAddressesAsync" }
+                };
+            HttpRoute route = new HttpRoute("addresses", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            addressesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = addressesController.ControllerContext;
+            var actionDescriptor = addressesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                addressesServiceMock.Setup(i => i.GetAddressesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                addressesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view Addresses."));
+                await addressesController.GetAddressesAsync(It.IsAny<Paging>());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
+
         #endregion
 
         #region GetAddressesByGuid
@@ -388,6 +575,177 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             await addressesController.GetAddressByGuidAsync(usAddressGuid);
         }
 
+        //GET by id v11.1.0 / v11
+        //Successful
+        //GetAddressByGuid2Async
+
+        [TestMethod]
+        public async Task AddressesController_GetAddressByGuid2Async_Permissions()
+        {
+            var expected = addressesCollection.FirstOrDefault(x => x.Id == usAddressGuid);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Addresses" },
+                    { "action", "GetAddressByGuid2Async" }
+                };
+            HttpRoute route = new HttpRoute("addresses", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            addressesController.Request.SetRouteData(data);
+            addressesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BasePermissionCodes.ViewAddress, BasePermissionCodes.UpdateAddress });
+
+            var controllerContext = addressesController.ControllerContext;
+            var actionDescriptor = addressesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            addressesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            addressesServiceMock.Setup(x => x.GetAddressesByGuid2Async(usAddressGuid)).ReturnsAsync(expected);
+            var actual = await addressesController.GetAddressByGuid2Async(usAddressGuid);
+
+            Object filterObject;
+            addressesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewAddress));
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdateAddress));
+
+        }
+
+        //GET by id v11.1.0 / v11
+        //Exception
+        //GetAddressByGuid2Async
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AddressesController_GetAddressByGuid2Async_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Addresses" },
+                    { "action", "GetAddressByGuid2Async" }
+                };
+            HttpRoute route = new HttpRoute("addresses", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            addressesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = addressesController.ControllerContext;
+            var actionDescriptor = addressesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                addressesServiceMock.Setup(x => x.GetAddressesByGuid2Async(It.IsAny<string>())).Throws<PermissionsException>();
+                addressesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view Addresses."));
+                await addressesController.GetAddressByGuid2Async(usAddressGuid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET by id v6
+        //Successful
+        //GetAddressByGuidAsync
+
+        [TestMethod]
+        public async Task AddressesController_GetAddressByGuidAsync_Permissions()
+        {
+            var expected = addressesCollection.FirstOrDefault(x => x.Id == usAddressGuid);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Addresses" },
+                    { "action", "GetAddressByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("addresses", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            addressesController.Request.SetRouteData(data);
+            addressesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BasePermissionCodes.ViewAddress, BasePermissionCodes.UpdateAddress });
+
+            var controllerContext = addressesController.ControllerContext;
+            var actionDescriptor = addressesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            addressesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            addressesServiceMock.Setup(x => x.GetAddressesByGuidAsync(usAddressGuid)).ReturnsAsync(expected);
+            var actual = await addressesController.GetAddressByGuidAsync(usAddressGuid);
+
+            Object filterObject;
+            addressesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.ViewAddress));
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdateAddress));
+
+        }
+
+        //GET by id v6
+        //Exception
+        //GetAddressByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AddressesController_GetAddressByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Addresses" },
+                    { "action", "GetAddressByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("addresses", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            addressesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = addressesController.ControllerContext;
+            var actionDescriptor = addressesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                addressesServiceMock.Setup(x => x.GetAddressesByGuidAsync(It.IsAny<string>())).Throws<PermissionsException>();
+                addressesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view Addresses."));
+                await addressesController.GetAddressByGuidAsync(usAddressGuid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion  GetAddressesByGuid
 
         #region PutAddressAsync
@@ -491,6 +849,91 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
             await addressesController.PutAddressAsync(usAddressGuid, new Dtos.Addresses());
         }
 
+        //Put v6
+        //Successful
+        //PutAddressAsync
+
+        [TestMethod]
+        public async Task AddressesController_PutAddressAsync_Permissions()
+        {
+            var expected = addressesCollection.FirstOrDefault(x => x.Id == usAddressGuid);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Addresses" },
+                    { "action", "PutAddressAsync" }
+                };
+            HttpRoute route = new HttpRoute("addresses", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            addressesController.Request.SetRouteData(data);
+            addressesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(BasePermissionCodes.UpdateAddress);
+
+            var controllerContext = addressesController.ControllerContext;
+            var actionDescriptor = addressesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            addressesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            addressesServiceMock.Setup(x => x.PutAddressesAsync(usAddressGuid, It.IsAny<Dtos.Addresses>())).ReturnsAsync(expected);
+            var actual = await addressesController.PutAddressAsync(usAddressGuid, expected);
+
+            Object filterObject;
+            addressesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdateAddress));
+
+        }
+
+        //Put v6
+        //Exception
+        //PutAddressAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AddressesController_PutAddressAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Addresses" },
+                    { "action", "PutAddressAsync" }
+                };
+            HttpRoute route = new HttpRoute("addresses", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            addressesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = addressesController.ControllerContext;
+            var actionDescriptor = addressesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                addressesServiceMock.Setup(x => x.PutAddressesAsync(It.IsAny<string>(), It.IsAny<Dtos.Addresses>())).Throws<PermissionsException>();
+                addressesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to update Addresses."));
+                await addressesController.PutAddressAsync(usAddressGuid, new Dtos.Addresses());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
         #endregion
 
         #region PutAddress2Async
@@ -592,6 +1035,89 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
 
             addressesServiceMock.Setup(x => x.PutAddresses2Async(It.IsAny<string>(), It.IsAny<Dtos.Addresses>())).Throws<Exception>();
             await addressesController.PutAddress2Async(usAddressGuid, new Dtos.Addresses());
+        }
+
+        //Put v11.1.0 / v11
+        //Successful
+        //PutAddress2Async
+
+        [TestMethod]
+        public async Task AddressesController_PutAddress2Async_Permissions()
+        {
+            var expected = addressesCollection.FirstOrDefault(x => x.Id == usAddressGuid);
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Addresses" },
+                    { "action", "PutAddress2Async" }
+                };
+            HttpRoute route = new HttpRoute("addresses", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            addressesController.Request.SetRouteData(data);
+            addressesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(BasePermissionCodes.UpdateAddress);
+
+            var controllerContext = addressesController.ControllerContext;
+            var actionDescriptor = addressesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            addressesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            addressesServiceMock.Setup(x => x.PutAddresses2Async(usAddressGuid, It.IsAny<Dtos.Addresses>())).ReturnsAsync(expected);
+            var actual = await addressesController.PutAddress2Async(usAddressGuid, expected);
+
+            Object filterObject;
+            addressesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BasePermissionCodes.UpdateAddress));
+
+        }
+
+        //Put v11.1.0 / v11
+        //Exception
+        //PutAddress2Async
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task AddressesController_PutAddress2Async_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Addresses" },
+                    { "action", "PutAddress2Async" }
+                };
+            HttpRoute route = new HttpRoute("addresses", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            addressesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = addressesController.ControllerContext;
+            var actionDescriptor = addressesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                addressesServiceMock.Setup(x => x.PutAddresses2Async(It.IsAny<string>(), It.IsAny<Dtos.Addresses>())).Throws<PermissionsException>();
+                addressesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to update Addresses."));
+                await addressesController.PutAddress2Async(usAddressGuid, new Dtos.Addresses());
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
         }
 
         #endregion
@@ -697,16 +1223,6 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Base
         #endregion
 
         #region DeleteAddressAsync
-
-        [TestMethod]
-        [ExpectedException(typeof(HttpResponseException))]
-        public async Task AddressesController_DeleteAddressAsync_US()
-        {
-            var expected = addressesCollection.FirstOrDefault(x => x.Id == usAddressGuid);
-            addressesServiceMock.Setup(x => x.DeleteAddressesAsync(usAddressGuid));
-
-            await addressesController.DeleteAddressAsync(usAddressGuid);
-        }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]

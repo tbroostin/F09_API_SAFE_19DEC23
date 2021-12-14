@@ -52,7 +52,7 @@ namespace Ellucian.Colleague.Dtos.DtoProperties
         /// The number of units specified for the line item.
         /// </summary>
         [DataMember(Name = "quantity", EmitDefaultValue = false)]
-        public decimal Quantity { get; set; }
+        public decimal? Quantity { get; set; }
 
         /// <summary>
         /// The number of units for the line item as specified by the vendor.

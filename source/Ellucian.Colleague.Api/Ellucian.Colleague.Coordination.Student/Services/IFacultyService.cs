@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Dtos.Student;
 using System;
@@ -55,7 +55,21 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="bestFit">Optional, true assigns a term to any non-term section based on the section start date. Defaults to false.</param>
         /// <param name="useCache">Flag indicating whether or not to use cached <see cref="Section3">course section</see> data. Defaults to true.</param>
         /// <returns>Collection of requested Section3 DTOs</returns>
+        [Obsolete("Obsolete as of API 1.31. Use latest version of this method.")]
         Task<PrivacyWrapper<IEnumerable<Section3>>> GetFacultySections4Async(string facultyId, DateTime? startDate, DateTime? endDate, bool bestFit, bool useCache = true);
+
+        /// <summary>
+        /// Get a list of sections taught by faculty ID based on a date range or system parameters. If a start date is not specified sections will be returned based on 
+        /// the allowed terms specified on Registration Web Parameters (RGWP), Class Schedule Web Parameters (CSWP) and Grading Web Parameters (GRWP).
+        /// </summary>
+        /// <param name="facultyId">A faculty ID - if not supplied an empty list of sections is returned.</param>
+        /// <param name="startDate">Optional, startDate, ISO-8601, yyyy-mm-dd</param>
+        /// <param name="endDate">Optional, endDate, ISO-8601, yyyy-mm-dd. If a start date is specified but end date is not, it will default to 90 days past start date. It must be greater than start date if specified, otherwise it will default to 90 days past start.</param>
+        /// <param name="bestFit">Optional, true assigns a term to any non-term section based on the section start date. Defaults to false.</param>
+        /// <param name="useCache">Flag indicating whether or not to use cached <see cref="Section3">course section</see> data. Defaults to true.</param>
+        /// <returns>Collection of requested Section3 DTOs</returns>
+        Task<PrivacyWrapper<IEnumerable<Section4>>> GetFacultySections5Async(string facultyId, DateTime? startDate, DateTime? endDate, bool bestFit, bool useCache = true);
+
         Task<IEnumerable<Faculty>> QueryFacultyAsync(FacultyQueryCriteria criteria);
         Task<IEnumerable<Faculty>> GetFacultyByIdsAsync(IEnumerable<string> facultyIds);
         Task<IEnumerable<string>> SearchFacultyIdsAsync(bool facultyOnlyFlag, bool advisorOnlyFlag);

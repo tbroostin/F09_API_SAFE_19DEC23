@@ -1,4 +1,4 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 
 using System;
@@ -124,23 +124,23 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             #endregion
 
-            [TestMethod]
-            [ExpectedException(typeof(IntegrationApiException))]
-            public async Task SectionInstructorsService_GetSectionInstructorsAsync_PermissionException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+            //[TestMethod]
+            //[ExpectedException(typeof(IntegrationApiException))]
+            //public async Task SectionInstructorsService_GetSectionInstructorsAsync_PermissionException()
+            //{
+            //    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
 
-                try
-                {
-                    await service.GetSectionInstructorsAsync(offset, limit, "", "", new List<string>());
-                }
-                catch (IntegrationApiException ex)
-                {
-                    Assert.IsNotNull(ex.Errors);
-                    Assert.AreEqual("User 'StudentPO' is not authorized to create or view section-instructors.", ex.Errors[0].Message);
-                    throw;
-                }
-            }
+            //    try
+            //    {
+            //        await service.GetSectionInstructorsAsync(offset, limit, "", "", new List<string>());
+            //    }
+            //    catch (IntegrationApiException ex)
+            //    {
+            //        Assert.IsNotNull(ex.Errors);
+            //        Assert.AreEqual("User 'StudentPO' is not authorized to create or view section-instructors.", ex.Errors[0].Message);
+            //        throw;
+            //    }
+            //}
 
             [TestMethod]
             public async Task SectionInstructorsService_GetSectionInstructorsAsync()
@@ -151,23 +151,23 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.AreEqual(1, result.Item1.Count());
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(IntegrationApiException))]
-            public async Task SectionInstructorsService_GetSectionInstructorsByGuidAsync_PermissionException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+            //[TestMethod]
+            //[ExpectedException(typeof(IntegrationApiException))]
+            //public async Task SectionInstructorsService_GetSectionInstructorsByGuidAsync_PermissionException()
+            //{
+            //    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
 
-                try
-                {
-                    await service.GetSectionInstructorsByGuidAsync(guid);
-                }
-                catch (IntegrationApiException ex)
-                {
-                    Assert.IsNotNull(ex.Errors);
-                    Assert.AreEqual("User 'StudentPO' is not authorized to create or view section-instructors.", ex.Errors[0].Message);
-                    throw;
-                }
-            }
+            //    try
+            //    {
+            //        await service.GetSectionInstructorsByGuidAsync(guid);
+            //    }
+            //    catch (IntegrationApiException ex)
+            //    {
+            //        Assert.IsNotNull(ex.Errors);
+            //        Assert.AreEqual("User 'StudentPO' is not authorized to create or view section-instructors.", ex.Errors[0].Message);
+            //        throw;
+            //    }
+            //}
 
             [TestMethod]
             [ExpectedException(typeof(IntegrationApiException))]
@@ -296,22 +296,22 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             #endregion
 
-            [TestMethod]
-            [ExpectedException(typeof(IntegrationApiException))]
-            public async Task SectionInstructorsService_CreateSectionInstructorsAsync_IntegrationApiException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                try
-                {
-                    await service.CreateSectionInstructorsAsync(sectionInstructor);
-                }
-                catch (IntegrationApiException ex)
-                {
-                    Assert.IsNotNull(ex.Errors);
-                    Assert.AreEqual("User StudentPO does not have permission to create or update section-instructors.", ex.Errors[0].Message);
-                    throw;
-                }
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(IntegrationApiException))]
+            //public async Task SectionInstructorsService_CreateSectionInstructorsAsync_IntegrationApiException()
+            //{
+            //    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+            //    try
+            //    {
+            //        await service.CreateSectionInstructorsAsync(sectionInstructor);
+            //    }
+            //    catch (IntegrationApiException ex)
+            //    {
+            //        Assert.IsNotNull(ex.Errors);
+            //        Assert.AreEqual("User StudentPO does not have permission to create or update section-instructors.", ex.Errors[0].Message);
+            //        throw;
+            //    }
+            //}
 
             [TestMethod]
             [ExpectedException(typeof(IntegrationApiException))]
@@ -390,7 +390,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionInstructorsService_CreateSectionInstructorsAsync_DtoToEntity_IntegrationApiException_InstMethods_Null()
             {
-                referenceDataRepositoryMock.Setup(s => s.GetInstructionalMethodsAsync(false)).ReturnsAsync(null);
+                referenceDataRepositoryMock.Setup(s => s.GetInstructionalMethodsAsync(false)).ReturnsAsync(() => null);
                 try
                 {
                     await service.CreateSectionInstructorsAsync(sectionInstructor);
@@ -410,7 +410,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 sectionInstructor.InstructionalMethod = null;
 
-                sectionRepositoryMock.Setup(s => s.PostSectionFacultyAsync(It.IsAny<SectionFaculty>(), It.IsAny<string>())).ReturnsAsync(null);
+                sectionRepositoryMock.Setup(s => s.PostSectionFacultyAsync(It.IsAny<SectionFaculty>(), It.IsAny<string>())).ReturnsAsync(() => null);
                 try
                 {
                     await service.CreateSectionInstructorsAsync(sectionInstructor);
@@ -544,22 +544,22 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             #endregion
 
-            [TestMethod]
-            [ExpectedException(typeof(IntegrationApiException))]
-            public async Task SectionInstructorsService_UpdateSectionInstructorsAsync_IntegrationApiException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                try
-                {
-                    await service.UpdateSectionInstructorsAsync(guid, sectionInstructor);
-                }
-                catch (IntegrationApiException ex)
-                {
-                    Assert.IsNotNull(ex.Errors);
-                    Assert.AreEqual("User StudentPO does not have permission to create or update section-instructors.", ex.Errors[0].Message);
-                    throw;
-                }
-            }
+            //[TestMethod]
+            //[ExpectedException(typeof(IntegrationApiException))]
+            //public async Task SectionInstructorsService_UpdateSectionInstructorsAsync_IntegrationApiException()
+            //{
+            //    roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+            //    try
+            //    {
+            //        await service.UpdateSectionInstructorsAsync(guid, sectionInstructor);
+            //    }
+            //    catch (IntegrationApiException ex)
+            //    {
+            //        Assert.IsNotNull(ex.Errors);
+            //        Assert.AreEqual("User StudentPO does not have permission to create or update section-instructors.", ex.Errors[0].Message);
+            //        throw;
+            //    }
+            //}
 
             [TestMethod]
             [ExpectedException(typeof(IntegrationApiException))]
@@ -639,7 +639,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(IntegrationApiException))]
             public async Task SectionInstructorsService_UpdateSectionInstructorsAsync_DtoToEntity_IntegrationApiException_InstMethods_Null()
             {
-                referenceDataRepositoryMock.Setup(s => s.GetInstructionalMethodsAsync(false)).ReturnsAsync(null);
+                referenceDataRepositoryMock.Setup(s => s.GetInstructionalMethodsAsync(false)).ReturnsAsync(() => null);
                 try
                 {
                     await service.UpdateSectionInstructorsAsync(guid, sectionInstructor);
@@ -659,7 +659,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 sectionInstructor.InstructionalMethod = null;
 
-                sectionRepositoryMock.Setup(s => s.PutSectionFacultyAsync(It.IsAny<SectionFaculty>(), It.IsAny<string>())).ReturnsAsync(null);
+                sectionRepositoryMock.Setup(s => s.PutSectionFacultyAsync(It.IsAny<SectionFaculty>(), It.IsAny<string>())).ReturnsAsync(() => null);
                 try
                 {
                     await service.UpdateSectionInstructorsAsync(guid, sectionInstructor);
@@ -776,7 +776,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task SectionInstructorsService_DeleteSectionInstructorsAsync_KeyNotFoundException_SectionInstructor_NotFound()
             {
-                sectionRepositoryMock.Setup(s => s.GetSectionFacultyByGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                sectionRepositoryMock.Setup(s => s.GetSectionFacultyByGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 await service.DeleteSectionInstructorsAsync(guid);
             }
 

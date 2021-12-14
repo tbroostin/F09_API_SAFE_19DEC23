@@ -1,4 +1,4 @@
-﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -173,6 +173,43 @@ namespace Ellucian.Colleague.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Retrieves retention alert work cases 2 Async
+        /// </summary>
+        /// <param name="retentionAlertQueryCriteria">Criteria to retrieve retention alert cases</param>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. Forbidden returned if the user is not allowed to retrieve retention alert cases.</exception>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. BadRequest returned if the DTO is not present in the request or any unexpected error has occured.</exception>
+        /// <returns>A list of <see cref="RetentionAlertWorkCase2">RetentionAlertWorkCase2</see> object</returns>
+        /// <accessComments>
+        /// An authenticated user may query retention alert cases if they have one of the following permissions:
+        /// WORK.CASES
+        /// WORK.ANY.CASE
+        /// </accessComments>
+        [HttpPost]
+        public async Task<IEnumerable<RetentionAlertWorkCase2>> QueryRetentionAlertWorkCasesByPost2Async([FromBody] RetentionAlertQueryCriteria retentionAlertQueryCriteria)
+        {
+            if (retentionAlertQueryCriteria == null)
+            {
+                string errorText = "Must provide the retentionAlertQueryCriteria item to query cases.";
+                _logger.Error(errorText);
+                throw CreateHttpResponseException(errorText, HttpStatusCode.BadRequest);
+            }
+            try
+            {
+                return await _retentionAlertService.GetRetentionAlertCases2Async(retentionAlertQueryCriteria);
+            }
+            catch (PermissionsException ex)
+            {
+                var message = string.Format(ex.Message);
+                _logger.Error(ex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e, "Unable to retrieve Retention Alert work cases 2");
+                throw CreateHttpResponseException("Unable to retrieve Retention Alert work cases 2", HttpStatusCode.BadRequest);
+            }
+        }
         /// <summary>
         /// Retrieves retention alert case Detail
         /// </summary>

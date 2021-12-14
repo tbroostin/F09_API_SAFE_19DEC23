@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and affiliates */
+﻿/* Copyright 2017-2021 Ellucian Company L.P. and affiliates */
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
@@ -17,11 +17,15 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         public string paycheckReferenceId;
         public string payStatementReferenceId;
         public bool useNewW4Flag;
+        public DateTime? paycheckDate;
+        public bool isAdj;
+
         public PayrollRegisterEntry pre
         {
             get
             {
-                return new PayrollRegisterEntry(id, employeeId, payPeriodStartDate, payPeriodEndDate, payCycleId, sequenceNumber, paycheckReferenceId, payStatementReferenceId, useNewW4Flag);
+                return new PayrollRegisterEntry(id, employeeId, payPeriodStartDate, payPeriodEndDate, 
+                    payCycleId, sequenceNumber, paycheckReferenceId, payStatementReferenceId, useNewW4Flag, paycheckDate, isAdj);
             }
         }
 
@@ -37,6 +41,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             paycheckReferenceId = "91023";
             payStatementReferenceId = "32019";
             useNewW4Flag = true;
+            paycheckDate = new DateTime(2021, 5, 24);
+            
         }
         [TestMethod]
         public void PropertiesAreSet()
@@ -56,6 +62,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             Assert.IsNotNull(pre.BenefitDeductionEntries);
             Assert.IsNotNull(pre.TaxableBenefitEntries);
             Assert.IsTrue(pre.Apply2020W4Rules);
+            Assert.AreEqual(paycheckDate, pre.PaycheckDate);
+            Assert.IsFalse(pre.IsAdjustment);
         }
         [TestMethod, ExpectedException(typeof(ArgumentNullException))]
         public void NullIdIsHandled()
@@ -63,13 +71,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             id = null;
             var error = pre;
         }
-        [TestMethod, ExpectedException(typeof(ArgumentException))]
-        public void NullReferenceIdsAreHandled()
-        {
-            paycheckReferenceId = null;
-            payStatementReferenceId = null;
-            var error = pre;
-        }
+        
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void PayCycleRequiredTest()
@@ -108,6 +110,21 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         {
             //pre = new PayrollRegisterEntry(id, sequenceNumber, paycheckReferenceId, payStatementReferenceId);
             Assert.AreEqual(id.GetHashCode(), pre.GetHashCode());
+        }
+
+        [TestMethod]
+        public void IsAdjustmentGetSetTest()
+        {
+            isAdj = true;
+            Assert.IsTrue(pre.IsAdjustment);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void NullEmployeeId_ThrowsArgumentNullExceptionTest()
+        {
+            employeeId = null;
+            Assert.IsNull(pre.EmployeeId);
         }
     }
 }

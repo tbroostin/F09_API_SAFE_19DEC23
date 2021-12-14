@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -250,7 +250,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
                 catch (Exception e)
                 {
-                    LogDataError("Person", record.Recordkey, record, e);
+                    LogDataError("Person", record.Recordkey, null, e);
                 }
 
             }
@@ -336,7 +336,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
                 catch (Exception e)
                 {
-                    LogDataError("Person", personRecord.Recordkey, personRecord, e);
+                    LogDataError("Person", personRecord.Recordkey, null, e);
                 }
             }
 
@@ -512,25 +512,15 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             if (string.IsNullOrEmpty(guid))
                 throw new RepositoryException("Must provide a guid to get a record.");
 
-            try
-            {
-                var personEntity = await GetIntegration3ByGuidAsync(guid,
-                                 person =>
-                                 {
-                                     var entity = new PersonIntegration(person.Recordkey, person.LastName);
-                                     return entity;
-                                 }, bypassCache);
+            var personEntity = await GetIntegration3ByGuidAsync(guid,
+                             person =>
+                             {
+                                 var entity = new PersonIntegration(person.Recordkey, person.LastName);
+                                 return entity;
+                             }, bypassCache);
 
-                return personEntity;
-            }
-            catch (RepositoryException e)
-            {
-                throw e;
-            }
-            catch (Exception e)
-            {
-                throw e;
-            }
+            return personEntity;
+
         }
 
         /// <summary>
@@ -903,7 +893,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
                 catch (Exception e)
                 {
-                    LogDataError("Person", personRecord.Recordkey, personRecord, e);
+                    LogDataError("Person", personRecord.Recordkey, null, e);
                     if (e.GetType() == typeof(ArgumentNullException) && e.Message.Contains("lastName"))
                     {
                         var msg = string.Format("Person ID '{0}' has no last name.", personRecord.Recordkey);
@@ -958,7 +948,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
                 catch (Exception e)
                 {
-                    LogDataError("Person", personRecord.Recordkey, personRecord, e);
+                    LogDataError("Person", personRecord.Recordkey, null, e);
                     if (e.GetType() == typeof(ArgumentNullException) && e.Message.Contains("lastName"))
                     {
                         var msg = string.Format("Person ID '{0}' has no last name.", personRecord.Recordkey);
@@ -1013,7 +1003,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
                 catch (Exception e)
                 {
-                    LogDataError("Person", personRecord.Recordkey, personRecord, e);
+                    LogDataError("Person", personRecord.Recordkey, null, e);
                     if (e.GetType() == typeof(ArgumentNullException) && e.Message.Contains("lastName"))
                     {
                         var msg = string.Format("Person ID '{0}' has no last name.", personRecord.Recordkey);
@@ -1084,7 +1074,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
                 catch (Exception e)
                 {
-                    LogDataError("Person", personRecord.Recordkey, personRecord, e);
+                    LogDataError("Person", personRecord.Recordkey, null, e);
                     if (e.GetType() == typeof(ArgumentNullException) && e.Message.Contains("lastName"))
                     {
                         var msg = string.Format("Person ID '{0}' has no last name.", personRecord.Recordkey);
@@ -1155,7 +1145,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 }
                 catch (Exception e)
                 {
-                    LogDataError("Person", personRecord.Recordkey, personRecord, e);
+                    LogDataError("Person", personRecord.Recordkey, null, e);
                 }
             }
             
@@ -1293,7 +1283,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 // log any ids that were not found.
                 var errorMessage = "The following person Ids were requested but not found: " + string.Join(",", personIdsNotFound.ToArray());
-                logger.Info(errorMessage);
+                logger.Error(errorMessage);
             }
             return personResults;
         }
@@ -1339,7 +1329,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 // log any ids that were not found.
                 var errorMessage = "The following person Ids were requested but not found: " + string.Join(",", personIdsNotFound.ToArray());
-                logger.Info(errorMessage);
+                logger.Error(errorMessage);
             }
             return personResults;
         }
@@ -1440,8 +1430,14 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 }
                                 catch (ArgumentNullException e)
                                 {
-                                    var ex = new RepositoryException("The last name is missing when gathering person history names.");
+                                    //var ex = new RepositoryException("The last name is missing when gathering person history names.");
+                                    var ex = new RepositoryException();
+
+                                    ex.AddError(
+                                        new RepositoryError("Bad.Data", "The last name is missing when gathering person history names.")
+                                        );
                                     throw ex;
+                                   
                                 }
 
                             }
@@ -1588,7 +1584,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                             // create the address entities
                             foreach (var address in addressDataContracts)
                             {
-                                var addressEntity = new Domain.Base.Entities.Address();
+                                var addressEntity = new Domain.Base.Entities.Address(address.Recordkey, personId);
                                 addressEntity.Guid = address.RecordGuid;
                                 addressEntity.City = address.City;
                                 addressEntity.State = address.State;
@@ -1624,7 +1620,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                                                 // Log the original exception
                                                 logger.Error(ex.ToString());
-                                                logger.Info(error);
+                                                logger.Error(error);
                                             }
                                         }
                                     }
@@ -1707,7 +1703,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 }
                                 catch (Exception exception)
                                 {
-                                    logger.Error(exception, string.Format("Could not load email address for person id {0} with GUID {1}", personDataContract.Recordkey, personDataContract.RecordGuid));
+                                   // do not log error
+                                   //logger.Error(exception, string.Format("Could not load email address for person id {0} with GUID {1}", personDataContract.Recordkey, personDataContract.RecordGuid));
                                 }
                             }
                         }
@@ -1842,7 +1839,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 // log any ids that were not found.
                 var errorMessage = "The following person Ids were requested but not found: " + string.Join(",", personIdsNotFound.ToArray());
-                logger.Info(errorMessage);
+                logger.Error(errorMessage);
             }
             if (repositoryException.Errors.Any())
             {
@@ -2138,7 +2135,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                                                 // Log the original exception
                                                 logger.Error(ex.ToString());
-                                                logger.Info(error);
+                                                logger.Error(error);
                                             }
                                         }
                                     }
@@ -2230,9 +2227,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                                     personBasedObject.AddEmailAddress(emailToAdd);
                                 }
-                                catch (Exception exception)
+                                catch (Exception)
                                 {
-                                    logger.Error(exception, string.Format("Could not load email address for person id {0} with GUID {1}", personDataContract.Recordkey, personDataContract.RecordGuid));
+                                    //do not log error
+                                    //logger.Error(exception, string.Format("Could not load email address for person id {0} with GUID {1}", personDataContract.Recordkey, personDataContract.RecordGuid));
                                 }
                             }
                         }
@@ -2363,7 +2361,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 // log any ids that were not found.
                 var errorMessage = "The following person Ids were requested but not found: " + string.Join(",", personIdsNotFound.ToArray());
-                logger.Info(errorMessage);
+                logger.Error(errorMessage);
             }
             return personResults;
         }
@@ -2469,16 +2467,10 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                         {
                             foreach (var names in personDataContract.NamehistEntityAssociation)
                             {
-                                try
+                                if (!string.IsNullOrEmpty(names.NameHistoryLastNameAssocMember))
                                 {
-                                    if (names.NameHistoryLastNameAssocMember == null)
-                                        names.NameHistoryLastNameAssocMember = "test";
                                     var nameHist = new PersonName(names.NameHistoryFirstNameAssocMember, names.NameHistoryMiddleNameAssocMember, names.NameHistoryLastNameAssocMember);
                                     personNameHistory.Add(nameHist);
-                                }
-                                catch (ArgumentNullException e)
-                                {
-                                    exception.AddError(new RepositoryError("persons", "The last name is missing when gathering person history names.") { Id = guid, SourceId = personId });
                                 }
                             }
                         }
@@ -2660,7 +2652,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                                                 // Log the original exception
                                                 logger.Error(ex.ToString());
-                                                logger.Info(error);
+                                                logger.Error(error);
                                             }
                                         }
                                     }
@@ -2754,7 +2746,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 }
                                 catch (Exception ex)
                                 {
-                                    logger.Error(ex, string.Format("Could not load email address for person id {0} with GUID {1}", personDataContract.Recordkey, personDataContract.RecordGuid));
+                                    // do not log error
+                                    //logger.Error(ex, string.Format("Could not load email address for person id {0} with GUID {1}", personDataContract.Recordkey, personDataContract.RecordGuid));
                                 }
                             }
                         }
@@ -2892,7 +2885,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 // log any ids that were not found.
                 var errorMessage = "The following person Ids were requested but not found: " + string.Join(",", personIdsNotFound.ToArray());
-                logger.Info(errorMessage);
+                logger.Error(errorMessage);
             }
 
             if (exception.Errors.Any())
@@ -3107,10 +3100,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
                 if (updateResponse.OrgIntgErrors.Any())
                 {
-                    var errorMessage = string.Format("Error(s) occurred updating organization '{0}':", personOrg.Guid);
-                    var exception = new RepositoryException(errorMessage);
-                    updateResponse.OrgIntgErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
-                    logger.Error(errorMessage);
+                    var exception = new RepositoryException();
+                    updateResponse.OrgIntgErrors.ForEach(e => exception.AddError(new RepositoryError("Create.Update.Exception", string.Concat(e.ErrorCodes, " - ", e.ErrorMessages))));
                     throw exception;
                 }
 

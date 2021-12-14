@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Entities;
@@ -194,9 +194,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         public async Task<Tuple<IEnumerable<Dtos.SectionRegistration4>, int>> GetSectionRegistrations3Async(int offset, int limit, SectionRegistration4 criteria,
             string academicPeriod, string sectionInstructor, Dtos.Filters.RegistrationStatusesByAcademicPeriodFilter registrationStatusesByAcademicPeriodFilter, bool bypassCache = false)
         {
-            // get user permissions
-            CheckUserRegistrationViewPermissions();
-
+        
             int totalCount = 0;
 
             #region Filters
@@ -406,9 +404,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 IntegrationApiExceptionAddError("Must provide a SectionRegistration id for retrieval.", "guid");
                 throw IntegrationApiException;
             }
-
-            // get user permissions
-            CheckUserRegistrationViewPermissions();
 
             var recordKey = await _sectionRegistrationRepository.GetSectionRegistrationIdFromGuidAsync(guid);
             if (string.IsNullOrEmpty(recordKey))
@@ -744,8 +739,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (string.IsNullOrEmpty(guid))
                 throw new ArgumentNullException("GetSectionRegistration", "Must provide a SectionRegistration id for retrieval");
 
-            // get user permissions
-            CheckUserRegistrationViewPermissions();
 
             // process the request
             var response = await _sectionRegistrationRepository.GetAsync(guid);
@@ -794,8 +787,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (string.IsNullOrEmpty(guid))
                 throw new ArgumentNullException("GetSectionRegistration", "Must provide a SectionRegistration id for retrieval");
 
-            // get user permissions
-            CheckUserRegistrationViewPermissions();
 
             // process the request
             var response = await _sectionRegistrationRepository.GetAsync(guid);
@@ -845,8 +836,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Tuple containing IEnumerable Dtos.SectionRegistration2 object and record count</returns>
         public async Task<Tuple<IEnumerable<Dtos.SectionRegistration2>, int>> GetSectionRegistrationsAsync(int offset, int limit, string section, string registrant)
         {
-            // get user permissions
-            CheckUserRegistrationViewPermissions();
 
             string personId = string.Empty, sectionId = string.Empty;
             var sectRegistrationList = new List<Dtos.SectionRegistration2>();
@@ -914,9 +903,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Tuple containing IEnumerable Dtos.SectionRegistration2 object and record count</returns>
         public async Task<Tuple<IEnumerable<Dtos.SectionRegistration3>, int>> GetSectionRegistrations2Async(int offset, int limit, string section, string registrant)
         {
-            // get user permissions
-            CheckUserRegistrationViewPermissions();
-
+        
             //if the section guid is input is invalid, the ingore it. 
             string personId = string.Empty, sectionId = string.Empty;
             var sectRegistrationList = new List<Dtos.SectionRegistration3>();
@@ -1035,8 +1022,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (string.IsNullOrEmpty(personId))
                 throw new KeyNotFoundException("Person ID associated to guid '" + registrationDto.Registrant.Guid + "' not found in repository");
 
-            // get user permissions
-            CheckUserRegistrationUpdatePermissions(personId);
 
             // get the section ID associated to the incoming guid
             var sectionId = await _sectionRepository.GetSectionIdFromGuidAsync(registrationDto.Section.Guid);
@@ -1062,7 +1047,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     {
                         errorMessage += string.Format(Environment.NewLine + "'{0}'", msg);
                     }
-                    logger.Info(errorMessage);
+                    logger.Error(errorMessage);
                 }
             }
             return dtoResponse;
@@ -1089,7 +1074,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 throw new KeyNotFoundException("Person ID associated to id '" + registrationDto.Registrant.Id + "' not found");
 
 
-            CheckUserRegistrationUpdatePermissions(personId);
+            //CheckUserRegistrationUpdatePermissions(personId);
 
 
             _sectionRegistrationRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
@@ -1172,7 +1157,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         {
                             errorMessage += string.Format(Environment.NewLine + "'{0}'", msg);
                         }
-                        logger.Info(errorMessage);
+                        logger.Error(errorMessage);
                     }
                 }
                 return dtoResponse;
@@ -1216,7 +1201,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             if (string.IsNullOrEmpty(personId))
                 throw new KeyNotFoundException("Person ID associated to id '" + registrationDto.Registrant.Id + "' not found");
 
-            CheckUserRegistrationUpdatePermissions(personId);
+            //CheckUserRegistrationUpdatePermissions(personId);
 
 
             _sectionRegistrationRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
@@ -1319,7 +1304,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         {
                             errorMessage += string.Format(Environment.NewLine + "'{0}'", msg);
                         }
-                        logger.Info(errorMessage);
+                        logger.Error(errorMessage);
                     }
                 }
                 return dtoResponse;
@@ -1376,7 +1361,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 IntegrationApiExceptionAddError("Person associated to id '" + registrationDto.Registrant.Id + "' not found",
                     "sectionRegistrations.registrant.id", registrationDto.Id, "", System.Net.HttpStatusCode.NotFound);
 
-            CheckUserRegistrationUpdatePermissions(personId);
+            //CheckUserRegistrationUpdatePermissions(personId);
           
             _sectionRegistrationRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -1474,7 +1459,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                         {
                             errorMessage += string.Format(Environment.NewLine + "'{0}'", msg);
                         }
-                        logger.Info(errorMessage);
+                        logger.Error(errorMessage);
                     }
                 }
 
@@ -4214,43 +4199,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
         #endregion
 
-        #region Permissions
-
-        /// <summary>
-        /// Verifies if the user has the correct permissions to update a registration.
-        /// </summary>
-        private void CheckUserRegistrationUpdatePermissions(string personId)
-        {
-            // access is ok if the current user is the person being updated
-            if (!CurrentUser.IsPerson(personId))
-            {
-                // access is ok if the current user has the update registrations permission
-                if (!HasPermission(SectionPermissionCodes.UpdateRegistrations))
-                {
-                    logger.Error("User '" + CurrentUser.UserId + "' is not authorized to update section-registrations.");
-                    // throw new PermissionsException("User is not authorized to update section-registrations.");
-                    IntegrationApiExceptionAddError("User '" + CurrentUser.UserId + "' is not authorized to update section-registrations.", "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
-                    throw IntegrationApiException;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Verifies if the user has the correct permissions to view a person.
-        /// </summary>
-        private void CheckUserRegistrationViewPermissions()
-        {
-            // access is ok if the current user has the view, create, or update registrations permission
-            if (!HasPermission(SectionPermissionCodes.ViewRegistrations) && !HasPermission(SectionPermissionCodes.UpdateRegistrations))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view section-registrations.");
-                // throw new PermissionsException("User is not authorized to view section-registrations.");
-                IntegrationApiExceptionAddError("User '" + CurrentUser.UserId + "' is not authorized to view section-registrations.", "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
-                throw IntegrationApiException;
-            }
-        }
-        #endregion
-
         #region Section Registration Grade Options
 
         /// <summary>
@@ -4263,7 +4211,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Dtos.SectionRegistrationsGradeOptions</returns>
         public async Task<Tuple<IEnumerable<SectionRegistrationsGradeOptions>, int>> GetSectionRegistrationsGradeOptionsAsync(int offset, int limit, SectionRegistrationsGradeOptions criteriaObj, bool bypassCache)
         {
-            CheckUserRegistrationViewPermissions();
+            //CheckUserRegistrationViewPermissions();
 
             List<SectionRegistrationsGradeOptions> dtos = new List<SectionRegistrationsGradeOptions>();
             StudentAcadCredCourseSecInfo criteria = null;
@@ -4359,7 +4307,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns></returns>
         public async Task<SectionRegistrationsGradeOptions> GetSectionRegistrationsGradeOptionsByGuidAsync(string guid, bool bypassCache = false)
         {
-            CheckUserRegistrationViewPermissions();
+            //CheckUserRegistrationViewPermissions();
 
             if (string.IsNullOrEmpty(guid))
                 throw new ArgumentNullException("guid", "Must provide a section registrations grade options GUID for retrieval.");

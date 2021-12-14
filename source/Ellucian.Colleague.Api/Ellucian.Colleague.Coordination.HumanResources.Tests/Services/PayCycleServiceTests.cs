@@ -99,7 +99,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             public async Task RepositoryReturnsNullTest()
             {
                 personEmploymentStatusRepositoryMock.Setup(r => r.GetPersonEmploymentStatusesAsync(It.IsAny<IEnumerable<string>>(), null))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
 
                 try
                 {
@@ -115,7 +115,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             [TestMethod]
             public async Task ExpectedEqualsActualTest()
             {
-                var expected = (await testPersonEmploymentStatusRepository.GetPersonEmploymentStatusesAsync(new List<string>() { employeeCurrentUserFactory.CurrentUser.PersonId }))
+                var expected = (await testPersonEmploymentStatusRepository.GetPersonEmploymentStatusesAsync(new List<string>() { employeeCurrentUserFactory.CurrentUser.PersonId }, new DateTime() { }))
                     .Select(ppEntity => personEmploymentStatusEntityToDtoAdapter.MapToType(ppEntity));
 
                 var actual = await actualService.GetPersonEmploymentStatusesAsync();

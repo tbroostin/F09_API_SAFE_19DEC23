@@ -1037,7 +1037,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task GetAdmissionApplicationSubmissionByIdAsync_KeyNotFoundException()
         {
-            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Applications>("APPLICATIONS", It.IsAny<GuidLookup>(), It.IsAny<bool>())).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<Applications>("APPLICATIONS", It.IsAny<GuidLookup>(), It.IsAny<bool>())).ReturnsAsync(() => null);
             var actual = await admissionApplicationsRepository.GetAdmissionApplicationSubmissionByIdAsync("1234", It.IsAny<bool>());
         }
 

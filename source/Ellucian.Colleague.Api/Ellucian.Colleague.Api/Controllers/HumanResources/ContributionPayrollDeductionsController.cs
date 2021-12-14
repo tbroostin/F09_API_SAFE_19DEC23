@@ -1,4 +1,4 @@
-﻿//Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -21,6 +21,7 @@ using Ellucian.Web.Http;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Newtonsoft.Json;
+using Ellucian.Colleague.Domain.HumanResources;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
@@ -50,7 +51,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Return all contributionPayrollDeductions
         /// </summary>
         /// <returns>List of ContributionPayrollDeductions <see cref="Dtos.ContributionPayrollDeductions"/> objects representing matching contributionPayrollDeductions</returns>
-        [HttpGet]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [PermissionsFilter(HumanResourcesPermissionCodes.ViewContributionPayrollDeductions)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter, FilteringFilter(IgnoreFiltering = true)]
         [ValidateQueryStringFilter()]
         [QueryStringFilterFilter("criteria", typeof(Dtos.ContributionPayrollDeductions))]
@@ -69,6 +71,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                _contributionPayrollDeductionsService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -105,7 +108,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -135,7 +138,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="id">GUID to desired contributionPayrollDeductions</param>
         /// <returns>A contributionPayrollDeductions object <see cref="Dtos.ContributionPayrollDeductions"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [EedmResponseFilter, PermissionsFilter(HumanResourcesPermissionCodes.ViewContributionPayrollDeductions)]
         public async Task<Dtos.ContributionPayrollDeductions> GetContributionPayrollDeductionsByIdAsync([FromUri]string id)
         {
             var bypassCache = false;
@@ -155,6 +159,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                _contributionPayrollDeductionsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                     await _contributionPayrollDeductionsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await _contributionPayrollDeductionsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -169,7 +174,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -198,7 +203,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="contributionPayrollDeductions">DTO of the new contributionPayrollDeductions</param>
         /// <returns>A contributionPayrollDeductions object <see cref="Dtos.ContributionPayrollDeductions"/> in EEDM format</returns>
-        [HttpPost]
+        [HttpPost, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.ContributionPayrollDeductions> PostContributionPayrollDeductionsAsync([FromBody] Dtos.ContributionPayrollDeductions contributionPayrollDeductions)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
@@ -212,7 +217,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="id">GUID of the contributionPayrollDeductions to update</param>
         /// <param name="contributionPayrollDeductions">DTO of the updated contributionPayrollDeductions</param>
         /// <returns>A contributionPayrollDeductions object <see cref="Dtos.ContributionPayrollDeductions"/> in EEDM format</returns>
-        [HttpPut]
+        [HttpPut, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.ContributionPayrollDeductions> PutContributionPayrollDeductionsAsync([FromUri] string id, [FromBody] Dtos.ContributionPayrollDeductions contributionPayrollDeductions)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
@@ -224,7 +229,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Delete (DELETE) a contributionPayrollDeductions
         /// </summary>
         /// <param name="id">GUID to desired contributionPayrollDeductions</param>
-        [HttpDelete]
+        [HttpDelete, CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task DeleteContributionPayrollDeductionsAsync(string id)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.

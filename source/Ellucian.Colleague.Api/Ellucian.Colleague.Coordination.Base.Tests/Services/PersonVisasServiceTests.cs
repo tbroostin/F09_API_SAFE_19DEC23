@@ -1,4 +1,5 @@
-﻿using Ellucian.Colleague.Domain.Base.Repositories;
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Domain.Base.Repositories;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
@@ -139,14 +140,14 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             #region GET V6
 
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task PersonVisas_GetPersonVisaAllAsync_PermissionsException()
-            {
-                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+            //[TestMethod]
+            //[ExpectedException(typeof(PermissionsException))]
+            //public async Task PersonVisas_GetPersonVisaAllAsync_PermissionsException()
+            //{
+            //    roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
 
-                await personVisasService.GetAllAsync(0, 4, It.IsAny<string>(), It.IsAny<bool>());
-            }
+            //    await personVisasService.GetAllAsync(0, 4, It.IsAny<string>(), It.IsAny<bool>());
+            //}
 
             [TestMethod]
             public async Task PersonVisas_GetPersonVisaAllAsync()
@@ -173,7 +174,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [TestMethod]
             public async Task PersonVisas_GetPersonVisaAllAsync_DoesNotThrowIfPagedPastEndOfList()
             {
-                personVisasRepositoryMock.Setup(i => i.GetAllPersonVisasAsync(0, 900, It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                personVisasRepositoryMock.Setup(i => i.GetAllPersonVisasAsync(0, 900, It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 referenceDataRepositoryMock.Setup(i => i.GetVisaTypesAsync(It.IsAny<bool>())).ReturnsAsync(visaTypesGuidItems);
 
                 var actuals = await personVisasService.GetAllAsync(0, 900, It.IsAny<string>(), It.IsAny<bool>());
@@ -203,14 +204,14 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             #region GET 11
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task PersonVisas_GetPersonVisaAll2Async_PermissionsException()
-            {
-                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+            //[TestMethod]
+            //[ExpectedException(typeof(PermissionsException))]
+            //public async Task PersonVisas_GetPersonVisaAll2Async_PermissionsException()
+            //{
+            //    roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
 
-                await personVisasService.GetAll2Async(0, 4, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
-            }
+            //    await personVisasService.GetAll2Async(0, 4, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>());
+            //}
 
             [TestMethod]
             public async Task PersonVisas_GetPersonVisas2AllAsync()
@@ -256,7 +257,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             {
                 personVisasRepositoryMock.Setup(i => i.GetPersonVisaByIdAsync(id)).ReturnsAsync(personVisaEntity);
                 referenceDataRepositoryMock.Setup(i => i.GetVisaTypesAsync(It.IsAny<bool>())).ReturnsAsync(visaTypesGuidItems);
-                personRepoMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(null);
+                personRepoMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(() => null);
 
                 var result = await personVisasService.GetPersonVisaById2Async(id);
             }
@@ -271,7 +272,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 personVisasRepositoryMock.Setup(i => i.GetPersonVisaByIdAsync(id)).ReturnsAsync(personVisaEntity);
                 referenceDataRepositoryMock.Setup(i => i.GetVisaTypesAsync(It.IsAny<bool>())).ReturnsAsync(visaTypesGuidItems);
-                personRepoMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(null);
+                personRepoMock.Setup(i => i.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(() => null);
 
                 var result = await personVisasService.GetPersonVisaById2Async(id);
             }
@@ -280,14 +281,14 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             #region PUT_v6
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task PersonVisas_PutPersonVisaAsync_PermissionsException()
-            {
-                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+            //[TestMethod]
+            //[ExpectedException(typeof(PermissionsException))]
+            //public async Task PersonVisas_PutPersonVisaAsync_PermissionsException()
+            //{
+            //    roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
 
-                await personVisasService.PutPersonVisaAsync(id, personVisaDto);
-            }
+            //    await personVisasService.PutPersonVisaAsync(id, personVisaDto);
+            //}
 
 
             [TestMethod]
@@ -364,14 +365,14 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             #region PUT_v11
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task PersonVisas_PutPersonVisa2Async_PermissionsException()
-            {
-                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+            //[TestMethod]
+            //[ExpectedException(typeof(PermissionsException))]
+            //public async Task PersonVisas_PutPersonVisa2Async_PermissionsException()
+            //{
+            //    roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
 
-                await personVisasService.PutPersonVisa2Async(id, personVisaDto);
-            }
+            //    await personVisasService.PutPersonVisa2Async(id, personVisaDto);
+            //}
 
             [TestMethod]
             public async Task PersonVisas_PutPersonVisa2Async()
@@ -447,14 +448,14 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             #region POST_v6
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task PersonVisas_PostPersonVisaAsync_PermissionsException()
-            {
-                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+            //[TestMethod]
+            //[ExpectedException(typeof(PermissionsException))]
+            //public async Task PersonVisas_PostPersonVisaAsync_PermissionsException()
+            //{
+            //    roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
 
-                await personVisasService.PostPersonVisaAsync(personVisaDto);
-            }
+            //    await personVisasService.PostPersonVisaAsync(personVisaDto);
+            //}
 
 
             [TestMethod]
@@ -483,14 +484,14 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
             #region POST_v11
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task PersonVisas_PostPersonVisa2Async_PermissionsException()
-            {
-                roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
+            //[TestMethod]
+            //[ExpectedException(typeof(PermissionsException))]
+            //public async Task PersonVisas_PostPersonVisa2Async_PermissionsException()
+            //{
+            //    roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
 
-                await personVisasService.PostPersonVisa2Async(personVisaDto);
-            }
+            //    await personVisasService.PostPersonVisa2Async(personVisaDto);
+            //}
 
 
             [TestMethod]

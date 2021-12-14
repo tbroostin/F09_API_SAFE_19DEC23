@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Newtonsoft.Json;
@@ -10,17 +10,17 @@ namespace Ellucian.Colleague.Dtos
     /// <summary>
     /// The Resources API provides a mechanism by which callers can view a list of Ethos resources that are exposed through the server API.
     /// </summary>
-    [JsonObject(MemberSerialization.OptIn)]
+    [JsonObject(MemberSerialization.OptIn, IsReference = false)]
     public class ApiResources
     {
         /// <summary>
-        /// The full name of a room.
+        /// The full name of the resource.
         /// </summary>
         [JsonProperty("name")]
         public string Name { get; set; }
 
         /// <summary>
-        /// A description of a room.
+        /// A collection of representations
         /// </summary>
         [JsonProperty("representations")]
         public List<Representation> Representations { get; set; }
@@ -76,10 +76,18 @@ namespace Ellucian.Colleague.Dtos
          */
 
         /// <summary>
-        /// Used by the resources controller to determine which versionless route is most current.  Does not appear in output
+        /// Used by the resources controller to determine which versionless route is most current.  
+        /// Does not appear in output
         /// </summary>
         [JsonIgnore]
         public string VersionNumber { get; set; }
+
+        /// <summary>
+        /// Flag to indicate if the major number route has been added for this mediatype. 
+        /// Does not appear in output
+        /// </summary>
+        [JsonIgnore]
+        public bool MajorVersionAdded { get; set; }
 
     }
 
@@ -107,10 +115,10 @@ namespace Ellucian.Colleague.Dtos
         public string XMediaType { get; set; }
     }
 
-/// <summary>
-/// NamedQuery
-/// </summary>
-public class NamedQuery
+    /// <summary>
+    /// NamedQuery
+    /// </summary>
+    public class NamedQuery
     {
         /// <summary>
         /// Name

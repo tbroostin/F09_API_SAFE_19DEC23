@@ -92,23 +92,70 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             var payPeriodsCollection = new List<Ellucian.Colleague.Dtos.PayPeriods>();
 
-            var pageOfItems = await _payPeriodRepository.GetPayPeriodsAsync(offset, limit, payCycleCode, convertedStartOn, convertedEndOn, bypassCache);
-            
-            var payPeriodsEntities = pageOfItems.Item1;
-            int totalRecords = pageOfItems.Item2;
+            //var externalEmploymentsCollection = new List<Ellucian.Colleague.Dtos.ExternalEmployments>();
+            //Tuple<IEnumerable<Ellucian.Colleague.Domain.Base.Entities.ExternalEmployments>, int> externalEmploymentsData = null;
+            //try
+            //{
+            //    externalEmploymentsData = await _externalEmploymentsRepository.GetExternalEmploymentsAsync(offset, limit);
+            //}
+            //catch (RepositoryException ex)
+            //{
+            //    IntegrationApiExceptionAddError(ex);
+            //    throw IntegrationApiException;
+            //}
 
-            if (payPeriodsEntities != null && payPeriodsEntities.Any())
+            //var payPeriodsCollection = new List<Ellucian.Colleague.Dtos.PayPeriods>();
+            Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.PayPeriod>, int> payPeriodsData = null;
+            try
             {
-                foreach (var payPeriods in payPeriodsEntities)
+                payPeriodsData = await _payPeriodRepository.GetPayPeriodsAsync(offset, limit, payCycleCode, convertedStartOn, convertedEndOn, bypassCache);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+
+            if (payPeriodsData != null)
+            {
+                var payPeriodsEntities = payPeriodsData.Item1;
+                if (payPeriodsEntities != null && payPeriodsEntities.Any())
                 {
-                    payPeriodsCollection.Add(await ConvertPayPeriodsEntityToDto(payPeriods));
+                    foreach (var payPeriods in payPeriodsEntities)
+                    {
+                        payPeriodsCollection.Add(await ConvertPayPeriodsEntityToDto(payPeriods));
+                    }                    
                 }
-                return new Tuple<IEnumerable<Dtos.PayPeriods>, int>(payPeriodsCollection, totalRecords);
             }
             else
             {
-                return new Tuple<IEnumerable<Dtos.PayPeriods>, int>(new List<Ellucian.Colleague.Dtos.PayPeriods>(), 0);
+                return new Tuple<IEnumerable<Dtos.PayPeriods>, int>(payPeriodsCollection, 0);
             }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+
+            return new Tuple<IEnumerable<Dtos.PayPeriods>, int>(payPeriodsCollection, payPeriodsData.Item2);
+
+            //var pageOfItems = await _payPeriodRepository.GetPayPeriodsAsync(offset, limit, payCycleCode, convertedStartOn, convertedEndOn, bypassCache);
+
+            //var payPeriodsEntities = pageOfItems.Item1;
+            //int totalRecords = pageOfItems.Item2;
+
+            //if (payPeriodsEntities != null && payPeriodsEntities.Any())
+            //{
+            //    foreach (var payPeriods in payPeriodsEntities)
+            //    {
+            //        payPeriodsCollection.Add(await ConvertPayPeriodsEntityToDto(payPeriods));
+            //    }
+            //    return new Tuple<IEnumerable<Dtos.PayPeriods>, int>(payPeriodsCollection, totalRecords);
+            //}
+            //else
+            //{
+            //    return new Tuple<IEnumerable<Dtos.PayPeriods>, int>(new List<Ellucian.Colleague.Dtos.PayPeriods>(), 0);
+            //}
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>

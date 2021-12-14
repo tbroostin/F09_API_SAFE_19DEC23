@@ -1,9 +1,8 @@
-﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
-using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Web.Adapters;
@@ -197,7 +196,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     throw new ArgumentNullException("guid", "GUID is required to get an Student Academic Program.");
                 }
-                CheckGetStudentAcademicProgramPermission();
+                
                 var programEntity = new List<StudentAcademicProgram>();
                 var inst = GetDefaultInstitutionId();
                 programEntity.Add(await _studentAcademicProgramRepository.GetStudentAcademicProgramByGuidAsync(guid, inst));
@@ -226,7 +225,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     throw new ArgumentNullException("guid", "GUID is required to get an Student Academic Program.");
                 }
-                CheckGetStudentAcademicProgramPermission();
+               
                 var programEntity = new List<StudentAcademicProgram>();
                 var inst = GetDefaultInstitutionId();
                 programEntity.Add(await _studentAcademicProgramRepository.GetStudentAcademicProgramByGuidAsync(guid, inst));
@@ -256,7 +255,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     IntegrationApiExceptionAddError("GUID is required to get an Student Academic Program.", "Missing.Required.Property");
                     throw IntegrationApiException;
                 }
-                CheckGetStudentAcademicProgramPermission();
+                
                 var programEntity = new List<StudentAcademicProgram>();
                 var inst = string.Empty;
                 try
@@ -306,7 +305,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     IntegrationApiExceptionAddError("GUID is required to get an Student Academic Program.", "Missing.Required.Property");
                     throw IntegrationApiException;
                 }
-                CheckGetStudentAcademicProgramPermission();
+              
                 var programEntity = new List<StudentAcademicProgram>();
                 var inst = string.Empty;
                 try
@@ -355,7 +354,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     IntegrationApiExceptionAddError("GUID is required to get an Student Academic Program.", "Missing.Required.Property");
                     throw IntegrationApiException;
                 }
-                CheckGetStudentAcademicProgramPermission();
+                
                 var programEntity = new List<StudentAcademicProgram>();
                 var inst = string.Empty;
                 try
@@ -1164,23 +1163,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                                 stuProgram.Guid, id);
                         }
                     }
-                    //process actual graduation term
-                    //if (!string.IsNullOrEmpty(stuProgram.GradTerm))
-                    //{
-                    //    try
-                    //    {
-                    //        var term = await _termRepository.GetAcademicPeriodsGuidAsync(stuProgram.GradTerm);
-                    //        if (term != null)
-                    //        {
-                    //            acadPeriods.ActualGraduation = new Dtos.GuidObject2(term);
-                    //        }
-                    //    }
-                    //    catch (RepositoryException ex)
-                    //    {
-                    //        IntegrationApiExceptionAddError(ex, "student-academic-programs.actualGraduation",
-                    //            stuProgram.Guid, id);
-                    //    }
-                    //}
+                    
                     studentProgramDto.AcademicPeriods = acadPeriods;
                 }
                 //process academic level
@@ -2023,8 +2006,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>An Student Academic Program DTO object for the created student programs</returns>
         public async Task<Dtos.StudentAcademicPrograms> CreateStudentAcademicProgramAsync(Dtos.StudentAcademicPrograms studentAcadProgramDto, bool bypassCache = false)
         {
-            // Confirm that user has permissions to create Student Academic Program
-            CheckCreateStudentAcademicProgramPermission();
+          
 
             //Extensibility
             _studentAcademicProgramRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
@@ -2044,9 +2026,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>An Student Academic Program DTO object for the created student programs</returns>
         public async Task<Dtos.StudentAcademicPrograms2> CreateStudentAcademicProgram2Async(Dtos.StudentAcademicPrograms2 studentAcadProgramDto, bool bypassCache = false)
         {
-            // Confirm that user has permissions to create Student Academic Program
-            CheckCreateStudentAcademicProgramPermission();
-
             //Extensibility
             _studentAcademicProgramRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -2066,10 +2045,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>An Student Academic Program DTO object for the created student programs</returns>
         public async Task<Dtos.StudentAcademicPrograms4> CreateStudentAcademicProgramSubmissionAsync(Dtos.StudentAcademicProgramsSubmissions studentAcadProgramDto, bool bypassCache = false)
         {
-            // Confirm that user has permissions to create Student Academic Program
-            CheckCreateStudentAcademicProgramPermission();
-
-            ValidateStudentAcademicProgramsSubmissions(string.Empty, string.Empty, studentAcadProgramDto);
+             ValidateStudentAcademicProgramsSubmissions(string.Empty, string.Empty, studentAcadProgramDto);
 
             //Extensibility
             _studentAcademicProgramRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
@@ -2091,8 +2067,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns></returns>
         public async Task<StudentAcademicPrograms4> CreateStudentAcademicProgramReplacementsAsync(StudentAcademicProgramReplacements studentAcadProgramDto, bool bypassCache)
         {
-            // Confirm that user has permissions to create Student Academic Program
-            CheckCreateStudentAcademicProgramReplacementPermission();
+           
 
             ValidateStudentAcademicProgramReplacements(string.Empty, string.Empty, studentAcadProgramDto);
 
@@ -2752,9 +2727,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>An Student Academic Program DTO object for the updated student programs</returns>
         public async Task<Dtos.StudentAcademicPrograms> UpdateStudentAcademicProgramAsync(Dtos.StudentAcademicPrograms studentAcadProgDto, bool bypassCache = false)
         {
-            // Confirm that user has permissions to create/update Student Academic Program
-            CheckCreateStudentAcademicProgramPermission();
-
+            
             //Extensibility
             _studentAcademicProgramRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -2773,9 +2746,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>An Student Academic Program DTO object for the updated student programs</returns>
         public async Task<Dtos.StudentAcademicPrograms2> UpdateStudentAcademicProgram2Async(Dtos.StudentAcademicPrograms2 studentAcadProgDto, bool bypassCache = false)
         {
-            // Confirm that user has permissions to create/update Student Academic Program
-            CheckCreateStudentAcademicProgramPermission();
-
+            
             //Extensibility
             _studentAcademicProgramRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -2794,9 +2765,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>An Student Academic Program DTO object for the updated student programs</returns>
         public async Task<Dtos.StudentAcademicPrograms4> UpdateStudentAcademicProgramSubmissionAsync(Dtos.StudentAcademicProgramsSubmissions studentAcadProgDto, bool bypassCache = false)
         {
-            // Confirm that user has permissions to create/update Student Academic Program
-            CheckCreateStudentAcademicProgramPermission();
-
+           
             //check for errors
             string stprKey = string.Empty;
             string guid = studentAcadProgDto.Id;
@@ -2942,50 +2911,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
         }
 
-        /// <summary>
-        /// Helper method to determine if the user has permission to create and update Student Academic Programs.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckCreateStudentAcademicProgramPermission()
-        {
-            bool hasPermission = HasPermission(StudentPermissionCodes.CreateStudentAcademicProgramConsent);
-
-            // User is not allowed to create or update courses without the appropriate permissions
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to create or update Student Academic Programs.");
-            }
-        }
-
-        /// <summary>
-        /// Helper method to determine if the user has permission to create and update Student Academic Programs.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckCreateStudentAcademicProgramReplacementPermission()
-        {
-            bool hasPermission = HasPermission(StudentPermissionCodes.ReplaceStudentAcademicProgram);
-
-            // User is not allowed to create or update courses without the appropriate permissions
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to create or update Student Academic Programs.");
-            }
-        }
-
-        /// <summary>
-        /// Helper method to determine if the user has permission to view Student Academic Programs.
-        /// </summary>
-        /// <exception><see cref="IntegrationApiException">IntegrationApiException</see></exception>
-        private void CheckGetStudentAcademicProgramPermission()
-        {
-            // User is not allowed to view Student Academic Program without the appropriate permissions
-            if (!HasPermission(StudentPermissionCodes.ViewStudentAcademicProgramConsent) && !HasPermission(StudentPermissionCodes.CreateStudentAcademicProgramConsent))
-            {
-                IntegrationApiExceptionAddError("User " + CurrentUser.UserId + " does not have permission to view Student Academic Programs.", "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
-                throw IntegrationApiException;
-            }
-        }
-
+       
         /// <summary>
         /// Converts a Student Academic Program DTO to its corresponding Student Programs domain entity
         /// </summary>
@@ -4262,8 +4188,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             try
             {
-                //check permissions
-                CheckGetStudentAcademicProgramPermission();
+                
                 string newStudent = string.Empty, newStartOn = string.Empty, newEndOn = string.Empty, newProgram = string.Empty, newCatalog = string.Empty, newStatus = string.Empty, newProgramOwner = string.Empty, newSite = string.Empty,
                     newAcademicLevel = string.Empty, newGraduatedOn = string.Empty, newgraduatedAcademicPeriod = string.Empty;
 
@@ -4362,8 +4287,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             try
             {
-                //check permissions
-                CheckGetStudentAcademicProgramPermission();
+                
                 string newStartOn = string.Empty, newEndOn = string.Empty, newStudent = string.Empty, newProgram = string.Empty, newStatus = string.Empty, newSite = string.Empty,
                     newAcademicLevel = string.Empty, newGraduatedOn = string.Empty, newgraduatedAcademicPeriod = string.Empty, completeStatus = string.Empty;
                 List<string> ccdCredential = new List<string>();
@@ -4470,9 +4394,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             try
             {
-                //check permissions
-                CheckGetStudentAcademicProgramPermission();
-
+               
                 string newStartOn = string.Empty, newEndOn = string.Empty, newStudent = string.Empty, newProgram = string.Empty, newStatus = string.Empty, newSite = string.Empty,
                     newAcademicLevel = string.Empty, newGraduatedOn = string.Empty, newgraduatedAcademicPeriod = string.Empty, completeStatus = string.Empty;
                 List<string> ccdCredential = new List<string>();
@@ -4624,8 +4546,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             try
             {
-                //check permissions
-                CheckGetStudentAcademicProgramPermission();
+                
 
                 string newStartOn = string.Empty, newEndOn = string.Empty, newStudent = string.Empty, newProgram = string.Empty, newStatus = string.Empty, newSite = string.Empty,
                     newAcademicLevel = string.Empty, newGraduatedOn = string.Empty, newgraduatedAcademicPeriod = string.Empty, completeStatus = string.Empty;

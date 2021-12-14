@@ -1,8 +1,9 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.Repositories;
+using Ellucian.Colleague.Domain.Base.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Data.Colleague;
@@ -31,6 +32,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             Collection<LdmGuid> ldmGuids;
             IEnumerable<StudentAcademicCredential> entities;
             private StudentAcademicCredentialsRepository _studentAcademicCredentialsRepository;
+            Mock<IColleagueTransactionInvoker> mockManager = null;
             StudentAcademicCredential criteriaEntity;
             string[] filterPersonIds;
             string acadProgramFilter;
@@ -178,6 +180,53 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<LdmGuid>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(ldmGuids);
 
                 dataReaderMock.Setup(d => d.ReadRecordAsync<AcadCredentials>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(acadCredentials.FirstOrDefault());
+                
+                 mockManager = new Mock<IColleagueTransactionInvoker>();
+
+                var dicResult = new Dictionary<string, GuidLookupResult>();
+              
+                dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).Returns<RecordKeyLookup[]>(recordKeyLookups =>
+                {
+                    var result = new Dictionary<string, RecordKeyLookupResult>();
+                    foreach (var recordKeyLookup in recordKeyLookups)
+                    {
+                        var record = acadCredentials.Where(e => e.Recordkey == recordKeyLookup.PrimaryKey).FirstOrDefault();
+                        result.Add(string.Join("+", new string[] { "ACAD.CREDENTIALS", record.Recordkey }),
+                            new RecordKeyLookupResult() { Guid = record.RecordGuid });
+                    }
+                    return Task.FromResult(result);
+                });
+
+
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(mockManager.Object);
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 2,
+                    CacheName = "AllStudentAcademicCredentials:",
+                    Entity = "ACAD.CREDENTIALS",
+                    Sublist = new List<string>() { "1" },
+                    TotalCount = 1,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+                };
+                mockManager.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
             }
 
             #endregion
@@ -185,6 +234,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task GetStudentAcademicCredentialsAsync()
             {
+
                 var result = await _studentAcademicCredentialsRepository.GetStudentAcademicCredentialsAsync(0, 100, criteriaEntity, filterPersonIds, acadProgramFilter, filterQualifiers);
                 Assert.IsNotNull(result);
             }
@@ -192,9 +242,24 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [TestMethod]
             public async Task GetStudentAcademicCredentialsAsync_AcadCredIds_Null()
             {
-                dataReaderMock.Setup(d => d.SelectAsync("ACAD.CREDENTIALS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.SelectAsync("ACAD.CREDENTIALS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(() => null);
                 dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), true, It.IsAny<int>()))
                     .ReturnsAsync(new string[] { });
+                
+                
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 2,
+                    CacheName = "AllStudentAcademicCredentials:",
+                    Entity = "ACAD.CREDENTIALS",
+                    Sublist = new List<string>() {  },
+                    TotalCount = 0,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+                
+                };
+                mockManager.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
                 var result = await _studentAcademicCredentialsRepository.GetStudentAcademicCredentialsAsync(0, 100, criteriaEntity, filterPersonIds, acadProgramFilter, filterQualifiers);
                 Assert.IsNotNull(result);
                 Assert.AreEqual(0, result.Item2);
@@ -215,6 +280,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<LdmGuid>(It.IsAny<string[]>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
                 dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), true, It.IsAny<int>()))
                     .ReturnsAsync(new string[] { });
+                dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ThrowsAsync(new RepositoryException());
+
                 var result = await _studentAcademicCredentialsRepository.GetStudentAcademicCredentialsAsync(0, 100, criteriaEntity, filterPersonIds, acadProgramFilter, filterQualifiers);
             }
 
@@ -222,9 +289,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(RepositoryException))]
             public async Task GetStudentAcademicCredentialsAsync_DictionaryNull_RepositoryException()
             {
-                dataReaderMock.Setup(d => d.BulkReadRecordAsync<LdmGuid>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.BulkReadRecordAsync<LdmGuid>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), true, It.IsAny<int>()))
                     .ReturnsAsync(new string[] { });
+                dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(() => null);
+
                 var result = await _studentAcademicCredentialsRepository.GetStudentAcademicCredentialsAsync(0, 100, criteriaEntity, filterPersonIds, acadProgramFilter, filterQualifiers);
             }
 
@@ -239,7 +308,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task GetStudentAcademicCredentialByGuidAsync_KeyNotFoundException()
             {
-                dataReaderMock.Setup(d => d.ReadRecordAsync<AcadCredentials>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.ReadRecordAsync<AcadCredentials>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 var result = await _studentAcademicCredentialsRepository.GetStudentAcademicCredentialByGuidAsync("1");
             }
 
@@ -256,6 +325,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task GetStudentAcademicCredentialByGuidAsync_GetStAcadCredDictionaryAsync_RepositoryException()
             {
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<LdmGuid>(It.IsAny<string[]>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
+                dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ThrowsAsync(new RepositoryException());
                 var result = await _studentAcademicCredentialsRepository.GetStudentAcademicCredentialByGuidAsync("1");
             }
 
@@ -263,7 +333,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(RepositoryException))]
             public async Task GetStudentAcademicCredentialByGuidAsync_DictionaryNull_RepositoryException()
             {
-                dataReaderMock.Setup(d => d.BulkReadRecordAsync<LdmGuid>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.BulkReadRecordAsync<LdmGuid>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(() => null);
+                dataReaderMock.Setup(acc => acc.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(() => null);
                 var result = await _studentAcademicCredentialsRepository.GetStudentAcademicCredentialByGuidAsync("1");
             }
 

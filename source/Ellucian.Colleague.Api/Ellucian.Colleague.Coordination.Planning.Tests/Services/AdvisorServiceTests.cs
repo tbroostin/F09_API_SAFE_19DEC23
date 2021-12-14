@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Planning.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -2829,7 +2829,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             private Mock<IPersonBaseRepository> personBaseRepoMock;
 
             private string studentId;
-            private Dtos.Planning.CompletedAdvisement completedAdvisement;
+            private Dtos.Student.CompletedAdvisement completedAdvisement;
             private Domain.Student.Entities.Student student;
             private StudentAccess studentAccess;
             private IEnumerable<StudentAccess> studentAccesses;
@@ -2871,15 +2871,15 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
                 var adviseeDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.PlanningStudent, Dtos.Planning.Advisee>(adapterRegistry, logger);
                 adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.PlanningStudent, Dtos.Planning.Advisee>()).Returns(adviseeDtoAdapter);
 
-                var planningStudentEntityToAdviseeDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.CompletedAdvisement, Dtos.Planning.CompletedAdvisement>(adapterRegistry, logger);
-                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.CompletedAdvisement, Dtos.Planning.CompletedAdvisement>()).Returns(planningStudentEntityToAdviseeDtoAdapter);
+                var planningStudentEntityToAdviseeDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.CompletedAdvisement, Dtos.Student.CompletedAdvisement>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.CompletedAdvisement, Dtos.Student.CompletedAdvisement>()).Returns(planningStudentEntityToAdviseeDtoAdapter);
 
                 // Set up current user
                 currentUserFactory = new CurrentUserSetup.AdvisorUserFactory();
 
                 // Data setup
                 studentId = "0001234";
-                completedAdvisement = new Dtos.Planning.CompletedAdvisement()
+                completedAdvisement = new Dtos.Student.CompletedAdvisement()
                 {
                     AdvisorId = currentUserFactory.CurrentUser.PersonId,
                     CompletionDate = DateTime.Today,
@@ -2975,7 +2975,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             [ExpectedException(typeof(ApplicationException))]
             public async Task PostCompletedAdvisementAsync_StudentRepository_GetAsync_Returns_Null()
             {
-                studentRepoMock.Setup(repo => repo.GetAsync(It.IsAny<string>())).ReturnsAsync(null);
+                studentRepoMock.Setup(repo => repo.GetAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 advisorService = new AdvisorService(
                     adapterRegistry, advisorRepo, degreePlanRepo, termRepo, adviseeRepo, configRepo, currentUserFactory,
                     roleRepo, logger, studentRepo, null, baseConfigurationRepository, personBaseRepo, studentDegreePlanRepo);
@@ -3004,7 +3004,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Tests.Services
             [ExpectedException(typeof(ApplicationException))]
             public async Task PostCompletedAdvisementAsync_AdviseeRepository_Returns_Null()
             {
-                adviseeRepoMock.Setup(repo => repo.PostCompletedAdvisementAsync(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTimeOffset>(), It.IsAny<string>())).ReturnsAsync(null);
+                adviseeRepoMock.Setup(repo => repo.PostCompletedAdvisementAsync(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTimeOffset>(), It.IsAny<string>())).ReturnsAsync(() => null);
                 advisorService = new AdvisorService(
                     adapterRegistry, advisorRepo, degreePlanRepo, termRepo, adviseeRepo, configRepo, currentUserFactory,
                     roleRepo, logger, studentRepo, null, baseConfigurationRepository, personBaseRepo, studentDegreePlanRepo);

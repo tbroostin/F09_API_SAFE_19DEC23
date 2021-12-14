@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -81,7 +81,7 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
             #endregion
         }
 
-        public async Task<IEnumerable<CostCenter>> GetCostCentersAsync(GeneralLedgerUser generalLedgerUser, CostCenterStructure costCenterStructure, GeneralLedgerClassConfiguration glClassConfiguration, string costCenterId, string fiscalYear, CostCenterQueryCriteria criteria, string personId)
+        public async Task<IEnumerable<CostCenter>> GetCostCentersAsync(GeneralLedgerUser generalLedgerUser, CostCenterStructure costCenterStructure, GeneralLedgerClassConfiguration glClassConfiguration, string costCenterId, string fiscalYear, CostCenterQueryCriteria criteria, string personId, bool includeJustificationNotes = false)
         {
             if (generalLedgerUser.Id == "9999999")
             {

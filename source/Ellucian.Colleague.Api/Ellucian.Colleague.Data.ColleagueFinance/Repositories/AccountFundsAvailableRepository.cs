@@ -82,30 +82,37 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// </summary>
         /// <returns>The created FundsAvailable domain entity</returns>       
         public async Task<List<FundsAvailable>>  CheckAvailableFundsAsync(List<FundsAvailable> fundsAvailable, 
-            string purchaseOrderId = "", string voucherId = "", string blanketPurchaseOrderNumber = "", string documentSubmittedBy = "", string requisitionId = "")
+            string purchaseOrderId = "", string voucherId = "", string blanketPurchaseOrderNumber = "", string documentSubmittedBy = "", string requisitionId = "", List<string> bpoReqIds = null)
         {
             if (fundsAvailable == null || !fundsAvailable.Any())
             {
                 throw new ArgumentNullException("The accounting string must be specified to get available funds.");
             }
             var fundsResponseList = new List<FundsAvailable>();
-                             
-            var glStruct = await GetGlstructAsync();
-            if (glStruct != null && glStruct.AcctCheckAvailFunds == "N")
-            {
-                foreach (var fundAvailable in fundsAvailable)
-                {
-                    var fundsResponse = new FundsAvailable(fundAvailable.AccountString);
-                    fundsResponse.TransactionDate = fundAvailable.TransactionDate;
-                    fundsResponse.AvailableStatus = FundsAvailableStatus.NotApplicable;
-                    fundsResponse.Sequence = fundAvailable.Sequence;
-                    fundsResponse.ItemId = fundAvailable.ItemId;
-                    fundsResponse.Amount = fundAvailable.Amount;
-                    fundsResponse.CurrencyCode = fundAvailable.CurrencyCode;
-                    fundsResponseList.Add(fundsResponse);
-                }
-                return fundsResponseList;
-            } 
+            
+            // The AcctCheckAvailFunds parameter from GLAP is checked in the account funds
+            // available subroutines used to verify if funds are available so we don't
+            // need to identify this as non-applicable here in the API.  Instead, let the 
+            // CTX determine the status to be returned.  The reason is that the GL account
+            // validation/lookup needs to make sure that the oper ID has access based on
+            // the submitted By values.  Otherwise, the submitted by isn't validated.
+            // SRM - 01/05/2021
+            //var glStruct = await GetGlstructAsync();
+            //if (glStruct != null && glStruct.AcctCheckAvailFunds == "N")
+            //{
+            //    foreach (var fundAvailable in fundsAvailable)
+            //    {
+            //        var fundsResponse = new FundsAvailable(fundAvailable.AccountString);
+            //        fundsResponse.TransactionDate = fundAvailable.TransactionDate;
+            //        fundsResponse.AvailableStatus = FundsAvailableStatus.NotApplicable;
+            //        fundsResponse.Sequence = fundAvailable.Sequence;
+            //        fundsResponse.ItemId = fundAvailable.ItemId;
+            //        fundsResponse.Amount = fundAvailable.Amount;
+            //        fundsResponse.CurrencyCode = fundAvailable.CurrencyCode;
+            //        fundsResponseList.Add(fundsResponse);
+            //    }
+            //    return fundsResponseList;
+            //}
 
             var glAvailableList = new List<GlAvailableList>();
             foreach (var fundAvailable in fundsAvailable)
@@ -126,18 +133,27 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 BpoNo = blanketPurchaseOrderNumber,  
                 PoId = purchaseOrderId,
                 VouId = voucherId,
-                ReqId = requisitionId
+                ReqId = requisitionId,
+                BpoReqIds = bpoReqIds ?? null
             };
 
             // write the data
             var createResponse = await transactionInvoker.ExecuteAsync<CheckAvailableFundsRequest, CheckAvailableFundsResponse>(createRequest);
+            
+            // Write informational messages to API log
+            if (createResponse.InfoMessages != null && createResponse.InfoMessages.Any())
+            {
+                string messages = string.Empty;
+                createResponse.InfoMessages.ForEach(m => messages = string.Concat(messages, m, "\r\n"));
+                logger.Info(messages);
+            }
 
             if (createResponse.ErrorMessages.Any())
             {
                 var errorMessage = "Error(s) occurred checking funds availability ";
                 var exception = new RepositoryException(errorMessage);
                 createResponse.ErrorMessages.ForEach
-                    (e => exception.AddError(new RepositoryError("CheckAvailableFunds", e)));
+                    (e => exception.AddError(new RepositoryError("Validation.Exception", e)));
                 
                 logger.Error(errorMessage);
                 throw exception;
@@ -213,6 +229,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 fundsResponse.ItemId = glAvailableResponse.ItemsId;
                 fundsResponse.Sequence = glAvailableResponse.RecordKey;
                 fundsResponse.SubmittedBy = glAvailableResponse.SubmittedBy;
+                fundsResponse.OverrideMessage = glAvailableResponse.OverrideMessage;
                 fundsResponseList.Add(fundsResponse);
             }
             return fundsResponseList;          
@@ -239,6 +256,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     return FundsAvailableStatus.Override;
                 case "INVALID.ACCOUNTING.STRING":
                     return FundsAvailableStatus.Invalid;
+                case "NOT.APPLICABLE":
+                    return FundsAvailableStatus.NotApplicable;
                 default:
                     throw new ArgumentException(string.Concat("Invalid FundsAvailableStatus: ", availableStatus));
             }
@@ -644,9 +663,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
                 if (purchaseOrders.FirstOrDefault().PoStatEntityAssociation != null & purchaseOrders.FirstOrDefault().PoStatEntityAssociation.Any())
                 {
-                    var poStatus = purchaseOrders.FirstOrDefault().PoStatEntityAssociation
-                        .OrderByDescending(d => d.PoStatusDateAssocMember)
-                        .FirstOrDefault();
+                    var poStatus = purchaseOrders.FirstOrDefault().PoStatEntityAssociation.FirstOrDefault();
+
                     return string.IsNullOrEmpty(poStatus.PoStatusAssocMember) ? string.Empty : poStatus.PoStatusAssocMember;
                 }
             }
@@ -671,7 +689,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 throw new KeyNotFoundException(string.Format("No item found for item number: {0}.", itemNumber));
             }
 
-            if (!string.IsNullOrEmpty(result.ItmReqId))
+            // If we have a purchase order attached to the line item then we don't care what the status of the requisition is.
+            // We only care about the status of the Purchase Order which has already been verified in the service method.
+            if (!string.IsNullOrEmpty(result.ItmReqId) && string.IsNullOrEmpty(result.ItmPoId))
             {
                 string reqCriteria = string.Format("WITH REQUISITIONS.ID EQ '{0}'", result.ItmReqId);
                 var requisitions = await DataReader.BulkReadRecordAsync<DataContracts.Requisitions>("REQUISITIONS", reqCriteria);
@@ -682,9 +702,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 }
                 if (requisitions.FirstOrDefault().ReqStatusesEntityAssociation != null & requisitions.FirstOrDefault().ReqStatusesEntityAssociation.Any())
                 {
-                    var reqStatus = requisitions.FirstOrDefault().ReqStatusesEntityAssociation
-                        .OrderByDescending(d => d.ReqStatusDateAssocMember)
-                        .FirstOrDefault();
+                    var reqStatus = requisitions.FirstOrDefault().ReqStatusesEntityAssociation.FirstOrDefault();
+
                     return string.IsNullOrEmpty(reqStatus.ReqStatusAssocMember) ? string.Empty : reqStatus.ReqStatusAssocMember;
                 }
             }

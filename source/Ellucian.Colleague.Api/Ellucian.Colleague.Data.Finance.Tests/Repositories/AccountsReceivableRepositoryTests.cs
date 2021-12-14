@@ -71,14 +71,14 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             [ExpectedException(typeof(ArgumentNullException))]
             public void AccountsReceivableRepository_GetAccountHolder_NullId()
             {
-                var result = repository.GetAccountHolder(null);
+                var result = Task.Run(async() => await repository.GetAccountHolderAsync(null)).GetAwaiter().GetResult();
             }
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public void AccountsReceivableRepository_GetAccountHolder_EmptyId()
             {
-                var result = repository.GetAccountHolder(String.Empty);
+                var result = Task.Run(async() => await repository.GetAccountHolderAsync(String.Empty)).GetAwaiter().GetResult();
             }
 
             [TestMethod]
@@ -86,7 +86,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             {
                 // 2 deposits due
                 string personId = "0000001";
-                var result = repository.GetAccountHolder(personId);
+                var result = Task.Run(async () => await repository.GetAccountHolderAsync(personId)).GetAwaiter().GetResult();
 
                 Assert.AreEqual(personId, result.Id);
                 Assert.AreEqual(2, result.DepositsDue.Count());
@@ -97,7 +97,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             {
                 // 2 deposits due
                 string personId = "0000002";
-                var result = repository.GetAccountHolder(personId);
+                var result = Task.Run(async () => await repository.GetAccountHolderAsync(personId)).GetAwaiter().GetResult();
 
                 Assert.AreEqual(personId, result.Id);
                 Assert.AreEqual(2, result.DepositsDue.Count());
@@ -108,7 +108,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             {
                 // 2 deposits due
                 string personId = "0000003";
-                var result = repository.GetAccountHolder(personId);
+                var result = Task.Run(async () => await repository.GetAccountHolderAsync(personId)).GetAwaiter().GetResult();
 
                 Assert.AreEqual(personId, result.Id);
                 Assert.AreEqual(2, result.DepositsDue.Count());
@@ -119,7 +119,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             {
                 // 3 deposits due
                 string personId = "0000004";
-                var result = repository.GetAccountHolder(personId);
+                var result = Task.Run(async () => await repository.GetAccountHolderAsync(personId)).GetAwaiter().GetResult();
 
                 Assert.AreEqual(personId, result.Id);
                 Assert.AreEqual(3, result.DepositsDue.Count());
@@ -130,7 +130,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             {
                 // 2 deposits due
                 string personId = "0000005";
-                var result = repository.GetAccountHolder(personId);
+                var result = Task.Run(async () => await repository.GetAccountHolderAsync(personId)).GetAwaiter().GetResult();
 
                 Assert.AreEqual(personId, result.Id);
                 Assert.AreEqual(2, result.DepositsDue.Count());
@@ -141,7 +141,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             {
                 // No deposits due
                 string personId = "0000006";
-                var result = repository.GetAccountHolder(personId);
+                var result = Task.Run(async () => await repository.GetAccountHolderAsync(personId)).GetAwaiter().GetResult();
 
                 Assert.AreEqual(personId, result.Id);
                 Assert.AreEqual(0, result.DepositsDue.Count());
@@ -1079,6 +1079,52 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
                     {
                         var result = invoices[i];
                         Assert.AreEqual(invoicePaymentItem.InvoicePaymentAmount, result.AmountPaid, "Invoice Amount Paid does not match for Invoice " + source.Recordkey);
+                    }
+                }
+            }
+
+            [TestMethod]
+            public async Task AccountsReceivableRepository_QueryInvoicePaymentsAsync_VerifyInvoicePaidAmount_Paid_BalanceAmount()
+            {
+                // ARRANGE
+                var ids = this.arInvoices.Select(x => x.Recordkey).ToList();
+                GetInvoicePaymentAmountsRequest ctxRequest = new GetInvoicePaymentAmountsRequest();
+                ctxRequest.InvoiceIds = ids;
+                GetInvoicePaymentAmountsResponse ctxResponse = new GetInvoicePaymentAmountsResponse();
+                ctxResponse.InvoicePaymentItems = new List<InvoicePaymentItems>();
+                foreach (var invoiceId in ids)
+                {
+                    // Get payment items for the particular invoice to build a response
+                    var items = arInvoiceItems.Where(ai => ai.InviInvoice == invoiceId);
+                    var amountCharged = items == null || !items.Any() ? 0 : items.Sum(ii => ii.InviExtChargeAmt);
+                    var amountPaid = amountCharged > 10 ? amountCharged - 10 : 0;
+                    var balanceAmount = amountCharged - amountPaid;
+                    var invoicePaymentItem = new InvoicePaymentItems() { InvoicePaymentId = invoiceId, InvoicePaymentAmount = amountPaid, AlInvoiceBalanceAmount=balanceAmount };
+                    ctxResponse.InvoicePaymentItems.Add(invoicePaymentItem);
+                }
+
+                // Mock the Colleague TX response
+                transManagerMock.Setup<Task<GetInvoicePaymentAmountsResponse>>(
+                    trans => trans.ExecuteAsync<GetInvoicePaymentAmountsRequest, GetInvoicePaymentAmountsResponse>(It.IsAny<GetInvoicePaymentAmountsRequest>()))
+                        .Returns<GetInvoicePaymentAmountsRequest>(request =>
+                        {
+                            return Task.FromResult(ctxResponse);
+                        });
+
+                // ACT
+                var invoices = (await this.repository.QueryInvoicePaymentsAsync(ids, InvoiceDataSubset.InvoicePayment)).ToList();
+
+                // ASSESS THE RESULTS
+                for (int i = 0; i < ids.Count(); i++)
+                {
+                    // Get paid amounts
+                    var source = arInvoices[i];
+                    var invoicePaymentItem = ctxResponse.InvoicePaymentItems.Where(ip => ip.InvoicePaymentId == source.Recordkey).FirstOrDefault();
+                    if (invoicePaymentItem != null)
+                    {
+                        var result = invoices[i];
+                        Assert.AreEqual(invoicePaymentItem.InvoicePaymentAmount, result.AmountPaid, "Invoice Amount Paid does not match for Invoice " + source.Recordkey);
+                        Assert.AreEqual(invoicePaymentItem.AlInvoiceBalanceAmount, result.BalanceAmount, "Invoice Balance Amount does not match for Invoice " + source.Recordkey);
                     }
                 }
             }

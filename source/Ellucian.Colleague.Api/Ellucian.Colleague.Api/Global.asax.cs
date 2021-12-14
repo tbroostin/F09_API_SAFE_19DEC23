@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.App.Config.Storage.Service.Client;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Dmi.Client;
@@ -48,6 +48,9 @@ namespace Ellucian.Colleague.Api
             BundleConfig.RegisterBundles(BundleTable.Bundles);
 
             AntiForgeryConfig.UniqueClaimTypeIdentifier = "sid";
+
+            // Remove headers that report the internals of the application (MVC version)
+            MvcHandler.DisableMvcResponseHeader = true;
 
             // setup the API Explorer doc source
             string xmlDocumentationFileName = "~/bin/Ellucian.Colleague.Api.xml";
@@ -214,6 +217,12 @@ namespace Ellucian.Colleague.Api
                                     configObject.Namespace, configObject.ConfigData, username,
                                     configObject.ConfigVersion, configObject.ProductId, configObject.ProductVersion).GetAwaiter().GetResult();
                                 logger.Info("Post-merge backup sent to config storage.");
+
+                                // after submitting the merged checksum, set the lastrestoredchecksum to this new checksum.
+                                // This must be done to avoid a looping situation where instances keep performing merges
+                                // in lock step with each other due to lastrestoredchecksum file containing an older checksum, when 
+                                // there are changes that are repeated (e.g. logging toggled on/off).
+                                Utilities.SetLastRestoredChecksum(currentChecksum);
                             }
                             catch (Exception e)
                             {

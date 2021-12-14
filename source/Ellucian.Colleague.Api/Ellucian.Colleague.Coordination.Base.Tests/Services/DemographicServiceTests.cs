@@ -578,7 +578,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task DemographicService_GetPersonFilterByGuid_HEDM_ThrowsInvOpExc()
             {
                 refRepoMock.Setup(repo => repo.GetPersonFiltersAsync(It.IsAny<bool>())).Throws<InvalidOperationException>();

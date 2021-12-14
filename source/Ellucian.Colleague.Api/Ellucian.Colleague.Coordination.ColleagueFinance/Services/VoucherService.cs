@@ -195,7 +195,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             //sorting
             var sortOrderSequence = new List<string> { Ellucian.Colleague.Dtos.ColleagueFinance.VoucherStatus.InProgress.ToString(), Ellucian.Colleague.Dtos.ColleagueFinance.VoucherStatus.NotApproved.ToString(), Ellucian.Colleague.Dtos.ColleagueFinance.VoucherStatus.Outstanding.ToString(), Ellucian.Colleague.Dtos.ColleagueFinance.VoucherStatus.Paid.ToString(), Ellucian.Colleague.Dtos.ColleagueFinance.VoucherStatus.Reconciled.ToString(), Ellucian.Colleague.Dtos.ColleagueFinance.VoucherStatus.Voided.ToString() };
-            voucherSummaryDomainEntities = voucherSummaryDomainEntities.OrderBy(item => sortOrderSequence.IndexOf(item.Status.ToString())).ThenByDescending(item=> item.Id);
+            voucherSummaryDomainEntities = voucherSummaryDomainEntities.OrderBy(item => sortOrderSequence.IndexOf(item.Status.ToString())).ThenByDescending(item => item.Date).ThenByDescending(item => item.Id);
 
             // Convert the voucher summary and all its child objects into DTOs
             var voucherSummaryDtoAdapter = new VoucherSummaryEntityDtoAdapter(_adapterRegistry, logger);
@@ -419,6 +419,58 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
 
             return voucherDtos;
+        }
+
+        /// <summary>
+        /// Get Voucher summary list for the given user
+        /// </summary>
+        /// <param name="criteria">procurement filter criteria</param>
+        /// <returns>Voucher Summary DTOs</returns>
+        public async Task<IEnumerable<VoucherSummary>> QueryVoucherSummariesAsync(Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria criteria)
+        {
+            List<VoucherSummary> voucherSummaryDtos = new List<VoucherSummary>();
+
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("filterCriteria", "filter criteria must be specified.");
+            }
+            var personId = criteria.PersonId;
+            if (string.IsNullOrEmpty(personId))
+            {
+                throw new ArgumentNullException("personId", "Person ID must be specified.");
+            }
+            // check if personId passed is same currentuser
+            CheckIfUserIsSelf(personId);
+
+            //check if personId has staff record            
+            await CheckStaffRecordAsync(personId);
+
+            // Check the permission code to view a voucher.
+            CheckViewVoucherPermission();
+
+            // Create the adapter to convert domain entities to DTO.
+            var filterCriteriaAdapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria, Ellucian.Colleague.Domain.ColleagueFinance.Entities.ProcurementDocumentFilterCriteria>();
+            var queryCriteriaEntity = filterCriteriaAdapter.MapToType(criteria);
+            
+            // Get the list of voucher summary domain entity from the repository
+            var voucherSummaryDomainEntities = await voucherRepository.QueryVoucherSummariesAsync(queryCriteriaEntity);
+
+            if (voucherSummaryDomainEntities == null || !voucherSummaryDomainEntities.Any())
+            {
+                return voucherSummaryDtos;
+            }
+            //sorting
+            var sortOrderSequence = new List<string> { Ellucian.Colleague.Dtos.ColleagueFinance.VoucherStatus.InProgress.ToString(), Ellucian.Colleague.Dtos.ColleagueFinance.VoucherStatus.NotApproved.ToString(), Ellucian.Colleague.Dtos.ColleagueFinance.VoucherStatus.Outstanding.ToString(), Ellucian.Colleague.Dtos.ColleagueFinance.VoucherStatus.Paid.ToString(), Ellucian.Colleague.Dtos.ColleagueFinance.VoucherStatus.Reconciled.ToString(), Ellucian.Colleague.Dtos.ColleagueFinance.VoucherStatus.Voided.ToString() };
+            voucherSummaryDomainEntities = voucherSummaryDomainEntities.OrderBy(item => sortOrderSequence.IndexOf(item.Status.ToString())).ThenByDescending(item => item.Date).ThenByDescending(item => item.Id);
+
+            // Convert the voucher summary and all its child objects into DTOs
+            var voucherSummaryDtoAdapter = new VoucherSummaryEntityDtoAdapter(_adapterRegistry, logger);
+            foreach (var voucherDomainEntity in voucherSummaryDomainEntities)
+            {
+                voucherSummaryDtos.Add(voucherSummaryDtoAdapter.MapToType(voucherDomainEntity));
+            }
+
+            return voucherSummaryDtos;
         }
 
 

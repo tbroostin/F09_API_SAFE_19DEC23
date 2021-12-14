@@ -1,4 +1,4 @@
-﻿//Copyright 2014-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using System.Reflection;
 using System.Web.Http;
@@ -2103,7 +2103,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.FinancialAid
             [ExpectedException(typeof(HttpResponseException))]
             public async Task NoAwardLetterDtoReturned_ThrowsExceptionTest()
             {
-                awardLetterServiceMock.Setup(s => s.GetAwardLetterByIdAsync(studentId, awardLetterId)).ReturnsAsync(null);
+                awardLetterServiceMock.Setup(s => s.GetAwardLetterByIdAsync(studentId, awardLetterId)).ReturnsAsync(() => null);
                 try
                 {
                     await AwardLettersController.GetAwardLetterReport3Async(studentId, awardLetterId);
@@ -2543,7 +2543,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.FinancialAid
             [ExpectedException(typeof(HttpResponseException))]
             public async Task NoAwardLetterDtoReturned_ThrowsExceptionTest()
             {
-                awardLetterServiceMock.Setup(s => s.GetAwardLetterById2Async(studentId, awardLetterId)).ReturnsAsync(null);
+                awardLetterServiceMock.Setup(s => s.GetAwardLetterById2Async(studentId, awardLetterId)).ReturnsAsync(() => null);
                 try
                 {
                     await AwardLettersController.GetAwardLetterReport4Async(studentId, awardLetterId);

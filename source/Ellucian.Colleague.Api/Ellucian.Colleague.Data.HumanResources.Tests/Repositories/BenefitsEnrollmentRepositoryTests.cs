@@ -124,7 +124,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         public async Task GetEmployeeBenefitsEnrollmentEligibilityAsync_Throws_ApplicationException_When_ResponseNull()
         {
             transManagerMock.Setup(t => t.ExecuteAsync<GetBenefitEnrollmentEligibilityRequest, GetBenefitEnrollmentEligibilityResponse>(It.IsAny<GetBenefitEnrollmentEligibilityRequest>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
             await repository.GetEmployeeBenefitsEnrollmentEligibilityAsync(employeeId);
         }
 
@@ -170,7 +170,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         public async Task GetEmployeeBenefitsEnrollmentEligibilityAsync_NullResponse_ApplicationExceptionThrownTest()
         {
             transManagerMock.Setup(t => t.ExecuteAsync<GetBenefitEnrollmentEligibilityRequest, GetBenefitEnrollmentEligibilityResponse>(It.IsAny<GetBenefitEnrollmentEligibilityRequest>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
             repository = new BenefitsEnrollmentRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
             await repository.GetEmployeeBenefitsEnrollmentEligibilityAsync(employeeId);
         }
@@ -207,7 +207,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         public async Task GetEmployeeBenefitsEnrollmentPoolAsync_Throws_RepositoryException_When_ResponseNull()
         {
             transManagerMock.Setup(t => t.ExecuteAsync<GetBenefitEnrollmentPoolRequest, GetBenefitEnrollmentPoolResponse>(It.IsAny<GetBenefitEnrollmentPoolRequest>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
             await repository.GetEmployeeBenefitsEnrollmentPoolAsync(employeeId);
         }
 
@@ -302,7 +302,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         public async Task AddEmployeeBenefitsEnrollmentPoolAsync_Throws_ApplicationException_When_Response_Is_Null()
         {
             transManagerMock.Setup(t => t.ExecuteAsync<AddBenefitEnrollmentPoolRequest, AddBenefitEnrollmentPoolResponse>(It.IsAny<AddBenefitEnrollmentPoolRequest>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
             await repository.AddEmployeeBenefitsEnrollmentPoolAsync(employeeId, new EmployeeBenefitsEnrollmentPoolItem());
         }
 
@@ -345,7 +345,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         [TestMethod, ExpectedException(typeof(KeyNotFoundException))]
         public async Task CheckDependentExistsAsync_Throws_KeyNotFoundException_When_BenefitsEnrollmentPoolId_Is_NotFound()
         {
-            dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
+            dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(() => null);
 
             await repository.CheckDependentExistsAsync(benefitsEnrollmentPoolId);
         }
@@ -396,7 +396,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         public async Task UpdateEmployeeBenefitsEnrollmentPoolAsync_Throws_ApplicationException_When_ResponseNull()
         {
             transManagerMock.Setup(t => t.ExecuteAsync<UpdateBenEnrPoolRequest, UpdateBenEnrPoolResponse>(It.IsAny<UpdateBenEnrPoolRequest>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
             await repository.UpdateEmployeeBenefitsEnrollmentPoolAsync(employeeId, employeeBenefitsEnrollmentPoolItem);
         }
 
@@ -491,7 +491,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             public async Task GetBenefitEnrollmentPackageNullResponse_ExceptionRethrownTest()
             {
                 transManagerMock.Setup(t => t.ExecuteAsync<GetBenefitEnrollmentPackageRequest, GetBenefitEnrollmentPackageResponse>(It.IsAny<GetBenefitEnrollmentPackageRequest>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
                 await repository.GetEmployeeBenefitsEnrollmentPackageAsync(employeeId);
             }
 
@@ -549,7 +549,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             public async Task NullTransactionResponse_ExceptionThrownTest()
             {
                 transManagerMock.Setup(t => t.ExecuteAsync<GetBenefitTypeBenefitsRequest, GetBenefitTypeBenefitsResponse>(It.IsAny<GetBenefitTypeBenefitsRequest>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
                 repository = new BenefitsEnrollmentRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
                 await repository.QueryEnrollmentPeriodBenefitsAsync("MED");
             }
@@ -600,7 +600,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             public async Task QueryEmployeeBenefitsEnrollmentInfoAsync_NullTransactionResponse_ExceptionThrownTest()
             {
                 transManagerMock.Setup(t => t.ExecuteAsync<GetEmployeeBenefitsEnrollmentInfoRequest, GetEmployeeBenefitsEnrollmentInfoResponse>(It.IsAny<GetEmployeeBenefitsEnrollmentInfoRequest>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
                 repository = new BenefitsEnrollmentRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
                 await repository.QueryEmployeeBenefitsEnrollmentInfoAsync("0014697", "19FALL", "19FLDENT");
             }
@@ -726,7 +726,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             public async Task CTXReturnsNullTest()
             {
                 transManagerMock.Setup(t => t.ExecuteAsync<ReopenBenefitSelectionRequest, ReopenBenefitSelectionResponse>(It.IsAny<ReopenBenefitSelectionRequest>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
                 repository = new BenefitsEnrollmentRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
                 await repository.ReOpenBenefitElectionsAsync("0014697", "19FALL");
             }

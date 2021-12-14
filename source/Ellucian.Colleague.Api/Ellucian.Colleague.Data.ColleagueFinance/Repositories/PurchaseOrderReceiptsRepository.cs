@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -31,6 +31,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <param name="cacheProvider">Pass in an ICacheProvider object</param>
         /// <param name="transactionFactory">Pass in an IColleagueTransactionFactory object</param>
         /// <param name="logger">Pass in an ILogger object</param>
+        /// 
+
+        private RepositoryException exception = new RepositoryException();
         public PurchaseOrderReceiptRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger)
             : base(cacheProvider, transactionFactory, logger)
         {
@@ -79,13 +82,17 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns>Tuple of PurchaseOrderReceipt entity objects <see cref="PurchaseOrderReceipt"/> and a count for paging.</returns>
         public async Task<Tuple<IEnumerable<PurchaseOrderReceipt>, int>> GetPurchaseOrderReceiptsAsync(int offset, int limit, string purchaseOrderID ="")
         {
-            var criteria = "";
+            var criteria = "WITH PRI.RECEIVED.BY NE ''";
 
             if (!string.IsNullOrEmpty(purchaseOrderID))
             {
-                criteria = string.Format("WITH PRI.PO.ID EQ '{0}'", purchaseOrderID);
+                criteria = string.Format("WITH PRI.RECEIVED.BY NE '' AND WITH PRI.PO.ID EQ '{0}'", purchaseOrderID);
             }
             var purchaseOrderReceiptIds = await DataReader.SelectAsync("PO.RECEIPT.INTG", criteria);
+            if (purchaseOrderReceiptIds == null || !purchaseOrderReceiptIds.Any())
+            {
+                return new Tuple<IEnumerable<PurchaseOrderReceipt>, int>(new List<PurchaseOrderReceipt>(), 0);
+            }
 
             var totalCount = purchaseOrderReceiptIds.Count();
             Array.Sort(purchaseOrderReceiptIds);
@@ -95,7 +102,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             if (purchaseOrderReceiptData == null)
             {
-                throw new KeyNotFoundException("No records selected from PO.RECEIPT.INTG file in Colleague.");
+                return new Tuple<IEnumerable<PurchaseOrderReceipt>, int>(new List<PurchaseOrderReceipt>(), 0);
             }
 
             var itemIds = purchaseOrderReceiptData.SelectMany(x => x.PriItems);
@@ -108,6 +115,10 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                purchaseOrderData = await DataReader.BatchReadRecordColumnsAsync("PURCHASE.ORDERS", purchaseOrderIds.Distinct().ToArray(), new string[] { "PO.NO" });
             }
             var purchaseOrderReceipts = BuildPurchaseOrderReceipts(purchaseOrderReceiptData, purchaseOrderReceiptItems, purchaseOrderData);
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
 
             return new Tuple<IEnumerable<PurchaseOrderReceipt>, int>(purchaseOrderReceipts, totalCount);
 
@@ -120,27 +131,23 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns>PurchaseOrderReceipt entity object <see cref="PurchaseOrderReceipt"/></returns>
         public async Task<PurchaseOrderReceipt> GetPurchaseOrderReceiptByGuidAsync(string guid)
         {
+            PurchaseOrderReceipt purchaseOrderReceiptEntity = null;
             if (string.IsNullOrEmpty(guid))
             {
-                throw new ArgumentNullException("guid");
+                throw new KeyNotFoundException("No purchase-order-receipts was found for GUID " + guid);
             }
             var id = await GetPurchaseOrderReceiptIdFromGuidAsync(guid);
 
             if (id == null || string.IsNullOrEmpty(id))
             {
-                throw new KeyNotFoundException("Purchase Order Receipt not found for GUID " + guid);
+                throw new KeyNotFoundException("No purchase-order-receipts was found for GUID " + guid);
             }
 
             var purchaseOrderReceipt = await DataReader.ReadRecordAsync<PoReceiptIntg>(id);
 
             if (purchaseOrderReceipt == null)
             {
-                throw new KeyNotFoundException("Purchase Order Receipt not found for GUID " + guid);
-            }
-
-            if (purchaseOrderReceipt.RecordGuid != null && purchaseOrderReceipt.RecordGuid != guid)
-            {
-                throw new KeyNotFoundException("Purchase Order Receipt not found for GUID " + guid);
+                throw new KeyNotFoundException("No purchase-order-receipts was found for GUID " + guid);
             }
 
             ICollection<DataContracts.PoReceiptItemIntg> poReceiptItems = null;
@@ -153,14 +160,18 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var purchaseOrderIds = new string[]{purchaseOrderReceipt.PriPoId};
             var purchaseOrderData = await DataReader.BatchReadRecordColumnsAsync("PURCHASE.ORDERS", purchaseOrderIds.ToArray(), new string[] { "PO.NO" });
             if (purchaseOrderData != null)
-            {
-                
+            {                
                 var poNoDict = new Dictionary<string, string>();
                 var found = purchaseOrderData.TryGetValue(purchaseOrderReceipt.PriPoId, out poNoDict);
                 if (found)
                     poNoDict.TryGetValue("PO.NO", out poNo);
             }
-            return BuildPurchaseOrderReceipt(purchaseOrderReceipt, poReceiptItems, poNo);
+            purchaseOrderReceiptEntity = BuildPurchaseOrderReceipt(purchaseOrderReceipt, poReceiptItems, poNo);
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+            return purchaseOrderReceiptEntity;
         }
 
         /// <summary>
@@ -170,7 +181,34 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns>id</returns>
         public async Task<string> GetPurchaseOrderReceiptIdFromGuidAsync(string guid)
         {
-            return await GetRecordKeyFromGuidAsync(guid);
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new KeyNotFoundException("No purchase-order-receipts was found for GUID " + guid);
+            }
+
+            var idDict = await DataReader.SelectAsync(new GuidLookup[] { new GuidLookup(guid) });
+            if (idDict == null || idDict.Count == 0)
+            {
+                throw new KeyNotFoundException("No purchase-order-receipts was found for GUID " + guid);
+            }
+
+            var foundEntry = idDict.FirstOrDefault();
+            if (foundEntry.Value == null)
+            {
+                throw new KeyNotFoundException("No purchase-order-receipts was found for GUID " + guid);
+            }
+
+            if (foundEntry.Value.Entity != "PO.RECEIPT.INTG")
+            {
+                exception.AddError(new RepositoryError("GUID.Wrong.Type", string.Format("GUID {0} has different entity, {1}, than expected, PO.RECEIPT.INTG", guid, foundEntry.Value.Entity))
+                {
+                    Id = guid
+                });
+                throw exception;
+
+            }
+
+            return foundEntry.Value.PrimaryKey;
         }
 
         /// <summary>
@@ -182,20 +220,33 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
            Dictionary<string, Dictionary<string, string>> purchaseOrderData)
         {
             var purchaseOrderReceiptCollection = new List<PurchaseOrderReceipt>();
-         
+
             foreach (var purchaseOrderReceipt in purchaseOrderReceipts)
             {
-                var poNo = string.Empty;
-                if (purchaseOrderData != null)
+                try
                 {
-                    var poNoDict = new Dictionary<string, string>();
-                    var found = purchaseOrderData.TryGetValue(purchaseOrderReceipt.PriPoId, out poNoDict);
-                    if (found)
-                        poNoDict.TryGetValue("PO.NO", out poNo);
+                    var poNo = string.Empty;
+                    if (purchaseOrderData != null)
+                    {
+                        var poNoDict = new Dictionary<string, string>();
+                        var found = purchaseOrderData.TryGetValue(purchaseOrderReceipt.PriPoId, out poNoDict);
+                        if (found)
+                            poNoDict.TryGetValue("PO.NO", out poNo);
+                    }
+                    var purchaseOrderReceiptEntity = BuildPurchaseOrderReceipt(purchaseOrderReceipt, poReceiptItems, poNo);
+                    if (purchaseOrderReceiptEntity != null)
+                        purchaseOrderReceiptCollection.Add(purchaseOrderReceiptEntity);
                 }
-                purchaseOrderReceiptCollection.Add(BuildPurchaseOrderReceipt(purchaseOrderReceipt, poReceiptItems, poNo));
-            }
+                catch (Exception e)
+                {
+                    exception.AddError(new RepositoryError("Bad.Data", e.Message)
+                    {
+                        SourceId = purchaseOrderReceipt.Recordkey,
+                        Id = purchaseOrderReceipt.RecordGuid
+                    });
+                }
 
+            }
             return purchaseOrderReceiptCollection.AsEnumerable();
         }
 
@@ -210,12 +261,19 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         {
             if (purchaseOrderReceipt == null)
             {
-                throw new ArgumentNullException("purchaseOrderReceipt");
+                exception.AddError(new RepositoryError("Bad.Data", "Procurement receipt is missing."));
+                throw exception;
             }
 
             if (string.IsNullOrEmpty(purchaseOrderReceipt.RecordGuid))
             {
-                throw new ArgumentNullException("guid");
+                exception.AddError(new RepositoryError("GUID.Not.Found", "Procurement receipt GUID is missing.")
+                {
+                    SourceId = purchaseOrderReceipt.Recordkey,
+                    Id = purchaseOrderReceipt.RecordGuid                 
+                }) ;
+                throw exception;
+
             }
 
             var purchaseOrderReceiptDomainEntity = new PurchaseOrderReceipt(purchaseOrderReceipt.RecordGuid);

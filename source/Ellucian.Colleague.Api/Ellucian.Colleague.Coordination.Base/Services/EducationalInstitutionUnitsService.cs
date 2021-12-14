@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -64,7 +64,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         {
             if (_schools == null)
             {
-                _schools = await _referenceDataRepository.GetSchoolsAsync(bypassCache);
+                _schools = await _referenceDataRepository.GetSchools2Async(bypassCache);
             }
             return _schools;
         }

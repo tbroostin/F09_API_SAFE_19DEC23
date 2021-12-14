@@ -247,6 +247,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                                     {"2019/WI","2019","2","2019 Winterim Term            ","2018-12-27" ,"2019-01-31", "UG   ", "N", "Y", "2019RWI", "",   "",   "subterm","WI"},
                                     {"2019RSU","2019","7","Summer Reporting Term         ","2019-05-22" ,"2019-08-16", "     ", "N", "N", "2019RSU", "",    "",  "term",   "SU"},
                                     {"2019RWI","2019","6","Winter Reporting Term         ","2018-12-27" ,"2019-01-31", "     ", "N", "N", "2019RWI", "",    "",  "term",   "SU"},
+
+                                     {"2029/FA","2029","1","2029 Fall Term                ","2020-12-31" ,"2029-12-31", "UG   ", "Y", "Y", "2029/FA", "F",  "E;O","term",   "SP"},
                                      };
             int termcnt = termdata.Length / 14;
 
@@ -296,9 +298,11 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                     };
                 if (newterm.Code == "2012/FA")
                 {
-                    // Give it some registration dates.
-                    newterm.RegistrationDates.Add(new RegistrationDate(null, new DateTime(2012, 10, 1), new DateTime(2012, 10, 5), new DateTime(2013, 1, 1), new DateTime(2013, 1, 15), new DateTime(2013, 2, 1), new DateTime(2013, 2, 15), null, null, null, null));
-                } 
+                    // Give it some registration dates. //add census dates also
+                    newterm.RegistrationDates.Add(new RegistrationDate(null, new DateTime(2012, 10, 1), new DateTime(2012, 10, 5), new DateTime(2013, 1, 1), new DateTime(2013, 1, 15), new DateTime(2013, 2, 1), new DateTime(2013, 2, 15), null, null, null, new List<DateTime?>() {new DateTime(2021, 01, 01), new DateTime(2021, 03, 02) }));
+                    newterm.RegistrationDates.Add(new RegistrationDate("NW", new DateTime(2012, 10, 1), new DateTime(2012, 10, 5), new DateTime(2013, 1, 1), new DateTime(2013, 1, 15), new DateTime(2013, 2, 1), new DateTime(2013, 2, 15), null, null, null, new List<DateTime?>() { new DateTime(2021, 02, 01), new DateTime(2021, 05, 02), new DateTime(2021, 06, 02) }));
+
+                }
                 foreach (string level in acadLevels)
                 {
                     newterm.AddAcademicLevel(level);

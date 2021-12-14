@@ -1,4 +1,4 @@
-﻿//Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -18,6 +18,7 @@ using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Colleague.Dtos.DtoProperties;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Services
 {
@@ -76,9 +77,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         {
             try
             {
-                //check permissions
-                CheckGetInstitutionJobsPermission();
-
                 string personCode = string.Empty;
                 if (!string.IsNullOrEmpty(person))
                 {
@@ -199,9 +197,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         {
             try
             {
-                //check permissions
-                CheckGetInstitutionJobsPermission();
-
                 string personCode = string.Empty;
                 if (!string.IsNullOrEmpty(person))
                 {
@@ -350,14 +345,18 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             string endOn = "", string status = "", string classification = "", string preference = "", bool bypassCache = false, Dictionary<string, string> filterQualifiers = null)
         {
             try
-            {
-                //check permissions
-                CheckGetInstitutionJobsPermission();
-
+            {         
                 string personCode = string.Empty;
                 if (!string.IsNullOrEmpty(person))
                 {
-                    personCode = await _personRepository.GetPersonIdFromGuidAsync(person);
+                    try
+                    {
+                        personCode = await _personRepository.GetPersonIdFromGuidAsync(person);
+                    }
+                    catch
+                    {
+                        personCode = string.Empty;
+                    }
                     if (string.IsNullOrEmpty(personCode))
                         // no results
                         return new Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>(new List<Dtos.InstitutionJobs3>(), 0);
@@ -366,8 +365,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 string employerCode = string.Empty;
                 if (!string.IsNullOrEmpty(employer))
                 {
-                    employerCode = await _personRepository.GetPersonIdFromGuidAsync(employer);
-                    if (string.IsNullOrEmpty(employerCode))
+                    var institutionalEmployerGuid = await _institutionJobsRepository.GetInstitutionEmployerGuidAsync();
+                    if (employer != institutionalEmployerGuid)
                         // no results
                         return new Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>(new List<Dtos.InstitutionJobs3>(), 0);
                 }
@@ -496,7 +495,11 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
                         foreach (var institutionJobsEntity in institutionJobsEntities)
                         {
-                            institutionPositions.Add(await this.ConvertInstitutionJobsEntityToDto3Async(institutionJobsEntity, personGuidCollection, bypassCache));
+                            institutionPositions.Add(await this.ConvertInstitutionJobsEntityToDto3Async(institutionJobsEntity, personGuidCollection, bypassCache)); 
+                        }
+                        if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+                        {
+                            throw IntegrationApiException;
                         }
                         return new Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>(institutionPositions, totalCount);
                     }
@@ -506,9 +509,18 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 //no results
                 return new Tuple<IEnumerable<Dtos.InstitutionJobs3>, int>(new List<Dtos.InstitutionJobs3>(), 0);
             }
-            catch( PermissionsException e )
+            catch( PermissionsException)
             {
                 throw;
+            }
+            catch (RepositoryException e)
+            {
+                IntegrationApiExceptionAddError(e);
+                throw IntegrationApiException;
+            }
+            catch (IntegrationApiException e)
+            {
+                throw e;
             }
             catch (Exception e)
             {
@@ -527,7 +539,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw new ArgumentNullException("guid", "GUID is required to get an Institution Job.");
             }
-            CheckGetInstitutionJobsPermission();
+        
             try
             {
                 var institutionJobsEntity = (await _institutionJobsRepository.GetInstitutionJobsByGuidAsync(guid));
@@ -558,7 +570,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw new ArgumentNullException("guid", "GUID is required to get an Institution Job.");
             }
-            CheckGetInstitutionJobsPermission();
+         
             try
             {
                 var institutionJobsEntity = (await _institutionJobsRepository.GetInstitutionJobsByGuidAsync(guid));
@@ -589,7 +601,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw new ArgumentNullException("guid", "GUID is required to get an Institution Job.");
             }
-            CheckGetInstitutionJobsPermission();
+            
             try
             {
                 var institutionJobsEntity = (await _institutionJobsRepository.GetInstitutionJobsByGuidAsync(guid));
@@ -600,11 +612,26 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 //lookup the guids for persons and employer
                 var ids = new List<string>() { institutionJobsEntity.PersonId, institutionJobsEntity.Employer, institutionJobsEntity.SupervisorId, institutionJobsEntity.AlternateSupervisorId };
                 var personGuidCollection = await _personRepository.GetPersonGuidsCollectionAsync(ids);
-                return await ConvertInstitutionJobsEntityToDto3Async(institutionJobsEntity, personGuidCollection, bypassCache);
+                var institutionJobsDto = await ConvertInstitutionJobsEntityToDto3Async(institutionJobsEntity, personGuidCollection, bypassCache);
+
+                if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+                {
+                    throw IntegrationApiException;
+                }
+                return institutionJobsDto;
             }
-            catch( PermissionsException e )
+            catch( PermissionsException e)
             {
-                throw;
+                throw e;
+            }
+            catch (RepositoryException e)
+            {
+                IntegrationApiExceptionAddError(e);
+                throw IntegrationApiException;
+            }
+            catch (IntegrationApiException e)
+            {
+                throw e;
             }
             catch (KeyNotFoundException)
             {
@@ -635,9 +662,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 try
                 {
-                    // verify the user has the permission to update a institutionJobs
-                    CheckCreateInstitutionJobsPermission();
-
                     _institutionJobsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
                     // map the DTO to entities
@@ -687,9 +711,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw new ArgumentNullException("institutionJobsDto", "Must provide a guid for institutionJobs create");
             }
-
-            // verify the user has the permission to create an institutionJobs
-            CheckCreateInstitutionJobsPermission();
 
             _institutionJobsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -1728,6 +1749,13 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 throw new ArgumentNullException("personGuidCollection is null or empty.  An error occurred extracting person guids");
             }
+
+            var employDepartments = await this.GetAllEmploymentDepartmentAsync(bypassCache);
+            var jobChangeReasons = await this.GetAllJobChangeReasonsAsync(bypassCache);
+            var classificaitons = await this.GetAllEmploymentClassificationAsync(bypassCache);
+            var payClasses = await this.GetAllPayClassesAsync(bypassCache);
+            var payCycles = await this.GetAllPayCycles2Async(bypassCache);
+
             try
             {
 
@@ -1735,48 +1763,53 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
                 if (string.IsNullOrEmpty(source.PersonId))
                 {
-                    throw new ArgumentNullException("Person ID is required for Institution Jobs.  Id:" + source.Id);
+                    IntegrationApiExceptionAddError("Person ID is required for Institution Jobs.  Id:" + source.Id, "Bad.Data", source.Guid, source.Id);
                 }
-                //var personGuid = await _personRepository.GetPersonGuidFromIdAsync(source.PersonId);
-                //if (!(string.IsNullOrEmpty(personGuid)))
-                //    institutionJobs.Person = new GuidObject2(personGuid);
-
-                var personGuid = string.Empty;
-                personGuidCollection.TryGetValue(source.PersonId, out personGuid);
-                if (string.IsNullOrEmpty(personGuid))
+                else
                 {
-                    throw new KeyNotFoundException(string.Concat("Person guid not found, PersonId: '", source.PersonId, "', Record ID: '", source.Id, "'"));
+                    var personGuid = string.Empty;
+                    personGuidCollection.TryGetValue(source.PersonId, out personGuid);
+                    if (string.IsNullOrEmpty(personGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("Person guid not found, PersonId: '", source.PersonId, "', Record ID: '", source.Id, "'"), "Bad.Data", source.Guid, source.Id);
+                    }
+                    else
+                    {
+                        institutionJobs.Person = new GuidObject2(personGuid);
+                    }
                 }
-                institutionJobs.Person = new GuidObject2(personGuid);
                 institutionJobs.Employer = new GuidObject2(await _institutionJobsRepository.GetInstitutionEmployerGuidAsync());
 
                 if (string.IsNullOrEmpty(source.PositionId))
                 {
-                    throw new ArgumentNullException("Position ID is required for Institution Jobs. Id:" + source.Id);
+                    IntegrationApiExceptionAddError("Position ID is required for Institution Jobs. Id:" + source.Id, "Bad.Data", source.Guid, source.Id);
                 }
-                var positionGuid = await _positionRepository.GetPositionGuidFromIdAsync(source.PositionId);
-                if (!(string.IsNullOrEmpty(positionGuid)))
-                    institutionJobs.Position = new GuidObject2(positionGuid);
-
-
-                if (!(string.IsNullOrWhiteSpace(source.Department)))
+                else
                 {
-                    var employDepartments = await this.GetAllEmploymentDepartmentAsync(bypassCache);
+                    var positionGuid = await _positionRepository.GetPositionGuidFromIdAsync(source.PositionId);
+                    if (!(string.IsNullOrEmpty(positionGuid)))
+                        institutionJobs.Position = new GuidObject2(positionGuid);
+                }
+
+                if (!string.IsNullOrEmpty(source.Department))
+                {
                     if (employDepartments != null)
                     {
                         var employDepartment = employDepartments.FirstOrDefault(ed => ed.Code == source.Department);
-                        if (employDepartment != null)
+                        if (employDepartment != null && !string.IsNullOrEmpty(employDepartment.Guid))
                         {
                             institutionJobs.Department = new GuidObject2(employDepartment.Guid);
                         }
                     }
                     // making sure change sticks
-                    if (institutionJobs.Department == null) { throw new ArgumentNullException("Unable to locate department for code " + source.Department + ", Position " + source.PositionId + " is required to have a department."); }
-
+                    if (institutionJobs.Department == null)
+                    {
+                        IntegrationApiExceptionAddError("Unable to locate department for code " + source.Department + ", Position " + source.PositionId + " is required to have a department.", "Bad.Data", source.Guid, source.Id);
+                    }
                 }
                 else
                 {
-                    throw new ArgumentNullException("Position " + source.PositionId + " is required to have a department.");
+                    IntegrationApiExceptionAddError("Position " + source.PositionId + " is required to have a department.", source.Guid, source.Id);
                 }
 
                 institutionJobs.StartOn = source.StartDate;
@@ -1784,14 +1817,17 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
                 if (!(string.IsNullOrEmpty(source.EndReason)))
                 {
-                    var jobChangeReasons = await this.GetAllJobChangeReasonsAsync(bypassCache);
                     if (jobChangeReasons != null)
                     {
                         var jobChangeReason = jobChangeReasons.FirstOrDefault(jcr => jcr.Code == source.EndReason);
-                        if (jobChangeReason != null)
+                        if (jobChangeReason != null && !string.IsNullOrEmpty(jobChangeReason.Guid))
                         {
                             institutionJobs.JobChangeReason = new GuidObject2(jobChangeReason.Guid);
                         }
+                    }
+                    if (institutionJobs.JobChangeReason == null)
+                    {
+                        IntegrationApiExceptionAddError("Unable to locate job change reason for code " + source.EndReason, "Bad.Data", source.Guid, source.Id);
                     }
                 }
 
@@ -1807,7 +1843,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 }
                 else
                 {
-                    throw new Exception("Unable to determine institution job status.  Id" + source.Id);
+                    IntegrationApiExceptionAddError("Unable to determine institution job status.  Id" + source.Id, "Bad.Data", source.Guid, source.Id);
                 }
 
                 var timeUnits = await GetAllTimeUnitsAsync(bypassCache);
@@ -1846,22 +1882,23 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 {
                     try
                     {
-                        //var supervisorPositionGuid = await _personRepository.GetPersonGuidFromIdAsync(source.SupervisorId);
                         var supervisorPositionGuid = string.Empty;
                         personGuidCollection.TryGetValue(source.SupervisorId, out supervisorPositionGuid);
                         if (string.IsNullOrEmpty(supervisorPositionGuid))
                         {
-                            throw new KeyNotFoundException(string.Concat("Person guid not found, SupervisorId: '", source.SupervisorId, "', Record ID: '", source.Id, "'"));
+                            IntegrationApiExceptionAddError(string.Concat("Person guid not found, SupervisorId: '", source.SupervisorId, "', Record ID: '", source.Id, "'"), source.Guid, source.Id);
                         }
-                        
-                        if (!string.IsNullOrEmpty(supervisorPositionGuid))
+                        else
                         {
-                            var supervisorsDtoProperty = new SupervisorsDtoProperty()
+                            if (!string.IsNullOrEmpty(supervisorPositionGuid))
                             {
-                                Supervisor = new GuidObject2(supervisorPositionGuid),
-                                Type = PositionReportsToType.Primary
-                            };
-                            supervisors.Add(supervisorsDtoProperty);
+                                var supervisorsDtoProperty = new SupervisorsDtoProperty()
+                                {
+                                    Supervisor = new GuidObject2(supervisorPositionGuid),
+                                    Type = PositionReportsToType.Primary
+                                };
+                                supervisors.Add(supervisorsDtoProperty);
+                            }
                         }
                     }
                     catch (ArgumentOutOfRangeException ex)
@@ -1876,21 +1913,23 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 {
                     try
                     {
-                        //var altSupervisorPositionGuid = await _personRepository.GetPersonGuidFromIdAsync(source.AlternateSupervisorId);
                         var altSupervisorPositionGuid = string.Empty;
                         personGuidCollection.TryGetValue(source.AlternateSupervisorId, out altSupervisorPositionGuid);
                         if (string.IsNullOrEmpty(altSupervisorPositionGuid))
                         {
-                            throw new KeyNotFoundException(string.Concat("Person guid not found, AlternateSupervisorId: '", source.AlternateSupervisorId, "', Record ID: '", source.Id, "'"));
+                            IntegrationApiExceptionAddError(string.Concat("Person guid not found, AlternateSupervisorId: '", source.AlternateSupervisorId, "', Record ID: '", source.Id, "'"), "Bad.Data", source.Guid, source.Id);
                         }
-                        if (!string.IsNullOrEmpty(altSupervisorPositionGuid))
+                        else
                         {
-                            var supervisorsDtoProperty = new SupervisorsDtoProperty()
+                            if (!string.IsNullOrEmpty(altSupervisorPositionGuid))
                             {
-                                Supervisor = new GuidObject2(altSupervisorPositionGuid),
-                                Type = PositionReportsToType.Alternative
-                            };
-                            supervisors.Add(supervisorsDtoProperty);
+                                var supervisorsDtoProperty = new SupervisorsDtoProperty()
+                                {
+                                    Supervisor = new GuidObject2(altSupervisorPositionGuid),
+                                    Type = PositionReportsToType.Alternative
+                                };
+                                supervisors.Add(supervisorsDtoProperty);
+                            }
                         }
                     }
                     catch (ArgumentOutOfRangeException ex)
@@ -1948,9 +1987,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                                 {
                                     salary.SalaryAmount = salaryAmount;
                                     salaries.Add(salary);
-                                
 
-                                //    var perposwgItems = source.PerposwgItems.OrderBy(x => x.StartDate);
+
+                                    //    var perposwgItems = source.PerposwgItems.OrderBy(x => x.StartDate);
 
                                     if (wage.AccountingStringAllocation != null && wage.AccountingStringAllocation.Any())
                                     {
@@ -1991,33 +2030,42 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
                 if (!(string.IsNullOrEmpty(source.Classification)))
                 {
-                    var classificaitons = await this.GetAllEmploymentClassificationAsync(bypassCache);
                     if (classificaitons != null)
                     {
                         var classification = classificaitons.FirstOrDefault(c => c.Code == source.Classification);
-                        if (classification != null)
+                        if (classification != null && !string.IsNullOrEmpty(classification.Guid))
                         {
                             institutionJobs.Classification = new GuidObject2(classification.Guid);
                         }
+                    }
+                    // Should produce an error but would be breaking change.
+                    if (institutionJobs.Classification == null)
+                    {
+                        //IntegrationApiExceptionAddError("Unable to locate employment classification for code " + source.Classification, "Bad.Data", source.Guid, source.Id);
+                        logger.Error("Unable to locate employment classification for code " + source.Classification + " for Id: '" + source.Id + "' GUID: '" + source.Guid + "'");
                     }
                 }
 
                 if (!(string.IsNullOrEmpty(source.PayClass)))
                 {
-                    var payClasses = await this.GetAllPayClassesAsync(bypassCache);
                     if (payClasses != null)
                     {
                         var payClass = payClasses.FirstOrDefault(c => c.Code == source.PayClass);
-                        if (payClass != null)
+                        if (payClass != null && !string.IsNullOrEmpty(payClass.Guid))
                         {
                             institutionJobs.PayClass = new GuidObject2(payClass.Guid);
                         }
+                    }
+                    // Should produce an error but would be breaking change.
+                    if (institutionJobs.PayClass == null)
+                    {
+                        //IntegrationApiExceptionAddError("Unable to locate pay classes for code " + source.PayClass, "Bad.Data", source.Guid, source.Id);
+                        logger.Error("Unable to locate pay classes for code " + source.PayClass + " for Id: '" + source.Id + "' GUID: '" + source.Guid + "'");
                     }
                 }
 
                 if (!(string.IsNullOrEmpty(source.PayCycle)))
                 {
-                    var payCycles = await this.GetAllPayCycles2Async(bypassCache);
                     if (payCycles != null)
                     {
                         var payCycle = payCycles.FirstOrDefault(c => c.Code == source.PayCycle);
@@ -2026,15 +2074,29 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                             institutionJobs.PayCycle = new GuidObject2(payCycle.Guid);
                         }
                     }
+                    // Should produce an error but would be breaking change.
+                    if (institutionJobs.PayCycle == null)
+                    {
+                        //IntegrationApiExceptionAddError("Unable to locate pay cycle for code " + source.PayCycle, "Bad.Data", source.Guid, source.Id);
+                        logger.Error("Unable to locate pay cycle for code " + source.PayCycle + " for Id: '" + source.Id + "' GUID: '" + source.Guid + "'");
+                    }
                 }
                 if (source.Primary)
                     institutionJobs.Preference = JobPreference2.Primary;
 
             }
+            catch (IntegrationApiException)
+            {
+                IntegrationApiExceptionAddError(string.Concat("An error occurred obtaining InstitutionJob Id: ", source.Id), "Bad.Data", source.Guid, source.Id);
+                throw IntegrationApiException;
+            }
             catch (Exception ex)
             {
-                throw new Exception(string.Concat("An error occurred obtaining InstitutionJob Id: ", source.Id, " ", ex.Message));
+                //throw new Exception(string.Concat("An error occurred obtaining InstitutionJob Id: ", source.Id, " ", ex.Message));
+                IntegrationApiExceptionAddError(string.Concat("An error occurred obtaining InstitutionJob Id: ", source.Id, " ", ex.Message), "Bad.Data", source.Guid, source.Id);
+                throw IntegrationApiException;
             }
+
             return institutionJobs;
         }
 
@@ -2098,31 +2160,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             return amount.ToString(); //.Replace(".", "");
         }
 
-
-        /// <summary>
-        /// Helper method to determine if the user has permission to view Institution Jobs.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckGetInstitutionJobsPermission()
-        {
-            if ( !HasPermission( HumanResourcesPermissionCodes.ViewInstitutionJob ) && !HasPermission( HumanResourcesPermissionCodes.CreateInstitutionJob ) )
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view Institution Jobs.");
-            }
-        }
-
-        /// <summary>
-        /// Helper method to determine if the user has permission to create/update Institution Jobs.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckCreateInstitutionJobsPermission()
-        {
-            if ( !HasPermission( HumanResourcesPermissionCodes.CreateInstitutionJob ) )
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to create or update Institution Jobs.");
-            }
-        }
-
         /// <summary>
         /// Converts date to unidata Date
         /// </summary>
@@ -2134,9 +2171,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 return await _referenceDataRepository.GetUnidataFormattedDate(date);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw new ArgumentException("Invalid Date format in arguments");
+                throw new ArgumentException("Invalid Date format in arguments", ex);
             }
         }
 
@@ -2149,7 +2186,20 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         {
             if (_jobChangeReasons == null)
             {
-                _jobChangeReasons = await _hrReferenceDataRepository.GetJobChangeReasonsAsync(bypassCache);
+                try
+                {
+                    _jobChangeReasons = await _hrReferenceDataRepository.GetJobChangeReasonsAsync(bypassCache);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex);
+                    IntegrationApiExceptionAddError("Failed to get JobChangeReasons from table validation POSITION.ENDING.REASONS");
+                    throw IntegrationApiException;
+                }
+                catch (Exception ex)
+                {
+                    throw new ArgumentException("Failed to get JobChangeReasons from table validation POSITION.ENDING.REASONS", ex);
+                }
             }
             return _jobChangeReasons;
         }
@@ -2163,7 +2213,20 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         {
             if (_employmentClassification == null)
             {
-                _employmentClassification = await _hrReferenceDataRepository.GetEmploymentClassificationsAsync(bypassCache);
+                try
+                {
+                    _employmentClassification = await _hrReferenceDataRepository.GetEmploymentClassificationsAsync(bypassCache);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex);
+                    IntegrationApiExceptionAddError("Failed to get EmploymentClassifications from validation table CLASSIFICATIONS");
+                    throw IntegrationApiException;
+                }
+                catch (Exception ex)
+                {
+                    throw new ArgumentException("Failed to get EmploymentClassifications from validation table CLASSIFICATIONS", ex);
+                }
             }
             return _employmentClassification;
         }
@@ -2177,7 +2240,20 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         {
             if (_employmentDepartments == null)
             {
-                _employmentDepartments = await _hrReferenceDataRepository.GetEmploymentDepartmentsAsync(bypassCache);
+                try
+                {
+                    _employmentDepartments = await _hrReferenceDataRepository.GetEmploymentDepartmentsAsync(bypassCache);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex);
+                    IntegrationApiExceptionAddError("Failed to get EmploymentDepartments from table DEPTS");
+                    throw IntegrationApiException;
+                }
+                catch (Exception ex)
+                {
+                    throw new ArgumentException("Failed to get EmploymentDepartments from table DEPTS", ex);
+                }
             }
             return _employmentDepartments;
         }
@@ -2191,7 +2267,20 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         {
             if (_payClasses == null)
             {
-                _payClasses = await _hrReferenceDataRepository.GetPayClassesAsync(bypassCache);
+                try
+                {
+                    _payClasses = await _hrReferenceDataRepository.GetPayClassesAsync(bypassCache);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex);
+                    IntegrationApiExceptionAddError("Failed to get PayClasses from table PAYCLASS");
+                    throw IntegrationApiException;
+                }
+                catch (Exception ex)
+                {
+                    throw new ArgumentException("Failed to get PayClasses from table PAYCLASS", ex);
+                }
             }
             return _payClasses;
         }
@@ -2205,10 +2294,19 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         {
             if (_payCycles == null)
             {
-                _payCycles = await _hrReferenceDataRepository.GetPayCyclesAsync(bypassCache);
-                foreach(var payCycle in _payCycles)
+                try
                 {
-
+                    _payCycles = await _hrReferenceDataRepository.GetPayCyclesAsync(bypassCache);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex);
+                    IntegrationApiExceptionAddError("Failed to get PayCycles from table PAYCYCLE");
+                    throw IntegrationApiException;
+                }
+                catch (Exception ex)
+                {
+                    throw new ArgumentException("Failed to get PayCycles from table PAYCYCLE", ex);
                 }
             }
             return _payCycles;
@@ -2223,7 +2321,20 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         {
             if (_timeUnits == null)
             {
-                _timeUnits = await _hrReferenceDataRepository.GetTimeUnitsAsync(bypassCache);
+                try
+                {
+                    _timeUnits = await _hrReferenceDataRepository.GetTimeUnitsAsync(bypassCache);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex);
+                    IntegrationApiExceptionAddError("Failed to get TimeUnits from validation table TIME.UNITS");
+                    throw IntegrationApiException;
+                }
+                catch (Exception ex)
+                {
+                    throw new ArgumentException("Failed to get TimeUnits from validation table TIME.UNITS", ex);
+                }
             }
             return _timeUnits;
         }
@@ -2233,7 +2344,20 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         {
             if (_hostCountry == null)
             {
-                _hostCountry = await _personRepository.GetHostCountryAsync();
+                try
+                {
+                    _hostCountry = await _personRepository.GetHostCountryAsync();
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex);
+                    IntegrationApiExceptionAddError("Failed to get Host Country from CORE DEFAULTS");
+                    throw IntegrationApiException;
+                }
+                catch (Exception ex)
+                {
+                    throw new ArgumentException("Failed to get Host Country from CORE DEFAULTS", ex);
+                }
             }
             return _hostCountry;
         }

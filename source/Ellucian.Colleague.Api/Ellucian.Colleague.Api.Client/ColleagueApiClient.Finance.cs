@@ -1,4 +1,5 @@
-﻿// Copyright 2012-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Api.Client.Core;
 using Ellucian.Colleague.Dtos.Base;
 using Ellucian.Colleague.Dtos.Finance;
 using Ellucian.Colleague.Dtos.Finance.AccountActivity;
@@ -223,6 +224,7 @@ namespace Ellucian.Colleague.Api.Client
 
             var headers = new NameValueCollection();
             headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
 
             var responseString = ExecuteGetRequestWithResponse(baseUrl, headers: headers);
 
@@ -242,6 +244,7 @@ namespace Ellucian.Colleague.Api.Client
 
             var headers = new NameValueCollection();
             headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
 
             var responseString = ExecuteGetRequestWithResponse(baseUrl, headers: headers);
 
@@ -261,7 +264,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <returns>The AccountHolder DTO</returns>
         /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
         /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
-        public AccountHolder GetAccountHolder2(string id)
+        public AccountHolder GetAccountHolder2(string id, bool bypassCache = false)
         {
             if (String.IsNullOrEmpty(id))
             {
@@ -270,12 +273,53 @@ namespace Ellucian.Colleague.Api.Client
             try
             {
                 string urlPath = UrlUtility.CombineUrlPath(_receivablesPath, "account-holder", id);
+                string queryString = UrlUtility.BuildEncodedQueryString("bypassCache", bypassCache.ToString());
+                var combinedUrl = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                // Do not log the response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
 
-                var responseString = ExecuteGetRequestWithResponse(urlPath, headers: headers);
+                var responseString = ExecuteGetRequestWithResponse(combinedUrl, headers: headers);
                 var response = JsonConvert.DeserializeObject<AccountHolder>(responseString.Content.ReadAsStringAsync().Result);
+
+                return response;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get accountholder.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get a privacy-restricted accountholder by ID
+        /// </summary>
+        /// <param name="id">Accountholder ID</param>
+        /// <returns>The AccountHolder DTO</returns>
+        /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<AccountHolder> GetAccountHolder2Async(string id, bool bypassCache = true)
+        {
+            if (String.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "ID is required for accountholder retrieval.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_receivablesPath, "account-holder", id);
+                string queryString = UrlUtility.BuildEncodedQueryString("bypassCache", bypassCache.ToString());
+                var combinedUrl = UrlUtility.CombineUrlPathAndArguments(urlPath, queryString);
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                // Do not log the response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
+
+                var responseString = ExecuteGetRequestWithResponse(combinedUrl, headers: headers);
+                var response = JsonConvert.DeserializeObject<AccountHolder>(await responseString.Content.ReadAsStringAsync());
 
                 return response;
             }
@@ -321,6 +365,8 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+                // Do not log the response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
 
                 var responseString = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<AccountHolder>>(await responseString.Content.ReadAsStringAsync());
@@ -372,6 +418,8 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion3);
+                // Do not log the response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
 
                 var responseString = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<AccountHolder>>(await responseString.Content.ReadAsStringAsync());
@@ -680,6 +728,8 @@ namespace Ellucian.Colleague.Api.Client
             var headers = new NameValueCollection();
             headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
 
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
+
             var responseString = ExecutePostRequestWithResponse(paymentDetails, _processStudentPaymentPath, headers: headers);
 
             var paymentRedirect = JsonConvert.DeserializeObject<PaymentProvider>(responseString.Content.ReadAsStringAsync().Result);
@@ -696,6 +746,8 @@ namespace Ellucian.Colleague.Api.Client
         {
             var headers = new NameValueCollection();
             headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
 
             var responseString = ExecutePostRequestWithResponse(paymentDetails, _electronicCheckPaymentPath, headers: headers);
 
@@ -715,6 +767,8 @@ namespace Ellucian.Colleague.Api.Client
 
             var headers = new NameValueCollection();
             headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
 
             var responseString = ExecuteGetRequestWithResponse(baseUrl, headers: headers);
 
@@ -760,6 +814,8 @@ namespace Ellucian.Colleague.Api.Client
 
             var headers = new NameValueCollection();
             headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
 
             var responseString = ExecuteGetRequestWithResponse(combinedUrl, headers: headers);
 
@@ -917,6 +973,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
 
                 var responseString = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var response = JsonConvert.DeserializeObject<PaymentPlanApproval>(responseString.Content.ReadAsStringAsync().Result);
@@ -948,6 +1005,7 @@ namespace Ellucian.Colleague.Api.Client
             {
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent | LoggingRestrictions.DoNotLogResponseContent);
 
                 string urlPath = UrlUtility.CombineUrlPath(_paymentPlansPath, "accept-terms");
                 var responseString = ExecutePostRequestWithResponse(acceptance, urlPath, headers: headers);
@@ -1027,6 +1085,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
 
                 var responseString = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var response = JsonConvert.DeserializeObject<Payment>(responseString.Content.ReadAsStringAsync().Result);
@@ -1365,6 +1424,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
 
                 var responseString = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var response = JsonConvert.DeserializeObject<IEnumerable<Payment>>(responseString.Content.ReadAsStringAsync().Result);
@@ -1398,6 +1458,8 @@ namespace Ellucian.Colleague.Api.Client
             {
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogRequestContent);
 
                 string urlPath = UrlUtility.CombineUrlPath(_paymentControlsPath, "start-payment");
                 var responseString = ExecutePostRequestWithResponse(paymentDto, urlPath, headers: headers);

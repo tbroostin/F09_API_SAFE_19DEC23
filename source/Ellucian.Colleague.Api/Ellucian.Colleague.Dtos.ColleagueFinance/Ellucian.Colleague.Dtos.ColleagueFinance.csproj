@@ -40,9 +40,8 @@
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net40\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -54,20 +53,27 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ApprovedDocument.cs" />
     <Compile Include="ApprovalDocument.cs" />
     <Compile Include="ApprovalDocumentRequest.cs" />
     <Compile Include="ApprovalDocumentResponse.cs" />
     <Compile Include="ApprovalItem.cs" />
+    <Compile Include="AssociatedDocument.cs" />
     <Compile Include="BaseGlComponentQueryCriteria.cs" />
     <Compile Include="BudgetAdjustmentPendingApprovalSummary.cs" />
     <Compile Include="BudgetAdjustmentApproval.cs" />
     <Compile Include="DocumentApproval.cs" />
     <Compile Include="DocumentApprovalRequest.cs" />
     <Compile Include="DocumentApprovalResponse.cs" />
+    <Compile Include="GlAccountBalances.cs" />
+    <Compile Include="GlAccountBalancesQueryCriteria.cs" />
     <Compile Include="Initiator.cs" />
     <Compile Include="NewLineItemDefaultAdditionalInformation.cs" />
     <Compile Include="ProcurementAcceptReturnItemInformationRequest.cs" />
     <Compile Include="ProcurementAcceptReturnItemInformationResponse.cs" />
+    <Compile Include="ProcurementDocumentField.cs" />
+    <Compile Include="ApprovedDocumentFilterCriteria.cs" />
+    <Compile Include="ProcurementDocumentFilterCriteria.cs" />
     <Compile Include="ProcurementItemInformation.cs" />
     <Compile Include="ProcurementItemInformationResponse.cs" />
     <Compile Include="ProcurementReturnReason.cs" />

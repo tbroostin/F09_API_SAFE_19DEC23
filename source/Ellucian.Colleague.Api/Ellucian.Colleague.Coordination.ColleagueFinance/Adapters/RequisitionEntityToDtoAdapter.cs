@@ -48,6 +48,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
             requisitionDto.StatusDate = Source.StatusDate;
             requisitionDto.VendorId = Source.VendorId;
             requisitionDto.VendorName = Source.VendorName;
+            requisitionDto.VendorAddress = Source.VendorAddress;
+            requisitionDto.VendorAddressTypeCode = Source.VendorAddressTypeCode;
+            requisitionDto.VendorAddressTypeDesc = Source.VendorAddressTypeDesc;
 
             requisitionDto.PurchaseOrders = new List<string>();
             if ((Source.PurchaseOrders != null) && (Source.PurchaseOrders.Count > 0))

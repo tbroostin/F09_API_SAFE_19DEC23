@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,6 +38,10 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         public static ProxyWorkflowConstants TimeManagementTimeApproval
         {
             get { return new ProxyWorkflowConstants("TMTA"); }
+        }
+        public static ProxyWorkflowConstants TimeManagementLeaveApproval
+        {
+            get { return new ProxyWorkflowConstants("TMLA"); }
         }
 
         #endregion

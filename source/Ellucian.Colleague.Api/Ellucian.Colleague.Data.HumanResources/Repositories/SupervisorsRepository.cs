@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -34,7 +34,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// </summary>
         /// <param name="supervisorId"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<string>> GetSuperviseesBySupervisorAsync(string supervisorId)
+        public async Task<IEnumerable<string>> GetSuperviseesBySupervisorAsync(string supervisorId, DateTime? lookupStartDate = null)
         {
             if (string.IsNullOrWhiteSpace(supervisorId))
             {
@@ -45,16 +45,16 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
 
             //select PERPOS records that specify this supervisor Id as the supervisor
-            var superviseePerposKeys = await getDirectlySupervisedPerposIds(supervisorId);
+            var superviseePerposKeys = await getDirectlySupervisedPerposIds(supervisorId, lookupStartDate);
 
             //next, get the supervisor's list of positions
-            var supervisorPositionIds = await getPositionIdsOfSupervisor(supervisorId);
+            var supervisorPositionIds = await getPositionIdsOfSupervisor(supervisorId, lookupStartDate);
 
             // 2. now get positions where the supervisor's position is specified as the supervisorPosition; 
             var superviseePositionIds = await getPositionIdsSupervisedByPositionIds(supervisorPositionIds);
 
             // 3.  get the people from perpos who have those positions of the supervisor assignment is empty
-            var additionalSuperviseePerposKeys = await getPerposIdsByPositionIdsWithoutDirectSupervisor(superviseePositionIds);
+            var additionalSuperviseePerposKeys = await getPerposIdsByPositionIdsWithoutDirectSupervisor(superviseePositionIds, lookupStartDate);
 
             var allSuperviseePerposKeys = superviseePerposKeys.Concat(additionalSuperviseePerposKeys).ToArray();
 
@@ -79,9 +79,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <summary>
         /// Gets direct and position supervisors for a supervisee
         /// </summary>
-        /// <param name="superviseeId"></param>
+        /// <param name="superviseeId">ID of the employee in which to get data based on</param>
+        /// <param name="lookupStartDate">Optional lookback date to limit returned results</param>
         /// <returns></returns>
-        public async Task<IEnumerable<string>> GetSupervisorsBySuperviseeAsync(string superviseeId)
+        public async Task<IEnumerable<string>> GetSupervisorsBySuperviseeAsync(string superviseeId, DateTime? lookupStartDate = null)
         {
             if (string.IsNullOrWhiteSpace(superviseeId))
             {
@@ -92,7 +93,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             var positionsIdsWithoutDirectSupervisor = new List<string>();
 
             // get all the PERPOS ids for this supervisee
-            var allSuperviseeIdPerposIds = await getSuperviseePerposIds(superviseeId);
+            // CH-12939: lookback added to limit PERPOS records to only those without an end date or with end dates after the lookback start date.
+            var allSuperviseeIdPerposIds = await getSuperviseePerposIds(superviseeId, lookupStartDate);
 
             if (allSuperviseeIdPerposIds.Any())
             {
@@ -184,11 +186,22 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// Gets all PERPOS records for an employee 
         /// </summary>
         /// <param name="superviseeId"></param>
+        /// <param name="lookupStartDate"></param>
         /// <returns></returns>
-        private async Task<IEnumerable<string>> getSuperviseePerposIds(string superviseeId)
+        private async Task<IEnumerable<string>> getSuperviseePerposIds(string superviseeId, DateTime? lookupStartDate = null)
         {
             // select PERPOS records for this superviseeId
             var superviseePerposCriteria = string.Format("WITH PERPOS.HRP.ID EQ {0}", superviseeId);
+
+            // restricts PERPOS records to only ones with an end date after the lookupStartDate OR with no end date specified
+            if (lookupStartDate.HasValue)
+            {
+                superviseePerposCriteria += " AND (PERPOS.END.DATE GE '" + 
+                    UniDataFormatter.UnidataFormatDate(lookupStartDate.Value, InternationalParameters.HostShortDateFormat, 
+                    InternationalParameters.HostDateDelimiter)
+                    + "' OR PERPOS.END.DATE EQ '')";
+            }
+
             var superviseePerposKeys = await DataReader.SelectAsync("PERPOS", superviseePerposCriteria);
 
             if (superviseePerposKeys == null)
@@ -260,10 +273,15 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// </summary>
         /// <param name="supervisorId"></param>
         /// <returns></returns>
-        private async Task<IEnumerable<string>> getDirectlySupervisedPerposIds(string supervisorId)
+        private async Task<IEnumerable<string>> getDirectlySupervisedPerposIds(string supervisorId, DateTime? lookupStartDate = null)
         {
             //select PERPOS records that specify this supervisor Id as the supervisor
             var superviseePerposCriteria = string.Format("WITH INDEX.PERPOS.SUPERVISOR EQ {0}", supervisorId); // note: supervisorId is indexed, but alternate is not
+            if (lookupStartDate.HasValue)
+            {
+                superviseePerposCriteria += " AND (PERPOS.END.DATE GE '" + UniDataFormatter.UnidataFormatDate(lookupStartDate.Value, InternationalParameters.HostShortDateFormat, InternationalParameters.HostDateDelimiter)
+                    + "' OR PERPOS.END.DATE EQ '')";
+            }
 
             var superviseePerposKeys = await DataReader.SelectAsync("PERPOS", superviseePerposCriteria);
 
@@ -285,9 +303,14 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// </summary>
         /// <param name="supervisorId"></param>
         /// <returns></returns>
-        private async Task<IEnumerable<string>> getPositionIdsOfSupervisor(string supervisorId)
+        private async Task<IEnumerable<string>> getPositionIdsOfSupervisor(string supervisorId, DateTime? lookupStartDate = null)
         {
             var supervisorPerposCriteria = string.Format("WITH PERPOS.HRP.ID EQ {0}", supervisorId);
+            if (lookupStartDate.HasValue)
+            {
+                supervisorPerposCriteria += " AND (PERPOS.END.DATE GE '" + UniDataFormatter.UnidataFormatDate(lookupStartDate.Value, InternationalParameters.HostShortDateFormat, InternationalParameters.HostDateDelimiter)
+                    + "' OR PERPOS.END.DATE EQ '')";
+            }
 
             var supervisorPersonPositions = await DataReader.BulkReadRecordAsync<Perpos>(supervisorPerposCriteria);
 
@@ -387,11 +410,16 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// </summary>
         /// <param name="positionIds"></param>
         /// <returns></returns>
-        private async Task<IEnumerable<string>> getPerposIdsByPositionIdsWithoutDirectSupervisor(IEnumerable<string> positionIds)
+        private async Task<IEnumerable<string>> getPerposIdsByPositionIdsWithoutDirectSupervisor(IEnumerable<string> positionIds, DateTime? lookupStartDate = null)
         {
             var perposCriteria = "WITH PERPOS.POSITION.INDEX EQ ? AND WITH INDEX.PERPOS.SUPERVISOR EQ ''";
             var perposValues = positionIds.Distinct().Select(id => string.Format("\"{0}\"", id));
 
+            if (lookupStartDate.HasValue)
+            {
+                perposCriteria += " AND (PERPOS.END.DATE GE '" + UniDataFormatter.UnidataFormatDate(lookupStartDate.Value, InternationalParameters.HostShortDateFormat, InternationalParameters.HostDateDelimiter)
+                    + "' OR PERPOS.END.DATE EQ '')";
+            }
             var perposKeys = await DataReader.SelectAsync("PERPOS", perposCriteria, perposValues.ToArray());
 
             if (perposKeys == null)

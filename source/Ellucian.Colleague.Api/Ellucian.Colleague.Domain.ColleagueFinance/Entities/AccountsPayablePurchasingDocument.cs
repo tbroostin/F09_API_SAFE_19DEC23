@@ -32,6 +32,21 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         public string VendorName { get { return vendorName; } }
 
         /// <summary>
+        /// Vendor address.
+        /// </summary>
+        public string VendorAddress { get; set; }
+
+        /// <summary>
+        /// Address type code
+        /// </summary>
+        public string VendorAddressTypeCode { get; set; }
+
+        /// <summary>
+        /// Address type description
+        /// </summary>
+        public string VendorAddressTypeDesc { get; set; }
+
+        /// <summary>
         /// Document amount.
         /// </summary>
         public decimal Amount { get; set; }

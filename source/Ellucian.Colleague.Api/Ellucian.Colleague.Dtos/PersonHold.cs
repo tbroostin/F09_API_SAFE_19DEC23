@@ -38,6 +38,7 @@ namespace Ellucian.Colleague.Dtos
         /// The date when the hold goes into effect
         /// </summary>
         [DataMember(Name = "startOn")]
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public DateTimeOffset? StartOn { get; set; }
 
         /// <summary>

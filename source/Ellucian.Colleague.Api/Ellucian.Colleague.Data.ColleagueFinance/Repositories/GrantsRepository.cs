@@ -2,8 +2,10 @@
 
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Colleague.Domain.Base.Services;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
@@ -24,6 +26,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
     [RegisterType(Lifetime = RegistrationLifetime.Hierarchy)]
     public class GrantsRepository : BaseColleagueRepository, IGrantsRepository
     {
+        private const int GrantsCacheTimeout = 20;
+        private const string AllGrantsCache = "AllGrants";
+        RepositoryException exception = null;
 
         /// <summary>
         /// Constructor to instantiate a general ledger transaction repository object
@@ -47,47 +52,71 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<ProjectCF>, int>> GetGrantsAsync(int offset, int limit, string reportingSegment = "", string fiscalYearId = "", bool bypassCache = false)
         {
-            List<ProjectCF> projectEntities = new List<ProjectCF>();
             int totalCount = 0;
             string criteria = string.Empty;
 
-            if(!string.IsNullOrEmpty(fiscalYearId))
-            {
-                var recordKey = await GetRecordKeyFromGuidAsync(fiscalYearId);
-                if(string.IsNullOrEmpty(recordKey))
+            string purchaseOrdersCacheKey = CacheSupport.BuildCacheKey(AllGrantsCache, reportingSegment, fiscalYearId);
+
+            var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                purchaseOrdersCacheKey,
+                "PROJECTS.CF",
+                offset,
+                limit,
+                GrantsCacheTimeout,
+                async () =>
                 {
-                    return new Tuple<IEnumerable<ProjectCF>, int>(new List<ProjectCF>(), 0);
-                }
-                criteria = string.Format("WITH PRJCF.FISCAL.YEARS EQ '{0}'", recordKey);
-            }
+                    if (!string.IsNullOrEmpty(fiscalYearId))
+                    {
+                        var recordKeyLookUp = await GetRecordInfoFromGuidAsync(fiscalYearId);
+                        if (recordKeyLookUp == null || string.IsNullOrEmpty(recordKeyLookUp.PrimaryKey) || recordKeyLookUp.Entity != "GEN.LDGR")
+                        {
+                            return new CacheSupport.KeyCacheRequirements()
+                            {
+                                NoQualifyingRecords = true
+                            };
+                        }
+                        criteria = string.Format("WITH PRJCF.FISCAL.YEARS EQ '{0}'", recordKeyLookUp.PrimaryKey);
+                    }
 
-            if (!string.IsNullOrEmpty(reportingSegment))
-            {
-                var repSegment = await BuildReportingSegmentAsync();
-                if (!repSegment.Equals(reportingSegment, StringComparison.OrdinalIgnoreCase))
-                {
-                    return new Tuple<IEnumerable<ProjectCF>, int>(new List<ProjectCF>(), 0);
-                }
-            }
+                    if (!string.IsNullOrEmpty(reportingSegment))
+                    {
+                        var repSegment = await BuildReportingSegmentAsync();
+                        if (!repSegment.Equals(reportingSegment, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return new CacheSupport.KeyCacheRequirements()
+                            {
+                                NoQualifyingRecords = true
+                            };
+                        }
+                    }
+                    
+                    var requirements = new CacheSupport.KeyCacheRequirements()
+                    {
+                        criteria = criteria
+                    };
 
-            //Id's for ProjectCF
-            var projectCFIds = await DataReader.SelectAsync("PROJECTS.CF", criteria);
+                    return requirements;
+                });
 
-            if(projectCFIds != null && !projectCFIds.Any())
+            if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
             {
                 return new Tuple<IEnumerable<ProjectCF>, int>(new List<ProjectCF>(), 0);
             }
 
-            totalCount = projectCFIds.Count();
+            var subList = keyCacheObject.Sublist.ToArray();
+            totalCount = keyCacheObject.TotalCount.Value;
 
-            Array.Sort(projectCFIds);
-
-            var subIdList = projectCFIds.Skip(offset).Take(limit);
+            List<ProjectCF> projectEntities = new List<ProjectCF>();
 
             //ProjectCF
-            var projCFDCs = await DataReader.BulkReadRecordAsync<ProjectsCf>(subIdList.ToArray());
+            var projCFDCs = await DataReader.BulkReadRecordAsync<ProjectsCf>(subList.ToArray());
             //Project
-            var projDCs = await DataReader.BulkReadRecordAsync<Projects>(subIdList.ToArray());
+            var projDCs = await DataReader.BulkReadRecordAsync<Projects>(subList.ToArray());
             //ProjectsLineItems
             var prjLineItemIds = projCFDCs.SelectMany(r => r.PrjcfLineItems).Distinct();
             var projLineItemDCs = await DataReader.BulkReadRecordAsync<ProjectsLineItems>("PROJECTS.LINE.ITEMS", prjLineItemIds.ToArray());
@@ -99,12 +128,24 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     var prjDC = projDCs.FirstOrDefault(rec => rec.Recordkey.Equals(projCFDC.Recordkey, StringComparison.OrdinalIgnoreCase));
                     if (prjDC == null)
                     {
-                        throw new KeyNotFoundException(string.Format("Project record not found for guid: {0}", projCFDC.RecordGuid));
+                        //throw new KeyNotFoundException(string.Format("Project record not found for guid: {0}", projCFDC.RecordGuid));
+                        if (exception == null)
+                        {
+                            exception = new RepositoryException();
+                        }
+                        exception.AddError(new Domain.Entities.RepositoryError("Bad.Data", string.Format("Project record not found for guid: {0}", projCFDC.RecordGuid)));
                     }
-
-                    var projectEntity = await BuildProjectCFEntityAsync(projCFDC, prjDC, projLineItemDCs);
-                    projectEntities.Add(projectEntity);
+                    else
+                    {
+                        var projectEntity = await BuildProjectCFEntityAsync(projCFDC, prjDC, projLineItemDCs);
+                        projectEntities.Add(projectEntity);
+                    }
                 }
+            }
+
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
             }
 
             return projectEntities.Any() ? new Tuple<IEnumerable<ProjectCF>, int>(projectEntities, totalCount) :
@@ -127,7 +168,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             var recordInfo = await GetRecordInfoFromGuidAsync(guid);
             if (recordInfo == null || string.IsNullOrEmpty(recordInfo.PrimaryKey) || recordInfo.Entity != "PROJECTS.CF")
             {
-                throw new KeyNotFoundException(string.Format("Grants record {0} does not exist.", guid));
+                throw new KeyNotFoundException(string.Format("No grant was found for guid {0}.", guid));
             }
 
             //Project CF
@@ -150,6 +191,11 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             var projectEntity = await BuildProjectCFEntityAsync(projCFDC, projDC, projLineItemDCs);
 
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+
             return projectEntity;
         }
 
@@ -162,20 +208,71 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <returns></returns>
         private async Task<ProjectCF> BuildProjectCFEntityAsync(ProjectsCf prjCF, Projects project, Collection<ProjectsLineItems> prjLineItems)
         {
-            ProjectCF projectCf = new ProjectCF(prjCF.RecordGuid, prjCF.Recordkey, project.PrjRefNo, project.PrjStartDate)
+            try
             {
-                Title = project.PrjTitle,
-                EndOn = project.PrjEndDate,
-                SponsorReferenceCode = project.PrjAgencyRefNo,
-                ReportingSegment = await BuildReportingSegmentAsync(),
-                CurrentStatus = project.PrjCurrentStatus,
-                AccountingStrings = BuildAccountingStrings(project.PrjRefNo, prjCF, prjLineItems),
-                BudgetAmount = BuildBudgetAmount(prjCF, prjLineItems),
-                ReportingPeriods = BuildReportingPeriods(prjCF),
-                ProjectType = project.PrjType,
-                ProjectContactPerson = await BuildContactPersonIdAsync(project.PrjContactsEntityAssociation)
-            };
-            return projectCf;
+                ProjectCF projectCf = new ProjectCF(prjCF.RecordGuid, prjCF.Recordkey, project.PrjRefNo, project.PrjStartDate)
+                {
+                    Title = project.PrjTitle,
+                    EndOn = project.PrjEndDate,
+                    SponsorReferenceCode = project.PrjAgencyRefNo,
+                    ReportingSegment = await BuildReportingSegmentAsync(),
+                    CurrentStatus = project.PrjCurrentStatus,
+                    AccountingStrings = BuildAccountingStrings(project.PrjRefNo, prjCF, prjLineItems),
+                    BudgetAmount = BuildBudgetAmount(prjCF, prjLineItems),
+                    ReportingPeriods = BuildReportingPeriods(prjCF),
+                    ProjectType = project.PrjType,
+                    ProjectContactPerson = await BuildContactPersonIdAsync(project.PrjContactsEntityAssociation)
+                };
+                return projectCf;
+            }
+            catch (Exception ex)
+            {
+                if (exception == null)
+                {
+                    exception = new RepositoryException();
+                }
+                bool errorFound = false;
+                if (string.IsNullOrEmpty(prjCF.RecordGuid))
+                {
+
+                    exception.AddError(new Domain.Entities.RepositoryError("Bad.Data", "Project CF record GUID is missing.")
+                    {
+                        SourceId = prjCF.Recordkey
+                    });
+                    errorFound = true;
+                }
+                if (string.IsNullOrEmpty(prjCF.Recordkey))
+                {
+                    exception.AddError(new Domain.Entities.RepositoryError("Bad.Data", "Project CF record key is missing.")
+                    {
+                        Id = prjCF.RecordGuid
+                    });
+                    errorFound = true;
+                }
+                if (string.IsNullOrEmpty(project.PrjRefNo))
+                {
+                    exception.AddError(new Domain.Entities.RepositoryError("Bad.Data", "Project reference number is missing.")
+                    {
+                        Id = prjCF.RecordGuid,
+                        SourceId = prjCF.Recordkey
+                    });
+                    errorFound = true;
+                }
+                if (project.PrjStartDate == null || !project.PrjStartDate.HasValue)
+                {
+                    exception.AddError(new Domain.Entities.RepositoryError("Bad.Data", "Project start date is missing.")
+                    {
+                        Id = prjCF.RecordGuid,
+                        SourceId = prjCF.Recordkey
+                    });
+                    errorFound = true;
+                }
+                if (!errorFound)
+                {
+                    throw ex;
+                }
+                return null;
+            }
         }
 
         string institutionName = string.Empty;
@@ -197,9 +294,17 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 var corpContract = await DataReader.ReadRecordAsync<Base.DataContracts.Corp>("PERSON", defaultCorpId);
                 if (corpContract.CorpName == null || !corpContract.CorpName.Any())
                 {
-                    throw new ApplicationException("Institution must have a name.");
+                    //throw new ApplicationException("Institution must have a name.");
+                    if (exception == null)
+                    {
+                        exception = new RepositoryException();
+                    }
+                    exception.AddError(new Domain.Entities.RepositoryError("Bad.Data", "Institution must have a name."));
                 }
-                institutionName = String.Join(" ", corpContract.CorpName.Where(x => !string.IsNullOrEmpty(x)));
+                else
+                {
+                    institutionName = String.Join(" ", corpContract.CorpName.Where(x => !string.IsNullOrEmpty(x)));
+                }
             }
             return institutionName;
         }

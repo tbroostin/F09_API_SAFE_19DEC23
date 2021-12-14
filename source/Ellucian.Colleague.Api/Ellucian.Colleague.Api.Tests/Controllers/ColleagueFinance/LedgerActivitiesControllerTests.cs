@@ -1,16 +1,21 @@
 ﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using Ellucian.Colleague.Api.Controllers.ColleagueFinance;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -44,7 +49,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             private string guid = "83f78f38-cb00-403b-a107-557dabf0f451";
             private Ellucian.Web.Http.Models.QueryStringFilter criteriaFilter = new Web.Http.Models.QueryStringFilter("criteria", "");
             private string filterGroupName = "criteria";
-            
+
             #endregion
 
             #region TEST SETUP
@@ -62,7 +67,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
                 ledgerActivityServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
 
-                ledgerActivityServiceMock.Setup(s => s.GetLedgerActivitiesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), 
+                ledgerActivityServiceMock.Setup(s => s.GetLedgerActivitiesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                     It.IsAny<string>(), It.IsAny<string>(), false)).ReturnsAsync(tupleResult);
 
                 ledgerActivityServiceMock.Setup(s => s.GetLedgerActivityByGuidAsync(It.IsAny<string>(), false)).ReturnsAsync(ledgerActivities.FirstOrDefault());
@@ -117,7 +122,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 //string criteria = @"{'fiscalYear':{'id':'70479f3b-bb79-4c0b-a0db-c240cd51e300'}}";
                 ledgerActivitiesController.Request.Properties.Add(
                       string.Format("FilterObject{0}", filterGroupName),
-                      new Dtos.Filters.LedgerActivityFilter() { FiscalYear = new Dtos.GuidObject2("70479f3b-bb79-4c0b-a0db-c240cd51e300") }) ;
+                      new Dtos.Filters.LedgerActivityFilter() { FiscalYear = new Dtos.GuidObject2("70479f3b-bb79-4c0b-a0db-c240cd51e300") });
 
                 var result = await ledgerActivitiesController.GetLedgerActivitiesAsync(null, criteriaFilter);
 
@@ -127,7 +132,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
                 var actuals = ((ObjectContent<IEnumerable<Dtos.LedgerActivity>>)httpResponseMessage.Content)
                     .Value as IEnumerable<Dtos.LedgerActivity>;
-                
+
                 Assert.IsNotNull(result);
                 Assert.AreEqual(actuals.FirstOrDefault().Id, guid);
             }
@@ -299,7 +304,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             {
                 ledgerActivityServiceMock.Setup(s => s.GetLedgerActivitiesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                     It.IsAny<string>(), It.IsAny<string>(), false)).ThrowsAsync(new RepositoryException());
-             
+
                 await ledgerActivitiesController.GetLedgerActivitiesAsync(page, criteriaFilter);
             }
 
@@ -309,7 +314,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             {
                 ledgerActivityServiceMock.Setup(s => s.GetLedgerActivitiesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                     It.IsAny<string>(), It.IsAny<string>(), false)).ThrowsAsync(new IntegrationApiException());
-              
+
                 await ledgerActivitiesController.GetLedgerActivitiesAsync(page, criteriaFilter);
             }
 
@@ -329,7 +334,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             {
                 ledgerActivityServiceMock.Setup(s => s.GetLedgerActivitiesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                     It.IsAny<string>(), It.IsAny<string>(), false)).ThrowsAsync(new Exception());
-          
+
                 await ledgerActivitiesController.GetLedgerActivitiesAsync(page, criteriaFilter);
             }
 
@@ -398,6 +403,173 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 Assert.IsNotNull(result);
                 Assert.AreEqual(result.Id, guid);
             }
+
+            //GET by id v11.1.0 v11
+            //Successful
+            //GetLedgerActivitiesByGuidAsync
+            [TestMethod]
+            public async Task LedgerActivitiesController_GetLedgerActivitiesByGuidAsync_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "LedgerActivities" },
+                    { "action", "GetLedgerActivitiesByGuidAsync" }
+                };
+                HttpRoute route = new HttpRoute("ledger-activities", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                ledgerActivitiesController.Request.SetRouteData(data);
+                ledgerActivitiesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.ViewLedgerActivities);
+
+                var controllerContext = ledgerActivitiesController.ControllerContext;
+                var actionDescriptor = ledgerActivitiesController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                ledgerActivityServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                ledgerActivityServiceMock.Setup(s => s.GetLedgerActivityByGuidAsync(It.IsAny<string>(), false)).ReturnsAsync(ledgerActivities.FirstOrDefault());
+                var result = await ledgerActivitiesController.GetLedgerActivitiesByGuidAsync(guid);
+
+                Object filterObject;
+                ledgerActivitiesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewLedgerActivities));
+
+
+            }
+
+            //GET by id v11.1.0 v11
+            //Exception
+            //GetLedgerActivitiesByGuidAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task LedgerActivitiesController_GetLedgerActivitiesByGuidAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "LedgerActivities" },
+                    { "action", "GetLedgerActivitiesByGuidAsync" }
+                };
+                HttpRoute route = new HttpRoute("ledger-activities", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                ledgerActivitiesController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = ledgerActivitiesController.ControllerContext;
+                var actionDescriptor = ledgerActivitiesController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    ledgerActivityServiceMock.Setup(s => s.GetLedgerActivityByGuidAsync(It.IsAny<string>(), false)).ThrowsAsync(new PermissionsException());
+                    ledgerActivityServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view ledger-activities."));
+                    await ledgerActivitiesController.GetLedgerActivitiesByGuidAsync(guid);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+            //GET v11.1.0 v11
+            //Successful
+            //GetLedgerActivitiesAsync
+            [TestMethod]
+            public async Task LedgerActivitiesController_GetLedgerActivitiesAsync_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "LedgerActivities" },
+                    { "action", "GetLedgerActivitiesAsync" }
+                };
+                HttpRoute route = new HttpRoute("ledger-activities", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                ledgerActivitiesController.Request.SetRouteData(data);
+                ledgerActivitiesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(ColleagueFinancePermissionCodes.ViewLedgerActivities);
+
+                var controllerContext = ledgerActivitiesController.ControllerContext;
+                var actionDescriptor = ledgerActivitiesController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                ledgerActivityServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                ledgerActivityServiceMock.Setup(s => s.GetLedgerActivitiesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), false)).ReturnsAsync(tupleResult);
+                await ledgerActivitiesController.GetLedgerActivitiesAsync(page, criteriaFilter);
+
+                Object filterObject;
+                ledgerActivitiesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewLedgerActivities));
+
+
+            }
+
+            //GET v11.1.0 v11
+            //Exception
+            //GetLedgerActivitiesAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task LedgerActivitiesController_GetLedgerActivitiesAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "LedgerActivities" },
+                    { "action", "GetLedgerActivitiesAsync" }
+                };
+                HttpRoute route = new HttpRoute("ledger-activities", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                ledgerActivitiesController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = ledgerActivitiesController.ControllerContext;
+                var actionDescriptor = ledgerActivitiesController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    ledgerActivityServiceMock.Setup(s => s.GetLedgerActivitiesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), false)).ThrowsAsync(new PermissionsException());
+                    ledgerActivityServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view ledger-activities."));
+                    await ledgerActivitiesController.GetLedgerActivitiesAsync(page, criteriaFilter);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
 
             #region NOT SUPPORTED
 

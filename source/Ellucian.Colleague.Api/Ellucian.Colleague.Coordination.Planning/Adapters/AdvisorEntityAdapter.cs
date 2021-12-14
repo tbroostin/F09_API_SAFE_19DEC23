@@ -7,7 +7,7 @@ using slf4net;
 
 namespace Ellucian.Colleague.Coordination.Planning.Adapters
 {
-    public class AdvisorEntityAdapter 
+    public class AdvisorEntityAdapter
     {
         private IAdapterRegistry AdapterRegistry;
         private ILogger Logger;
@@ -21,8 +21,8 @@ namespace Ellucian.Colleague.Coordination.Planning.Adapters
         {
             AdapterRegistry = adapterRegistry;
             Logger = logger;
-        }   
-        
+        }
+
         public Ellucian.Colleague.Dtos.Planning.Advisor MapToType(Domain.Planning.Entities.Advisor source, string facultyEmailTypeCode)
         {
             if (source == null)
@@ -35,6 +35,17 @@ namespace Ellucian.Colleague.Coordination.Planning.Adapters
             advisorDto.LastName = source.LastName;
             advisorDto.MiddleName = source.MiddleName;
             advisorDto.EmailAddresses = source.GetEmailAddresses(facultyEmailTypeCode);
+            if (source.PersonDisplayName != null)
+            {
+                advisorDto.PersonDisplayName = new Dtos.Base.PersonHierarchyName()
+                {
+                    FirstName = source.PersonDisplayName.FirstName,
+                    MiddleName = source.PersonDisplayName.MiddleName,
+                    LastName = source.PersonDisplayName.LastName,
+                    FullName = source.PersonDisplayName.FullName,
+                    HierarchyCode = source.PersonDisplayName.HierarchyCode
+                };
+            }
             return advisorDto;
         }
     }

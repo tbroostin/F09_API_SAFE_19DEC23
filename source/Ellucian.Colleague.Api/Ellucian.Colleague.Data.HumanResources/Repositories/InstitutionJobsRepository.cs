@@ -19,6 +19,7 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Configuration;
 using Ellucian.Colleague.Data.HumanResources.Transactions;
 using Ellucian.Data.Colleague.DataContracts;
+using Ellucian.Colleague.Domain.Base.Services;
 
 namespace Ellucian.Colleague.Data.HumanResources.Repositories
 {
@@ -28,6 +29,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
     {
         private readonly int _bulkReadSize;
         private Ellucian.Data.Colleague.DataContracts.IntlParams _internationalParameters;
+        const string AllInstitutionJobsRecordsCache = "AllInstitutionJobsRecordKeys";
+        const int AllInstitutionJobsRecordsCacheTimeout = 20;
+        private RepositoryException exception = new RepositoryException();
 
         public InstitutionJobsRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings settings)
             : base(cacheProvider, transactionFactory, logger)
@@ -52,6 +56,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     {
                         return await GetInstitutionJobsByIdAsync(id);
                     }
+                }
+                catch (RepositoryException ex)
+                {
+                    throw ex;
                 }
                 catch
                     (Exception e)
@@ -89,297 +97,321 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             var selectionCriteria = new StringBuilder();
             var coreDefaultData = GetDefaults();
 
-            try
-            {
-                var startOnOperation = filterQualifiers != null && filterQualifiers.ContainsKey("StartOn") ? filterQualifiers["StartOn"] : "EQ";
-                var endOnOperation = filterQualifiers != null && filterQualifiers.ContainsKey("EndOn") ? filterQualifiers["EndOn"] : "EQ";
+            var startOnOperation = filterQualifiers != null && filterQualifiers.ContainsKey("StartOn") ? filterQualifiers["StartOn"] : "EQ";
+            var endOnOperation = filterQualifiers != null && filterQualifiers.ContainsKey("EndOn") ? filterQualifiers["EndOn"] : "EQ";
+            string selectedRecordCacheKey = CacheSupport.BuildCacheKey(AllInstitutionJobsRecordsCache, personCode,
+                employerCode, positionCode, departmentCode, convertedStartOn, convertedEndOn, status, classificationCode, preference);
 
-                //startOn - select any records in PERPOS using PERPOS.START.DATE
-                //endOn - select any records in PERPOS using PERPOS.END.DATE 
-                if (!string.IsNullOrEmpty(convertedStartOn) || !string.IsNullOrEmpty(convertedEndOn))
+            int totalCount = 0;
+
+            var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                selectedRecordCacheKey,
+                "PERPOS",
+                offset,
+                limit,
+                AllInstitutionJobsRecordsCacheTimeout,
+                async () =>
                 {
-                    if (!string.IsNullOrEmpty(convertedStartOn))
+                    //startOn - select any records in PERPOS using PERPOS.START.DATE
+                    //endOn - select any records in PERPOS using PERPOS.END.DATE 
+                    if (!string.IsNullOrEmpty(convertedStartOn) || !string.IsNullOrEmpty(convertedEndOn))
                     {
-                        selectionCriteria.Append(string.Format("WITH PERPOS.START.DATE {0} '", startOnOperation));
-                        selectionCriteria.Append(convertedStartOn);
-                        selectionCriteria.Append("'");
-                    }
-                    if (!string.IsNullOrEmpty(convertedEndOn))
-                    {
-                        if (selectionCriteria.Length > 0)
+                        if (!string.IsNullOrEmpty(convertedStartOn))
                         {
-                            selectionCriteria.Append("AND ");
-                        }
-                        selectionCriteria.Append(string.Format("WITH PERPOS.END.DATE {0} '", endOnOperation));
-                        selectionCriteria.Append(convertedEndOn);
-                        selectionCriteria.Append("'");
-                        selectionCriteria.Append(" AND PERPOS.END.DATE NE ''");
-                    }
-                }
-                else
-                {
-                    selectionCriteria.Append("WITH PERPOS.START.DATE NE ''");
-                }
-
-                //person - select any record in PERPOS where the PERPOS.HRP.ID matches the person specified in the filter
-                if (!string.IsNullOrEmpty(personCode))
-                {
-                    selectionCriteria.Append(" AND WITH PERPOS.HRP.ID EQ '");
-                    selectionCriteria.Append(personCode);
-                    selectionCriteria.Append("'");
-                }
-
-
-                //employer - if the employer specified in the filter matches the guid corresponding to the DEFAULT.HOST.CORP.ID then return all records in PERPOS. Otherwise if the employer is anything else, then the filter won't return any results.
-                if (!(string.IsNullOrEmpty(employerCode)))
-                {                   
-                    if (coreDefaultData != null)
-                    {
-                        if (employerCode != coreDefaultData.DefaultHostCorpId)
-                            return new Tuple<IEnumerable<InstitutionJobs>, int>(new List<InstitutionJobs>(), 0);
-                    }
-                }
-
-                //position - select any records in PERPOS where the PERPOS.POSITION.ID matches the position ID corresponding to the guid specified in the filter.
-                if (!string.IsNullOrEmpty(positionCode))
-                {
-                    selectionCriteria.Append(" AND WITH PERPOS.POSITION.ID EQ '");
-                    selectionCriteria.Append(positionCode);
-                    selectionCriteria.Append("'");
-                }
-
-                string[] positionData = null;
-                //department - select any records in PERPOS where the corresponding position department (POS.DEPT) matches the department code specified in the filter (this filter does not use a guid!). Consider using the PERPOS.DEPT computed column.               
-                if (!string.IsNullOrEmpty(departmentCode))
-                {
-                    //var positionData = await DataReader.BulkReadRecordAsync<DataContracts.Position>("POSITION", string.Concat("WITH POS.DEPT EQ '", departmentCode, "'"));
-                    positionData = await DataReader.SelectAsync("POSITION", string.Concat("WITH POS.DEPT EQ '", departmentCode, "'"));
-                    if (positionData != null && positionData.Any())
-                    {
-                        selectionCriteria.Append(" AND WITH PERPOS.POSITION.ID EQ ");
-                        foreach (var pos in positionData)
-                        {
+                            selectionCriteria.Append(string.Format("WITH PERPOS.START.DATE {0} '", startOnOperation));
+                            selectionCriteria.Append(convertedStartOn);
                             selectionCriteria.Append("'");
-                            //selectionCriteria.Append(pos.Recordkey);
-                            selectionCriteria.Append(pos);
-                            selectionCriteria.Append("' ");
+                        }
+                        if (!string.IsNullOrEmpty(convertedEndOn))
+                        {
+                            if (selectionCriteria.Length > 0)
+                            {
+                                selectionCriteria.Append("AND ");
+                            }
+                            selectionCriteria.Append(string.Format("WITH PERPOS.END.DATE {0} '", endOnOperation));
+                            selectionCriteria.Append(convertedEndOn);
+                            selectionCriteria.Append("'");
+                            selectionCriteria.Append(" AND PERPOS.END.DATE NE ''");
                         }
                     }
                     else
                     {
-                        return new Tuple<IEnumerable<InstitutionJobs>, int>(new List<InstitutionJobs>(), 0);
+                        selectionCriteria.Append("WITH PERPOS.START.DATE NE ''");
                     }
-                }
 
-                //classification - select any records in PERPOS where the corresponding position classification (POS.CLASS) matches the classification code corresponding to the guid specified in the filter.
-                if (!string.IsNullOrEmpty(classificationCode))
-                {
-                    //var positionClassData = await DataReader.BulkReadRecordAsync<DataContracts.Position>("POSITION", string.Concat("WITH POS.CLASS EQ '", classificationCode, "'"));
-                    var positionClassData = (positionData == null)
-                        ? await DataReader.SelectAsync("POSITION", string.Concat("WITH POS.CLASS EQ '", classificationCode, "'"))
-                        : await DataReader.SelectAsync("POSITION", positionData, string.Concat("WITH POS.CLASS EQ '", classificationCode, "'"));
-                    if (positionClassData != null && positionClassData.Any())
+                    //person - select any record in PERPOS where the PERPOS.HRP.ID matches the person specified in the filter
+                    if (!string.IsNullOrEmpty(personCode))
                     {
-                        selectionCriteria.Append(" AND WITH PERPOS.POSITION.ID EQ ");
-                        foreach (var pos in positionClassData)
+                        selectionCriteria.Append(" AND WITH PERPOS.HRP.ID EQ '");
+                        selectionCriteria.Append(personCode);
+                        selectionCriteria.Append("'");
+                    }
+
+
+                    //employer - if the employer specified in the filter matches the guid corresponding to the DEFAULT.HOST.CORP.ID then return all records in PERPOS. Otherwise if the employer is anything else, then the filter won't return any results.
+                    if (!(string.IsNullOrEmpty(employerCode)))
+                    {
+                        if (coreDefaultData != null)
                         {
-                            selectionCriteria.Append("'");
-                            //selectionCriteria.Append(pos.Recordkey);
-                            selectionCriteria.Append(pos);
-                            selectionCriteria.Append("' ");
+                            if (employerCode != coreDefaultData.DefaultHostCorpId)
+                                return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
                         }
                     }
-                    else
+
+                    //position - select any records in PERPOS where the PERPOS.POSITION.ID matches the position ID corresponding to the guid specified in the filter.
+                    if (!string.IsNullOrEmpty(positionCode))
                     {
-                        return new Tuple<IEnumerable<InstitutionJobs>, int>(new List<InstitutionJobs>(), 0);
+                        selectionCriteria.Append(" AND WITH PERPOS.POSITION.ID EQ '");
+                        selectionCriteria.Append(positionCode);
+                        selectionCriteria.Append("'");
                     }
-                }
 
-                if (!string.IsNullOrEmpty(status))
-                {
-                    var today = await GetUnidataFormatDateAsync(DateTime.Now);
-                    switch (status.ToLower())
+                    string[] positionData = null;
+                    //department - select any records in PERPOS where the corresponding position department (POS.DEPT) matches the department code specified in the filter (this filter does not use a guid!). Consider using the PERPOS.DEPT computed column.               
+                    if (!string.IsNullOrEmpty(departmentCode))
                     {
-                        //status (active) - select any records in PERPOS where the PERPOS.END.DATE is null or the PERPOS.END.DATE 
-                        //is on or after the request date.
-                        case "active":
-                            // selectionCriteria.AppendFormat(" AND WITH PERPOS.START.DATE LE '{0}'", today);
-                            selectionCriteria.Append(" AND WITH PERPOS.END.DATE EQ ''");
-                            selectionCriteria.AppendFormat(" OR PERPOS.END.DATE GT '{0}'", today);
-                            break;
-                        //status (ended) - select any records in PERPOS where the PERPOS.END.DATE is not null and is a 
-                        //date prior to the request date.
-                        case "ended":
-                            selectionCriteria.AppendFormat(" AND WITH PERPOS.END.DATE LE '{0}'", today);
-                            selectionCriteria.Append(" AND WITH PERPOS.END.DATE NE ''");
-                            break;
-                        default:
-                            break;
-                    }
-                }
-
-                // preference (primary) - select all active status records in PERSTAT to find the current status records (PERSTAT that's considered active based on the request date) and then publish the corresponding PERPOS record (PERSTAT.PRIMARY.PERPOS.ID). We might need to create a computed column for this filter, not 100% sure. Refer to the logic used to publish the preference property.
-                // The HRPER file does capture the status date ranges itself in HRP.PERSTAT.START.DATE and 
-                // HRP.PERSTAT.END.DATE...so we can check these date ranges from HRPER to determine the current status 
-                // record, then read the corresponding PERSTAT entry to get the PERSTAT.PRIMARY.POS.ID and then see 
-                // if it matches the current position we're integrating above in position.id then populate this 
-                // property with the "primary" enumeration.            
-                if (!(string.IsNullOrEmpty(preference)))
-                {
-                    //if we have additional selection criteria - use it to filter out preference records
-                    var primaryids = (await GetPrimaryInstitutionJobsPerposIdsAsync(selectionCriteria.ToString())).ToArray();
-                    if (primaryids != null)
-                    {
-                        perposIds.AddRange(primaryids);
-                    }
-                }
-                else
-                {
-                    perposIds.AddRange(await DataReader.SelectAsync("PERPOS", selectionCriteria.ToString()));
-                }
-
-                var totalCount = perposIds.Count();
-
-                perposIds.Sort();
-                var perposSubList = perposIds.Skip(offset).Take(limit).ToArray();
-                var perposRecords = await DataReader.BulkReadRecordAsync<DataContracts.Perpos>("PERPOS", perposSubList);
-
-                var personIds = perposRecords.Select(e => e.PerposHrpId);
-
-                var criteria = string.Format("WITH PPWG.PERPOS.ID EQ ? AND PPWG.TYPE NE 'M'");
-                //var perposwgKeys = await DataReader.SelectAsync("PERPOSWG", criteria, perposSubList);
-                var perposwgKeys = await DataReader.SelectAsync("PERPOSWG", criteria, perposSubList.Select(id => string.Format("\"{0}\"", id)).ToArray());
-
-                //bulkread the records for all the keys
-                var perposwgRecords = new List<Perposwg>();
-                for (var i = 0; i < perposwgKeys.Count(); i += _bulkReadSize)
-                {
-                    var subList = perposwgKeys.Skip(i).Take(_bulkReadSize);
-                    var records = await DataReader.BulkReadRecordAsync<Perposwg>(subList.ToArray());
-                    if (records != null)
-                    {
-                        perposwgRecords.AddRange(records);
-                    }
-                }
-
-
-                var positionIds = perposRecords.Select(e => e.PerposPositionId);
-
-                criteria = string.Format("WITH POSITION.ID EQ ?");
-                var positionKeys = await DataReader.SelectAsync("POSITION", criteria, positionIds.Select(id => string.Format("\"{0}\"", id)).ToArray());
-
-                //bulkread the records for all the keys
-                var positionRecords = new List<DataContracts.Position>();
-                for (var i = 0; i < positionKeys.Count(); i += _bulkReadSize)
-                {
-                    var subList = positionKeys.Skip(i).Take(_bulkReadSize);
-                    var records = await DataReader.BulkReadRecordAsync<DataContracts.Position>(subList.ToArray());
-                    if (records != null)
-                    {
-                        positionRecords.AddRange(records);
-                    }
-                }
-
-                // select all the PERBEN ids with the HRP.ID equal to the input person id.
-                criteria = string.Format("WITH PERBEN.HRP.ID EQ ?");
-                var perbenKeys = await DataReader.SelectAsync("PERBEN", criteria, personIds.Select(id => string.Format("\"{0}\"", id)).ToArray());
-
-                var perbenRecords = new List<Perben>();
-                for (int i = 0; i < perbenKeys.Count(); i += _bulkReadSize)
-                {
-                    var subList = perbenKeys.Skip(i).Take(_bulkReadSize);
-                    var records = await DataReader.BulkReadRecordAsync<Perben>(subList.ToArray());
-                    if (records != null)
-                    {
-                        perbenRecords.AddRange(records);
-                    }
-                }
-
-                // select all the PERSTAT ids with the HRP.ID equal to the input person id.
-                criteria = "WITH PERSTAT.HRP.ID EQ ?";
-                var perstatKeys = await DataReader.SelectAsync("PERSTAT", criteria, personIds.Select(id => string.Format("\"{0}\"", id)).ToArray());
-
-                var perstatRecords = new List<Perstat>();
-                for (int i = 0; i < perstatKeys.Count(); i += _bulkReadSize)
-                {
-
-                    var subList = perstatKeys.Skip(i).Take(_bulkReadSize);
-                    var records = await DataReader.BulkReadRecordAsync<Perstat>(subList.ToArray());
-                    if (records != null)
-                    {
-                        perstatRecords.AddRange(records);
-                    }
-                }
-
-                // bulkread all HRPER records from Colleauge
-                var hrperRecords = new List<Hrper>();
-                for (int i = 0; i < personIds.Count(); i += _bulkReadSize)
-                {
-                    var subList = personIds.Skip(i).Take(_bulkReadSize);
-                    var records = await DataReader.BulkReadRecordAsync<Hrper>(subList.ToArray());
-                    if (records != null)
-                    {
-                        hrperRecords.AddRange(records);
-                    }
-                }
-
-                var institutionJobsEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.InstitutionJobs>();
-
-                var ldmDefaults = await DataReader.ReadRecordAsync<LdmDefaults>("CORE.PARMS", "LDM.DEFAULTS");
-
-                var hostCountry = await GetHostCountryAsync();
-               
-                var hostCorpId = coreDefaultData.DefaultHostCorpId;
-
-
-                Dictionary<string, string> ldmGuidCollection = new Dictionary<string, string>();
-                ldmGuidCollection = await GetInstitutionJobsGuidDictionary( perposSubList );
-
-                foreach( var perpos in perposRecords)
-                {
-                    if (perpos != null)
-                    {
-                        string errorKey = perpos.Recordkey;
-
-                        try
+                        //var positionData = await DataReader.BulkReadRecordAsync<DataContracts.Position>("POSITION", string.Concat("WITH POS.DEPT EQ '", departmentCode, "'"));
+                        positionData = await DataReader.SelectAsync("POSITION", string.Concat("WITH POS.DEPT EQ '", departmentCode, "'"));
+                        if (positionData != null && positionData.Any())
                         {
-                            var positionRecord = positionRecords.Where(p => p.Recordkey == perpos.PerposPositionId);
-                            var personPositionWages = perposwgRecords.Where(ppw => ppw.PpwgPerposId == perpos.Recordkey);
-                            var personStatusRecords = perstatRecords.Where(ps => ps.PerstatHrpId == perpos.PerposHrpId);
-                            var personBenefitsRecords = perbenRecords.Where(ps => ps.PerbenHrpId == perpos.PerposHrpId);
-                            var hrPersonRecord = hrperRecords.Where(hr => hr.Recordkey == perpos.PerposHrpId);
-
-                            institutionJobsEntities.Add(
-                                await BuildInstitutionJobsAsync(perpos, personPositionWages, positionRecord, 
-                                personBenefitsRecords, personStatusRecords, hrPersonRecord, ldmGuidCollection, 
-                                ldmDefaults, hostCountry, hostCorpId));
+                            selectionCriteria.Append(" AND WITH PERPOS.POSITION.ID EQ ");
+                            foreach (var pos in positionData)
+                            {
+                                selectionCriteria.Append("'");
+                                //selectionCriteria.Append(pos.Recordkey);
+                                selectionCriteria.Append(pos);
+                                selectionCriteria.Append("' ");
+                            }
                         }
-                        catch (Exception e)
+                        else
                         {
-                            var errorMessage = string.Format("Record key: {0}. {1}", errorKey, "Duplicate GUID found. To resolve errors, run Remove Duplicate GUIDs (RDGU) for PERPOS.");
-                            LogDataError("InstitutionJobs", perpos.Recordkey, perpos, e, errorMessage);
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
                         }
                     }
-                }
-                return new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.InstitutionJobs>, int>(institutionJobsEntities, totalCount);
-            }
-            catch (RepositoryException e)
+
+                    //classification - select any records in PERPOS where the corresponding position classification (POS.CLASS) matches the classification code corresponding to the guid specified in the filter.
+                    if (!string.IsNullOrEmpty(classificationCode))
+                    {
+                        //var positionClassData = await DataReader.BulkReadRecordAsync<DataContracts.Position>("POSITION", string.Concat("WITH POS.CLASS EQ '", classificationCode, "'"));
+                        var positionClassData = (positionData == null)
+                            ? await DataReader.SelectAsync("POSITION", string.Concat("WITH POS.CLASS EQ '", classificationCode, "'"))
+                            : await DataReader.SelectAsync("POSITION", positionData, string.Concat("WITH POS.CLASS EQ '", classificationCode, "'"));
+                        if (positionClassData != null && positionClassData.Any())
+                        {
+                            selectionCriteria.Append(" AND WITH PERPOS.POSITION.ID EQ ");
+                            foreach (var pos in positionClassData)
+                            {
+                                selectionCriteria.Append("'");
+                                //selectionCriteria.Append(pos.Recordkey);
+                                selectionCriteria.Append(pos);
+                                selectionCriteria.Append("' ");
+                            }
+                        }
+                        else
+                        {
+                            return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                        }
+                    }
+
+                    if (!string.IsNullOrEmpty(status))
+                    {
+                        var today = await GetUnidataFormatDateAsync(DateTime.Now);
+                        switch (status.ToLower())
+                        {
+                            //status (active) - select any records in PERPOS where the PERPOS.END.DATE is null or the PERPOS.END.DATE 
+                            //is on or after the request date.
+                            case "active":
+                                // selectionCriteria.AppendFormat(" AND WITH PERPOS.START.DATE LE '{0}'", today);
+                                selectionCriteria.Append(" AND WITH PERPOS.END.DATE EQ ''");
+                                selectionCriteria.AppendFormat(" OR PERPOS.END.DATE GT '{0}'", today);
+                                break;
+                            //status (ended) - select any records in PERPOS where the PERPOS.END.DATE is not null and is a 
+                            //date prior to the request date.
+                            case "ended":
+                                selectionCriteria.AppendFormat(" AND WITH PERPOS.END.DATE LE '{0}'", today);
+                                selectionCriteria.Append(" AND WITH PERPOS.END.DATE NE ''");
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+
+                    // preference (primary) - select all active status records in PERSTAT to find the current status records (PERSTAT that's considered active based on the request date) and then publish the corresponding PERPOS record (PERSTAT.PRIMARY.PERPOS.ID). We might need to create a computed column for this filter, not 100% sure. Refer to the logic used to publish the preference property.
+                    // The HRPER file does capture the status date ranges itself in HRP.PERSTAT.START.DATE and 
+                    // HRP.PERSTAT.END.DATE...so we can check these date ranges from HRPER to determine the current status 
+                    // record, then read the corresponding PERSTAT entry to get the PERSTAT.PRIMARY.POS.ID and then see 
+                    // if it matches the current position we're integrating above in position.id then populate this 
+                    // property with the "primary" enumeration.            
+                    if (!(string.IsNullOrEmpty(preference)))
+                    {
+                        //if we have additional selection criteria - use it to filter out preference records
+                        var primaryids = (await GetPrimaryInstitutionJobsPerposIdsAsync(selectionCriteria.ToString())).ToArray();
+                        if (primaryids != null)
+                        {
+                            perposIds.AddRange(primaryids);
+                        }
+                    }
+
+                    return new CacheSupport.KeyCacheRequirements()
+                    {
+                        limitingKeys = perposIds != null && perposIds.Any() ? perposIds.Distinct().ToList() : null,
+                        criteria = selectionCriteria.ToString()
+                    };
+                });
+
+            if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
             {
-                if( e.Errors != null && e.Errors.Any() )
+                return new Tuple<IEnumerable<InstitutionJobs>, int>(new List<InstitutionJobs>(), 0);
+            }
+
+            totalCount = keyCacheObject.TotalCount.Value;
+
+            var perposSubList = keyCacheObject.Sublist.ToArray();
+            
+            if (perposSubList == null || !perposSubList.Any())
+            {
+                return new Tuple<IEnumerable<InstitutionJobs>, int>(new List<InstitutionJobs>(), 0);
+            }
+
+            var perposRecords = await DataReader.BulkReadRecordAsync<DataContracts.Perpos>("PERPOS", perposSubList);
+
+            var personIds = perposRecords.Select(e => e.PerposHrpId);
+
+            var criteria = string.Format("WITH PPWG.PERPOS.ID EQ ? AND PPWG.TYPE NE 'M'");
+            //var perposwgKeys = await DataReader.SelectAsync("PERPOSWG", criteria, perposSubList);
+            var perposwgKeys = await DataReader.SelectAsync("PERPOSWG", criteria, perposSubList.Select(id => string.Format("\"{0}\"", id)).ToArray());
+
+            //bulkread the records for all the keys
+            var perposwgRecords = new List<Perposwg>();
+            for (var i = 0; i < perposwgKeys.Count(); i += _bulkReadSize)
+            {
+                var subList = perposwgKeys.Skip(i).Take(_bulkReadSize);
+                var records = await DataReader.BulkReadRecordAsync<Perposwg>(subList.ToArray());
+                if (records != null)
                 {
-                    string errorMessage = string.Empty;
-                    e.Errors.ToList().ForEach( i =>
-                    {
-                        errorMessage += i.Code + "\r\n";
-                    } );
-                    throw new RepositoryException( errorMessage, e );
-                }
-                else
-                {
-                    throw;
+                    perposwgRecords.AddRange(records);
                 }
             }
 
+
+            var positionIds = perposRecords.Select(e => e.PerposPositionId);
+
+            criteria = string.Format("WITH POSITION.ID EQ ?");
+            var positionKeys = await DataReader.SelectAsync("POSITION", criteria, positionIds.Select(id => string.Format("\"{0}\"", id)).ToArray());
+
+            //bulkread the records for all the keys
+            var positionRecords = new List<DataContracts.Position>();
+            for (var i = 0; i < positionKeys.Count(); i += _bulkReadSize)
+            {
+                var subList = positionKeys.Skip(i).Take(_bulkReadSize);
+                var records = await DataReader.BulkReadRecordAsync<DataContracts.Position>(subList.ToArray());
+                if (records != null)
+                {
+                    positionRecords.AddRange(records);
+                }
+            }
+
+            // select all the PERBEN ids with the HRP.ID equal to the input person id.
+            criteria = string.Format("WITH PERBEN.HRP.ID EQ ?");
+            var perbenKeys = await DataReader.SelectAsync("PERBEN", criteria, personIds.Select(id => string.Format("\"{0}\"", id)).ToArray());
+
+            var perbenRecords = new List<Perben>();
+            for (int i = 0; i < perbenKeys.Count(); i += _bulkReadSize)
+            {
+                var subList = perbenKeys.Skip(i).Take(_bulkReadSize);
+                var records = await DataReader.BulkReadRecordAsync<Perben>(subList.ToArray());
+                if (records != null)
+                {
+                    perbenRecords.AddRange(records);
+                }
+            }
+
+            // select all the PERSTAT ids with the HRP.ID equal to the input person id.
+            criteria = "WITH PERSTAT.HRP.ID EQ ?";
+            var perstatKeys = await DataReader.SelectAsync("PERSTAT", criteria, personIds.Select(id => string.Format("\"{0}\"", id)).ToArray());
+
+            var perstatRecords = new List<Perstat>();
+            for (int i = 0; i < perstatKeys.Count(); i += _bulkReadSize)
+            {
+
+                var subList = perstatKeys.Skip(i).Take(_bulkReadSize);
+                var records = await DataReader.BulkReadRecordAsync<Perstat>(subList.ToArray());
+                if (records != null)
+                {
+                    perstatRecords.AddRange(records);
+                }
+            }
+
+            // bulkread all HRPER records from Colleauge
+            var hrperRecords = new List<Hrper>();
+            for (int i = 0; i < personIds.Count(); i += _bulkReadSize)
+            {
+                var subList = personIds.Skip(i).Take(_bulkReadSize);
+                var records = await DataReader.BulkReadRecordAsync<Hrper>(subList.ToArray());
+                if (records != null)
+                {
+                    hrperRecords.AddRange(records);
+                }
+            }
+
+            var institutionJobsEntities = new List<Ellucian.Colleague.Domain.HumanResources.Entities.InstitutionJobs>();
+
+            var ldmDefaults = await DataReader.ReadRecordAsync<LdmDefaults>("CORE.PARMS", "LDM.DEFAULTS");
+
+            var hostCountry = await GetHostCountryAsync();
+
+            var hostCorpId = coreDefaultData.DefaultHostCorpId;
+
+
+            Dictionary<string, string> ldmGuidCollection = new Dictionary<string, string>();
+            ldmGuidCollection = await GetInstitutionJobsGuidDictionary(perposSubList);
+            if (ldmGuidCollection == null || !ldmGuidCollection.Any())
+            {
+                throw new ArgumentException("LDM.GUID Unable to locate guids for the PERPOS table.");
+            }
+
+            foreach (var perpos in perposRecords)
+            {
+                if (perpos != null)
+                {
+                    string errorKey = perpos.Recordkey;
+
+                    try
+                    {
+                        var positionRecord = positionRecords.Where(p => p.Recordkey == perpos.PerposPositionId);
+                        var personPositionWages = perposwgRecords.Where(ppw => ppw.PpwgPerposId == perpos.Recordkey);
+                        var personStatusRecords = perstatRecords.Where(ps => ps.PerstatHrpId == perpos.PerposHrpId);
+                        var personBenefitsRecords = perbenRecords.Where(ps => ps.PerbenHrpId == perpos.PerposHrpId);
+                        var hrPersonRecord = hrperRecords.Where(hr => hr.Recordkey == perpos.PerposHrpId);
+
+                        institutionJobsEntities.Add(
+                            await BuildInstitutionJobsAsync(perpos, personPositionWages, positionRecord,
+                            personBenefitsRecords, personStatusRecords, hrPersonRecord, ldmGuidCollection,
+                            ldmDefaults, hostCountry, hostCorpId));
+                    }
+                    catch (Exception e)
+                    {
+                        var errorMessage = string.Format("Record key: {0}. {1}", errorKey, "Duplicate GUID found. To resolve errors, run Remove Duplicate GUIDs (RDGU) for PERPOS.");
+                        LogDataError("InstitutionJobs", perpos.Recordkey, perpos, e, errorMessage);
+                        exception.AddError(new RepositoryError("Bad.Data", errorMessage)
+                        {
+                            SourceId = perpos.Recordkey,
+                            Id = perpos.RecordGuid
+                        });
+                    }
+                }
+            }
+
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
+            return new Tuple<IEnumerable<Ellucian.Colleague.Domain.HumanResources.Entities.InstitutionJobs>, int>(institutionJobsEntities, totalCount);
         }
 
         /// <summary>
@@ -403,15 +435,18 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
 
             foreach( var e in ldmGuidRecords )
             {
-                var output = string.Empty;
-                var key = e.Key.Split( new char[] { '+' }, StringSplitOptions.RemoveEmptyEntries );
-                if( ldmGuidCollection.TryGetValue( e.Key[ 1 ].ToString(), out output ) )
+                if (e.Value != null && !string.IsNullOrEmpty(e.Value.Guid))
                 {
-                    var errorMessage = string.Format( "Duplicate key found for key '{0}'.", e.Key );
-                    exception.AddError( new RepositoryError( key[ 1 ].ToString(), "invalid.key", errorMessage ) );
+                    var output = string.Empty;
+                    var key = e.Key.Split(new char[] { '+' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (ldmGuidCollection.TryGetValue(e.Key[1].ToString(), out output))
+                    {
+                        var errorMessage = string.Format("Duplicate key found for key '{0}'.", e.Key);
+                        exception.AddError(new RepositoryError(key[1].ToString(), "invalid.key", errorMessage));
+                    }
+                    else
+                        ldmGuidCollection.Add(key[1], e.Value.Guid);
                 }
-                else
-                    ldmGuidCollection.Add( key[ 1 ], e.Value.Guid );
             }
 
             if( exception.Errors.Any() )
@@ -656,6 +691,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 logger.Error(string.Format("Could not build positionPay for id {0}", guid));
                 logger.Error(e.GetBaseException().Message + e.GetBaseException().StackTrace);
             }
+
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
+            }
             return institutionJobs;
         }
 
@@ -691,195 +731,206 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             {
                 throw new ArgumentNullException("guid", string.Format("LDM.GUID Unable to locate guid for perpos id: {0}", perposRecord.Recordkey));
             }
-            
-            var institutionJobs = new InstitutionJobs(guid,
-                perposRecord.Recordkey, perposRecord.PerposHrpId,
-                perposRecord.PerposPositionId, perposRecord.PerposStartDate.Value)
+            try
             {
-                EndDate = perposRecord.PerposEndDate,
-                AlternateSupervisorId = perposRecord.PerposAltSupervisorId,
-                SupervisorId = perposRecord.PerposSupervisorHrpId
-            };
-
-            institutionJobs.HostCountry = hostCountry;
-            institutionJobs.Employer = hostCorpId;
-
-            institutionJobs.EndReason = perposRecord.PerposEndReason;
-
-            if (positionRecords != null)
-            {
-                var position = positionRecords.FirstOrDefault(p => p.Recordkey == perposRecord.PerposPositionId);
-                if (position != null)
+                var institutionJobs = new InstitutionJobs(guid,
+                    perposRecord.Recordkey, perposRecord.PerposHrpId,
+                    perposRecord.PerposPositionId, perposRecord.PerposStartDate.Value)
                 {
-                    institutionJobs.Department = string.IsNullOrWhiteSpace(position.PosDept) ? null : position.PosDept;
-                    institutionJobs.Classification = string.IsNullOrWhiteSpace(position.PosClass) ? null : position.PosClass;
+                    EndDate = perposRecord.PerposEndDate,
+                    AlternateSupervisorId = perposRecord.PerposAltSupervisorId,
+                    SupervisorId = perposRecord.PerposSupervisorHrpId
+                };
 
-                    //position is salaried if db column is "S". position is hourly if db column is "H"
-                    institutionJobs.IsSalary = position.PosHrlyOrSlry.Equals("S", StringComparison.InvariantCultureIgnoreCase);
-                }
-            }
+                institutionJobs.HostCountry = hostCountry;
+                institutionJobs.Employer = hostCorpId;
 
-            if ((perposwgRecords != null) && (perposwgRecords.Any()))
-            {
+                institutionJobs.EndReason = perposRecord.PerposEndReason;
 
-                var currentPerposwg =
-                    perposwgRecords.FirstOrDefault(p => !p.PpwgEndDate.HasValue
-                                                        && p.PpwgStartDate <= currentDate)
-                    ?? perposwgRecords.FirstOrDefault(p => p.PpwgEndDate.HasValue
-                                                           && p.PpwgStartDate <= currentDate && p.PpwgEndDate >= currentDate);
-                institutionJobs.PayStatus = PayStatus.WithoutPay;
-                ICollection<Projects> projectRecords = new List<Projects>();
-                var projectIds = GetProjectIds(perposwgRecords, currentPerposwg);
-
-                if (projectIds != null && projectIds.Any())
+                if (positionRecords != null)
                 {
-                    projectRecords = await DataReader.BulkReadRecordAsync<Projects>(projectIds.Distinct().ToArray());
-                }
-
-                if (currentPerposwg != null)
-                {
-                    if (currentPerposwg.PpwgEndDate == null || currentPerposwg.PpwgEndDate > DateTime.Today)
+                    var position = positionRecords.FirstOrDefault(p => p.Recordkey == perposRecord.PerposPositionId);
+                    if (position != null)
                     {
-                        institutionJobs.PayStatus = PayStatus.WithPay;
+                        institutionJobs.Department = string.IsNullOrWhiteSpace(position.PosDept) ? null : position.PosDept;
+                        institutionJobs.Classification = string.IsNullOrWhiteSpace(position.PosClass) ? null : position.PosClass;
+
+                        //position is salaried if db column is "S". position is hourly if db column is "H"
+                        institutionJobs.IsSalary = position.PosHrlyOrSlry.Equals("S", StringComparison.InvariantCultureIgnoreCase);
+                    }
+                }
+
+                if ((perposwgRecords != null) && (perposwgRecords.Any()))
+                {
+
+                    var currentPerposwg =
+                        perposwgRecords.FirstOrDefault(p => !p.PpwgEndDate.HasValue
+                                                            && p.PpwgStartDate <= currentDate)
+                        ?? perposwgRecords.FirstOrDefault(p => p.PpwgEndDate.HasValue
+                                                               && p.PpwgStartDate <= currentDate && p.PpwgEndDate >= currentDate);
+                    institutionJobs.PayStatus = PayStatus.WithoutPay;
+                    ICollection<Projects> projectRecords = new List<Projects>();
+                    var projectIds = GetProjectIds(perposwgRecords, currentPerposwg);
+
+                    if (projectIds != null && projectIds.Any())
+                    {
+                        projectRecords = await DataReader.BulkReadRecordAsync<Projects>(projectIds.Distinct().ToArray());
                     }
 
-                    var accountingStrings = new List<string>();
-
-                    // Loop through a second time this grabbing the accounting string and the correct project reference number
-                    // if we can't get a reference number it will default the project ID
-                    foreach (var currentPpwitem in currentPerposwg.PpwitemsEntityAssociation)
+                    if (currentPerposwg != null)
                     {
-                        var projectId = currentPpwitem.PpwgProjectsIdsAssocMember;
-                        if (!string.IsNullOrWhiteSpace(projectId) && projectRecords != null)
+                        if (currentPerposwg.PpwgEndDate == null || currentPerposwg.PpwgEndDate > DateTime.Today)
                         {
-                            var projectRecord = projectRecords.FirstOrDefault(pr => pr.Recordkey == projectId);
-                            // If there are project IDs, there should be project line item IDs
-                            if ((projectRecord != null))
-                            {
-                                // For each project line item ID, get the project line item code
-
-                                projectId = projectRecord.PrjRefNo;
-                            }
+                            institutionJobs.PayStatus = PayStatus.WithPay;
                         }
-                        //if there was a project Id then concatenate the accounting string with the project ID.
-                        var accountingString = string.IsNullOrEmpty(projectId) ?
-                            currentPpwitem.PpwgPiGlNoAssocMember : string.Concat(currentPpwitem.PpwgPiGlNoAssocMember, '*', projectId);
-                        if (!(string.IsNullOrWhiteSpace(accountingString)))
-                            accountingStrings.Add(accountingString);
-                    }
-                    if (accountingStrings.Any())
-                    {
-                        institutionJobs.AccountingStrings = accountingStrings;
-                        institutionJobs.PpwgGlAccountNumber = currentPerposwg.PpwgPiGlNo;
-                    }
 
-                    institutionJobs.PpwgProjectIds = currentPerposwg.PpwgProjectsIds;
+                        var accountingStrings = new List<string>();
 
-                    institutionJobs.Grade = string.IsNullOrWhiteSpace(currentPerposwg.PpwgGrade) ? null : currentPerposwg.PpwgGrade;
-                    institutionJobs.Step = string.IsNullOrWhiteSpace(currentPerposwg.PpwgStep) ? null : currentPerposwg.PpwgStep;
-                    institutionJobs.PayRate = string.IsNullOrWhiteSpace(currentPerposwg.PpwgPayRate) ? null : currentPerposwg.PpwgPayRate;
-
-                    institutionJobs.PayClass = string.IsNullOrWhiteSpace(currentPerposwg.PpwgPayclassId) ? null : currentPerposwg.PpwgPayclassId;
-                    institutionJobs.PayCycle = string.IsNullOrWhiteSpace(currentPerposwg.PpwgPaycycleId) ? null : currentPerposwg.PpwgPaycycleId;
-
-                    institutionJobs.CycleWorkTimeAmount = currentPerposwg.PpwgCycleWorkTimeAmt;
-                    institutionJobs.CycleWorkTimeUnits = currentPerposwg.PpwgCycleWorkTimeUnits;
-
-                    institutionJobs.YearWorkTimeAmount = currentPerposwg.PpwgYearWorkTimeAmt;
-                    institutionJobs.YearWorkTimeUnits = currentPerposwg.PpwgYearWorkTimeUnits;
-                }
-
-                var perposwgItems = new List<PersonPositionWageItem>();
-               
-                foreach (var perposwg in perposwgRecords)
-                {
-                    var perposwgItem = new PersonPositionWageItem(perposwg.Recordkey);
-
-                    if (perposwg.PpwgStartDate != null && perposwg.PpwgStartDate.HasValue)
-                        perposwgItem.StartDate = Convert.ToDateTime(perposwg.PpwgStartDate);
-
-                    perposwgItem.Grade = string.IsNullOrWhiteSpace(perposwg.PpwgGrade) ? null : perposwg.PpwgGrade;
-                    perposwgItem.Step = string.IsNullOrWhiteSpace(perposwg.PpwgStep) ? null : perposwg.PpwgStep;
-                    perposwgItem.PayRate = string.IsNullOrWhiteSpace(perposwg.PpwgPayRate) ? null : perposwg.PpwgPayRate;
-
-                    if (perposwg.PpwgEndDate != null && perposwg.PpwgEndDate.HasValue)
-                        perposwgItem.EndDate = Convert.ToDateTime(perposwg.PpwgEndDate);
-
-                    if (perposwg.PpwitemsEntityAssociation != null && perposwg.PpwitemsEntityAssociation.Any())
-                    {                        
-                        perposwgItem.AccountingStringAllocation = new List<PpwgAccountingStringAllocation>();
-                        foreach (var ppwitem in perposwg.PpwitemsEntityAssociation)
+                        // Loop through a second time this grabbing the accounting string and the correct project reference number
+                        // if we can't get a reference number it will default the project ID
+                        foreach (var currentPpwitem in currentPerposwg.PpwitemsEntityAssociation)
                         {
-                            var ppwgGlAssociation = new PpwgAccountingStringAllocation();
-                            var projectId = ppwitem.PpwgProjectsIdsAssocMember;
+                            var projectId = currentPpwitem.PpwgProjectsIdsAssocMember;
                             if (!string.IsNullOrWhiteSpace(projectId) && projectRecords != null)
                             {
                                 var projectRecord = projectRecords.FirstOrDefault(pr => pr.Recordkey == projectId);
+                                // If there are project IDs, there should be project line item IDs
                                 if ((projectRecord != null))
                                 {
                                     // For each project line item ID, get the project line item code
+
                                     projectId = projectRecord.PrjRefNo;
                                 }
                             }
-                            ppwgGlAssociation.PpwgProjectsId = projectId;
-                            ppwgGlAssociation.GlNumber = ppwitem.PpwgPiGlNoAssocMember;
-                            ppwgGlAssociation.GlPercentDistribution = ppwitem.PpwgPiPctDistAssocMember ?? 0; //ppwitem.PpwgPiGlPctDistAssocMember;
-
-                            perposwgItem.AccountingStringAllocation.Add(ppwgGlAssociation);
+                            //if there was a project Id then concatenate the accounting string with the project ID.
+                            var accountingString = string.IsNullOrEmpty(projectId) ?
+                                currentPpwitem.PpwgPiGlNoAssocMember : string.Concat(currentPpwitem.PpwgPiGlNoAssocMember, '*', projectId);
+                            if (!(string.IsNullOrWhiteSpace(accountingString)))
+                                accountingStrings.Add(accountingString);
                         }
-                    }
-
-                    perposwgItems.Add(perposwgItem);
-                }
-                institutionJobs.PerposwgItems = perposwgItems;
-            }
-
-            institutionJobs.BenefitsStatus = BenefitsStatus.WithoutBenefits;
-            if ((personBenefitsRecords != null) && (personBenefitsRecords.Any()))
-            {
-                List<string> excludeBenefits = new List<string>();
-                // Get list of benefits to exclude for consideration of employee benefit status 
-                 if (ldmDefaults != null)
-                {
-                    excludeBenefits = ldmDefaults.LdmdExcludeBenefits;
-                }
-                foreach (var perben in personBenefitsRecords)
-                {
-                    var benefit = perben.PerbenBdId;
-                    // Make sure this benefit is not on the list for exclusion before using it to determine 
-                    // employee benefit status 
-                    if (!excludeBenefits.Contains(benefit))
-                    {
-                        if (perben.PerbenCancelDate == null || perben.PerbenCancelDate > DateTime.Today)
+                        if (accountingStrings.Any())
                         {
-                            institutionJobs.BenefitsStatus = BenefitsStatus.WithBenefits;
-                            break;
+                            institutionJobs.AccountingStrings = accountingStrings;
+                            institutionJobs.PpwgGlAccountNumber = currentPerposwg.PpwgPiGlNo;
+                        }
+
+                        institutionJobs.PpwgProjectIds = currentPerposwg.PpwgProjectsIds;
+
+                        institutionJobs.Grade = string.IsNullOrWhiteSpace(currentPerposwg.PpwgGrade) ? null : currentPerposwg.PpwgGrade;
+                        institutionJobs.Step = string.IsNullOrWhiteSpace(currentPerposwg.PpwgStep) ? null : currentPerposwg.PpwgStep;
+                        institutionJobs.PayRate = string.IsNullOrWhiteSpace(currentPerposwg.PpwgPayRate) ? null : currentPerposwg.PpwgPayRate;
+
+                        institutionJobs.PayClass = string.IsNullOrWhiteSpace(currentPerposwg.PpwgPayclassId) ? null : currentPerposwg.PpwgPayclassId;
+                        institutionJobs.PayCycle = string.IsNullOrWhiteSpace(currentPerposwg.PpwgPaycycleId) ? null : currentPerposwg.PpwgPaycycleId;
+
+                        institutionJobs.CycleWorkTimeAmount = currentPerposwg.PpwgCycleWorkTimeAmt;
+                        institutionJobs.CycleWorkTimeUnits = currentPerposwg.PpwgCycleWorkTimeUnits;
+
+                        institutionJobs.YearWorkTimeAmount = currentPerposwg.PpwgYearWorkTimeAmt;
+                        institutionJobs.YearWorkTimeUnits = currentPerposwg.PpwgYearWorkTimeUnits;
+                    }
+
+                    var perposwgItems = new List<PersonPositionWageItem>();
+
+                    foreach (var perposwg in perposwgRecords)
+                    {
+                        var perposwgItem = new PersonPositionWageItem(perposwg.Recordkey);
+
+                        if (perposwg.PpwgStartDate != null && perposwg.PpwgStartDate.HasValue)
+                            perposwgItem.StartDate = Convert.ToDateTime(perposwg.PpwgStartDate);
+
+                        perposwgItem.Grade = string.IsNullOrWhiteSpace(perposwg.PpwgGrade) ? null : perposwg.PpwgGrade;
+                        perposwgItem.Step = string.IsNullOrWhiteSpace(perposwg.PpwgStep) ? null : perposwg.PpwgStep;
+                        perposwgItem.PayRate = string.IsNullOrWhiteSpace(perposwg.PpwgPayRate) ? null : perposwg.PpwgPayRate;
+
+                        if (perposwg.PpwgEndDate != null && perposwg.PpwgEndDate.HasValue)
+                            perposwgItem.EndDate = Convert.ToDateTime(perposwg.PpwgEndDate);
+
+                        if (perposwg.PpwitemsEntityAssociation != null && perposwg.PpwitemsEntityAssociation.Any())
+                        {
+                            perposwgItem.AccountingStringAllocation = new List<PpwgAccountingStringAllocation>();
+                            foreach (var ppwitem in perposwg.PpwitemsEntityAssociation)
+                            {
+                                var ppwgGlAssociation = new PpwgAccountingStringAllocation();
+                                var projectId = ppwitem.PpwgProjectsIdsAssocMember;
+                                if (!string.IsNullOrWhiteSpace(projectId) && projectRecords != null)
+                                {
+                                    var projectRecord = projectRecords.FirstOrDefault(pr => pr.Recordkey == projectId);
+                                    if ((projectRecord != null))
+                                    {
+                                        // For each project line item ID, get the project line item code
+                                        projectId = projectRecord.PrjRefNo;
+                                    }
+                                }
+                                ppwgGlAssociation.PpwgProjectsId = projectId;
+                                ppwgGlAssociation.GlNumber = ppwitem.PpwgPiGlNoAssocMember;
+                                ppwgGlAssociation.GlPercentDistribution = ppwitem.PpwgPiPctDistAssocMember ?? 0; //ppwitem.PpwgPiGlPctDistAssocMember;
+
+                                perposwgItem.AccountingStringAllocation.Add(ppwgGlAssociation);
+                            }
+                        }
+
+                        perposwgItems.Add(perposwgItem);
+                    }
+                    institutionJobs.PerposwgItems = perposwgItems;
+                }
+
+                institutionJobs.BenefitsStatus = BenefitsStatus.WithoutBenefits;
+                if ((personBenefitsRecords != null) && (personBenefitsRecords.Any()))
+                {
+                    List<string> excludeBenefits = new List<string>();
+                    // Get list of benefits to exclude for consideration of employee benefit status 
+                    if (ldmDefaults != null)
+                    {
+                        excludeBenefits = ldmDefaults.LdmdExcludeBenefits;
+                    }
+                    foreach (var perben in personBenefitsRecords)
+                    {
+                        var benefit = perben.PerbenBdId;
+                        // Make sure this benefit is not on the list for exclusion before using it to determine 
+                        // employee benefit status 
+                        if (!excludeBenefits.Contains(benefit))
+                        {
+                            if (perben.PerbenCancelDate == null || perben.PerbenCancelDate > DateTime.Today)
+                            {
+                                institutionJobs.BenefitsStatus = BenefitsStatus.WithBenefits;
+                                break;
+                            }
                         }
                     }
                 }
-            }
 
-            institutionJobs.FullTimeEquivalent = perposRecord.PerposFte;
+                institutionJobs.FullTimeEquivalent = perposRecord.PerposFte;
 
-            if (hrperRecords.Any() && perstatRecords.Any())
-            {
-                var terminated = hrperRecords.FirstOrDefault(hrper => !hrper.HrpEffectTermDate.HasValue
-                                                                      && hrper.HrpEffectTermDate <= currentDate);
-                if (terminated == null)
+                if (hrperRecords.Any() && perstatRecords.Any())
                 {
-                    //perstatRecords = perstatRecords.OrderByDescending(pr => pr.PerstatStartDate);
-                    //get most currect person status record for that position
-                    var perstatRecord =
-                        perstatRecords.OrderByDescending(p => p.PerstatStartDate).FirstOrDefault(p => !p.PerstatEndDate.HasValue
-                                                                                                      && p.PerstatStartDate <= currentDate)
-                        ?? perstatRecords.OrderByDescending(p => p.PerstatStartDate).FirstOrDefault(p => p.PerstatEndDate.HasValue
-                                                                                                         && p.PerstatStartDate <= currentDate && p.PerstatEndDate >= currentDate);
+                    var terminated = hrperRecords.FirstOrDefault(hrper => !hrper.HrpEffectTermDate.HasValue
+                                                                          && hrper.HrpEffectTermDate <= currentDate);
+                    if (terminated == null)
+                    {
+                        //perstatRecords = perstatRecords.OrderByDescending(pr => pr.PerstatStartDate);
+                        //get most currect person status record for that position
+                        var perstatRecord =
+                            perstatRecords.OrderByDescending(p => p.PerstatStartDate).FirstOrDefault(p => !p.PerstatEndDate.HasValue
+                                                                                                          && p.PerstatStartDate <= currentDate)
+                            ?? perstatRecords.OrderByDescending(p => p.PerstatStartDate).FirstOrDefault(p => p.PerstatEndDate.HasValue
+                                                                                                             && p.PerstatStartDate <= currentDate && p.PerstatEndDate >= currentDate);
 
-                    if (perstatRecord != null && perstatRecord.PerstatPrimaryPosId == perposRecord.PerposPositionId)
-                        institutionJobs.Primary = true;
+                        if (perstatRecord != null && perstatRecord.PerstatPrimaryPosId == perposRecord.PerposPositionId)
+                            institutionJobs.Primary = true;
+                    }
                 }
+                return institutionJobs;
             }
-            return institutionJobs;
+            catch (Exception ex)
+            {
+                exception.AddError(new RepositoryError("Bad.Data", string.Format("Could not build the InstitutionJobs entity. {0}", ex.Message))
+                {
+                    SourceId = perposRecord.Recordkey,
+                    Id = perposRecord.RecordGuid
+                });
+            }
+            return null;
         }
 
         private List<string> GetProjectIds(IEnumerable<Perposwg> perposwgRecords, Perposwg currentPerposwg)

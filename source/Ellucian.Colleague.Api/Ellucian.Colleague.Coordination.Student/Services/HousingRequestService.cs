@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -226,22 +226,38 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Collection of HousingRequests DTO objects</returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.HousingRequest>, int>> GetHousingRequestsAsync(int offset, int limit, bool bypassCache = false)
         {
-            CheckViewHousingRequestPermissions();
-
             var housingRequestsCollection = new List<Ellucian.Colleague.Dtos.HousingRequest>();
+            Tuple<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.HousingRequest>, int> housingRequestsData = null;
 
-            Tuple<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.HousingRequest>, int> housingRequestsEntitiesTuple = await _housingRequestRepository.GetHousingRequestsAsync(offset, limit, bypassCache);
-            if (housingRequestsEntitiesTuple == null || !housingRequestsEntitiesTuple.Item1.Any())
+            try
             {
-                return new Tuple<IEnumerable<HousingRequest>, int>(housingRequestsCollection, 0);
+                housingRequestsData = await _housingRequestRepository.GetHousingRequestsAsync(offset, limit, bypassCache);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
             }
 
-            if (housingRequestsEntitiesTuple != null && housingRequestsEntitiesTuple.Item1.Any())
+            if (housingRequestsData != null)
             {
-                housingRequestsCollection.AddRange((await ConvertHousingRequestsEntitiesToDtos(housingRequestsEntitiesTuple.Item1, bypassCache)).ToList());
+                var housingRequestsEntities = housingRequestsData.Item1;
+                if (housingRequestsEntities != null && housingRequestsEntities.Any())
+                {
+                    housingRequestsCollection = (await ConvertHousingRequestsEntitiesToDtos(housingRequestsData.Item1, bypassCache)).ToList();
+                }
             }
-            var housingRequestTuple = new Tuple<IEnumerable<Ellucian.Colleague.Dtos.HousingRequest>, int>(housingRequestsCollection, housingRequestsEntitiesTuple.Item2);
-            return housingRequestTuple;
+            else
+            {
+                return new Tuple<IEnumerable<Dtos.HousingRequest>, int>(housingRequestsCollection, 0);
+            }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+
+            return new Tuple<IEnumerable<Dtos.HousingRequest>, int>(housingRequestsCollection, housingRequestsData.Item2);
         }   
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -251,11 +267,28 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>HousingRequests DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.HousingRequest> GetHousingRequestByGuidAsync(string guid, bool bypassCache = false)
         {
-            CheckViewHousingRequestPermissions();
+            Dtos.HousingRequest housingRequestDto;
+            try
+            {
+                var housingRequestEntities = new List<Domain.Student.Entities.HousingRequest>();
+                var housingRequestEntity = await _housingRequestRepository.GetHousingRequestByGuidAsync(guid);
+                housingRequestEntities.Add(housingRequestEntity);
+                BuildLocalPersonGuids(new List<Ellucian.Colleague.Domain.Student.Entities.HousingRequest>() { housingRequestEntity });
+                _personGuidsDict = await this._personRepository.GetPersonGuidsCollectionAsync(_personIds);
+                housingRequestDto = await ConvertHousingRequestsEntityToDto(housingRequestEntity, bypassCache);                
+            }
 
-            var housingRequestEntity = await _housingRequestRepository.GetHousingRequestByGuidAsync(guid);
-            BuildLocalPersonGuids(new List<Ellucian.Colleague.Domain.Student.Entities.HousingRequest>() { housingRequestEntity });
-            return await ConvertHousingRequestsEntityToDto(housingRequestEntity, bypassCache);
+            catch (RepositoryException ex)
+            {
+                throw ex;
+            }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+
+            return housingRequestDto;
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -309,8 +342,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             try
             {
-                CheckCreateUpdateHousingRequestPermissions();
-
                 _housingRequestRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
                 
                 var housingRequestEntity = await ConvertDtoToEntity(guid, housingRequest);
@@ -318,10 +349,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 Domain.Student.Entities.HousingRequest updatedHousingRequestEntity = await _housingRequestRepository.UpdateHousingRequestAsync(housingRequestEntity);
 
                 BuildLocalPersonGuids(new List<Ellucian.Colleague.Domain.Student.Entities.HousingRequest>() { updatedHousingRequestEntity });
-
+                _personGuidsDict = await this._personRepository.GetPersonGuidsCollectionAsync(_personIds);
                 ClearReferenceData();
 
-                return await ConvertHousingRequestsEntityToDto(updatedHousingRequestEntity, true);
+                var housingRequestDto = await ConvertHousingRequestsEntityToDto(updatedHousingRequestEntity, true);
+
+                if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+                {
+                    throw IntegrationApiException;
+                }
+
+                return housingRequestDto;
             }
             catch (Exception e)
             {
@@ -345,10 +383,19 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new InvalidOperationException("Academic period or End on date is required for housing request.");
             }
-            
-            Ellucian.Colleague.Domain.Student.Entities.HousingRequest housingRequestEntity = string.IsNullOrEmpty(guid) ?
+            string recordKey = null;
+            try
+            {
+                recordKey = await GetRecordKey(housingRequestDto);
+            }
+            catch (Exception ex)
+            {
+                // Allow an exception if we couldn't find a record.  ConvertDtoToEntity can be called on creation of a new
+                // record from Post/Put.
+            }
+            Ellucian.Colleague.Domain.Student.Entities.HousingRequest housingRequestEntity = string.IsNullOrEmpty(recordKey) ?
                 new Domain.Student.Entities.HousingRequest(housingRequestDto.Id, housingRequestDto.StartOn, status) :
-                new Domain.Student.Entities.HousingRequest(housingRequestDto.Id, await GetRecordKey(housingRequestDto), housingRequestDto.StartOn, status);
+                new Domain.Student.Entities.HousingRequest(housingRequestDto.Id, recordKey, housingRequestDto.StartOn, status);
 
             housingRequestEntity.EndDate = housingRequestDto.EndOn;
             housingRequestEntity.LotteryNo = housingRequestDto.PriorityNumber;
@@ -831,7 +878,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private async Task<IEnumerable<Ellucian.Colleague.Dtos.HousingRequest>> ConvertHousingRequestsEntitiesToDtos(IEnumerable<Ellucian.Colleague.Domain.Student.Entities.HousingRequest> housingRequestsEntities, bool bypassCache)
         {
             var housingRequestsCollection = new List<Ellucian.Colleague.Dtos.HousingRequest>();
+
             BuildLocalPersonGuids(housingRequestsEntities);
+            _personGuidsDict = await this._personRepository.GetPersonGuidsCollectionAsync(_personIds);
 
             foreach (var housingRequests in housingRequestsEntities)
             {
@@ -854,14 +903,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             if (string.IsNullOrEmpty(source.Status))
             {
-                throw new InvalidOperationException(string.Format("Status is required. Id: {0}", source.Guid));
+                IntegrationApiExceptionAddError(string.Format("Status is required."), "Bad.Data", source.Guid, source.RecordKey);
             }
 
             housingRequest.Status = ConvertHousingRequestsStatusDomainEnumToHousingRequestsStatusDtoEnum(source.Status);
 
             if (!source.StartDate.HasValue)
             {
-                throw new InvalidOperationException(string.Format("Start date is required. Id: {0}", source.Guid));
+                IntegrationApiExceptionAddError(string.Format("Start date is required."), "Bad.Data", source.Guid, source.RecordKey);
             }
             housingRequest.StartOn = source.StartDate.HasValue? source.StartDate.Value : default(DateTimeOffset?);
             housingRequest.EndOn = source.EndDate.HasValue ? source.EndDate.Value : default(DateTimeOffset?);
@@ -871,55 +920,76 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 housingRequest.PriorityNumber = priorityNumber;
             }
 
+            //person
             if (string.IsNullOrEmpty(source.PersonId))
             {
-                throw new InvalidOperationException(string.Format("Student id is required. Id: {0}", source.Guid));
+                IntegrationApiExceptionAddError("Person is required.  ", "Bad.Data", source.Guid, source.RecordKey);
             }
-
-            //student
-            var person = (await (GetPersonGuidsAsync())).FirstOrDefault(i => i.Key.Equals(source.PersonId, StringComparison.OrdinalIgnoreCase));
-            if (person.Equals(default(KeyValuePair<string, string>)))
+            else
             {
-                var error = string.Format("No person found for key {0}. ", source.PersonId);
-                throw new KeyNotFoundException(error);
+                if (_personGuidsDict == null)
+                {
+                    IntegrationApiExceptionAddError(string.Format("Unable to locate guid for person ID : {0}", source.PersonId), "Bad.Data", source.Guid, source.RecordKey);
+                }
+                else
+                {
+                    var personGuid = string.Empty;
+                    _personGuidsDict.TryGetValue(source.PersonId, out personGuid);
+                    if (string.IsNullOrEmpty(personGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Unable to locate guid for person ID : {0}", source.PersonId), "Bad.Data", source.Guid, source.RecordKey);
+                    }
+                    else
+                    {
+                        housingRequest.Person = new GuidObject2(personGuid);
+                    }
+                }
             }
-            housingRequest.Person = new GuidObject2(person.Value);
 
+            //term
             if (!string.IsNullOrEmpty(source.Term))
             {
-                var acadPeriods = (await GetAcademicPeriods()).Where(i => i.Code.Equals(source.Term, StringComparison.OrdinalIgnoreCase)).ToList();
-                if (acadPeriods == null || !acadPeriods.Any())
+                try
                 {
-                    throw new KeyNotFoundException(string.Format("No academic periods were found for term {0}", source.Term));
+                    var acadPeriod = await _termRepository.GetAcademicPeriodsGuidAsync(source.Term);
+
+                    if (!string.IsNullOrEmpty(acadPeriod))
+                    {
+                        housingRequest.AcademicPeriods = new List<GuidObject2>(){new Dtos.GuidObject2(acadPeriod)};
+                    }
                 }
-                housingRequest.AcademicPeriods = new List<GuidObject2>();
-                acadPeriods.ToList().ForEach(i => 
+                catch (RepositoryException ex)
                 {
-                    var acadPeriod = new GuidObject2(i.Guid);
-                    housingRequest.AcademicPeriods.Add(acadPeriod);
-                });
+                    IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                        source.Guid, source.RecordKey);
+                }
             }
+
             //preferences
             if (source.RoomPreferences != null && source.RoomPreferences.Any())
             {
-                housingRequest.Preferences = await ConvertRoomPreferencesEntitiesToDto(source.RoomPreferences, bypassCache);
+                housingRequest.Preferences = await ConvertRoomPreferencesEntitiesToDto(source.RoomPreferences, source.Guid, source.RecordKey, bypassCache);
             }
+            
             //room characteristic
             if (source.RoomCharacerstics != null && source.RoomCharacerstics.Any())
             {
-                housingRequest.RoomCharacteristics = await ConvertRoomCharacteristicEntitiesToDto(source.RoomCharacerstics, bypassCache);
+                housingRequest.RoomCharacteristics = await ConvertRoomCharacteristicEntitiesToDto(source.RoomCharacerstics, source.Guid, source.RecordKey, bypassCache);
             }
+            
             //Floor characteristic
             if (!string.IsNullOrEmpty(source.FloorCharacteristic))
             {
-                housingRequest.FloorCharacteristics = await ConvertFloorCharacteristEntityToDto(source, bypassCache);
+                housingRequest.FloorCharacteristics = await ConvertFloorCharacteristEntityToDto(source, source.Guid, source.RecordKey, bypassCache);
             }
+            
             //roommate characteristics & preferences
             if ((source.RoommatePreferences != null && source.RoommatePreferences.Any()) ||
                 (source.RoommateCharacteristicPreferences != null && source.RoommateCharacteristicPreferences.Any()))
             {
-                housingRequest.RoommatePreferences = await ConvertRoommatePreferencesEntitiesToDto(source, bypassCache);
+                housingRequest.RoommatePreferences = await ConvertRoommatePreferencesEntitiesToDto(source, source.Guid, source.RecordKey, bypassCache);
             }
+            
             return housingRequest;
         }
 
@@ -953,71 +1023,133 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="sources"></param>
         /// <param name="bypassCache"></param>
         /// <returns></returns>
-        private async Task<IEnumerable<Dtos.DtoProperties.HousingRequestPreferenceProperty>> ConvertRoomPreferencesEntitiesToDto(IEnumerable<Domain.Student.Entities.RoomPreference> sources, bool bypassCache)
+        private async Task<IEnumerable<Dtos.DtoProperties.HousingRequestPreferenceProperty>> ConvertRoomPreferencesEntitiesToDto(IEnumerable<Domain.Student.Entities.RoomPreference> sources, 
+            string guid, string id, bool bypassCache)
         {
             List<Dtos.DtoProperties.HousingRequestPreferenceProperty> preferences = new List<Dtos.DtoProperties.HousingRequestPreferenceProperty>();
 
             foreach (var source in sources)
             {
                 Dtos.DtoProperties.HousingRequestPreferenceProperty roomPreference = new Dtos.DtoProperties.HousingRequestPreferenceProperty();
-                //roomPreference.RoomPreference = new Dtos.DtoProperties.HousingPreferenceProperty();
-                //buildings, site(if building is there then build site based on the code specified in building
-                string buildingCode = string.Empty; 
+                
+                // building
+                string buildingLocation = string.Empty;
+                string buildingCode = string.Empty;
                 if (!string.IsNullOrEmpty(source.Building))
                 {
-                    var building = (await GetBuildings(bypassCache)).FirstOrDefault(i => i.Code.Equals(source.Building, StringComparison.OrdinalIgnoreCase));
-                    if (building == null)
+                    try
                     {
-                        throw new KeyNotFoundException(string.Format("No building was found for code {0}", source.Building));
-                    }
-                    buildingCode = building.Code;
-                    roomPreference.Building = new Dtos.DtoProperties.HousingPreferenceRequiredProperty()
-                    {
-                        Preferred = new GuidObject2(building.Guid),
-                        Required = GetRequiredPreference(source.BuildingReqdFlag)
-                    };
-                    //site
-                    if (!string.IsNullOrEmpty(building.LocationId))
-                    {
-                        var site = (await GetLocationsAsync(bypassCache)).FirstOrDefault(i => i.Code.Equals(building.LocationId, StringComparison.OrdinalIgnoreCase));
-                        if (site == null)
+                        var buildings = await GetBuildings(bypassCache);
+                        if (buildings.Any())
                         {
-                            throw new KeyNotFoundException(string.Format("No site was found for code {0}", building.LocationId));
+                            var building = (await GetBuildings(bypassCache)).FirstOrDefault(g => g.Code == source.Building);
+                            if (building != null && !string.IsNullOrEmpty(building.Guid))
+                            {
+                                buildingLocation = building.LocationId;
+                                buildingCode = building.Code;
+
+                                roomPreference.Building = new Dtos.DtoProperties.HousingPreferenceRequiredProperty()
+                                {
+                                    Preferred = new GuidObject2(building.Guid),
+                                    Required = GetRequiredPreference(source.BuildingReqdFlag)
+                                };
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError(string.Concat("Missing building GUID or invalid code of ", source.Building, "."),
+                                    "GUID.Not.Found", guid, id);
+                            }
                         }
-                        roomPreference.Site = new Dtos.DtoProperties.HousingPreferenceRequiredProperty()
+                        else
                         {
-                            Preferred = new GuidObject2(site.Guid),
-                            Required = GetRequiredPreference(source.BuildingReqdFlag)
-                        };
+                            IntegrationApiExceptionAddError(string.Concat("No buildings found."),
+                                "GUID.Not.Found", guid, id);
+                        }
                     }
-                }
-                //Room
-                if (!string.IsNullOrEmpty(source.Room))
-                {
-                    var room = (await GetRooms(bypassCache)).FirstOrDefault(i => i.Code.Equals(source.Room) && i.BuildingCode.Equals(buildingCode, StringComparison.OrdinalIgnoreCase));
-                    if (room == null)
+                    catch (Exception ex)
                     {
-                        throw new KeyNotFoundException(string.Format("No room was found for code {0}", source.Wing));
+                        IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found", guid, id);
                     }
-                    roomPreference.Room = new Dtos.DtoProperties.HousingPreferenceRequiredProperty()
+
+                    //site
+                    if (!string.IsNullOrEmpty(buildingLocation))
                     {
-                        Preferred = new GuidObject2(room.Guid),
-                        Required = GetRequiredPreference(source.RoomReqdFlag)
-                    };
+                        try
+                        {
+                            var location = await _referenceDataRepository.GetLocationsGuidAsync(buildingLocation);
+
+                            if (!string.IsNullOrEmpty(location))
+                            {
+                                roomPreference.Site = new Dtos.DtoProperties.HousingPreferenceRequiredProperty()
+                                {
+                                    Preferred = new GuidObject2(location),
+                                    Required = GetRequiredPreference(source.BuildingReqdFlag)
+                                };
+                            }
+                        }
+                        catch (RepositoryException ex)
+                        {
+                            IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                                guid, id);
+                        }
+                    }
+
+
+                    //room
+                    if (!string.IsNullOrEmpty(source.Room) && !string.IsNullOrEmpty(buildingCode))
+                    {
+                        try
+                        {
+                            //var room = await _roomRepository.GetRoomsGuidAsync(source.Room);
+                            var room = (await GetRooms(bypassCache)).FirstOrDefault(i => i.Code.Equals(source.Room) && i.BuildingCode.Equals(buildingCode, StringComparison.OrdinalIgnoreCase));
+                            if (room != null)
+                            {
+                                roomPreference.Room = new Dtos.DtoProperties.HousingPreferenceRequiredProperty()
+                                {
+                                    Preferred = new GuidObject2(room.Guid),
+                                    Required = GetRequiredPreference(source.RoomReqdFlag)
+                                };
+                            }
+                            else
+                            {
+                                var message = string.Format("No room was found for room {0} and building {1}", source.Room, buildingCode);
+                                IntegrationApiExceptionAddError(message, "GUID.Not.Found", guid, id);
+                            }
+                        }
+                        catch (RepositoryException ex)
+                        {
+                            IntegrationApiExceptionAddError(ex, "GUID.Not.Found",
+                                guid, id);
+                        }
+                    }
                 }
                 //wing
                 if (!string.IsNullOrEmpty(source.Wing))
                 {
-                    var wing = (await GetBuildingWings(bypassCache)).FirstOrDefault(i => i.Code.Equals(source.Wing));
-                    if (wing == null)
+                    var wings = await GetBuildingWings(bypassCache);
+                    if (wings != null)
                     {
-                        throw new KeyNotFoundException(string.Format("No wing was found for code {0}", source.Wing));
+                        var wing = wings.FirstOrDefault(w => w.Code == source.Wing);
+                        if (wing != null)
+                        {
+                            if (!string.IsNullOrEmpty(wing.Guid))
+                            {
+                                roomPreference.Wing = new Dtos.DtoProperties.HousingPreferenceRequiredProperty()
+                                {
+                                    Preferred = new GuidObject2(wing.Guid),
+                                    Required = GetRequiredPreference(source.WingReqdFlag)
+                                };
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the wing '{0}'", source.Wing), "GUID.Not.Found", guid, id);
+                            }                            ;
+                        }
+                        else
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Unable to find the wing '{0}'", source.Wing), "Bad.Data", guid, id);
+                        }
                     }
-                    roomPreference.Wing = new Dtos.DtoProperties.HousingPreferenceRequiredProperty()
-                    {
-                        Preferred = new GuidObject2(wing.Guid),
-                        Required = GetRequiredPreference(source.WingReqdFlag)
-                    };
                 }
 
                 //floor
@@ -1041,23 +1173,41 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="sources"></param>
         /// <param name="bypassCache"></param>
         /// <returns></returns>
-        private async Task<IEnumerable<Dtos.DtoProperties.HousingPreferenceRequiredProperty>> ConvertRoomCharacteristicEntitiesToDto(IEnumerable<Domain.Student.Entities.RoomCharacteristicPreference> sources, bool bypassCache)
+        private async Task<IEnumerable<Dtos.DtoProperties.HousingPreferenceRequiredProperty>> ConvertRoomCharacteristicEntitiesToDto(IEnumerable<Domain.Student.Entities.RoomCharacteristicPreference> sources,
+            string guid, string id, bool bypassCache)
         {
             List<Dtos.DtoProperties.HousingPreferenceRequiredProperty> roomCharPrefs = new List<Dtos.DtoProperties.HousingPreferenceRequiredProperty>();
+
             if (sources != null && sources.Any())
             {
                 foreach (var source in sources)
                 {
-                    Dtos.DtoProperties.HousingPreferenceRequiredProperty rmCharPref = new Dtos.DtoProperties.HousingPreferenceRequiredProperty();
-
-                    var rmPref = (await GetRoomCharacteristics(bypassCache)).FirstOrDefault(i => i.Code.Equals(source.RoomCharacteristic, StringComparison.OrdinalIgnoreCase));
-                    if (rmPref == null)
+                    if (!string.IsNullOrEmpty(source.RoomCharacteristic))
                     {
-                        throw new KeyNotFoundException(string.Format("No room characteristic found for code {0}", source.RoomCharacteristic));
+                        var roomChars = await GetRoomCharacteristics(bypassCache);
+                        if (roomChars != null)
+                        {
+                            var roomChar = roomChars.FirstOrDefault(f => f.Code == source.RoomCharacteristic);
+                            if (roomChar != null)
+                            {
+                                if (!string.IsNullOrEmpty(roomChar.Guid))
+                                {
+                                    var roomCharPref = new Dtos.DtoProperties.HousingPreferenceRequiredProperty();
+                                    roomCharPref.Preferred = new GuidObject2(roomChar.Guid);
+                                    roomCharPref.Required = GetRequiredPreference(source.RoomCharacteristicRequired);
+                                    roomCharPrefs.Add(roomCharPref);
+                                }
+                                else
+                                {
+                                    IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the room characteristic '{0}'", source.RoomCharacteristic), "GUID.Not.Found", guid, id);
+                                }
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Unable to find the room characteristic '{0}'", source.RoomCharacteristic), "Bad.Data", guid, id);
+                            }
+                        }
                     }
-                    rmCharPref.Preferred = new GuidObject2(rmPref.Guid);
-                    rmCharPref.Required = GetRequiredPreference(source.RoomCharacteristicRequired);
-                    roomCharPrefs.Add(rmCharPref);
                 }
             }
             return roomCharPrefs.Any() ? roomCharPrefs : null;
@@ -1070,18 +1220,37 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="source"></param>
         /// <param name="bypassCache"></param>
         /// <returns></returns>
-        private async Task<Dtos.DtoProperties.HousingPreferenceRequiredProperty> ConvertFloorCharacteristEntityToDto(Domain.Student.Entities.HousingRequest source, bool bypassCache)
+        private async Task<Dtos.DtoProperties.HousingPreferenceRequiredProperty> ConvertFloorCharacteristEntityToDto(Domain.Student.Entities.HousingRequest source,
+            string guid, string id, bool bypassCache)
         {
-            var flrCharPref = (await GetFloorCharacteristics(bypassCache)).FirstOrDefault(i => i.Code.Equals(source.FloorCharacteristic, StringComparison.OrdinalIgnoreCase));
-            if(flrCharPref == null)
+            Dtos.DtoProperties.HousingPreferenceRequiredProperty floorCharacteristic = new Dtos.DtoProperties.HousingPreferenceRequiredProperty();
+            if (!string.IsNullOrEmpty(source.FloorCharacteristic))
             {
-                throw new KeyNotFoundException(string.Format("No floor characteristic found for code {0}", source.FloorCharacteristic));
+                var floorChars = await GetFloorCharacteristics(bypassCache);
+                if (floorChars != null)
+                {
+                    var floorChar = floorChars.FirstOrDefault(f => f.Code == source.FloorCharacteristic);
+                    if (floorChar != null)
+                    {
+                        if (!string.IsNullOrEmpty(floorChar.Guid))
+                        {
+                            floorCharacteristic = new Dtos.DtoProperties.HousingPreferenceRequiredProperty()
+                            {
+                                Preferred = new GuidObject2(floorChar.Guid),
+                                Required = GetRequiredPreference(source.FloorCharacteristicReqd)
+                            };
+                        }
+                        else
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the floor characteristic '{0}'", source .FloorCharacteristic), "GUID.Not.Found", guid, id);
+                        }
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Unable to find the floor characteristic '{0}'", source.FloorCharacteristic), "Bad.Data", guid, id);
+                    }
+                }
             }
-            Dtos.DtoProperties.HousingPreferenceRequiredProperty floorCharacteristic = new Dtos.DtoProperties.HousingPreferenceRequiredProperty() 
-            {
-                Preferred = new GuidObject2(flrCharPref.Guid),
-                Required = GetRequiredPreference(source.FloorCharacteristicReqd)
-            };
             return floorCharacteristic;
         }
 
@@ -1092,7 +1261,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="source"></param>
         /// <param name="bypassCache"></param>
         /// <returns></returns>
-        private async Task<IEnumerable<Dtos.DtoProperties.HousingRequestRoommatePreferenceProperty>> ConvertRoommatePreferencesEntitiesToDto(Ellucian.Colleague.Domain.Student.Entities.HousingRequest source, bool bypassCache)
+        private async Task<IEnumerable<Dtos.DtoProperties.HousingRequestRoommatePreferenceProperty>> ConvertRoommatePreferencesEntitiesToDto(Ellucian.Colleague.Domain.Student.Entities.HousingRequest source,
+            string guid, string id, bool bypassCache)
         {
             List<Dtos.DtoProperties.HousingRequestRoommatePreferenceProperty> roommatePreferences = new List<Dtos.DtoProperties.HousingRequestRoommatePreferenceProperty>();
 
@@ -1100,32 +1270,58 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 foreach (var roommate in source.RoommatePreferences)
                 {
-                    var person = (await GetPersonGuidsAsync()).FirstOrDefault(i => i.Key.Equals(roommate.RoommateId, StringComparison.OrdinalIgnoreCase));
-                    if (person.Equals(default(KeyValuePair<string, string>)))
+                    if (roommate != null && !string.IsNullOrEmpty(roommate.RoommateId))
                     {
-                        throw new KeyNotFoundException(string.Format("No roommate was found for roommate id {0}", roommate.RoommateId));
+                        if (_personGuidsDict != null)
+                        {
+                            var personGuid = string.Empty;
+                            _personGuidsDict.TryGetValue(roommate.RoommateId, out personGuid);
+                            if (string.IsNullOrEmpty(personGuid))
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Unable to locate guid for person ID : {0}", source.PersonId), "Bad.Data", source.Guid, source.RecordKey);
+                            }
+                            else
+                            {
+                                Dtos.DtoProperties.HousingRequestRoommatePreferenceProperty roommatePreference = new Dtos.DtoProperties.HousingRequestRoommatePreferenceProperty();
+                                roommatePreference.Roommate = ConvertRoomatePreferencesEntityToDto(personGuid, roommate);
+                                roommatePreferences.Add(roommatePreference);
+                            }
+                        }
                     }
-                    Dtos.DtoProperties.HousingRequestRoommatePreferenceProperty roommatePreference = new Dtos.DtoProperties.HousingRequestRoommatePreferenceProperty();
-                    roommatePreference.Roommate = ConvertRoomatePreferencesEntityToDto(person, roommate);                    
-                    roommatePreferences.Add(roommatePreference);
                 }
             }
             if(source.RoommateCharacteristicPreferences != null && source.RoommateCharacteristicPreferences.Any())
             {
                 foreach (var roommateCharacteristicPreference in source.RoommateCharacteristicPreferences)
                 {
-                    var roommateChar = (await GetRoommateCharacteristics(bypassCache)).FirstOrDefault(i => i.Code.Equals(roommateCharacteristicPreference.RoommateCharacteristic, StringComparison.OrdinalIgnoreCase));
-                    if (roommateChar == null)
-                    {
-                        throw new KeyNotFoundException(string.Format("No roommate characteristic found for code {0}", roommateCharacteristicPreference.RoommateCharacteristic));
-                    }
                     Dtos.DtoProperties.HousingRequestRoommatePreferenceProperty roommateCharPref = new Dtos.DtoProperties.HousingRequestRoommatePreferenceProperty();
-                    roommateCharPref.RoommateCharacteristic = new Dtos.DtoProperties.HousingPreferenceRequiredProperty() 
+                    if (roommateCharacteristicPreference != null && !string.IsNullOrEmpty(roommateCharacteristicPreference.RoommateCharacteristic))
                     {
-                        Preferred = new GuidObject2(roommateChar.Guid),
-                        Required = GetRequiredPreference(roommateCharacteristicPreference.RoommateCharacteristicRequired)
-                    };
-                    roommatePreferences.Add(roommateCharPref);
+                        var roommateChars = await GetRoommateCharacteristics(bypassCache);
+                        if (roommateChars != null)
+                        {
+                            var roommateChar = roommateChars.FirstOrDefault(r => r.Code == roommateCharacteristicPreference.RoommateCharacteristic);
+                            if (roommateChar != null)
+                            {
+                                if (!string.IsNullOrEmpty(roommateChar.Guid))
+                                {
+                                    roommateCharPref.RoommateCharacteristic = new Dtos.DtoProperties.HousingPreferenceRequiredProperty()
+                                    {
+                                        Preferred = new GuidObject2(roommateChar.Guid),
+                                        Required = GetRequiredPreference(roommateCharacteristicPreference.RoommateCharacteristicRequired)
+                                    };
+                                }
+                                else
+                                {
+                                    IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the floor characteristic '{0}'", source.FloorCharacteristic), "GUID.Not.Found", guid, id);
+                                }
+                            }
+                            else
+                            {
+                                IntegrationApiExceptionAddError(string.Format("Unable to find the floor characteristic '{0}'", source.FloorCharacteristic), "Bad.Data", guid, id);
+                            }
+                        }
+                    }
                 }
             }
 
@@ -1139,12 +1335,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="person"></param>
         /// <param name="roommate"></param>
         /// <returns></returns>
-        private Dtos.DtoProperties.HousingPreferenceRequiredProperty ConvertRoomatePreferencesEntityToDto(KeyValuePair<string, string> person, Domain.Student.Entities.RoommatePreference roommate)
+        private Dtos.DtoProperties.HousingPreferenceRequiredProperty ConvertRoomatePreferencesEntityToDto(string person, Domain.Student.Entities.RoommatePreference roommate)
         {
-            Dtos.DtoProperties.HousingPreferenceRequiredProperty roommatePref = new Dtos.DtoProperties.HousingPreferenceRequiredProperty();
+                Dtos.DtoProperties.HousingPreferenceRequiredProperty roommatePref = new Dtos.DtoProperties.HousingPreferenceRequiredProperty();
             if (roommate != null)
             {
-                roommatePref.Preferred = new GuidObject2(person.Value);
+                roommatePref.Preferred = new GuidObject2(person);
                 roommatePref.Required = GetRequiredPreference(roommate.RoommateRequired);
             }
             return roommatePref;
@@ -1164,33 +1360,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             return RequiredPreference.Optional;
         }
-
-        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
-        /// <summary>
-        /// Checks housing request view permissions
-        /// </summary>
-        private void CheckViewHousingRequestPermissions()
-        {
-            // access is ok if the current user has the view housing request
-            if (!HasPermission(StudentPermissionCodes.ViewHousingRequest))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view housing-requests.");
-                throw new PermissionsException("User is not authorized to view housing-requests.");
-            }
-        }
-
-        /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
-        /// <summary>
-        /// Checks housing request view permissions
-        /// </summary>
-        private void CheckCreateUpdateHousingRequestPermissions()
-        {
-            // access is ok if the current user has the view housing request
-            if (!HasPermission(StudentPermissionCodes.CreateHousingRequest))
-            {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to create or update housing-requests.");
-                throw new PermissionsException("User is not authorized to create or update housing-requests.");
-            }
-        }
+       
     }
 }

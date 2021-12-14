@@ -14,6 +14,8 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         Task<Tuple<IEnumerable<Dtos.EthosApiBuilder>, int>> GetEthosApiBuilderAsync(int offset, int limit, string resourceName, Dictionary<string, EthosExtensibleDataFilter> filterDictionary, bool bypassCache);
         Task<Dtos.EthosApiBuilder> GetEthosApiBuilderByIdAsync(string id, string resourceName);
         Task<Dtos.EthosApiBuilder> PutEthosApiBuilderAsync(string id, Dtos.EthosApiBuilder extendedData, string resourceName);
+        Task<Dtos.EthosApiBuilder> PostEthosApiBuilderAsync(Dtos.EthosApiBuilder extendedData, string resourceName);
+        Task DeleteEthosApiBuilderAsync(string id, string resourceName);
         Task<string> GetRecordIdFromGuidAsync(string guid, string entityName, string secondaryKey = "");
         Task<string> GetRecordIdFromTranslationAsync(string sourceData, string entityName, string sourceColumn = "", string tableName = "");
     }

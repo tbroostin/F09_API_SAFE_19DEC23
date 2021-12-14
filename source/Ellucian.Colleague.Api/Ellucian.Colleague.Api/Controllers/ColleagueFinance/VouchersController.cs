@@ -144,6 +144,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <accessComments>
         /// Requires Staff record, requires permission VIEW.VOUCHER.
         /// </accessComments>
+        [Obsolete("Obsolete as of Colleague Web API 1.30. Use QueryVoucherSummariesAsync.")]
         [HttpGet]
         public async Task<IEnumerable<VoucherSummary>> GetVoucherSummariesAsync([FromUri] string personId)
         {
@@ -314,6 +315,48 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             {
                 logger.Error(ex.ToString());
                 throw CreateHttpResponseException();
+            }
+        }
+
+        /// <summary>
+        /// Retrieves list of voucher summary
+        /// </summary>
+        /// <param name="filterCriteria">procurement filter criteria</param>
+        /// <returns>list of voucher summary DTO</returns>
+        /// <accessComments>
+        /// Requires Staff record, requires permission VIEW.VOUCHER or CREATE.UPDATE.VOUCHER.
+        /// </accessComments>
+        [HttpPost]
+        public async Task<IEnumerable<VoucherSummary>> QueryVoucherSummariesAsync([FromBody] Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria filterCriteria)
+        {
+            if (filterCriteria == null)
+            {
+                throw CreateHttpResponseException("Request body must contain a valid search criteria.", HttpStatusCode.BadRequest);
+            }
+
+            try
+            {
+                return await voucherService.QueryVoucherSummariesAsync(filterCriteria);
+            }
+            catch (PermissionsException peex)
+            {
+                logger.Error(peex.Message);
+                throw CreateHttpResponseException("Insufficient permissions to search vouchers.", HttpStatusCode.Forbidden);
+            }
+            catch (ArgumentNullException anex)
+            {
+                logger.Error(anex, anex.Message);
+                throw CreateHttpResponseException("Invalid argument to search vouchers.", HttpStatusCode.BadRequest);
+            }
+            catch (KeyNotFoundException knfex)
+            {
+                logger.Error(knfex, knfex.Message);
+                throw CreateHttpResponseException("Record not found to search vouchers.", HttpStatusCode.NotFound);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message);
+                throw CreateHttpResponseException("Unable to search the vouchers.", HttpStatusCode.BadRequest);
             }
         }
     }

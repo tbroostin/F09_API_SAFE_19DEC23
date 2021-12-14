@@ -20,6 +20,7 @@ using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
 using System.Linq;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -50,7 +51,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Return all StudentCourseTransfer
         /// </summary>
         /// <returns>List of StudentCourseTransfer <see cref="Dtos.StudentCourseTransfer"/> objects representing matching StudentCourseTransfer</returns>
-        [HttpGet, EedmResponseFilter, PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
+        [HttpGet, PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentCourseTransfers })]
+        [EedmResponseFilter, PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetStudentCourseTransfersAsync(Paging page, bool ignoreCache = false)
         {
@@ -64,6 +66,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                     bypassCache = true;
                 }
             }
+            
             if (page == null)
             {
                 offset = 0;
@@ -76,6 +79,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _StudentCourseTransferService.ValidatePermissions(GetPermissionsMetaData());
                 var pageOfItems = await _StudentCourseTransferService.GetStudentCourseTransfersAsync(offset, limit, bypassCache);
 
                 AddEthosContextProperties(
@@ -95,7 +99,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -124,7 +128,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired StudentCourseTransfer</param>
         /// <returns>A StudentCourseTransfer object <see cref="Dtos.StudentCourseTransfer"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentCourseTransfers })]
         public async Task<Dtos.StudentCourseTransfer> GetStudentCourseTransferByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -142,6 +146,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _StudentCourseTransferService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                     await _StudentCourseTransferService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await _StudentCourseTransferService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -157,7 +162,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -185,7 +190,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// Return all StudentCourseTransfer
         /// </summary>
         /// <returns>List of StudentCourseTransfer <see cref="Dtos.StudentCourseTransfer"/> objects representing matching StudentCourseTransfer</returns>
-        [HttpGet, EedmResponseFilter, PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentCourseTransfers })]
+        [EedmResponseFilter, PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetStudentCourseTransfers2Async(Paging page, bool ignoreCache = false)
         {
@@ -211,6 +218,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _StudentCourseTransferService.ValidatePermissions(GetPermissionsMetaData());
                 var pageOfItems = await _StudentCourseTransferService.GetStudentCourseTransfers2Async(offset, limit, bypassCache);
 
                 AddEthosContextProperties(
@@ -230,7 +238,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -259,7 +267,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired StudentCourseTransfer</param>
         /// <returns>A StudentCourseTransfer object <see cref="Dtos.StudentCourseTransfer"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentCourseTransfers })]
         public async Task<Dtos.StudentCourseTransfer> GetStudentCourseTransfer2ByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -277,6 +286,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _StudentCourseTransferService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                     await _StudentCourseTransferService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await _StudentCourseTransferService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -292,7 +302,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {

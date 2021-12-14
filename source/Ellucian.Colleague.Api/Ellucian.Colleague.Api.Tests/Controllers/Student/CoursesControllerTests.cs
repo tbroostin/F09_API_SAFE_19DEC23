@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using AutoMapper;
 using Ellucian.Colleague.Api.Controllers;
 using Ellucian.Colleague.Configuration.Licensing;
@@ -6,10 +6,12 @@ using Ellucian.Colleague.Coordination.Base;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.Student;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -17,6 +19,7 @@ using Moq;
 using Newtonsoft.Json.Linq;
 using slf4net;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -25,7 +28,9 @@ using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using Course = Ellucian.Colleague.Dtos.Student.Course;
 using Course2 = Ellucian.Colleague.Dtos.Student.Course2;
 using Section = Ellucian.Colleague.Dtos.Student.Section;
@@ -1762,6 +1767,178 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     .ThrowsAsync(new Exception());
                 await courseController.PutCourse3Async("1", courseDto);
             }
+
+
+            //PUT V6
+            //Successful
+            //PutCourse3Async
+
+            [TestMethod]
+            public async Task CoursesController_PutCourse3Async_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Courses" },
+                    { "action", "PutCourse3Async" }
+                };
+                HttpRoute route = new HttpRoute("courses", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                courseController.Request.SetRouteData(data);
+                courseController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.CreateAndUpdateCourse);
+
+                var controllerContext = courseController.ControllerContext;
+                var actionDescriptor = courseController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                courseServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                courseServiceMock.Setup(c => c.UpdateCourse3Async(It.IsAny<Course3>())).ReturnsAsync(courseDto);
+                var result = await courseController.PutCourse3Async("1", courseDto);
+
+                Object filterObject;
+                courseController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateAndUpdateCourse));
+
+            }
+
+            //Put V6
+            //Exception
+            //PutCourse3Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CoursesController_PutCourse3Async_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Courses" },
+                    { "action", "PutCourse3Async" }
+                };
+                HttpRoute route = new HttpRoute("courses", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                courseController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = courseController.ControllerContext;
+                var actionDescriptor = courseController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    courseServiceMock.Setup(c => c.UpdateCourse3Async(courseDto)).ThrowsAsync(new PermissionsException()); 
+                    courseServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to update courses."));
+                    await courseController.PutCourse3Async("1", courseDto);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
+            //POST V6
+            //Successful
+            //PostCourse3Async
+
+            [TestMethod]
+            public async Task CoursesController_PostCourse3Async_Permissions()
+            {
+                courseDto.Id = Guid.Empty.ToString();
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                    {
+                        { "controller", "Courses" },
+                        { "action", "PostCourse3Async" }
+                    };
+                HttpRoute route = new HttpRoute("courses", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                courseController.Request.SetRouteData(data);
+                courseController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.CreateAndUpdateCourse);
+
+                var controllerContext = courseController.ControllerContext;
+                var actionDescriptor = courseController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                
+                courseServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                courseServiceMock.Setup(c => c.CreateCourse3Async(courseDto)).ReturnsAsync(courseDto);
+                var result = await courseController.PostCourse3Async(courseDto);
+
+                Object filterObject;
+                courseController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateAndUpdateCourse));
+
+            }
+
+            //POST V6
+            //Exception
+            //PostCourse3Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CoursesController_PostCourse3Async_Invalid_Permissions()
+            {
+                courseDto.Id = "1";
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                    {
+                        { "controller", "Courses" },
+                        { "action", "PostCourse3Async" }
+                    };
+                HttpRoute route = new HttpRoute("courses", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                courseController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = courseController.ControllerContext;
+                var actionDescriptor = courseController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    courseServiceMock.Setup(c => c.CreateCourse3Async(courseDto)).ThrowsAsync(new PermissionsException());
+                    courseServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to create courses."));
+                    await courseController.PostCourse3Async(courseDto);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
         }
 
 
@@ -1987,8 +2164,12 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 courseServiceMock = new Mock<ICourseService>();
                 loggerMock = new Mock<ILogger>();
 
-                courseController = new CoursesController(courseServiceMock.Object, loggerMock.Object);
-                
+                courseController = new CoursesController(courseServiceMock.Object, loggerMock.Object)
+                {
+                    Request = new HttpRequestMessage()
+                };
+                courseController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+
 
                 BuildCourse4();
             }
@@ -2124,9 +2305,96 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     .ThrowsAsync(new ArgumentNullException());
                 await courseController.PostCourse4Async(null);
             }
+
+            //POST V8
+            //Successful
+            //PostCourse4Async
+
+            [TestMethod]
+            public async Task CoursesController_PostCourse4Async_Permissions()
+            {
+                courseDto.Id = Guid.Empty.ToString();
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                    {
+                        { "controller", "Courses" },
+                        { "action", "PostCourse4Async" }
+                    };
+                HttpRoute route = new HttpRoute("courses", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                courseController.Request.SetRouteData(data);
+                courseController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.CreateAndUpdateCourse);
+
+                var controllerContext = courseController.ControllerContext;
+                var actionDescriptor = courseController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                courseServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                courseServiceMock.Setup(c => c.CreateCourse4Async(courseDto, false)).ReturnsAsync(courseDto);
+                var result = await courseController.PostCourse4Async(courseDto);
+
+                Object filterObject;
+                courseController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateAndUpdateCourse));
+
+            }
+
+            //POST V8
+            //Exception
+            //PostCourse4Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CoursesController_PostCourse4Async_Invalid_Permissions()
+            {
+                courseDto.Id = "1";
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                    {
+                        { "controller", "Courses" },
+                        { "action", "PostCourse4Async" }
+                    };
+                HttpRoute route = new HttpRoute("courses", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                courseController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = courseController.ControllerContext;
+                var actionDescriptor = courseController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    courseServiceMock.Setup(c => c.CreateCourse4Async(courseDto, It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                    courseServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to create courses."));
+                    await courseController.PostCourse4Async(courseDto);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
         }
 
-      
+
         [TestClass]
         public class CourseController_PUTHedmCourses4Async
         {
@@ -2356,6 +2624,91 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     .ThrowsAsync(new Exception());
                 await courseController.PutCourse4Async("1", courseDto);
             }
+
+            //PUT V8
+            //Successful
+            //PutCourse4Async
+
+            [TestMethod]
+            public async Task CoursesController_PutCourse4Async_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Courses" },
+                    { "action", "PutCourse4Async" }
+                };
+                HttpRoute route = new HttpRoute("courses", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                courseController.Request.SetRouteData(data);
+                courseController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.CreateAndUpdateCourse);
+
+                var controllerContext = courseController.ControllerContext;
+                var actionDescriptor = courseController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                courseServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                courseServiceMock.Setup(c => c.UpdateCourse4Async(It.IsAny<Course4>(), It.IsAny<bool>())).ReturnsAsync(courseDto);
+                var result = await courseController.PutCourse4Async("1", courseDto);
+
+                Object filterObject;
+                courseController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateAndUpdateCourse));
+
+            }
+
+            //Put V8
+            //Exception
+            //PutCourse4Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CoursesController_PutCourse4Async_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Courses" },
+                    { "action", "PutCourse4Async" }
+                };
+                HttpRoute route = new HttpRoute("courses", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                courseController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = courseController.ControllerContext;
+                var actionDescriptor = courseController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    courseServiceMock.Setup(c => c.UpdateCourse4Async(courseDto, false)).ThrowsAsync(new PermissionsException()); 
+                    courseServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to update courses."));
+                    await courseController.PutCourse4Async("1", courseDto);
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
         }
         #endregion
 
@@ -2835,7 +3188,177 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 var result = await courseController.PutCourse5Async("139", new Course5() { Id = "" });
                 Assert.IsNotNull(result);
             }
+
+            //PUT V16.1.0
+            //Successful
+            //PutCourse5Async
+
+            [TestMethod]
+            public async Task CoursesController_PutCourse5Async_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Courses" },
+                    { "action", "PutCourse5Async" }
+                };
+                HttpRoute route = new HttpRoute("courses", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                courseController.Request.SetRouteData(data);
+                courseController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.CreateAndUpdateCourse);
+
+                var controllerContext = courseController.ControllerContext;
+                var actionDescriptor = courseController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                courseServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                courseServiceMock.Setup(c => c.UpdateCourse5Async(It.IsAny<Course5>(), It.IsAny<bool>())).ReturnsAsync(allDtoCourses.First());
+                var result = await courseController.PutCourse5Async("139", new Course5() { Id = "139" });
+
+                Object filterObject;
+                courseController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateAndUpdateCourse));
+
+            }
+
+            //Put V16.1.0
+            //Exception
+            //PutCourse5Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CoursesController_PutCourse5Async_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "Courses" },
+                    { "action", "PutCourse5Async" }
+                };
+                HttpRoute route = new HttpRoute("courses", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                courseController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = courseController.ControllerContext;
+                var actionDescriptor = courseController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    courseServiceMock.Setup(c => c.UpdateCourse5Async(It.IsAny<Course5>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                    courseServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to update courses."));
+                    var result = await courseController.PutCourse5Async("139", new Course5() { Id = "139" });
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
+            //POST V16.1.0
+            //Successful
+            //PostCourse5Async
+
+            [TestMethod]
+            public async Task CoursesController_PostCourse5Async_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                    {
+                        { "controller", "Courses" },
+                        { "action", "PostCourse5Async" }
+                    };
+                HttpRoute route = new HttpRoute("courses", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                courseController.Request.SetRouteData(data);
+                courseController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.CreateAndUpdateCourse);
+
+                var controllerContext = courseController.ControllerContext;
+                var actionDescriptor = courseController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                courseServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                courseServiceMock.Setup(c => c.CreateCourse5Async(It.IsAny<Course5>(), It.IsAny<bool>())).ReturnsAsync(allDtoCourses.First());
+                var result = await courseController.PostCourse5Async(new Course5() { Id = Guid.Empty.ToString() });
+
+                Object filterObject;
+                courseController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateAndUpdateCourse));
+
+            }
+
+            //POST V16.1.0
+            //Exception
+            //PostCourse5Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task CoursesController_PostCourse5Async_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                    {
+                        { "controller", "Courses" },
+                        { "action", "PostCourse5Async" }
+                    };
+                HttpRoute route = new HttpRoute("courses", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                courseController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = courseController.ControllerContext;
+                var actionDescriptor = courseController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    courseServiceMock.Setup(c => c.CreateCourse5Async(It.IsAny<Course5>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                    courseServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to create courses."));
+                    await courseController.PostCourse5Async(new Course5() { Id = Guid.Empty.ToString() });
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
         }
+
 
         #endregion
     }

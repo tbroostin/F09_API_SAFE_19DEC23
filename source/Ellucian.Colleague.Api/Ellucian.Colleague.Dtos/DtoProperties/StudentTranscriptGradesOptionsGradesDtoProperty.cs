@@ -24,5 +24,11 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>
         [JsonProperty("value", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public string Value { get; set; }
+
+        /// <summary>
+        /// Incomplete grade defined on grades code.
+        /// </summary>
+        [JsonProperty("incompleteGrade", DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public StudentTranscriptGradesIncompleteGrade IncompleteGrade { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -334,6 +334,148 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             //    Assert.IsTrue(actual.IsZeroYearToDateAmount);
             //}
 
+        }
+
+        [TestClass]
+        public class TaxDeductionAdjustmentTests : PayStatementDeductionTests
+        {
+            [TestInitialize]
+            public void Initialize()
+            {
+                expectedYearToDateTaxEntries = new List<PayrollRegisterTaxEntry>();
+                expectedTaxCode = new TaxCode("FED", "Federal Tax", TaxCodeType.FederalWithholding);
+
+                expectedPayrollRegisterTaxEntry = new PayrollRegisterTaxEntry(expectedTaxCode.Code, PayrollTaxProcessingCode.Regular);
+                expectedPayrollRegisterTaxEntry.EmployeeTaxableAdjustmentAmount = 2000.00m;
+                expectedPayrollRegisterTaxEntry.EmployeeAdjustmentAmount = 200.00m;
+                expectedPayrollRegisterTaxEntry.EmployerTaxableAdjustmentAmount = 3000.00m;
+                expectedPayrollRegisterTaxEntry.EmployerAdjustmentAmount = 70.00m;
+
+                expectedYearToDateTaxEntries.Add(expectedPayrollRegisterTaxEntry);
+
+                expectedYearToDateTaxEntries.Add(
+                    new PayrollRegisterTaxEntry(expectedTaxCode.Code, PayrollTaxProcessingCode.Regular)
+                    {
+                        EmployeeTaxableAdjustmentAmount = 2000.00m,
+                        EmployeeAdjustmentAmount = -44.00m,
+                        EmployerTaxableAdjustmentAmount = 4000.00m,
+                        EmployerAdjustmentAmount = 30.00m
+                    });
+
+                expectedYearToDateTaxEntries.Add(
+                    new PayrollRegisterTaxEntry("VAST", PayrollTaxProcessingCode.Regular)
+                    {
+                        EmployeeTaxAmount = 55.00m,
+                        EmployerTaxAmount = 55.00m,
+                        EmployeeTaxableAmount = 5555.00m,
+                        EmployerTaxableAmount = 5555.00m
+                    });
+            }
+
+            [TestMethod]
+            public void EmployeeYearToDateAmount_AdjustmentAmountIsIncludedTest()
+            {
+                var expectedEmployeeYTD = expectedYearToDateTaxEntries.Where(t => t.TaxCode == expectedTaxCode.Code).Sum(t => t.EmployeeTaxAmount) 
+                    + expectedYearToDateTaxEntries.Where(t => t.TaxCode == expectedTaxCode.Code).Sum(t => t.EmployeeAdjustmentAmount);
+                var actualEmployeeYTD = (new PayStatementDeduction(expectedTaxCode, expectedPayrollRegisterTaxEntry, expectedYearToDateTaxEntries))
+                    .EmployeeYearToDateAmount;
+                Assert.AreEqual(expectedEmployeeYTD, actualEmployeeYTD);
+            }
+
+            [TestMethod]
+            public void EmployerYearToDateAmount_AdjustmentAmountIsIncludedTest()
+            {
+                var expectedEmployerYTD = expectedYearToDateTaxEntries.Where(t => t.TaxCode == expectedTaxCode.Code).Sum(t => t.EmployerTaxAmount)
+                    + expectedYearToDateTaxEntries.Where(t => t.TaxCode == expectedTaxCode.Code).Sum(t => t.EmployerAdjustmentAmount);
+                var actualEmployerYTD = (new PayStatementDeduction(expectedTaxCode, expectedPayrollRegisterTaxEntry, expectedYearToDateTaxEntries))
+                    .EmployerYearToDateAmount;
+                Assert.AreEqual(expectedEmployerYTD, actualEmployerYTD);
+            }
+
+            [TestMethod]
+            public void ApplicableGrossYearToDateAmount_AdjustmentAmountIsIncludedTest()
+            {
+                var expectedApplicableGrossYTD = expectedYearToDateTaxEntries.Where(t => t.TaxCode == expectedTaxCode.Code).Sum(t => t.EmployeeTaxableAmount)
+                    + expectedYearToDateTaxEntries.Where(t => t.TaxCode == expectedTaxCode.Code).Sum(t => t.EmployeeTaxableAdjustmentAmount);
+                var actualApplicableGrossYTD = (new PayStatementDeduction(expectedTaxCode, expectedPayrollRegisterTaxEntry, expectedYearToDateTaxEntries))
+                    .ApplicableGrossYearToDateAmount;
+                Assert.AreEqual(expectedApplicableGrossYTD, actualApplicableGrossYTD);
+            }
+        }
+
+        [TestClass]
+        public class BenefitDeductionAdjustmentTests : PayStatementDeductionTests
+        {
+            [TestInitialize]
+            public void Initialize()
+            {
+                expectedYearToDateBenefitDeductionEntries = new List<PayrollRegisterBenefitDeductionEntry>();
+                expectedBenefitDeductionType = new BenefitDeductionType("MEDI", "Medical Insurance", "Self-Service Medical Insurance", BenefitDeductionTypeCategory.Benefit);
+
+                expectedPayrollRegisterBenefitDeductionEntry = new PayrollRegisterBenefitDeductionEntry(expectedBenefitDeductionType.Id);
+                expectedPayrollRegisterBenefitDeductionEntry.EmployeeAdjustmentAmount = 111.11m;
+                expectedPayrollRegisterBenefitDeductionEntry.EmployeeBasisAdjustmentAmount = 4566.00m;
+                expectedPayrollRegisterBenefitDeductionEntry.EmployerAdjustmentAmount = 333.33m;
+                expectedPayrollRegisterBenefitDeductionEntry.EmployerBasisAdjustmentAmount = 4566.00m;
+
+                expectedYearToDateBenefitDeductionEntries.Add(expectedPayrollRegisterBenefitDeductionEntry);
+                expectedYearToDateBenefitDeductionEntries.Add(
+                    new PayrollRegisterBenefitDeductionEntry(expectedBenefitDeductionType.Id)
+                    {
+                        EmployeeAmount = -111.11m,
+                        EmployeeBasisAmount = 4566.00m,
+                        EmployerAmount = 333.33m,
+                        EmployerBasisAmount = 4566.00m
+                    });
+
+                expectedYearToDateBenefitDeductionEntries.Add(
+                    new PayrollRegisterBenefitDeductionEntry("LIFE")
+                    {
+                        EmployeeAdjustmentAmount = 343.99m,
+                        EmployeeBasisAdjustmentAmount = 4566.00m,
+                        EmployerAdjustmentAmount = 56.00M,
+                        EmployerBasisAdjustmentAmount = 4566.00m
+                    });
+            }
+
+            [TestMethod]
+            public void EmployeeYearToDateAmount_AdjustmentAmountIsIncludedTest()
+            {
+                var expectedEmployeeYTD = expectedYearToDateBenefitDeductionEntries.Where(t => t.BenefitDeductionId == expectedBenefitDeductionType.Id)
+                    .Sum(t => t.EmployeeAmount)
+                    + expectedYearToDateBenefitDeductionEntries.Where(t => t.BenefitDeductionId == expectedBenefitDeductionType.Id)
+                    .Sum(t => t.EmployeeAdjustmentAmount);
+
+                var actualEmployeeYTD = (new PayStatementDeduction(expectedBenefitDeductionType, expectedPayrollRegisterBenefitDeductionEntry, expectedYearToDateBenefitDeductionEntries))
+                    .EmployeeYearToDateAmount;
+
+                Assert.AreEqual(expectedEmployeeYTD, actualEmployeeYTD);
+            }
+
+            [TestMethod]
+            public void EmployerYearToDateAmount_AdjustmentAmountIsIncludedTest()
+            {
+                var expectedEmployerYTD = expectedYearToDateBenefitDeductionEntries.Where(t => t.BenefitDeductionId == expectedBenefitDeductionType.Id)
+                    .Sum(t => t.EmployerAmount)
+                    + expectedYearToDateBenefitDeductionEntries.Where(t => t.BenefitDeductionId == expectedBenefitDeductionType.Id)
+                    .Sum(t => t.EmployerAdjustmentAmount);
+
+                var actualEmployerYTD = (new PayStatementDeduction(expectedBenefitDeductionType, expectedPayrollRegisterBenefitDeductionEntry, expectedYearToDateBenefitDeductionEntries))
+                    .EmployerYearToDateAmount;
+
+                Assert.AreEqual(expectedEmployerYTD, actualEmployerYTD);
+            }
+
+            [TestMethod]
+            public void ApplicableGrossYearToDateAmount_AdjustmentAmountIsIncludedTest()
+            {
+                var expectedApplicableGrossYTD = expectedYearToDateBenefitDeductionEntries.Where(t => t.BenefitDeductionId == expectedBenefitDeductionType.Id)
+                    .Sum(t => t.EmployeeBasisAmount)
+                    + expectedYearToDateBenefitDeductionEntries.Where(t => t.BenefitDeductionId == expectedBenefitDeductionType.Id).Sum(t => t.EmployeeBasisAdjustmentAmount);
+                var actualApplicableGrossYTD = (new PayStatementDeduction(expectedBenefitDeductionType, expectedPayrollRegisterBenefitDeductionEntry, expectedYearToDateBenefitDeductionEntries))
+                    .ApplicableGrossYearToDateAmount;
+                Assert.AreEqual(expectedApplicableGrossYTD, actualApplicableGrossYTD);
+            }
         }
     }
 }

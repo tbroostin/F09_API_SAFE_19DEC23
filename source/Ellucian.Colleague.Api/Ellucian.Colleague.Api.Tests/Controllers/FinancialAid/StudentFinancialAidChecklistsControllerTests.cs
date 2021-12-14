@@ -79,6 +79,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.FinancialAid
 
             public string studentId;
             public string awardYear;
+            public string parentId;
 
             public StudentFinancialAidChecklist expectedChecklistDto;
             public HttpResponseMessage actualResponseMessage;
@@ -91,6 +92,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.FinancialAid
                 EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
 
                 studentId = "0003914";
+                parentId = "0000828";
                 awardYear = "2015";
 
                 expectedChecklistDto = new StudentFinancialAidChecklist()
@@ -377,6 +379,11 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.FinancialAid
             #endregion
 
             public string studentId;
+            public string parentId;
+
+            private Mock<IStudentChecklistService> checklistServiceMock;
+            private IStudentChecklistService checklistService
+                ;
 
             public List<StudentFinancialAidChecklist> expectedChecklistDtos;
             public List<StudentFinancialAidChecklist> actualChecklistDtos;
@@ -389,6 +396,10 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.FinancialAid
                 EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
 
                 studentId = "0003914";
+                parentId = "0000828";
+
+                checklistServiceMock = new Mock<IStudentChecklistService>();
+                checklistService = checklistServiceMock.Object;
 
                 expectedChecklistDtos = new List<StudentFinancialAidChecklist>()
                 {
@@ -473,7 +484,115 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.FinancialAid
                     throw;
                 }
             }
+        }
 
+
+        [TestClass]
+        public class GetFaProfileAsync : StudentFinancialAidChecklistsControllerTests
+        {
+            #region Test Context
+            private TestContext testContextInstance;
+
+            /// <summary>
+            ///Gets or sets the test context which provides
+            ///information about and functionality for the current test run.
+            ///</summary>
+            public TestContext TestContext
+            {
+                get
+                {
+                    return testContextInstance;
+                }
+                set
+                {
+                    testContextInstance = value;
+                }
+            }
+            #endregion
+
+            public string studentId;
+            public string parentId;
+
+            private StudentFinancialAidChecklistsController actualController;
+            private Mock<IStudentChecklistService> checklistServiceMock;
+            private IStudentChecklistService checklistService;
+            private Dtos.Base.Profile expectedProfileDto;
+            private Dtos.Base.Profile actualProfileDto;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                StudentFinancialAidChecklistsControllerTestsInitialize();
+                LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+                EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.TestDeploymentDir, "App_Data"));
+
+                studentId = "0003914";
+                parentId = "0000828";
+
+                expectedProfileDto = new Dtos.Base.Profile()
+                {
+                    Id = studentId,
+                    LastName = "Brown",
+                    FirstName = "Ricky",
+                    PreferredEmailAddress = "rickybrown@ellucian.com"
+                };
+
+                checklistServiceMock = new Mock<IStudentChecklistService>();
+                checklistService = checklistServiceMock.Object;
+
+                checklistServiceMock.Setup(s => s.GetMpnProfileAsync(parentId, studentId, It.IsAny<bool>())).ReturnsAsync(expectedProfileDto);
+
+                actualController = new StudentFinancialAidChecklistsController(adapterRegistryMock.Object, checklistService, loggerMock.Object);
+            }
+            [TestMethod]
+            public async Task GetFaProfileAsync_Valid()
+            {            
+                try
+                {
+                    var result = await actualController.GetFaProfileAsync(parentId, studentId);
+                    Assert.IsTrue(result is Dtos.Base.Profile);
+                }
+                catch (HttpResponseException hre)
+                {
+                    loggerMock.Verify(l => l.Error(It.IsAny<Exception>(), It.IsAny<string>()));
+                    Assert.AreEqual(HttpStatusCode.BadRequest, hre.Response.StatusCode);
+                    throw;
+                }
+            }
+
+            [TestMethod]
+            public async Task GetFaProfileAsync_NotFoundException()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                checklistServiceMock.Setup(s => s.GetMpnProfileAsync(parentId,studentId, It.IsAny<bool>())).Throws(new HttpResponseException(HttpStatusCode.NotFound));
+                try
+                {
+                    await actualController.GetFaProfileAsync(parentId,studentId);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.NotFound, statusCode);
+            }
+
+
+            [TestMethod]
+            public async Task GetFaProfileAsync_ArgumentNullException()
+            {
+                HttpStatusCode statusCode = HttpStatusCode.Unused;
+                checklistServiceMock.Setup(s => s.GetMpnProfileAsync(null, null, It.IsAny<bool>())).Throws(new ArgumentNullException());
+
+                try
+                {
+                    await actualController.GetFaProfileAsync(null, null);
+                }
+                catch (HttpResponseException e)
+                {
+                    statusCode = e.Response.StatusCode;
+                }
+                Assert.AreEqual(HttpStatusCode.BadRequest, statusCode);
+            }
         }
     }
 }

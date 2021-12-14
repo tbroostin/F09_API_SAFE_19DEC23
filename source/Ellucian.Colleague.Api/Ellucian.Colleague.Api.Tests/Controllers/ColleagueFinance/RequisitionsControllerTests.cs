@@ -1,4 +1,5 @@
-﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,6 +20,12 @@ using Moq;
 using Newtonsoft.Json.Linq;
 using slf4net;
 using Ellucian.Colleague.Dtos.ColleagueFinance;
+using Ellucian.Colleague.Domain.ColleagueFinance;
+using System.Web.Http.Controllers;
+using System.Web.Http.Routing;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Web.Http.Models;
+using System.Collections;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 {
@@ -36,7 +43,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         private RequisitionsController requisitionsController;
         private List<Dtos.Requisitions> requisitionsCollection;
         private List<RequisitionSummary> requisitionsSummaryCollection;
-        private Tuple<IEnumerable<Dtos.Requisitions>, int> requisiotionsCollectionTuple;
+        private Tuple<IEnumerable<Dtos.Requisitions>, int> requisitionsCollectionTuple;
         private string expectedGuid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc";
         private string expectedId = "1";
         private string personId = "0000100";
@@ -305,7 +312,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                    }
                 }
             };
-            requisiotionsCollectionTuple = new Tuple<IEnumerable<Requisitions>, int>(requisitionsCollection, requisitionsCollection.Count);
+            requisitionsCollectionTuple = new Tuple<IEnumerable<Requisitions>, int>(requisitionsCollection, requisitionsCollection.Count);
             requisitionsServiceMock.Setup(s => s.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
             //requisitionsServiceMock.Setup(s => s.DoesUpdateViolateDataPrivacySettings(It.IsAny<string>(), It.IsAny<object>(), It.IsAny<bool>())).ReturnsAsync(true);
             requisitionsServiceMock.Setup(s => s.GetRequisitionsByGuidAsync(It.IsAny<string>(), true)).ReturnsAsync(requisitionsCollection.FirstOrDefault());
@@ -381,9 +388,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             requisitionsController.Request.Headers.CacheControl =
                  new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = false };
 
-            requisitionsServiceMock.Setup(x => x.GetRequisitionsAsync(offset, limit, It.IsAny<bool>())).ReturnsAsync(requisiotionsCollectionTuple);
+            requisitionsServiceMock.Setup(x => x.GetRequisitionsAsync(offset, limit, It.IsAny<Dtos.Requisitions>(), It.IsAny<bool>())).ReturnsAsync(requisitionsCollectionTuple);
 
-            var requisitions = await requisitionsController.GetRequisitionsAsync(new Web.Http.Models.Paging(limit, offset));
+            var requisitions = await requisitionsController.GetRequisitionsAsync(new Web.Http.Models.Paging(limit, offset), new Web.Http.Models.QueryStringFilter("criteria", ""));
 
             var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -401,9 +408,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             requisitionsController.Request.Headers.CacheControl =
                 new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
 
-            requisitionsServiceMock.Setup(x => x.GetRequisitionsAsync(offset, limit, It.IsAny<bool>())).ReturnsAsync(requisiotionsCollectionTuple);
+            requisitionsServiceMock.Setup(x => x.GetRequisitionsAsync(offset, limit, It.IsAny<Dtos.Requisitions>(), It.IsAny<bool>())).ReturnsAsync(requisitionsCollectionTuple);
 
-            var requisitions = await requisitionsController.GetRequisitionsAsync(new Web.Http.Models.Paging(limit, offset));
+            var requisitions = await requisitionsController.GetRequisitionsAsync(new Web.Http.Models.Paging(limit, offset), new Web.Http.Models.QueryStringFilter("criteria", ""));
 
             var cancelToken = new System.Threading.CancellationToken(false);
 
@@ -494,30 +501,113 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         }
 
         [TestMethod]
+        public async Task RequisitionsController_GetRequisitionsAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "requisitions" },
+                { "action", "GetRequisitionsAsync" }
+            };
+            HttpRoute route = new HttpRoute("requisitions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            requisitionsController.Request.SetRouteData(data);
+            requisitionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewRequisitions,
+           ColleagueFinancePermissionCodes.UpdateRequisitions });
+
+            var controllerContext = requisitionsController.ControllerContext;
+            var actionDescriptor = requisitionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.Requisitions>, int>(requisitionsCollection, requisitionsCollection.Count);
+            requisitionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                   .Returns(true);
+            requisitionsServiceMock.Setup(s => s.GetRequisitionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Requisitions>(), 
+                It.IsAny<bool>())).ReturnsAsync(tuple);
+            var resp = await requisitionsController.GetRequisitionsAsync(new Paging(10, 0), null);
+
+            Object filterObject;
+            requisitionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewRequisitions));
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.UpdateRequisitions));
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_GetRequisitionsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "requisitions" },
+                { "action", "GetRequisitionsAsync" }
+            };
+            HttpRoute route = new HttpRoute("requisitions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            requisitionsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = requisitionsController.ControllerContext;
+            var actionDescriptor = requisitionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.Requisitions>, int>(requisitionsCollection, requisitionsCollection.Count);
+
+                requisitionsServiceMock.Setup(s => s.GetRequisitionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Requisitions>(),
+                It.IsAny<bool>())).ReturnsAsync(tuple); 
+                requisitionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User is not authorized to view requisistions."));
+                var resp = await requisitionsController.GetRequisitionsAsync(new Paging(10, 0), null);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task RequisitionsController_GetRequisitions_KeyNotFoundException()
         {
-            requisitionsServiceMock.Setup(x => x.GetRequisitionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
+            requisitionsServiceMock.Setup(x => x.GetRequisitionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Requisitions>(), It.IsAny<bool>()))
                 .Throws<KeyNotFoundException>();
-            await requisitionsController.GetRequisitionsAsync(It.IsAny<Web.Http.Models.Paging>());
+            await requisitionsController.GetRequisitionsAsync(It.IsAny<Web.Http.Models.Paging>(), new Web.Http.Models.QueryStringFilter("criteria", ""));
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task RequisitionsController_GetRequisitions_PermissionsException()
         {
-            requisitionsServiceMock.Setup(x => x.GetRequisitionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
+            requisitionsServiceMock.Setup(x => x.GetRequisitionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Requisitions>(), It.IsAny<bool>()))
                 .Throws<PermissionsException>();
-            await requisitionsController.GetRequisitionsAsync(It.IsAny<Web.Http.Models.Paging>());
+            await requisitionsController.GetRequisitionsAsync(It.IsAny<Web.Http.Models.Paging>(), new Web.Http.Models.QueryStringFilter("criteria", ""));
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task RequisitionsController_GetRequisitions_ArgumentException()
         {
-            requisitionsServiceMock.Setup(x => x.GetRequisitionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
+            requisitionsServiceMock.Setup(x => x.GetRequisitionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Requisitions>(), It.IsAny<bool>()))
                 .Throws<ArgumentException>();
-            await requisitionsController.GetRequisitionsAsync(It.IsAny<Web.Http.Models.Paging>());
+            await requisitionsController.GetRequisitionsAsync(It.IsAny<Web.Http.Models.Paging>(), new Web.Http.Models.QueryStringFilter("criteria", ""));
         }
 
         [TestMethod]
@@ -525,9 +615,9 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task RequisitionsController_GetRequisitions_RepositoryException()
         {
 
-            requisitionsServiceMock.Setup(x => x.GetRequisitionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
+            requisitionsServiceMock.Setup(x => x.GetRequisitionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Requisitions>(), It.IsAny<bool>()))
                 .Throws<RepositoryException>();
-            await requisitionsController.GetRequisitionsAsync(It.IsAny<Web.Http.Models.Paging>());
+            await requisitionsController.GetRequisitionsAsync(It.IsAny<Web.Http.Models.Paging>(), new Web.Http.Models.QueryStringFilter("criteria", ""));
         }
 
         [TestMethod]
@@ -535,19 +625,19 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task RequisitionsController_GetRequisitions_IntegrationApiException()
         {
 
-            requisitionsServiceMock.Setup(x => x.GetRequisitionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
+            requisitionsServiceMock.Setup(x => x.GetRequisitionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Requisitions>(), It.IsAny<bool>()))
                 .Throws<IntegrationApiException>();
-            await requisitionsController.GetRequisitionsAsync(It.IsAny<Web.Http.Models.Paging>());
+            await requisitionsController.GetRequisitionsAsync(It.IsAny<Web.Http.Models.Paging>(), new Web.Http.Models.QueryStringFilter("criteria", ""));
         }
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task RequisitionsController_GetRequisitions_Exception()
         {
-            requisitionsServiceMock.Setup(x => x.GetRequisitionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
+            requisitionsServiceMock.Setup(x => x.GetRequisitionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.Requisitions>(), It.IsAny<bool>()))
                 .Throws<Exception>();
 
-            await requisitionsController.GetRequisitionsAsync(It.IsAny<Web.Http.Models.Paging>());
+            await requisitionsController.GetRequisitionsAsync(It.IsAny<Web.Http.Models.Paging>(), new Web.Http.Models.QueryStringFilter("criteria", ""));
         }
 
         [TestMethod]
@@ -667,6 +757,89 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         #region Delete
 
         [TestMethod]
+        public async Task RequisitionsController_DeleteRequisitionsAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "requisitions" },
+                { "action", "DeleteRequisitionsAsync" }
+            };
+            HttpRoute route = new HttpRoute("requisitions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            requisitionsController.Request.SetRouteData(data);
+            requisitionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.DeleteRequisitions });
+
+            var controllerContext = requisitionsController.ControllerContext;
+            var actionDescriptor = requisitionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.Requisitions>, int>(requisitionsCollection, requisitionsCollection.Count);
+            requisitionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                   .Returns(true);
+            System.Net.Http.HttpResponseMessage httpResponseMessage = new HttpResponseMessage() { StatusCode = System.Net.HttpStatusCode.OK };
+            requisitionsServiceMock.Setup(x => x.DeleteRequisitionAsync("1234")).Returns(Task.FromResult(httpResponseMessage));
+
+            await requisitionsController.DeleteRequisitionsAsync("1234");
+
+            Object filterObject;
+            requisitionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.DeleteRequisitions));
+           
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_DeleteRequisitionsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "requisitions" },
+                { "action", "DeleteRequisitionsAsync" }
+            };
+            HttpRoute route = new HttpRoute("requisitions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            requisitionsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = requisitionsController.ControllerContext;
+            var actionDescriptor = requisitionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.Requisitions>, int>(requisitionsCollection, requisitionsCollection.Count);
+
+                System.Net.Http.HttpResponseMessage httpResponseMessage = new HttpResponseMessage() { StatusCode = System.Net.HttpStatusCode.OK };
+                requisitionsServiceMock.Setup(x => x.DeleteRequisitionAsync("1234")).Returns(Task.FromResult(httpResponseMessage));
+                requisitionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User is not authorized to delete requisistions."));
+                await requisitionsController.DeleteRequisitionsAsync("1234");
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
+        [TestMethod]
         public async Task RequisitionsController_DeleteRequisitionsAsync()
         {
             System.Net.Http.HttpResponseMessage httpResponseMessage = new HttpResponseMessage() { StatusCode = System.Net.HttpStatusCode.OK };
@@ -738,6 +911,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         #endregion
 
         #region POST
+
 
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
@@ -817,6 +991,90 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
             Assert.IsNotNull(result);
             Assert.AreEqual(result.Id, requisitionsCollection.FirstOrDefault().Id);
+        }
+
+
+        [TestMethod]
+        public async Task RequisitionsController_PostRequisitionsAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "requisitions" },
+                { "action", "PostRequisitionsAsync" }
+            };
+            HttpRoute route = new HttpRoute("requisitions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            requisitionsController.Request.SetRouteData(data);
+            requisitionsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { 
+           ColleagueFinancePermissionCodes.UpdateRequisitions });
+
+            var controllerContext = requisitionsController.ControllerContext;
+            var actionDescriptor = requisitionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.Requisitions>, int>(requisitionsCollection, requisitionsCollection.Count);
+            requisitionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                   .Returns(true);
+            requisitionsServiceMock.Setup(r => r.CreateRequisitionsAsync(It.IsAny<Requisitions>())).ReturnsAsync(requisitionsCollection.FirstOrDefault());
+            var result = await requisitionsController.PostRequisitionsAsync(requisitionsCollection.FirstOrDefault());
+
+
+            Object filterObject;
+            requisitionsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.UpdateRequisitions));
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_PostRequisitionsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "requisitions" },
+                { "action", "PostRequisitionsAsync" }
+            };
+            HttpRoute route = new HttpRoute("requisitions", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            requisitionsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = requisitionsController.ControllerContext;
+            var actionDescriptor = requisitionsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.Requisitions>, int>(requisitionsCollection, requisitionsCollection.Count);
+
+                requisitionsServiceMock.Setup(r => r.CreateRequisitionsAsync(It.IsAny<Requisitions>())).ReturnsAsync(requisitionsCollection.FirstOrDefault());
+                
+                requisitionsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User is not authorized to create requisistions."));
+                var result = await requisitionsController.PostRequisitionsAsync(requisitionsCollection.FirstOrDefault());
+
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
         }
 
         #endregion
@@ -1421,6 +1679,166 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
 
             Assert.IsNotNull(result);
             Assert.AreEqual(result.RequisitionId, createUpdateRequisitionDto.Requisition.Id);
+        }
+
+    }
+
+    #endregion
+
+    #region QueryRequisitionSummariesAsync Tests
+
+    [TestClass]
+    public class QueryRequisitionSummariesAsyncTests
+    {
+        /// <summary>
+        ///Gets or sets the test context which provides
+        ///information about and functionality for the current test run.
+        ///</summary>
+        public TestContext TestContext { get; set; }
+
+        private Mock<IRequisitionService> requisitionsServiceMock;
+        private Mock<ILogger> loggerMock;
+        private RequisitionsController requisitionsController;
+        private List<RequisitionSummary> requisitionsSummaryCollection;
+
+        private Dtos.ColleagueFinance.ProcurementDocumentFilterCriteria filterCriteria;
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            LicenseHelper.CopyLicenseFile(TestContext.TestDeploymentDir);
+            EllucianLicenseProvider.RefreshLicense(System.IO.Path.Combine(TestContext.DeploymentDirectory, "App_Data"));
+
+            requisitionsServiceMock = new Mock<IRequisitionService>();
+            loggerMock = new Mock<ILogger>();
+
+            filterCriteria = new ProcurementDocumentFilterCriteria();
+            filterCriteria.PersonId = "0000100";
+            filterCriteria.VendorIds = new List<string>() { "0000190" };
+
+            requisitionsSummaryCollection = new List<RequisitionSummary>();
+
+            BuildRequisitionSummaryData();
+
+            requisitionsController = new RequisitionsController(requisitionsServiceMock.Object, loggerMock.Object)
+            {
+                Request = new HttpRequestMessage()
+            };
+        }
+
+
+
+        private void BuildRequisitionSummaryData()
+        {
+            
+            requisitionsSummaryCollection = new List<RequisitionSummary>()
+            {
+                new RequisitionSummary()
+                {
+                   Id = "1",
+                   Date = DateTime.Today.AddDays(2),
+                   InitiatorName = "Test User",
+                   RequestorName = "Test User",
+                   Status = RequisitionStatus.InProgress,
+                   StatusDate = DateTime.Today.AddDays(2),
+                   VendorId = "0000190",
+                   VendorName = "Basic Office Supply",
+                   Amount = 10.00m,
+                   Number = "0000001",
+                   PurchaseOrders = new List<PurchaseOrderLinkSummary>()
+                   {
+                       new PurchaseOrderLinkSummary()
+                       {
+                           Id = "1",
+                           Number = "0000001"
+                       }
+                   }
+
+                },
+                new RequisitionSummary()
+                {
+                     Id = "2",
+                   Date = DateTime.Today.AddDays(2),
+                   InitiatorName = "Test User",
+                   RequestorName = "Test User",
+                   Status = RequisitionStatus.InProgress,
+                   StatusDate = DateTime.Today.AddDays(2),
+                   VendorId = "0000190",
+                   VendorName = "Basic Office Supply",
+                   Amount = 10.00m,
+                   Number = "0000002",
+                   PurchaseOrders = new List<PurchaseOrderLinkSummary>()
+                   {
+                       new PurchaseOrderLinkSummary()
+                       {
+                           Id = "2",
+                           Number = "0000002"
+                       }
+                   }
+                }
+
+            };
+            requisitionsServiceMock.Setup(r => r.QueryRequisitionSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ReturnsAsync(requisitionsSummaryCollection);
+
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            requisitionsController = null;
+            loggerMock = null;
+            requisitionsServiceMock = null;
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_QueryRequisitionSummariesAsync_Dto_Null()
+        {
+            await requisitionsController.QueryRequisitionSummariesAsync(null);
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_QueryRequisitionSummariessAsync_PermissionsException()
+        {
+            requisitionsServiceMock.Setup(r => r.QueryRequisitionSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ThrowsAsync(new PermissionsException());
+            await requisitionsController.QueryRequisitionSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_QueryRequisitionSummariesAsync_Exception()
+        {
+            requisitionsServiceMock.Setup(r => r.QueryRequisitionSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ThrowsAsync(new Exception());
+            await requisitionsController.QueryRequisitionSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_QueryRequisitionSummariesAsync_ArgumentNullException()
+        {
+            requisitionsServiceMock.Setup(r => r.QueryRequisitionSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ThrowsAsync(new ArgumentNullException());
+            await requisitionsController.QueryRequisitionSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task RequisitionsController_QueryRequisitionSummariesAsync_KeyNotFoundException()
+        {
+            requisitionsServiceMock.Setup(r => r.QueryRequisitionSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ThrowsAsync(new KeyNotFoundException());
+            await requisitionsController.QueryRequisitionSummariesAsync(filterCriteria);
+        }
+
+        [TestMethod]
+        public async Task RequisitionsController_QueryRequisitionSummariesAsync()
+        {
+            requisitionsServiceMock.Setup(r => r.QueryRequisitionSummariesAsync(It.IsAny<ProcurementDocumentFilterCriteria>())).ReturnsAsync(requisitionsSummaryCollection);
+            var result = await requisitionsController.QueryRequisitionSummariesAsync(filterCriteria);
+
+            Assert.IsNotNull(result);
+            Assert.IsTrue(result.Count() > 0);
         }
 
     }

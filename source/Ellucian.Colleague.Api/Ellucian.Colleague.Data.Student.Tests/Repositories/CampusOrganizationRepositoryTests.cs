@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
@@ -16,6 +16,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CampusOrgEntity = Ellucian.Colleague.Domain.Student.Entities.CampusOrganization;
+using Ellucian.Colleague.Domain.Base.Transactions;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -271,6 +272,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         public class CampusInvolvements_GET
         {
             Mock<IColleagueTransactionFactory> transFactoryMock;
+            Mock<IColleagueTransactionInvoker> transManagerMock;
             Mock<ICacheProvider> cacheProviderMock;
             Mock<IColleagueDataReader> dataAccessorMock;
             Mock<ILogger> loggerMock;
@@ -290,6 +292,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 BuildData();
 
                 campusOrganizationRepository = BuildCampusOrganisationRepository();
+
+                transManagerMock = new Mock<IColleagueTransactionInvoker>();
             }
 
             [TestCleanup]
@@ -386,6 +390,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 // transaction factory mock
                 transFactoryMock = new Mock<IColleagueTransactionFactory>();
+                transManagerMock = new Mock<IColleagueTransactionInvoker>();
 
                 // Cache Provider Mock
                 cacheProviderMock = new Mock<ICacheProvider>();
@@ -398,6 +403,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 // Set up dataAccessorMock as the object for the DataAccessor
                 transFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataAccessorMock.Object);
+                transFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManagerMock.Object);
 
                 var records = new Collection<DataContracts.CampusOrgMembers>();
                 foreach (var item in campusInvolvementEntities)
@@ -412,6 +418,16 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     records.Add(record);
                 }
                 dataAccessorMock.Setup(acc => acc.BulkReadRecordAsync<DataContracts.CampusOrgMembers>("CAMPUS.ORG.MEMBERS", campusInlvIds, true)).ReturnsAsync(records);
+
+                var invalidRecords = new Dictionary<string, string>();
+                var results = new Ellucian.Data.Colleague.BulkReadOutput<DataContracts.CampusOrgMembers>()
+                {
+                    BulkRecordsRead = new Collection<CampusOrgMembers>() { records[0], records[1], records[2], records[3] },
+                    InvalidRecords = invalidRecords,
+                    InvalidKeys = new string[] { }
+                };
+                
+                dataAccessorMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.CampusOrgMembers>("CAMPUS.ORG.MEMBERS", It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(results);
 
                 var campInvl = records.FirstOrDefault();
                 dataAccessorMock.Setup(acc => acc.ReadRecordAsync<DataContracts.CampusOrgMembers>("CAMPUS.ORG.MEMBERS", campInvl.Recordkey, true)).ReturnsAsync(campInvl);
@@ -431,9 +447,41 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     return Task.FromResult(result);
                 });
 
+
+                var ids = campusInvolvementEntities.Select(x => x.CampusInvolvementId).ToList();
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 100,
+                    CacheName = "AllCampusInvolvements",
+                    Entity = "",
+                    Sublist = ids,
+                    TotalCount = ids.Count,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+               {
+                   new KeyCacheInfo()
+                   {
+                       KeyCacheMax = 5905,
+                       KeyCacheMin = 1,
+                       KeyCachePart = "000",
+                       KeyCacheSize = 5905
+                   },
+                   new KeyCacheInfo()
+                   {
+                       KeyCacheMax = 7625,
+                       KeyCacheMin = 5906,
+                       KeyCachePart = "001",
+                       KeyCacheSize = 1720
+                   }
+               }
+                };
+                
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
+
                 // Construct repository
                 campusOrganizationRepository = new CampusOrganizationRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
-
+                
                 return campusOrganizationRepository;
             }
         }

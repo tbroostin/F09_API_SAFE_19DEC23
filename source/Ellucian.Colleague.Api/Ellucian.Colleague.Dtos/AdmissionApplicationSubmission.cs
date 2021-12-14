@@ -89,7 +89,7 @@ namespace Ellucian.Colleague.Dtos
         /// </summary>
         [DataMember(Name = "academicLoad", EmitDefaultValue = false)]
         //[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-        public AdmissionApplicationsAcademicLoadType AcademicLoad { get; set; }
+        public AdmissionApplicationsAcademicLoadType? AcademicLoad { get; set; }
 
 
         /// <summary>

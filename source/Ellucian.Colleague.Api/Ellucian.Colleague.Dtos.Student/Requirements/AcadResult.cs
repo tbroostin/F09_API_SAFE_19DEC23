@@ -19,6 +19,16 @@ namespace Ellucian.Colleague.Dtos.Student.Requirements
         /// explananation for Acad credit or course. This implies whether acad credit/course that is applied is 'Extra' to requirement completion
         /// </summary>
         public AcadResultExplanation Explanation { get; set; }
+        /// <summary>
+        /// Replaced Status
+        /// </summary>
+        public ReplacedStatus ReplacedStatus { get; set; }
+        /// <summary>
+        /// Replacement Status
+        /// </summary>
+        public ReplacementStatus ReplacementStatus { get; set; }
+       
+
     }
 
     /// <summary>

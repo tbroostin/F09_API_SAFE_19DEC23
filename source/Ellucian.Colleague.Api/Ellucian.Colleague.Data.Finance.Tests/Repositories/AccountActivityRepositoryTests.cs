@@ -640,7 +640,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             public async Task NullSlAcyrReturned_KeyNotFoundExceptionThrownTest()
             {
                 dataReaderMock.Setup(dr => dr.ReadRecordAsync<SlAcyr>(It.IsAny<string>(), It.IsAny<string>(), true))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
                 awardId = "PPLUS1";
                 await repository.GetStudentAwardDisbursementInfoAsync(studentId, awardYearCode, awardId, TIVAwardCategory.Loan);
             }
@@ -650,7 +650,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             public async Task NullTcAcyrReturned_KeyNotFoundExceptionThrownTest()
             {
                 dataReaderMock.Setup(dr => dr.ReadRecordAsync<TcAcyr>(It.IsAny<string>(), It.IsAny<string>(), true))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
                 awardId = "UGTCH";
                 await repository.GetStudentAwardDisbursementInfoAsync(studentId, awardYearCode, awardId, TIVAwardCategory.Teach);
             }
@@ -660,7 +660,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             public async Task NullPellAcyrReturned_KeyNotFoundExceptionThrownTest()
             {
                 dataReaderMock.Setup(dr => dr.ReadRecordAsync<PellAcyr>(It.IsAny<string>(), It.IsAny<string>(), true))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
                 awardId = "PELL";
                 await repository.GetStudentAwardDisbursementInfoAsync(studentId, awardYearCode, awardId, TIVAwardCategory.Pell);
             }
@@ -670,7 +670,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             public async Task NullDateAwardReturned_KeyNotFoundExceptionThrownTest()
             {
                 dataReaderMock.Setup(dr => dr.ReadRecordAsync<DateAward>(It.IsAny<string>(), true))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
                 awardId = "UGTCH";
                 await repository.GetStudentAwardDisbursementInfoAsync(studentId, awardYearCode, awardId, TIVAwardCategory.Teach);
             }
@@ -680,7 +680,7 @@ namespace Ellucian.Colleague.Data.Finance.Tests.Repositories
             public async Task NoDateAwardDisbursementsReturned_KeyNotFoundExceptionThrownTest()
             {
                 dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<DateAwardDisb>(It.IsAny<string[]>(), true))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
                 awardId = "UGTCH";
                 await repository.GetStudentAwardDisbursementInfoAsync(studentId, awardYearCode, awardId, TIVAwardCategory.Teach);
             }

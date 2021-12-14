@@ -1499,7 +1499,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 transManagerMock.Setup(manager => manager
                         .ExecuteAsync<GetPersonSearchKeyListRequest, GetPersonSearchKeyListResponse>(It.IsAny<GetPersonSearchKeyListRequest>()))
-                        .ReturnsAsync(null);
+                        .ReturnsAsync(() => null);
                 var lastName = "Gerbil";
                 var result = await retentionAlertRepository.SearchStudentsByNameForExactMatchAsync(lastName);
                 Assert.AreEqual(0, result.Count());

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -18,6 +18,8 @@ using Ellucian.Web.Http.Configuration;
 using System.Threading.Tasks;
 using System.Threading;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Base.Transactions;
+using Ellucian.Colleague.Domain.Student.Repositories;
 
 namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 {
@@ -34,7 +36,24 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         private List<AcademicCredit> _acadCreditsToSort;
         private List<string> _sortSpecificationIds = new List<string>() { "SORT1", "SORT2" };
         protected Mock<IColleagueDataReader> dataReaderMock = new Mock<IColleagueDataReader>();
+        //protected Mock<IColleagueTransactionInvoker> transManagerMock;
+        //protected IColleagueTransactionInvoker transManager;
 
+        private Mock<ISectionRepository> sectionRepositoryMock;
+        private ISectionRepository sectionRepository;
+
+        private List<Domain.Student.Entities.OfferingDepartment> dpts = new List<Domain.Student.Entities.OfferingDepartment>() { new Domain.Student.Entities.OfferingDepartment("ART", 100m) };
+        private List<string> levels = new List<string>();
+        private List<Ellucian.Colleague.Domain.Student.Entities.Section> sectionEntityList;
+        private Domain.Student.Entities.Section firstSection;
+        private Domain.Student.Entities.Section secondSection;
+        private Domain.Student.Entities.Section thirdSection;
+        private Domain.Student.Entities.Section fourthSection;
+        private string firstSectionGuid = "eab43b50-ce12-4e7f-8947-2d63661ab7ac";
+        private string secondSectionGuid = "51adca90-4839-442b-b22a-12c8009b1186";
+        private string thirdSectionGuid = "cd74617e-d304-4c6d-8598-6622ed15192a";
+        private string fourthSectionGuid = "cd74617e-d309-4c6d-8898-6622ed15192b";
+        private IEnumerable<string> listOfIds = new List<string>() { "1", "2", "3" };
 
         [TestInitialize]
         public async void Initialize()
@@ -43,6 +62,45 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             _acadCreditsToSort = (await testAcademicCreditRepository.GetAsync()).Take(5).ToList();
             academicCreditRepository = await BuildValidAcademicCreditRepository();
             colleagueTimeZone = apiSettingsRepository.ColleagueTimeZone;
+
+            sectionRepositoryMock = new Mock<ISectionRepository>();
+            sectionRepository = sectionRepositoryMock.Object;
+
+            var statuses = new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-6)) };
+            sectionEntityList = new List<Section>();
+            firstSection = new Section("1", "1119", "01", new DateTime(2012, 09, 01), 3.0m, 0, "Introduction to Art", "IN", dpts, levels, "UG", statuses);
+            firstSection.TermId = "2012/FA";
+            firstSection.EndDate = new DateTime(2012, 12, 21); firstSection.AddActiveStudent("STU1");
+            firstSection.GradeByRandomId = true;
+            firstSection.Guid = firstSectionGuid;
+            sectionEntityList.Add(firstSection);
+
+            secondSection = new Section("2", "1119", "02", new DateTime(2012, 09, 01), 3.0m, 0, "Introduction to Art", "IN", dpts, levels, "UG", statuses);
+            secondSection.TermId = "2012/FA"; secondSection.AddActiveStudent("STU1"); secondSection.AddActiveStudent("STU2");
+            secondSection.GradeByRandomId = false;
+            secondSection.Guid = secondSectionGuid;
+            sectionEntityList.Add(secondSection);
+
+            thirdSection = new Section("3", "1119", "03", new DateTime(2011, 09, 01), 3.0m, 0, "Introduction to Art", "IN", dpts, levels, "UG", statuses);
+            thirdSection.TermId = "2011/FA"; thirdSection.AddActiveStudent("STU1"); thirdSection.AddActiveStudent("STU2"); thirdSection.AddActiveStudent("STU3");
+            thirdSection.EndDate = new DateTime(2011, 12, 21);
+            thirdSection.GradeByRandomId = true;
+            thirdSection.Guid = thirdSectionGuid;
+            sectionEntityList.Add(thirdSection);
+
+            fourthSection = new Section("4", "1119", "04", new DateTime(2011, 09, 01), 3.0m, 0, "Introduction to Art", "IN", dpts, levels, "UG", statuses);
+            fourthSection.TermId = "2011/SP"; fourthSection.AddActiveStudent("STU1"); fourthSection.AddActiveStudent("STU2"); fourthSection.AddActiveStudent("STU3");
+            fourthSection.EndDate = new DateTime(2011, 12, 21);
+            fourthSection.GradeByRandomId = true;
+            fourthSection.Guid = fourthSectionGuid;
+            sectionEntityList.Add(fourthSection);
+
+            IEnumerable<Section> sections = sectionEntityList;
+
+            //Mock section repo GetCachedSections
+            bool bestFit = false;
+            sectionRepositoryMock.Setup(repo => repo.GetCachedSectionsAsync(listOfIds, bestFit)).Returns(Task.FromResult<IEnumerable<Section>>(sections));
+
         }
 
         [TestClass]
@@ -178,7 +236,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task AcademicCreditRepository_GetStudentCourseTransfersAsync_Invalid_StcStudentEquivEval_RepoException()
         {
             dataReaderMock.Setup(acc => acc.SelectAsync("STUDENT.EQUIV.EVALS", It.IsAny<string>())).ReturnsAsync(new string[] { "1" });
@@ -252,7 +310,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 Assert.AreEqual(allCourseIds.Count(), courseCredits.Count());
                 Assert.AreEqual(allNonCourseIds.Count(), nonCourseCredits.Count());
 
-                for(int i = 0; i > allCourseIds.Count(); i++)
+                for (int i = 0; i > allCourseIds.Count(); i++)
                 {
                     Assert.AreEqual(allCourseIds[i], courseCredits[i].StudentCourseSectionId);
                 }
@@ -270,12 +328,13 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 IEnumerable<AcademicCredit> credits = await academicCreditRepository.GetAsync(allIds, false, false);
                 // All should be returned
                 Assert.AreEqual(allIds.Count(), credits.Count());
-                for(int i = 0; i < allIds.Count(); i++)
+                for (int i = 0; i < allIds.Count(); i++)
                 {
                     if (expected[i].AdjustedCredit == null)
                     {
                         Assert.IsNull(credits.ElementAt(i).AdjustedCredit);
-                    } else
+                    }
+                    else
                     {
                         Assert.IsNotNull(credits.ElementAt(i).AdjustedCredit);
                         Assert.AreEqual(expected[i].AdjustedCredit, credits.ElementAt(i).AdjustedCredit);
@@ -425,7 +484,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     }
                 }
             }
-          
+
 
         }
 
@@ -892,8 +951,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 IEnumerable<AcademicCredit> credits = await academicCreditRepository.GetAsync(allIds, false, false);
                 // All should be returned that included dropped ones too
                 Assert.AreEqual(allIds.Count(), credits.Count());
-                Assert.IsTrue(credits.Where(c => c.Id == "100" && c.Status==CreditStatus.Dropped).Any());
-                Assert.IsTrue(credits.Where(c => c.Id == "101" && c.Status==CreditStatus.Dropped).Any());
+                Assert.IsTrue(credits.Where(c => c.Id == "100" && c.Status == CreditStatus.Dropped).Any());
+                Assert.IsTrue(credits.Where(c => c.Id == "101" && c.Status == CreditStatus.Dropped).Any());
             }
 
             [TestMethod]
@@ -999,7 +1058,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 )));
 
                 //Mock DataReader
-                var creditIds = new List<string>() { "1", "2", "3", "108","109" };
+                var creditIds = new List<string>() { "1", "2", "3", "108", "109" };
                 dataReaderMock.Setup<Task<string[]>>(acc => acc.SelectAsync("STUDENT.ACAD.CRED", It.IsAny<string>(), It.IsAny<string[]>(), "?", true, 425)).Returns(Task.FromResult(creditIds.ToArray()));
                 var creds = new List<StudentAcadCred>();
                 var academics = await testAcademicCreditRepository.GetAsync();
@@ -1008,7 +1067,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                     var sac = BuildValidStcResponse(testCredit);
                     creds.AddRange(sac);
                 }
-                foreach(var cred in creds)
+                foreach (var cred in creds)
                 {
                     cred.StcPersonId = cred.Recordkey;
                 }
@@ -1034,20 +1093,20 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 };
                 dataReaderMock.Setup<Task<ApplValcodes>>(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "STUDENT.ACAD.CRED.STATUSES", true)).Returns(Task.FromResult(statusCodeResponse));
 
-                pilotAcademicCreditRepository = new AcademicCreditRepository(cacheProviderMock.Object, transactionFactoryMock.Object, loggerMock.Object, new TestCourseRepository(), new TestGradeRepository(), new TestTermRepository(), apiSettingsMock);
+                pilotAcademicCreditRepository = new AcademicCreditRepository(cacheProviderMock.Object, transactionFactoryMock.Object, loggerMock.Object, new TestCourseRepository(), new TestGradeRepository(), new TestTermRepository(), null, apiSettingsMock);
             }
 
             [TestMethod]
             public async Task GetPilotAcademicCreditsByStudentIdsAsync()
             {
                 var students = new List<string>() { "1", "2", "3" };
-                
+
                 var result = await pilotAcademicCreditRepository.GetPilotAcademicCreditsByStudentIdsAsync(students, AcademicCreditDataSubset.None);
                 Assert.AreEqual(5, result.Count());
-                Assert.AreEqual(0m,result["108"][0].GpaCredit);
-                Assert.AreEqual(3.0m,result["108"][0].CompletedCredit);
-                Assert.AreEqual(1.0m,result["109"][0].GpaCredit);
-                Assert.AreEqual(0m,result["109"][0].CompletedCredit);
+                Assert.AreEqual(0m, result["108"][0].GpaCredit);
+                Assert.AreEqual(3.0m, result["108"][0].CompletedCredit);
+                Assert.AreEqual(1.0m, result["109"][0].GpaCredit);
+                Assert.AreEqual(0m, result["109"][0].CompletedCredit);
             }
         }
 
@@ -1097,7 +1156,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 string[] allAcademicCreditIds = (await testAcademicCreditRepository.GetAsync()).Select(ai => ai.Id).ToArray();
                 // Which section Ids I use here is irrelevant - all academic credits will be returned by the data reader.
                 IEnumerable<string> sectionIds = new List<string>() { "1", "2" };
-               AcademicCreditsWithInvalidKeys credits = await academicCreditRepository.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIds);
+                AcademicCreditsWithInvalidKeys credits = await academicCreditRepository.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIds);
                 // All should be returned
                 Assert.AreEqual(allAcademicCreditIds.Count(), credits.AcademicCredits.Count());
             }
@@ -1125,19 +1184,18 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 // including drops, withdrawns, etc.
                 string[] allAcademicCreditIds = (await testAcademicCreditRepository.GetAsync()).Select(ai => ai.Id).ToArray();
                 // Which section Ids I use here is irrelevant - all academic credits will be returned by the data reader.
-                IEnumerable<string> sectionIds = new List<string>() { "1", "2","1","2" };
+                IEnumerable<string> sectionIds = new List<string>() { "1", "2", "1", "2" };
                 string[] nonDuplicateSectionIds = new string[] { "1", "2" };
                 AcademicCreditsWithInvalidKeys credits = await academicCreditRepository.GetAcademicCreditsBySectionIdsWithInvalidKeysAsync(sectionIds);
                 // All should be returned
                 Assert.AreEqual(allAcademicCreditIds.Count(), credits.AcademicCredits.Count());
-                dataReaderMock.Verify(d => d.SelectAsync("STUDENT.COURSE.SEC", "WITH SCS.COURSE.SECTION = '?' SAVING SCS.STUDENT.ACAD.CRED", nonDuplicateSectionIds,"?",true,It.IsAny<int>()));
+                dataReaderMock.Verify(d => d.SelectAsync("STUDENT.COURSE.SEC", "WITH SCS.COURSE.SECTION = '?' SAVING SCS.STUDENT.ACAD.CRED", nonDuplicateSectionIds, "?", true, It.IsAny<int>()));
                 Assert.AreEqual(allAcademicCreditIds.Count(), credits.AcademicCredits.Count());
 
 
             }
 
         }
-
 
         [TestClass]
         public class GetWithInvalidKeysAsync : AcademicCreditRepositoryTests
@@ -1370,6 +1428,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
 
         }
+
         [TestClass]
         public class GetSortedAcademicCreditsBySortSpecificationIdAsync : AcademicCreditRepositoryTests
         {
@@ -1395,7 +1454,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 apiSettingsMock = new ApiSettings("null");
 
                 // Return mocked up repo
-                acr = new AcademicCreditRepository(cacheProviderMock.Object, transactionFactoryMock.Object, loggerMock.Object, new TestCourseRepository(), new TestGradeRepository(), new TestTermRepository(), apiSettingsMock);
+                acr = new AcademicCreditRepository(cacheProviderMock.Object, transactionFactoryMock.Object, loggerMock.Object, new TestCourseRepository(), new TestGradeRepository(), new TestTermRepository(), null, apiSettingsMock);
             }
 
             [TestMethod]
@@ -1431,7 +1490,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 transactionInvokerMock.Setup(manager => manager
                     .ExecuteAsync<Transactions.SortStudentAcadCredsRequest, Transactions.SortStudentAcadCredsResponse>(It.IsAny<Transactions.SortStudentAcadCredsRequest>()))
                     .ReturnsAsync(responseDict["error"]);
-                            
+
                 var sortedIds = await acr.GetSortedAcademicCreditsBySortSpecificationIdAsync(_acadCreditsToSort, _sortSpecificationIds);
             }
             [TestMethod]
@@ -1514,7 +1573,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         {
             string criteria = "WITH STC.COURSE.LEVEL EQ '100' ";
             [TestInitialize]
-            public  void TestInitialize()
+            public void TestInitialize()
             {
                 criteria = "WITH STC.COURSE.LEVEL EQ '100' ";
             }
@@ -1524,7 +1583,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task FilterAcademicCredits_AcademicCredits_Is_Null()
             {
                 IEnumerable<AcademicCredit> filteredCredits;
-               filteredCredits= await academicCreditRepository.FilterAcademicCreditsAsync(null, criteria);
+                filteredCredits = await academicCreditRepository.FilterAcademicCreditsAsync(null, criteria);
             }
 
             [TestMethod]
@@ -1579,7 +1638,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task FilterAcademicCredits_DataReader_Returns_Null_FilteredIds()
             {
                 IEnumerable<AcademicCredit> filteredCredits;
-                string[] creditIds =null;
+                string[] creditIds = null;
                 dataReaderMock.Setup<Task<string[]>>(d => d.SelectAsync("STUDENT.ACAD.CRED", It.IsAny<string[]>(), It.IsAny<string>())).Returns(Task.FromResult(creditIds));
                 filteredCredits = await academicCreditRepository.FilterAcademicCreditsAsync(_acadCreditsToSort, criteria);
                 Assert.AreEqual(0, filteredCredits.Count());
@@ -1592,14 +1651,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 string[] creditIds = new string[] { "2", "4" };
                 dataReaderMock.Setup<Task<string[]>>(d => d.SelectAsync("STUDENT.ACAD.CRED", It.IsAny<string[]>(), It.IsAny<string>())).Returns(Task.FromResult(creditIds));
                 filteredCredits = await academicCreditRepository.FilterAcademicCreditsAsync(_acadCreditsToSort, criteria);
-                Assert.AreEqual(2,filteredCredits.Count());
+                Assert.AreEqual(2, filteredCredits.Count());
             }
             //test when datareader returns all
             [TestMethod]
             public async Task FilterAcademicCredits_DataReader_Returns_All_FilteredIds()
             {
                 IEnumerable<AcademicCredit> filteredCredits;
-                string[] creditIds = new string[] {"1", "2","3", "4" ,"5"};
+                string[] creditIds = new string[] { "1", "2", "3", "4", "5" };
                 dataReaderMock.Setup<Task<string[]>>(d => d.SelectAsync("STUDENT.ACAD.CRED", It.IsAny<string[]>(), It.IsAny<string>())).Returns(Task.FromResult(creditIds));
                 filteredCredits = await academicCreditRepository.FilterAcademicCreditsAsync(_acadCreditsToSort, criteria);
                 Assert.AreEqual(5, filteredCredits.Count());
@@ -1614,7 +1673,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             public async Task FilterAcademicCredits_DataReader_Returns_NotInList_FilteredIds()
             {
                 IEnumerable<AcademicCredit> filteredCredits;
-                string[] creditIds = new string[] { "7","8" };
+                string[] creditIds = new string[] { "7", "8" };
                 dataReaderMock.Setup<Task<string[]>>(d => d.SelectAsync("STUDENT.ACAD.CRED", It.IsAny<string[]>(), It.IsAny<string>())).Returns(Task.FromResult(creditIds));
                 filteredCredits = await academicCreditRepository.FilterAcademicCreditsAsync(_acadCreditsToSort, criteria);
                 Assert.AreEqual(0, filteredCredits.Count());
@@ -1631,6 +1690,51 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             }
         }
 
+        [TestClass]
+        public class GetAnonymousGradingIdsAsync : AcademicCreditRepositoryTests
+        {
+            private Mock<IAcademicCreditRepository> acadCredRepositoryMock;
+            private IAcademicCreditRepository acadCredRepository;
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public async Task ThrowsWhenStudentIdIsNull()
+            {
+                acadCredRepositoryMock = new Mock<IAcademicCreditRepository>();
+                acadCredRepository = acadCredRepositoryMock.Object;
+                acadCredRepositoryMock.Setup(repo => repo.GetAnonymousGradingIdsAsync(AnonymousGradingType.None, null, new List<string>(), new List<string>())).Throws<ArgumentNullException>();
+
+                await academicCreditRepository.GetAnonymousGradingIdsAsync(AnonymousGradingType.Section, null, new List<string>(), new List<string>());
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentException))]
+            public async Task ThrowsWhenTermIdsAndSectionIds()
+            {
+                acadCredRepositoryMock = new Mock<IAcademicCreditRepository>();
+                acadCredRepository = acadCredRepositoryMock.Object;
+                var termIds = new List<string>() { "2020/FA" };
+                var sectionIds = new List<string>() { "1" };
+                acadCredRepositoryMock.Setup(repo => repo.GetAnonymousGradingIdsAsync(AnonymousGradingType.None, "0000004", termIds, sectionIds)).Throws<ArgumentException>();
+
+                await academicCreditRepository.GetAnonymousGradingIdsAsync(AnonymousGradingType.Section, "0000004", termIds, sectionIds);
+            }
+
+            [TestMethod]
+            public async Task ReturnsEmptyAnonymousGradingIdsWhenAnonymousGradingTypeIsNone()
+            {
+                acadCredRepositoryMock = new Mock<IAcademicCreditRepository>();
+                acadCredRepository = acadCredRepositoryMock.Object;
+                var termIds = new List<string>();
+                var sectionIds = new List<string>();
+                var emptyGradingIdsEntity = new List<StudentAnonymousGrading>();
+                acadCredRepositoryMock.Setup(repo => repo.GetAnonymousGradingIdsAsync(AnonymousGradingType.None, null, termIds, sectionIds)).ReturnsAsync(emptyGradingIdsEntity);
+
+                var studentGradingIds = await academicCreditRepository.GetAnonymousGradingIdsAsync(AnonymousGradingType.None, "0000004", termIds, sectionIds);
+                Assert.AreEqual(0, studentGradingIds.Count());
+            }
+        }
+
         private async Task<AcademicCreditRepository> BuildValidAcademicCreditRepository()
         {
 
@@ -1638,11 +1742,16 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             var loggerMock = new Mock<ILogger>();
             var apiSettingsMock = new ApiSettings("null");
             // Set up data reader for mocking 
-          //  var dataReaderMock = new Mock<IColleagueDataReader>();
+            //  var dataReaderMock = new Mock<IColleagueDataReader>();
             var transactionInvokerMock = new Mock<IColleagueTransactionInvoker>();
             transactionFactoryMock.Setup(transFac => transFac.GetDataReader()).Returns(dataReaderMock.Object);
             transactionFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transactionInvokerMock.Object);
 
+            // Set up transaction manager for mocking 
+            var transManagerMock = new Mock<IColleagueTransactionInvoker>();
+            var transManager = transManagerMock.Object;
+            // Set up transManagerMock as the object for the transaction manager
+            transactionFactoryMock.Setup(transFac => transFac.GetTransactionInvoker()).Returns(transManager);
             // Cache mocking
             var cacheProviderMock = new Mock<ICacheProvider>();
             cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
@@ -1849,12 +1958,41 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 }
             };
             dataReaderMock.Setup<Task<ApplValcodes>>(acc => acc.ReadRecordAsync<ApplValcodes>("ST.VALCODES", "STUDENT.ACAD.CRED.STATUSES", true)).Returns(Task.FromResult(statusCodeResponse));
-            
+
             // Select of Student Course Sec mock
-            dataReaderMock.Setup(acc => acc.SelectAsync("STUDENT.COURSE.SEC", It.IsAny<string>(), It.IsAny<string[]>(), "?", true, It.IsAny<int>())).ReturnsAsync(allIds);            
-            
+            dataReaderMock.Setup(acc => acc.SelectAsync("STUDENT.COURSE.SEC", It.IsAny<string>(), It.IsAny<string[]>(), "?", true, It.IsAny<int>())).ReturnsAsync(allIds);
+
+            GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+            {
+                Offset = 0,
+                Limit = 100,
+                CacheName = "AllStudentEquivEvalsRecordKeys",
+                Entity = "STUDENT.EQUIV.EVALS",
+                Sublist = requestedIds1.ToList(),
+                TotalCount = 3,
+                KeyCacheInfo = new List<KeyCacheInfo>()
+               {
+                   new KeyCacheInfo()
+                   {
+                       KeyCacheMax = 5905,
+                       KeyCacheMin = 1,
+                       KeyCachePart = "000",
+                       KeyCacheSize = 5905
+                   },
+                   new KeyCacheInfo()
+                   {
+                       KeyCacheMax = 7625,
+                       KeyCacheMin = 5906,
+                       KeyCachePart = "001",
+                       KeyCacheSize = 1720
+                   }
+               }
+            };
+            transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                .ReturnsAsync(resp);
+
             // Return mocked up repo
-            AcademicCreditRepository acr = new AcademicCreditRepository(cacheProviderMock.Object, transactionFactoryMock.Object, loggerMock.Object, new TestCourseRepository(), new TestGradeRepository(), new TestTermRepository(), apiSettingsMock);
+            AcademicCreditRepository acr = new AcademicCreditRepository(cacheProviderMock.Object, transactionFactoryMock.Object, loggerMock.Object, new TestCourseRepository(), new TestGradeRepository(), new TestTermRepository(), null, apiSettingsMock);
             return acr;
 
         }
@@ -1941,8 +2079,8 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                                                             "");
             stc.StcStatusesEntityAssociation.Add(statusitem);
             stc.StcStudentCourseSec = ac.Id; // Not real life example here.  The SCS record would have a diff-
-            // erent ID in real life, but we don't keep it here, so for mocking
-            // we will pretend it is the same as the STC record ID.
+                                             // erent ID in real life, but we don't keep it here, so for mocking
+                                             // we will pretend it is the same as the STC record ID.
             stc.StcSubject = ac.SubjectCode;
             stc.StcTerm = ac.TermCode;
             //stc.StcTitle I don't think we use this
@@ -2110,7 +2248,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             };
             if (sortSpecificationIds != null)
             {
-                foreach(var id in sortSpecificationIds)
+                foreach (var id in sortSpecificationIds)
                 {
                     validResponse.SortedStudentAcadCreditsBySortSpecId.Add(new Transactions.SortedStudentAcadCreditsBySortSpecId()
                     {
@@ -2127,7 +2265,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             };
             if (sortSpecificationIds != null)
             {
-                foreach(var id in sortSpecificationIds)
+                foreach (var id in sortSpecificationIds)
                 {
                     duplicatesResponse.SortedStudentAcadCreditsBySortSpecId.Add(new Transactions.SortedStudentAcadCreditsBySortSpecId()
                     {

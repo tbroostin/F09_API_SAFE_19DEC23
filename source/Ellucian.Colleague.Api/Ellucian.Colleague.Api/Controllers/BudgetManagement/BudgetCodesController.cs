@@ -18,6 +18,7 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Filters;
 using System.Linq;
 using Ellucian.Colleague.Coordination.BudgetManagement.Services;
+using Ellucian.Colleague.Domain.BudgetManagement;
 
 namespace Ellucian.Colleague.Api.Controllers.BudgetManagement
 {
@@ -47,7 +48,7 @@ namespace Ellucian.Colleague.Api.Controllers.BudgetManagement
         /// Return all budgetCodes
         /// </summary>
         /// <returns>List of BudgetCodes <see cref="Dtos.BudgetCodes"/> objects representing matching budgetCodes</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { BudgetManagementPermissionCodes.ViewBudgetCode })]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.BudgetCodes>> GetBudgetCodesAsync()
         {
@@ -61,7 +62,8 @@ namespace Ellucian.Colleague.Api.Controllers.BudgetManagement
             }
             try
             {
-               var items = await _budgetCodesService.GetBudgetCodesAsync(bypassCache);
+                _budgetCodesService.ValidatePermissions(GetPermissionsMetaData());
+                var items = await _budgetCodesService.GetBudgetCodesAsync(bypassCache);
 
                 AddEthosContextProperties(
                  await _budgetCodesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -108,7 +110,7 @@ namespace Ellucian.Colleague.Api.Controllers.BudgetManagement
         /// </summary>
         /// <param name="guid">GUID to desired budgetCodes</param>
         /// <returns>A budgetCodes object <see cref="Dtos.BudgetCodes"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { BudgetManagementPermissionCodes.ViewBudgetCode })]
         public async Task<Dtos.BudgetCodes> GetBudgetCodesByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -126,7 +128,8 @@ namespace Ellucian.Colleague.Api.Controllers.BudgetManagement
             }
             try
             {
-                 AddEthosContextProperties(
+                _budgetCodesService.ValidatePermissions(GetPermissionsMetaData());
+                AddEthosContextProperties(
                    await _budgetCodesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                    await _budgetCodesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
                        new List<string>() { guid }));

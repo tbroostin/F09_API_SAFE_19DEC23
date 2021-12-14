@@ -61,7 +61,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         public async Task CurrentBenefits_TransactionReturnsNullTest()
         {
             transManagerMock.Setup(t => t.ExecuteAsync<CurrentBenefitsRequest, CurrentBenefitsResponse>(It.IsAny<CurrentBenefitsRequest>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
             var actual = await repositoryUnderTest.GetEmployeeCurrentBenefitsAsync(effectivePersonId);
         }
 

@@ -1032,7 +1032,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 // Call Section Repository with a non-existant section
                 var nonExistingIds = new List<string>() { "notInListId" };
-                dataAccessorMock.Setup(sacc => sacc.SelectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string[]>(), "?", true, 425)).ReturnsAsync(null);
+                dataAccessorMock.Setup(sacc => sacc.SelectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string[]>(), "?", true, 425)).ReturnsAsync(() => null);
                 var studentAttendances = await StudentAttendanceRepository.GetStudentSectionAttendancesAsync("student1", nonExistingIds);
                 Assert.AreEqual("student1", studentAttendances.StudentId);
                 Assert.AreEqual(0, studentAttendances.SectionWiseAttendances.Count);

@@ -23,6 +23,7 @@ using Ellucian.Web.Http.ModelBinding;
 using System.Linq;
 using System.Net.Http;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -54,7 +55,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <returns>List of AdmissionApplicationSupportingItems <see cref="Dtos.AdmissionApplicationSupportingItems"/> objects representing matching admissionApplicationSupportingItems</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter,PermissionsFilter(new string[] { StudentPermissionCodes.ViewApplicationSupportingItems, StudentPermissionCodes.UpdateApplicationSupportingItems })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetAdmissionApplicationSupportingItemsAsync(Paging page)
@@ -69,6 +70,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _admissionApplicationSupportingItemsService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -121,7 +123,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID to desired admissionApplicationSupportingItems</param>
         /// <returns>A admissionApplicationSupportingItems object <see cref="Dtos.AdmissionApplicationSupportingItems"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewApplicationSupportingItems, StudentPermissionCodes.UpdateApplicationSupportingItems })]
         public async Task<Dtos.AdmissionApplicationSupportingItems> GetAdmissionApplicationSupportingItemsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -139,7 +141,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
-
+                _admissionApplicationSupportingItemsService.ValidatePermissions(GetPermissionsMetaData());
                 var returnval = await _admissionApplicationSupportingItemsService.GetAdmissionApplicationSupportingItemsByGuidAsync(guid);
                 AddEthosContextProperties(
                                         await _admissionApplicationSupportingItemsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -185,7 +187,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="admissionApplicationSupportingItems">DTO of the updated admissionApplicationSupportingItems</param>
         /// <returns>A AdmissionApplicationSupportingItems object <see cref="Dtos.AdmissionApplicationSupportingItems"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.UpdateApplicationSupportingItems)]
         public async Task<Dtos.AdmissionApplicationSupportingItems> PutAdmissionApplicationSupportingItemsAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.AdmissionApplicationSupportingItems admissionApplicationSupportingItems)
         {
             if (string.IsNullOrEmpty(guid))
@@ -214,6 +216,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _admissionApplicationSupportingItemsService.ValidatePermissions(GetPermissionsMetaData());
                 await _admissionApplicationSupportingItemsService.ImportExtendedEthosData(await ExtractExtendedData(await _admissionApplicationSupportingItemsService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
                 var returnval =  await _admissionApplicationSupportingItemsService.UpdateAdmissionApplicationSupportingItemsAsync(
@@ -269,7 +272,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="admissionApplicationSupportingItems">DTO of the new admissionApplicationSupportingItems</param>
         /// <returns>A admissionApplicationSupportingItems object <see cref="Dtos.AdmissionApplicationSupportingItems"/> in HeDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.UpdateApplicationSupportingItems)]
         public async Task<Dtos.AdmissionApplicationSupportingItems> PostAdmissionApplicationSupportingItemsAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.AdmissionApplicationSupportingItems admissionApplicationSupportingItems)
         {
             if (admissionApplicationSupportingItems == null)
@@ -288,6 +291,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _admissionApplicationSupportingItemsService.ValidatePermissions(GetPermissionsMetaData());
                 await _admissionApplicationSupportingItemsService.ImportExtendedEthosData(await ExtractExtendedData(await _admissionApplicationSupportingItemsService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
                 var returnval = await _admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);

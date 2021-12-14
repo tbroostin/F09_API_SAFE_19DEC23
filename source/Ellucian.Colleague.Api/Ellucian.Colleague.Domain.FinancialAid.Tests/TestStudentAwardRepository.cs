@@ -28,7 +28,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
         /// awardPeriodData populuates test data into TestAwardPeriodData objects 
         /// </summary>
         public List<TestAwardPeriodRecord> awardPeriodData = new List<TestAwardPeriodRecord>()
-        {      
+        {
             new TestAwardPeriodRecord()
             {
                 //not modifiable - not a loan
@@ -72,7 +72,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 awardStatus = "P",
                 awardStatusCategory = AwardStatusCategory.Pending,
                 xmitAmount = null
-            },            
+            },
 
             new TestAwardPeriodRecord()
             {   //modifiable
@@ -201,7 +201,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 xmitAmount = null
             },
             new TestAwardPeriodRecord()
-            {  
+            {
                 year = "2017",
                 award = "SNEEZY",
                 awardPeriod = "17/FA",
@@ -259,7 +259,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             public class TestAwardPeriodAssociationData
             {
                 public string awardPeriodId;
-                public bool isFrozenOnAttendancePattern;                
+                public bool isFrozenOnAttendancePattern;
             }
         }
 
@@ -525,6 +525,10 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             return GetStudentAwardsForYearAsync(studentId, studentAwardYear, allAwards, allAwardStatuses).Result;
         }
 
+        public Task<IEnumerable<string>> GetCFPVersionAsync(string studentId, string awardYear)
+        {
+            return GetCFPVersionAsync(studentId, awardYear);
+        }
 
         public Task<IEnumerable<StudentAward>> UpdateStudentAwardsAsync(StudentAwardYear studentAwardYear, IEnumerable<StudentAward> studentAwards, IEnumerable<Award> awards, IEnumerable<AwardStatus> awardStatuses)
         {

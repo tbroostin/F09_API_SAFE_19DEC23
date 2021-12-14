@@ -1,4 +1,4 @@
-//Copyright 2019 Ellucian Company L.P. and its affiliates.
+//Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -70,6 +70,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             _studentReferenceDataRepository = studentReferenceDataRepository;
         }
 
+      
+
         #region GET, GET By ID
         /// <summary>
         /// Gets all student academic credentials.
@@ -87,14 +89,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                Dictionary<string, string> filterQualifiers = null, bool bypassCache = false)
         {
 
-            //access is ok if the current user has the view.
-            if (!await CheckStudentAcademicCredentialsViewPermAsync())
-            {
-                string message = string.Format("User '{0}' does not have permission to view student-academic-credentials.", CurrentUser.UserId);
-                logger.Error(message);
-                throw new PermissionsException(message);
-            }
-
+        
             #region Filters
 
             Domain.Student.Entities.StudentAcademicCredential criteriaEntity = new Domain.Student.Entities.StudentAcademicCredential();
@@ -319,14 +314,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>StudentAcademicCredentials DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.StudentAcademicCredentials> GetStudentAcademicCredentialsByGuidAsync(string guid, bool bypassCache = true)
         {
-            //access is ok if the current user has the view.
-            if (!await CheckStudentAcademicCredentialsViewPermAsync())
-            {
-                string message = string.Format("User '{0}' does not have permission to view student-academic-credentials.", CurrentUser.UserId);
-                logger.Error(message);
-                throw new PermissionsException(message);
-            }
-
+        
             if (string.IsNullOrEmpty(guid))
             {
                 throw new ArgumentNullException("guid", "GUID is required.");
@@ -518,32 +506,75 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
             //disciplines Majors
             List<GuidObject2> disciplines = new List<GuidObject2>();
-            if (source.AcadDisciplines != null && source.AcadDisciplines.Any())
+            
+            if (source.AcadMajors != null && source.AcadMajors.Any())
             {
-                //GetAcadDisciplinesGuidAsync
-                foreach (var major in source.AcadDisciplines)
+                var majors = await GetAcademicMajors(source, bypassCache);
+                if ((majors != null) && (majors.Any()))
                 {
-                    try
+                    foreach (var acadMajor in source.AcadMajors)
                     {
-                        var guid = await _referenceDataRepository.GetAcadDisciplinesGuidAsync(major);
-                        if (string.IsNullOrEmpty(guid))
+
+                        var major = majors.FirstOrDefault(x => x.Code.Equals(acadMajor, StringComparison.OrdinalIgnoreCase));
+
+                        if ((major == null) || (string.IsNullOrEmpty(major.Guid)))
                         {
-                            IntegrationApiExceptionAddError(string.Format("Academic discipline guid not found for code '{0}', Record ID:'{1}", major, source.RecordKey),
-                                                "disciplines.id", source.RecordGuid, source.RecordKey);
+                            IntegrationApiExceptionAddError(string.Format("Academic discipline guid not found for major code '{0}', Record ID:'{1}", acadMajor, source.RecordKey),
+                                                "GUID.Not.Found", source.RecordGuid, source.RecordKey);
                         }
                         else
                         {
-                            GuidObject2 guidObject2 = new GuidObject2(guid);
-                            disciplines.Add(guidObject2);
+                            disciplines.Add(new GuidObject2(major.Guid));
                         }
-                    }
-                    catch (Exception)
-                    {
-                        IntegrationApiExceptionAddError(string.Format("Academic discipline guid not found for code '{0}', Record ID:'{1}", major, source.RecordKey),
-                                            "disciplines.id", source.RecordGuid, source.RecordKey);
                     }
                 }
             }
+
+            if (source.AcadMinors != null && source.AcadMinors.Any())
+            {
+                var minors = await GetAcademicMinors(source, bypassCache);
+                if ((minors != null) && (minors.Any()))
+                {
+                    foreach (var acadMinor in source.AcadMinors)
+                    {
+                        var minor = minors.FirstOrDefault(x => x.Code.Equals(acadMinor, StringComparison.OrdinalIgnoreCase));
+
+                        if ((minor == null) || (string.IsNullOrEmpty(minor.Guid)))
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Academic discipline guid not found for minor code '{0}', Record ID:'{1}", acadMinor, source.RecordKey),
+                                                "GUID.Not.Found", source.RecordGuid, source.RecordKey);
+                        }
+                        else
+                        {
+                            disciplines.Add(new GuidObject2(minor.Guid));
+                        }
+                    }
+                }
+            }
+
+            if (source.AcadSpecializations != null && source.AcadSpecializations.Any())
+            {
+                var specializations = await GetAcademicSpecializations(source, bypassCache);
+                if ((specializations != null) && (specializations.Any()))
+                {
+                    foreach (var acadSpecialization in source.AcadSpecializations)
+                    {
+
+                        var specialization = specializations.FirstOrDefault(x => x.Code.Equals(acadSpecialization, StringComparison.OrdinalIgnoreCase));
+
+                        if ((specialization == null) || (string.IsNullOrEmpty(specialization.Guid)))
+                        {
+                            IntegrationApiExceptionAddError(string.Format("Academic discipline guid not found for specialization code '{0}', Record ID:'{1}", acadSpecialization, source.RecordKey),
+                                                "GUID.Not.Found", source.RecordGuid, source.RecordKey);
+                        }
+                        else
+                        {
+                            disciplines.Add(new GuidObject2(specialization.Guid));
+                        }
+                    }
+                }
+            }
+
             if (disciplines.Any())
             {
                 dto.Disciplines = disciplines;
@@ -620,6 +651,58 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return dto;
         }
 
+        private async Task<IEnumerable<Domain.Base.Entities.AcademicDiscipline>> GetAcademicMajors(StudentAcademicCredential source, bool bypassCache = false)
+        {
+            var acadDisciplines = await this.GetAcademicDisciplinesAsync(bypassCache);
+            if (acadDisciplines == null)
+            {
+                IntegrationApiExceptionAddError("Academic major records not found.", "GUID.Not.Found", source.RecordGuid, source.RecordKey);
+
+            }
+            var majors = acadDisciplines.Where(a => a.AcademicDisciplineType == Domain.Base.Entities.AcademicDisciplineType.Major);
+            if ((majors == null) || (!majors.Any()))
+            {
+                IntegrationApiExceptionAddError("Academic major records not found.", "GUID.Not.Found", source.RecordGuid, source.RecordKey);
+            }
+
+            return majors;
+        }
+
+
+        private async Task<IEnumerable<Domain.Base.Entities.AcademicDiscipline>> GetAcademicMinors(StudentAcademicCredential source, bool bypassCache = false)
+        {
+            var acadDisciplines = await this.GetAcademicDisciplinesAsync(bypassCache);
+            if (acadDisciplines == null)
+            {
+                IntegrationApiExceptionAddError("Academic minor records not found.", "GUID.Not.Found", source.RecordGuid, source.RecordKey);
+
+            }
+            var minors = acadDisciplines.Where(a => a.AcademicDisciplineType == Domain.Base.Entities.AcademicDisciplineType.Minor);
+            if ((minors == null) || (!minors.Any()))
+            {
+                IntegrationApiExceptionAddError("Academic minor records not found.", "GUID.Not.Found", source.RecordGuid, source.RecordKey);
+            }
+
+            return minors;
+        }
+
+
+        private async Task<IEnumerable<Domain.Base.Entities.AcademicDiscipline>> GetAcademicSpecializations(StudentAcademicCredential source, bool bypassCache = false)
+        {
+            var acadDisciplines = await this.GetAcademicDisciplinesAsync(bypassCache);
+            if (acadDisciplines == null)
+            {
+                IntegrationApiExceptionAddError("Academic specialization records not found.", "GUID.Not.Found", source.RecordGuid, source.RecordKey);
+
+            }
+            var concentrations = acadDisciplines.Where(a => a.AcademicDisciplineType == Domain.Base.Entities.AcademicDisciplineType.Concentration);
+            if ((concentrations == null) || (!concentrations.Any()))
+            {
+                IntegrationApiExceptionAddError("Academic specialization records not found.", "GUID.Not.Found", source.RecordGuid, source.RecordKey);
+            }
+
+            return concentrations;
+        }
         //Academic credentials
         private IEnumerable<AcadCredential> _acadCredentials;
         private async Task<IEnumerable<AcadCredential>> GetAcadCredentialsAsync(bool bypassCache)
@@ -656,19 +739,20 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             return _academicPrograms ?? (_academicPrograms = await _studentReferenceDataRepository.GetAcademicProgramsAsync(bypassCache));
         }
 
-        #endregion
-
-        #region Permissions
         /// <summary>
-        /// Permissions code that allows an external system to perform the READ operation.
+        /// Academic Disciplines
         /// </summary>
-        /// <returns></returns>
-        private async Task<bool> CheckStudentAcademicCredentialsViewPermAsync()
+        private IEnumerable<Domain.Base.Entities.AcademicDiscipline> _academicDisciplines;
+        private async Task<IEnumerable<Domain.Base.Entities.AcademicDiscipline>> GetAcademicDisciplinesAsync(bool bypassCache)
         {
-            IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
-            return userPermissions.Contains(StudentPermissionCodes.ViewStudentAcademicCredentials) ? true : false;
+            if (_academicDisciplines == null)
+            {
+                _academicDisciplines = await _referenceDataRepository.GetAcademicDisciplinesAsync(bypassCache);
+            }
+            return _academicDisciplines;
         }
-
         #endregion
+
+      
     }
 }

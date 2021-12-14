@@ -52,6 +52,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <param name="criteria">API criteria info to filter on.</param>
         /// <returns>List of PayPeriods <see cref="Dtos.PayPeriods"/> objects representing matching payPeriods</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter, ValidateQueryStringFilter()]
         [QueryStringFilterFilter("criteria", typeof(Dtos.PayPeriods)), FilteringFilter(IgnoreFiltering = true)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
@@ -130,6 +131,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="guid">GUID to desired payPeriods</param>
         /// <returns>A payPeriods object <see cref="Dtos.PayPeriods"/> in EEDM format</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         public async Task<Dtos.PayPeriods> GetPayPeriodsByGuidAsync(string guid)
         {

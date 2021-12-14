@@ -15,6 +15,7 @@ namespace Ellucian.Web.Http.Routes
     public class ExtendedRouteConstraint : IRouteConstraint
     {
 
+        const string hedtechIntegrationMediaTypePrefix = "application/vnd.hedtech.integration."; 
         /// <summary>
         /// Initializes a new instance of the <see cref="ContentTypeConstraint"/> class.
         /// </summary>
@@ -57,6 +58,22 @@ namespace Ellucian.Web.Http.Routes
                 if (ethosExtensibilityConfiguration != null)
                 {
                     matches = ethosExtensibilityConfiguration.ContainsKey(values["resource"].ToString());
+                }
+
+                if (!matches)
+                {
+                    var acceptHeader = httpContext.Request.Headers["Accept"];
+                   
+                    var alternativeRepresenationName = acceptHeader.Replace(hedtechIntegrationMediaTypePrefix, "");
+
+                    if (alternativeRepresenationName.LastIndexOf(".v") > 0)
+                    {
+                        alternativeRepresenationName = alternativeRepresenationName.Remove(alternativeRepresenationName.LastIndexOf(".v"));
+                        if (!string.IsNullOrEmpty(alternativeRepresenationName))
+                        {
+                            matches = ethosExtensibilityConfiguration.ContainsKey(alternativeRepresenationName);
+                        }
+                    }
                 }
             }
             catch (Exception ex)

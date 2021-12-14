@@ -54,7 +54,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             apiSettingsMock = new ApiSettings("null");
 
             var regTerms = await new TermRepository(cacheProvider, txFactory, logger).GetRegistrationTermsAsync();
-            var sectionRepo = new SectionRepository(cacheProvider, txFactory, logger, apiSettingsMock);
+            var sectionRepo = new SectionRepository(cacheProvider, txFactory, logger, new Ellucian.Colleague.Domain.Student.Tests.TestFacultyRepository(), new Ellucian.Colleague.Domain.Student.Tests.TestTermRepository(),  apiSettingsMock);
             var sw = new Stopwatch();
             sw.Start();
             var count = (await sectionRepo.GetRegistrationSectionsAsync(regTerms)).Count();

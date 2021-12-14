@@ -1,4 +1,4 @@
-﻿/* Copyright 2019-2020 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2019-2021 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -63,9 +63,11 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 effectivePersonId = CurrentUser.PersonId;
             }
 
-            else if (!CurrentUser.IsPerson(effectivePersonId) && !(HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest)))
+            bool hasProxyAccess = HasProxyAccessForPerson(effectivePersonId, ProxyWorkflowConstants.TimeManagementLeaveApproval);
+
+            if (!CurrentUser.IsPerson(effectivePersonId) && !(hasProxyAccess || HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest)))
             {
-                throw new PermissionsException("User does not have permission to get leave request information");
+                throw new PermissionsException(string.Format("CurrentUser {0} is not the supervisor {1} nor has proxy access to supervisor", CurrentUser.PersonId, effectivePersonId));
             }
 
             var personIds = new List<string>() { effectivePersonId };
@@ -75,7 +77,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 try
                 {
-                    personIds.AddRange((await supervisorsRepository.GetSuperviseesByPrimaryPositionForSupervisorAsync(effectivePersonId)));
+                    personIds.AddRange(await supervisorsRepository.GetSuperviseesByPrimaryPositionForSupervisorAsync(effectivePersonId));
                 }
                 catch (Exception e)
                 {
@@ -84,7 +86,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
             var leaveRequestEntities = await employeeLeaveRequestRepository.GetLeaveRequestsAsync(personIds);
 
-            var leaveRequestEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.HumanResources.Entities.LeaveRequest, Dtos.HumanResources.LeaveRequest>();
+            var leaveRequestEntityToDtoAdapter = _adapterRegistry.GetAdapter<LeaveRequest, Dtos.HumanResources.LeaveRequest>();
 
             var leaveRequestDTOs = leaveRequestEntities.Select(lre => leaveRequestEntityToDtoAdapter.MapToType(lre)).ToList();
 
@@ -100,46 +102,37 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns>List of Leave Request DTO</returns>
         public async Task<IEnumerable<Dtos.HumanResources.LeaveRequest>> GetLeaveRequestsForTimeEntryAsync(DateTime startDate, DateTime endDate, string effectivePersonId = null)
         {
-           
             //Take LoggedInUser Id when no id is passed
             if (string.IsNullOrWhiteSpace(effectivePersonId))
             {
                 effectivePersonId = CurrentUser.PersonId;
             }
 
-            //Check for Proxy Access(TO-DO) , Timecard Approver Permission , when effective person id is not same as logged in User  
-            if (!CurrentUser.IsPerson(effectivePersonId) &&
-                    !(HasPermission(HumanResourcesPermissionCodes.ApproveRejectEmployeeTimecard)))
+            if (!CurrentUser.IsPerson(effectivePersonId)
+                && !HasPermission(HumanResourcesPermissionCodes.ApproveRejectEmployeeTimecard)
+                && !HasProxyAccessForPerson(effectivePersonId, ProxyWorkflowConstants.TimeManagementTimeApproval))
             {
                 throw new PermissionsException(string.Format("User {0} does not have permission to fetch leave request information of {1}", CurrentUser.PersonId, effectivePersonId));
             }
 
             var personIds = new List<string>() { effectivePersonId };
-
-            if (HasPermission(HumanResourcesPermissionCodes.ApproveRejectEmployeeTimecard))
+            var superviseeIds = await supervisorsRepository.GetSuperviseesBySupervisorAsync(effectivePersonId);
+            if (superviseeIds == null || !superviseeIds.Any())
             {
-                var superviseeIds = await supervisorsRepository.GetSuperviseesBySupervisorAsync(effectivePersonId);
-                if (superviseeIds == null || !superviseeIds.Any())
-                {
-                    logger.Error(string.Format("Supervisor {0} does not supervise any employees", effectivePersonId));
-                }
-                else
-                {
-                    personIds.AddRange(superviseeIds);
-                }
-
+                logger.Error(string.Format("Supervisor {0} does not supervise any employees", effectivePersonId));
+            }
+            else
+            {
+                personIds.AddRange(superviseeIds);
             }
 
-           //Invoke repository method
-            var leaveRequestEntities = await employeeLeaveRequestRepository.GetLeaveRequestsForTimeEntryAsync(startDate,endDate,personIds.Distinct());
+            //Invoke repository method
+            var leaveRequestEntities = await employeeLeaveRequestRepository.GetLeaveRequestsForTimeEntryAsync(startDate, endDate, personIds.Distinct());
             var leaveRequestEntityToDtoAdapter = _adapterRegistry.GetAdapter<Domain.HumanResources.Entities.LeaveRequest, Dtos.HumanResources.LeaveRequest>();
             var leaveRequestDTOs = leaveRequestEntities.Select(lre => leaveRequestEntityToDtoAdapter.MapToType(lre)).ToList();
 
             return leaveRequestDTOs;
         }
-
-      
-
 
         /// <summary>
         /// Service method that gets a single LeaveRequest object matching the given id based on the user's permissions. 
@@ -158,10 +151,14 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 effectivePersonId = CurrentUser.PersonId;
             }
-            else if (!CurrentUser.IsPerson(effectivePersonId) && !HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest))
+
+            bool hasProxyAccess = HasProxyAccessForPerson(effectivePersonId, ProxyWorkflowConstants.TimeManagementLeaveApproval);
+
+            if (!CurrentUser.IsPerson(effectivePersonId) && !(hasProxyAccess || HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest)))
             {
-                throw new PermissionsException("User does not have permission to view leave request information");
+                throw new PermissionsException(string.Format("CurrentUser {0} is not the supervisor {1} nor has proxy access to supervisor", CurrentUser.PersonId, effectivePersonId));
             }
+
             try
             {
                 var leaveRequestEntity = await employeeLeaveRequestRepository.GetLeaveRequestInfoByLeaveRequestIdAsync(id);
@@ -270,6 +267,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <returns>Newly created Leave Request Status Object</returns>
         public async Task<Dtos.HumanResources.LeaveRequestStatus> CreateLeaveRequestStatusAsync(Dtos.HumanResources.LeaveRequestStatus status, string effectivePersonId = null)
         {
+
+
             if (status == null)
             {
                 throw new ArgumentNullException("status");
@@ -284,13 +283,16 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 effectivePersonId = CurrentUser.PersonId;
             }
-            else if (!CurrentUser.IsPerson(effectivePersonId) && !HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest))
+
+            bool hasProxyAccess = HasProxyAccessForPerson(effectivePersonId, ProxyWorkflowConstants.TimeManagementLeaveApproval);
+
+            if (!CurrentUser.IsPerson(effectivePersonId) && !(hasProxyAccess || HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest)))
             {
-                throw new PermissionsException("User does not have permission to create leave request status information");
+                throw new PermissionsException(string.Format("CurrentUser {0} is not the supervisor {1} nor has proxy access to supervisor", CurrentUser.PersonId, effectivePersonId));
             }
 
             // If the leaveRequestEntity's employeeId doesn't match the current user's personId, then throw a permission exception.
-            // Note: Approver of this leave request is allowed to create a leave request status for this leave request.
+            // Note: Approver/Proxy Approver of this leave request is allowed to create a leave request status for this leave request.
             var leaveRequestEntity = await employeeLeaveRequestRepository.GetLeaveRequestInfoByLeaveRequestIdAsync(status.LeaveRequestId);
             if (leaveRequestEntity == null)
             {
@@ -468,9 +470,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 effectivePersonId = CurrentUser.PersonId;
             }
-            else if (!CurrentUser.IsPerson(effectivePersonId) && !HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest))
+
+            bool hasProxyAccess = HasProxyAccessForPerson(effectivePersonId, ProxyWorkflowConstants.TimeManagementLeaveApproval);
+
+            if (!CurrentUser.IsPerson(effectivePersonId) && !(hasProxyAccess || HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest)))
             {
-                throw new PermissionsException(string.Format("Current user does not have permission to create a comment for employee {0}'s leave request", effectivePersonId));
+                throw new PermissionsException(string.Format("CurrentUser {0} is not the supervisor {1} nor has proxy access to supervisor", CurrentUser.PersonId, effectivePersonId));
             }
 
             // If the leaveRequestEntity's employeeId doesn't match the current user's personId, then throw a permission exception.
@@ -488,8 +493,8 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             }
 
             //Get the Comment Authour name from person base
-            var personBaseEntity = await personBaseRepository.GetPersonBaseAsync(effectivePersonId);
-            string commentAuthorName = effectivePersonId;
+            var personBaseEntity = await personBaseRepository.GetPersonBaseAsync(CurrentUser.PersonId);
+            string commentAuthorName = CurrentUser.PersonId;
             if (personBaseEntity != null)
             {
                 // if the entity has a FirstName, use FirstName and LastName, else just set dto.CommentAuthorName to LastName
@@ -516,7 +521,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             return newLeaveRequestCommentDTO;
         }
-
 
         #region Helper_Methods
         /// <summary>
@@ -671,19 +675,24 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <summary>
         /// Retreives list of Supervisees for a Leave Approver/Supervisor
         /// </summary>
+        /// <param name="effectivePersonId">Optional parameter for passing effective person Id</param>
         /// <returns>List of HumanDemographics DTOs containing supervisee information</returns>
-        public async Task<IEnumerable<Dtos.HumanResources.HumanResourceDemographics>> GetSuperviseesByPrimaryPositionForSupervisorAsync()
+        public async Task<IEnumerable<Dtos.HumanResources.HumanResourceDemographics>> GetSuperviseesByPrimaryPositionForSupervisorAsync(string effectivePersonId = null)
         {
-            //Get the logged in user id
-            string supervisorId = CurrentUser.PersonId;
-
-            //Fetch Supervisees only for users with APPROVE.REJECT.LEAVE.REQUEST
-            if (!HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest))
+            if (string.IsNullOrEmpty(effectivePersonId))
             {
-                throw new PermissionsException(string.Format("Current user does not have permission to view supervisee information"));
+                effectivePersonId = CurrentUser.PersonId;
             }
+
+            bool hasProxyAccess = HasProxyAccessForPerson(effectivePersonId, ProxyWorkflowConstants.TimeManagementLeaveApproval);
+
+            if (!CurrentUser.IsPerson(effectivePersonId) && !(hasProxyAccess || HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest)))
+            {
+                throw new PermissionsException(string.Format("CurrentUser {0} is not the supervisor {1} nor has proxy access to supervisor", CurrentUser.PersonId, effectivePersonId));
+            }
+
             // Get all the supervisorIds for the input positionId
-            var supervisorIds = await supervisorsRepository.GetSuperviseesByPrimaryPositionForSupervisorAsync(supervisorId);
+            var supervisorIds = await supervisorsRepository.GetSuperviseesByPrimaryPositionForSupervisorAsync(effectivePersonId);
             List<PersonBase> personBaseEntities = new List<PersonBase>();
             if (supervisorIds != null && supervisorIds.Any())
             {
@@ -708,7 +717,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             {
                 supervisedEmployeeIds = supervisedEmployeeIds == null ? await supervisorsRepository.GetSuperviseesByPrimaryPositionForSupervisorAsync(supervisorId) : supervisedEmployeeIds;
                 return (supervisedEmployeeIds != null && supervisedEmployeeIds.Contains(employeeId));
-
             }
             else
             {

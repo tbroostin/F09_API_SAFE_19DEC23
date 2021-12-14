@@ -1,16 +1,13 @@
-﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
-using Ellucian.Colleague.Dtos;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
-using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
@@ -37,8 +34,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             currentUserFactoryMock = new Mock<ICurrentUserFactory>();
             leaveBalanceConfigurationRepositoryMock = new Mock<ILeaveBalanceConfigurationRepository>();
 
+            var leaveBalanceConfigurationAdapter = new AutoMapperAdapter<LeaveBalanceConfiguration, Dtos.HumanResources.LeaveBalanceConfiguration>(adapterRegistryMock.Object, loggerMock.Object);
+            adapterRegistryMock.Setup(a => a.GetAdapter<LeaveBalanceConfiguration, Dtos.HumanResources.LeaveBalanceConfiguration>()).Returns(leaveBalanceConfigurationAdapter);
+
             leaveBalanceConfigurationService = new LeaveBalanceConfigurationService(leaveBalanceConfigurationRepositoryMock.Object, adapterRegistryMock.Object, currentUserFactoryMock.Object,
                 roleRepositoryMock.Object, loggerMock.Object, null, null);
+            
         }
 
         [TestCleanup]
@@ -54,7 +55,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         [TestMethod]
         public async Task LeaveBalanceConfigurationService_GetLeaveBalanceConfigurationAsync_Repository_Returns_Null()
         {
-            leaveBalanceConfigurationRepositoryMock.Setup(l => l.GetLeaveBalanceConfigurationAsync()).ReturnsAsync(null);
+            leaveBalanceConfigurationRepositoryMock.Setup(l => l.GetLeaveBalanceConfigurationAsync()).ReturnsAsync(() => null);
             var result = await leaveBalanceConfigurationService.GetLeaveBalanceConfigurationAsync();
             Assert.IsNull(result);
         }

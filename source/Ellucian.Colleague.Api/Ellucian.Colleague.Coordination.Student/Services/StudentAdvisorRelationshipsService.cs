@@ -63,9 +63,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         public async Task<Tuple<IEnumerable<Dtos.StudentAdvisorRelationships>, int>> GetStudentAdvisorRelationshipsAsync(int offset, int limit, bool bypassCache = false,
             string student = "", string advisor = "", string advisorType = "", string startAcademicPeriod = "")
         {
-
-            CheckGetViewStudentAdvisorRelationshipPermission();
-
             var studentAdvisorRelationshipsCollection = new List<Dtos.StudentAdvisorRelationships>();
 
             //Currently not supporting this filter.
@@ -114,10 +111,10 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 try
                 {
-                    var advisorTypes = await _referenceDataRepository.GetAdvisorTypesAsync(false);
+                    var advisorTypes = await _referenceDataRepository.GetAdvisorTypesAsync(bypassCache);
                     advisorTypeCode = advisorTypes.FirstOrDefault(x => x.Guid == advisorType).Code;
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     //value for advisor Type was not found so send a empty set.
                     return new Tuple<IEnumerable<Dtos.StudentAdvisorRelationships>, int>(studentAdvisorRelationshipsCollection, 0);
@@ -144,7 +141,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 Dtos.StudentAdvisorRelationships studentAdvisorRelationshipsDto = 
                     await ConvertStudentAdvisorRelationshipsEntityToDto(studentAdvisorRelationships, await _personRepository.GetPersonGuidsCollectionAsync(personIds.Distinct().ToList()));
-                studentAdvisorRelationshipsCollection.Add(studentAdvisorRelationshipsDto);
+                if (studentAdvisorRelationshipsDto != null)
+                    studentAdvisorRelationshipsCollection.Add(studentAdvisorRelationshipsDto);
+            }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
             }
 
             return new Tuple<IEnumerable<Dtos.StudentAdvisorRelationships>, int>(studentAdvisorRelationshipsCollection, totalRecords);
@@ -157,11 +160,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>StudentAdvisorRelationships DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.StudentAdvisorRelationships> GetStudentAdvisorRelationshipsByGuidAsync(string guid)
         {
-            CheckGetViewStudentAdvisorRelationshipPermission();
             if (string.IsNullOrWhiteSpace(guid))
             {
                 throw new ArgumentNullException("guid", "student-advisor-relationships requires a GUID");
             }
+
+            StudentAdvisorRelationships studentAdvisorRelationshipsDto = null;
             try
             {
                 var entity = await _studentAdvisorRelationshipsRepository.GetStudentAdvisorRelationshipsByGuidAsync(guid);
@@ -169,17 +173,28 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
                 if (!string.IsNullOrWhiteSpace(entity.Advisor)) personIds.Add(entity.Advisor);
                 if (!string.IsNullOrWhiteSpace(entity.Student)) personIds.Add(entity.Student);
+                
+                studentAdvisorRelationshipsDto = await ConvertStudentAdvisorRelationshipsEntityToDto(entity, await _personRepository.GetPersonGuidsCollectionAsync(personIds.Distinct().ToList()));
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+            }
+            catch (KeyNotFoundException)
+            {
+                IntegrationApiExceptionAddError("student-advisor-relationships not found for GUID " + guid, "GUID.Not.Found", guid, "", System.Net.HttpStatusCode.NotFound);
+            }
+            catch (InvalidOperationException)
+            {
+                IntegrationApiExceptionAddError("student-advisor-relationships not found for GUID " + guid, "GUID.Not.Found", guid, "", System.Net.HttpStatusCode.NotFound);
+            }
 
-                return await ConvertStudentAdvisorRelationshipsEntityToDto(entity, await _personRepository.GetPersonGuidsCollectionAsync(personIds.Distinct().ToList()));
-            }
-            catch (KeyNotFoundException ex)
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
             {
-                throw new KeyNotFoundException("student-advisor-relationships not found for GUID " + guid, ex);
+                throw IntegrationApiException;
             }
-            catch (InvalidOperationException ex)
-            {
-                throw new KeyNotFoundException("student-advisor-relationships not found for GUID " + guid, ex);
-            }
+
+            return studentAdvisorRelationshipsDto;
         }
 
 
@@ -196,23 +211,27 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             //validate that the source data coming in contains the required data needed for the API response
             if (string.IsNullOrWhiteSpace(source.Guid))
             {
-                throw new Exception("Record does not contain a valid GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Guid + "'");
+                IntegrationApiExceptionAddError("Record does not contain a valid GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Id + "'",
+                    "Bad.Data", source.Guid, source.Id);
             }
             studentAdvisorRelationships.Id = source.Guid;
 
             if (string.IsNullOrWhiteSpace(source.Advisor))
             {
-                throw new Exception("Record does not contain a advisor ID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Guid + "'");
+                IntegrationApiExceptionAddError("Record does not contain an advisor ID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Id + "'",
+                    "Bad.Data", source.Guid, source.Id);
             }
             
             if (string.IsNullOrWhiteSpace(source.Student))
             {
-                throw new Exception("Record does not contain a student ID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Guid + "'");
+                IntegrationApiExceptionAddError("Record does not contain a student ID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Id + "'",
+                    "Bad.Data", source.Guid, source.Id);
             }
 
             if (source.StartOn == null)
             {
-                throw new Exception("Record does not contain a start date. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Guid + "'");
+                IntegrationApiExceptionAddError("Record does not contain a start date. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Id + "'",
+                    "Bad.Data", source.Guid, source.Id);
             }
 
             //Get the advisor GUID
@@ -223,7 +242,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             else
             {
-                throw new Exception("We could not retrive the advisor's GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Guid + "'");
+                IntegrationApiExceptionAddError("Could not retrive the advisor's GUID. Entity: PERSON, Record ID: '" + source.Advisor + "'",
+                    "Validation.Exception", source.Guid, source.Id);
             }
 
             //get the student GUID
@@ -234,7 +254,8 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             else
             {
-                throw new Exception("We could not retrive the student's GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Guid + "'");
+                IntegrationApiExceptionAddError("Could not retrive the student's GUID. Entity: PERSON, Record ID: '" + source.Student + "'",
+                    "Validation.Exception", source.Guid, source.Id);
             }
 
             //Get the AdvisorType GUID
@@ -245,13 +266,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var advisorTypeGuid = await _referenceDataRepository.GetAdvisorTypeGuidAsync(source.AdvisorType);
                     if (string.IsNullOrEmpty(advisorTypeGuid))
                     {
-                        throw new Exception("The record's field STAD.TYPE could not be matched with Advisor types or missing a GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Id + "'");
+                        IntegrationApiExceptionAddError("The field STAD.TYPE could not be matched with an advisor-types resource or the GUID is missing. Entity: ADVISOR.TYPES, Record ID: '" + source.AdvisorType + "'",
+                            "Validation.Exception", source.Guid, source.Id);
                     }
                     studentAdvisorRelationships.AdvisorType = new GuidObject2(advisorTypeGuid);
                 }
-                catch(RepositoryException ex)
+                catch(RepositoryException)
                 {
-                    throw new Exception("The record's field STAD.TYPE could not be matched with Advisor types or missing a GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Id + "'");
+                    IntegrationApiExceptionAddError("The field STAD.TYPE could not be matched with an advisor-types resource or the GUID is missing. Entity: ADVISOR.TYPES, Record ID: '" + source.AdvisorType + "'",
+                        "Validation.Exception", source.Guid, source.Id);
                 }
             }
 
@@ -263,13 +286,15 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var programGuid = await _referenceDataRepository.GetAcademicProgramsGuidAsync(source.Program);
                     if (string.IsNullOrEmpty(programGuid))
                     {
-                        throw new Exception("The record's field STAD.ACAD.PROGRAM could not be matched with Acad programs list or it is missing a GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Id + "'");
+                        IntegrationApiExceptionAddError("The field STAD.ACAD.PROGRAM could not be matched with an academic-programs resource or the GUID is missing. Entity: ACAD.PROGRAMS, Record ID: '" + source.Program + "'",
+                            "Validation.Exception", source.Guid, source.Id);
                     }
                     studentAdvisorRelationships.Program = new GuidObject2(programGuid);
                 }
-                catch(RepositoryException ex)
+                catch(RepositoryException)
                 {
-                    throw new Exception("The record's field STAD.ACAD.PROGRAM could not be matched with Acad programs list or it is missing a GUID. Entity: STUDENT.ADVISEMENT, Record ID: '" + source.Id + "'");
+                    IntegrationApiExceptionAddError("The field STAD.ACAD.PROGRAM could not be matched with an academic-programs resource or the GUID is missing. Entity: ACAD.PROGRAMS, Record ID: '" + source.Program + "'",
+                        "Validation.Exception", source.Guid, source.Id);
                 }
             }
 
@@ -283,7 +308,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             if (_acadPrograms == null)
             {
-                _acadPrograms = await _referenceDataRepository.GetAcademicProgramsAsync(false);
+                _acadPrograms = await _referenceDataRepository.GetAcademicProgramsAsync(bypassCache);
             }
             return _acadPrograms;
         }
@@ -292,21 +317,9 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             if (_advisorTypes == null)
             {
-                _advisorTypes = await _referenceDataRepository.GetAdvisorTypesAsync(false);
+                _advisorTypes = await _referenceDataRepository.GetAdvisorTypesAsync(bypassCache);
             }
             return _advisorTypes;
         }
-
-        private void CheckGetViewStudentAdvisorRelationshipPermission()
-        {
-            var hasPermission = HasPermission(StudentPermissionCodes.ViewStudentAdivsorRelationships);
-
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view student advisor relationships.");
-            }
-        }
-
-
     }
 }

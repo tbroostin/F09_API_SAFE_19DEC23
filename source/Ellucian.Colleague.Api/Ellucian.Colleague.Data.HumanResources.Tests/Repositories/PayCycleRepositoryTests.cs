@@ -163,6 +163,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 for (int i = 0; i < expected.Count(); i++)
                 {
                     Assert.AreEqual(expected[i].Description, actual[i].Description);
+                    Assert.AreEqual(expected[i].DisplayInSelfService, actual[i].DisplayInSelfService);
                     Assert.AreEqual(expected[i].AnnualPayFrequency, actual[i].AnnualPayFrequency);
                     CollectionAssert.AreEqual(expected[i].PayClassIds, actual[i].PayClassIds);
                     CollectionAssert.AreEqual(expected[i].PayPeriods, actual[i].PayPeriods);

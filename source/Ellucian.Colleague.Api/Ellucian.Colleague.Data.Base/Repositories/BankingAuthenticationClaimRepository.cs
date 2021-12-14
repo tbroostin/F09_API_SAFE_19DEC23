@@ -71,12 +71,12 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             }
 
             //cleanup the database by deleting records that expired yesterday
-            var todayAsPickDate = DmiString.DateTimeToPickDate(DateTime.Today);
-            var criteria = string.Format("WITH BAC.EXPIRATION.DATE LT {0}", todayAsPickDate);
+            var today = await GetUnidataFormatDateAsync(DateTime.Now);
+            var criteria = string.Format("WITH BAC.EXPIRATION.DATE LT '{0}'", today);
             var expiredTokens = await DataReader.SelectAsync("BANKING.AUTH.CLAIMS", criteria);
             if (expiredTokens != null && expiredTokens.Any())
             {
-              
+
                 var request = new DeleteBankingAuthClaimsRequest()
                 {
                     RecordIds = expiredTokens.ToList()
@@ -87,29 +87,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             }
 
-
             return new BankingAuthenticationToken(expiration.Value, parsedToken);
         }
-
-
-
-
-        //public async Task Delete(Guid token)
-        //{
-        //    var todayAsPickDate = DmiString.DateTimeToPickDate(DateTime.Today);
-        //    var criteria = string.Format("WITH BAC.EXPIRATION.DATE LT {0}", todayAsPickDate);
-        //    var expiredTokens = (await DataReader.SelectAsync("BANKING.AUTH.CLAIMS", criteria)).ToList();
-
-        //    expiredTokens.Add(token.ToString());
-
-        //    var request = new DeleteBankingAuthClaimsRequest()
-        //    {
-        //        RecordIds = expiredTokens
-        //    };
-
-        //    await transactionInvoker.ExecuteAsync<DeleteBankingAuthClaimsRequest, DeleteBankingAuthClaimsResponse>(request);
-
-        //    return;
-        //}
     }
 }

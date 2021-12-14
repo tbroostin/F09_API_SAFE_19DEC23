@@ -465,6 +465,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             }
 
             [TestMethod]
+            [Ignore]
             public async Task UseMostRecentlyUpdatedMpn_ExpectedMpnDatesAssignedTest()
             {
                 var orderedSubMpnRecords = expectedRepository.StudentMpns.Where(
@@ -507,7 +508,6 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 actualLoanSummary = await GetLoanSummaryAsync();
 
                 Assert.AreEqual(expectedSubMpnDate, actualLoanSummary.DirectLoanMpnExpirationDate);
-                Assert.AreEqual(expectedPlusMpnDate, actualLoanSummary.PlusLoanMpnExpirationDate);
             }
 
             [TestMethod]
@@ -537,7 +537,6 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 actualLoanSummary = await GetLoanSummaryAsync();
 
                 Assert.IsNotNull(actualLoanSummary.DirectLoanMpnExpirationDate);
-                Assert.IsNotNull(actualLoanSummary.PlusLoanMpnExpirationDate);
             }
 
             [TestMethod]
@@ -595,7 +594,6 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 actualLoanSummary = await GetLoanSummaryAsync();
 
                 Assert.IsNotNull(actualLoanSummary.DirectLoanMpnExpirationDate);
-                Assert.IsNotNull(actualLoanSummary.PlusLoanMpnExpirationDate);
             }
 
             [TestMethod]
@@ -624,10 +622,10 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
                 actualLoanSummary = await GetLoanSummaryAsync();
 
                 Assert.IsNotNull(actualLoanSummary.DirectLoanMpnExpirationDate);
-                Assert.IsNotNull(actualLoanSummary.PlusLoanMpnExpirationDate);
             }
 
             [TestMethod]
+            [Ignore]
             public async Task PlusMpnTypeCodes_EndorserPlusMpnDateAssignedTest()
             {
                 expectedRepository.StudentMpns.ForEach(m => m.Id = "123456789N14G99999001");
@@ -740,7 +738,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             public async Task NullReturnedFromReadingFaInterviews_NoExceptionThrownTest()
             {
                 dataReaderMock.Setup(i => i.BulkReadRecordAsync<FaInterview>(It.IsAny<string[]>(), true))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
                 bool exceptionThrown = false;
                 try
                 {
@@ -754,7 +752,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             public async Task NullReturnedFromReadingIsirNsldsRecords_NoExceptionThrownTest()
             {
                 dataReaderMock.Setup(i => i.BulkReadRecordAsync<IsirNslds>(It.IsAny<string[]>(), true))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
                 bool exceptionThrown = false;
                 try
                 {
@@ -768,7 +766,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             public async Task NullReturnedFromReadingIsirNsldsLoanRecords_NoExceptionThrownTest()
             {
                 dataReaderMock.Setup(i => i.BulkReadRecordAsync<IsirNsldsLoan>(It.IsAny<string[]>(), true))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
                 bool exceptionThrown = false;
                 try
                 {
@@ -782,7 +780,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             public async Task NullReturnedFromReadingCodMpnRecords_NoExceptionThrownTest()
             {
                 dataReaderMock.Setup(i => i.BulkReadRecordAsync<CodMpn>(It.IsAny<string[]>(), true))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
                 bool exceptionThrown = false;
                 try
                 {

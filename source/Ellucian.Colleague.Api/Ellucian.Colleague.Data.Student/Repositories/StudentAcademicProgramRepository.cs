@@ -113,35 +113,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     throw new KeyNotFoundException("Invalid Student Programs ID: " + studentProgramsId);
                 }
-                // Make sure that we have a valid record by insuring that it is properly linked in either STUDENTS
-                // or in the APPLICATIONS table.
-                var acadProgramIds = new List<string>();
-                var personId = studentProgramsId.Split('*')[0];
-                var studentRecord = await DataReader.ReadRecordColumnsAsync("STUDENTS", personId, new string[] { "STU.ACAD.PROGRAMS" });
-                if (studentRecord != null)
-                {
-                    acadProgramIds.AddRange(studentRecord.SelectMany(prog => prog.Value.Split(_VM).Select(ab => string.Concat(personId, "*", ab))));
-                }
-
-                if (!acadProgramIds.Contains(studentProgramsId))
-                {
-                    var applRecord = await DataReader.ReadRecordColumnsAsync("APPLICANTS", personId, new string[] { "APP.APPLICATIONS" });
-                    if (applRecord != null)
-                    {
-                        var subList = applRecord.SelectMany(appls => appls.Value.Split(_VM));
-                        var applicationRecords = await DataReader.BatchReadRecordColumnsAsync("APPLICATIONS", subList.ToArray(), new string[] { "APPL.ACAD.PROGRAM" });
-                        if (applicationRecords != null)
-                        {
-                            acadProgramIds.AddRange(applicationRecords.Select(a => string.Concat(personId, "*", a.Value["APPL.ACAD.PROGRAM"])));
-                        }
-                    }
-                    if (!acadProgramIds.Contains(studentProgramsId))
-                    {
-                        var exception = new RepositoryException();
-                        exception.AddError(new RepositoryError("Bad.Data", string.Concat("No Student Academic Program was found for guid '", id, "'. ")));
-                        throw exception;
-                    }
-                }
 
                 var studentProg = new Collection<StudentPrograms>() { stuprog };
                 var acadCredData = new Collection<AcadCredentials>();
@@ -1051,48 +1022,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 #region student filter
                 if (!string.IsNullOrEmpty(student))
                 {
-                    //since we have student Id, we should just read the student record and create the student program ids.
-                    List<string> IdsFromStuFil = new List<string>();
-                    var studentRecord = await DataReader.ReadRecordAsync<DataContracts.Students>(student);
-                    //if that is a student, then we construct the student.programs Id and acad credentails id
-                    if (studentRecord != null)
-                    {
-                        if (studentRecord.StuAcadPrograms != null && studentRecord.StuAcadPrograms.Any())
-                        {
-                            acadProgLimitingKeys.AddRange(studentRecord.StuAcadPrograms);
-                            foreach (var prog in studentRecord.StuAcadPrograms)
-                            {
-                                IdsFromStuFil.Add(string.Concat(student, "*", prog));
-                            }
-                        }
-                        if (IdsFromStuFil != null && IdsFromStuFil.Any())
-                            stuProgsLimitingKeys.AddRange(IdsFromStuFil);
-                        //since we know the student Id, using institution.attend record for the default institution, we can create the limiting keys for acad.credentials
-                        var instAttendId = string.Concat(student, "*", defaultInstitutionId);
-                        var instAttendRecord = await DataReader.ReadRecordAsync<InstitutionsAttend>(instAttendId);
-                        if (instAttendRecord != null && instAttendRecord.InstaAcadCredentials != null & instAttendRecord.InstaAcadCredentials.Any())
-                            acadCredLimitingKeys.AddRange(instAttendRecord.InstaAcadCredentials);
-                    }
-
-                    // see if they have student program records as an applicant
-                    var applicantRecord = await DataReader.ReadRecordAsync<DataContracts.Applicants>(student);
-                    if (applicantRecord != null && applicantRecord.AppApplications != null && applicantRecord.AppApplications.Any())
-                    {
-                        var applicationRecords = await DataReader.BulkReadRecordAsync<DataContracts.Applications>(applicantRecord.AppApplications.ToArray());
-                        if (applicationRecords != null)
-                        {
-                            var studentProgramKeys = applicationRecords.Select(a => a.ApplApplicant + "*" + a.ApplAcadProgram).ToList();
-                            stuProgsLimitingKeys.AddRange(studentProgramKeys.Except(stuProgsLimitingKeys));
-
-                            var programKeys = applicationRecords.Select(a => a.ApplAcadProgram).ToList();
-
-                            acadProgLimitingKeys.AddRange(programKeys);
-                        }
-                    }
-                    //at this point if stuProgsLimitingKeys is empty then we can return empty set
-                    if (stuProgsLimitingKeys == null || !stuProgsLimitingKeys.Any())
-                        return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-
+                    criteria = "WITH STPR.STUDENT EQ '" + student + "'";
                 }
                 #endregion
 
@@ -1431,7 +1361,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         if ((curriculumObjective == CurriculumObjectiveCategory.Applied) && (stuProgsLimitingKeys == null || !stuProgsLimitingKeys.Any()))
                         {
                             return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
-                        }
+                        } 
 
                         if (curriculumObjective == CurriculumObjectiveCategory.Recruited)
                         {
@@ -1443,7 +1373,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             appliedApplStudentProgramIds = appliedApplStudentProgramIds.Distinct().ToArray();
 
                             // we have to get the entire list of student.programs (using the initial list of limiting keys) to determine which ones do not have an application record.
-                            var allStudentProgramIDs = (await DataReader.SelectAsync("STUDENT.PROGRAMS", initialStuProgsLimitingKeys != null && initialStuProgsLimitingKeys.Any() ? initialStuProgsLimitingKeys.Distinct().ToArray() : null, criteria + " AND WITH STPR.VALID.PROGRAM NE ''")).ToList();
+                            var allStudentProgramIDs = (await DataReader.SelectAsync("STUDENT.PROGRAMS", initialStuProgsLimitingKeys != null && initialStuProgsLimitingKeys.Any() ? initialStuProgsLimitingKeys.Distinct().ToArray() : null, criteria)).ToList();
 
                             var studentProgramsWithoutApplications = allStudentProgramIDs.Except(appliedApplStudentProgramIds);
 
@@ -1460,16 +1390,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                     #endregion
                 }
-                #endregion
-
-                #region Default Selection Criteria
-                // Failed Inst Enrollment (WINR) leaves behind orphaned items.  Some items are invalid because
-                // the person record doesn't exist and other items are invalid because the key is invalid (missing program)
-                // This default criteria is set to insure we only select valid STUDENT.PROGRAMS records.
-                if (string.IsNullOrEmpty(criteria))
-                    criteria = "WITH STPR.VALID.PROGRAM NE ''";
-                else
-                    criteria += " AND WITH STPR.VALID.PROGRAM NE ''";
                 #endregion
 
                 return new CacheSupport.KeyCacheRequirements()
@@ -1541,7 +1461,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                 var programs = stuPrograms.Value.Split(_VM);
                                 foreach (var program in programs)
                                 {
-                                    IdsFromStuFil.Add(string.Concat(studentId, "*", program));
+                                    if (!string.IsNullOrEmpty(program))
+                                    {
+                                        IdsFromStuFil.Add(string.Concat(studentId, "*", program));
+                                    }
                                 }
                             }
                         }

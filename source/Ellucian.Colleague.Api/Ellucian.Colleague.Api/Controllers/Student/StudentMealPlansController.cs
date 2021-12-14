@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -22,6 +22,7 @@ using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -53,7 +54,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// /// <param name="criteria">mealplan  search criteria in JSON format</param>
         /// <returns>List of StudentMealPlans <see cref="Dtos.StudentMealPlans"/> objects representing matching studentMealPlans</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewMealPlanAssignment, StudentPermissionCodes.CreateMealPlanAssignment })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.StudentMealPlans))]
         [FilteringFilter(IgnoreFiltering = true)]
@@ -73,6 +74,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                 return new PagedHttpActionResult<IEnumerable<Dtos.StudentMealPlans>>(new List<Dtos.StudentMealPlans>(), page, 0, this.Request);
             try
             {
+                _studentMealPlansService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -127,7 +129,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// /// <param name="criteria">mealplan  search criteria in JSON format</param>
         /// <returns>List of StudentMealPlans <see cref="Dtos.StudentMealPlans2"/> objects representing matching studentMealPlans</returns>
         [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewMealPlanAssignment, StudentPermissionCodes.CreateMealPlanAssignment })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.StudentMealPlans2))]
         [FilteringFilter(IgnoreFiltering = true)]
@@ -148,6 +150,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _studentMealPlansService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -199,7 +202,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID to desired studentMealPlans</param>
         /// <returns>A studentMealPlans object <see cref="Dtos.StudentMealPlans2"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewMealPlanAssignment, StudentPermissionCodes.CreateMealPlanAssignment })]
         public async Task<Dtos.StudentMealPlans2> GetStudentMealPlansByGuid2Async(string guid)
         {
             var bypassCache = false;
@@ -218,6 +221,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _studentMealPlansService.ValidatePermissions(GetPermissionsMetaData());
                 var mealPlans = await _studentMealPlansService.GetStudentMealPlansByGuid2Async(guid);
 
                 if (mealPlans != null)
@@ -268,7 +272,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="studentMealPlans2">DTO of the updated studentMealPlans</param>
         /// <returns>A studentMealPlans object <see cref="Dtos.StudentMealPlans2"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateMealPlanAssignment)]
         public async Task<Dtos.StudentMealPlans2> PutStudentMealPlans2Async([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.StudentMealPlans2 studentMealPlans2)
         {
 
@@ -298,6 +302,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _studentMealPlansService.ValidatePermissions(GetPermissionsMetaData());
                 //get Data Privacy List
                 var dpList = await _studentMealPlansService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
@@ -365,7 +370,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="studentMealPlans2">DTO of the new studentMealPlans</param>
         /// <returns>A studentMealPlans object <see cref="Dtos.StudentMealPlans2"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateMealPlanAssignment)]
         public async Task<Dtos.StudentMealPlans2> PostStudentMealPlans2Async([ModelBinder(typeof(EedmModelBinder))] Dtos.StudentMealPlans2 studentMealPlans2)
         {
             if (studentMealPlans2 == null)
@@ -375,6 +380,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _studentMealPlansService.ValidatePermissions(GetPermissionsMetaData());
                 //call import extend method that needs the extracted extension data and the config
                 await _studentMealPlansService.ImportExtendedEthosData(await ExtractExtendedData(await _studentMealPlansService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
@@ -427,7 +433,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired studentMealPlans</param>
         /// <returns>A studentMealPlans object <see cref="Dtos.StudentMealPlans"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewMealPlanAssignment, StudentPermissionCodes.CreateMealPlanAssignment })]
         public async Task<Dtos.StudentMealPlans> GetStudentMealPlansByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -446,6 +452,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _studentMealPlansService.ValidatePermissions(GetPermissionsMetaData());
                 var mealPlans = await _studentMealPlansService.GetStudentMealPlansByGuidAsync(guid);
 
                 if (mealPlans != null)
@@ -494,7 +501,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="studentMealPlans">DTO of the new studentMealPlans</param>
         /// <returns>A studentMealPlans object <see cref="Dtos.StudentMealPlans2"/> in EEDM format</returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateMealPlanAssignment)]
         public async Task<Dtos.StudentMealPlans> PostStudentMealPlansAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.StudentMealPlans studentMealPlans)
         {
             if (studentMealPlans == null)
@@ -504,6 +511,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _studentMealPlansService.ValidatePermissions(GetPermissionsMetaData());
                 //call import extend method that needs the extracted extension data and the config
                 await _studentMealPlansService.ImportExtendedEthosData(await ExtractExtendedData(await _studentMealPlansService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
@@ -555,7 +563,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID of the studentMealPlans to update</param>
         /// <param name="studentMealPlans">DTO of the updated studentMealPlans</param>
         /// <returns>A studentMealPlans object <see cref="Dtos.StudentMealPlans"/> in EEDM format</returns>
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.CreateMealPlanAssignment)]
         public async Task<Dtos.StudentMealPlans> PutStudentMealPlansAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.StudentMealPlans studentMealPlans)
         {
 
@@ -585,6 +593,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _studentMealPlansService.ValidatePermissions(GetPermissionsMetaData());
                 //get Data Privacy List
                 var dpList = await _studentMealPlansService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 

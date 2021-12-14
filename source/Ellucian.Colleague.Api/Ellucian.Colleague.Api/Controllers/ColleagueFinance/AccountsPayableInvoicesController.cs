@@ -1,4 +1,4 @@
-﻿//Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -25,6 +25,7 @@ using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
 using Ellucian.Colleague.Dtos;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 
 namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 {
@@ -54,7 +55,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// Return all accountsPayableInvoices version 11
         /// </summary>
         /// <returns>List of AccountsPayableInvoices <see cref="Dtos.AccountsPayableInvoices2"/> objects representing matching accountsPayableInvoices</returns>
-        [HttpGet]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewApInvoices, ColleagueFinancePermissionCodes.UpdateApInvoices })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         [QueryStringFilterFilter("criteria", typeof(AccountsPayableInvoices2))]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
@@ -79,7 +81,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 return new PagedHttpActionResult<IEnumerable<Dtos.AccountsPayableInvoices2>>(new List<Dtos.AccountsPayableInvoices2>(), page, 0, this.Request);
             
             try
-            {      
+            {
+                _accountsPayableInvoicesService.ValidatePermissions(GetPermissionsMetaData());
                 var pageOfItems = await _accountsPayableInvoicesService.GetAccountsPayableInvoices2Async(page.Offset, page.Limit, criteriaFilter, bypassCache);
 
                 AddEthosContextProperties(
@@ -126,7 +129,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="guid">GUID to desired accountsPayableInvoices</param>
         /// <returns>A accountsPayableInvoices object <see cref="Dtos.AccountsPayableInvoices2"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewApInvoices, ColleagueFinancePermissionCodes.UpdateApInvoices }), EedmResponseFilter]
         public async Task<Dtos.AccountsPayableInvoices2> GetAccountsPayableInvoices2ByGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -146,6 +150,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
             try
             {
+                _accountsPayableInvoicesService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                     await _accountsPayableInvoicesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await _accountsPayableInvoicesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -190,7 +195,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="accountsPayableInvoices">DTO of the new accountsPayableInvoices</param>
         /// <returns>A accountsPayableInvoices object <see cref="Dtos.AccountsPayableInvoices2"/> in EEDM format</returns>
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, PermissionsFilter(new string[] {  ColleagueFinancePermissionCodes.UpdateApInvoices }), EedmResponseFilter]
         public async Task<Dtos.AccountsPayableInvoices2> PostAccountsPayableInvoices2Async([ModelBinder(typeof(EedmModelBinder))] Dtos.AccountsPayableInvoices2 accountsPayableInvoices)
         {
             if (accountsPayableInvoices == null)
@@ -200,6 +205,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                _accountsPayableInvoicesService.ValidatePermissions(GetPermissionsMetaData());
                 if (accountsPayableInvoices.Id != Guid.Empty.ToString())
                 {
                     throw new ArgumentNullException("accountsPayableInvoicesDto", "Nil GUID must be used in POST operation.");
@@ -268,7 +274,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="guid">GUID of the accountsPayableInvoices to update</param>
         /// <param name="accountsPayableInvoices">DTO of the updated accountsPayableInvoices</param>
         /// <returns>A accountsPayableInvoices object <see cref="Dtos.AccountsPayableInvoices2"/> in EEDM format</returns>
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.UpdateApInvoices }), EedmResponseFilter]
         public async Task<Dtos.AccountsPayableInvoices2> PutAccountsPayableInvoices2Async([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.AccountsPayableInvoices2 accountsPayableInvoices)
         {
             if (string.IsNullOrEmpty(guid))
@@ -298,6 +304,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
             try
             {
+                _accountsPayableInvoicesService.ValidatePermissions(GetPermissionsMetaData());
                 //get Data Privacy List
                 var dpList = await _accountsPayableInvoicesService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 

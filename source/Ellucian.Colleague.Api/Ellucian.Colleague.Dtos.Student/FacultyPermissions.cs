@@ -1,4 +1,4 @@
-﻿// Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 namespace Ellucian.Colleague.Dtos.Student
 {
@@ -31,5 +31,20 @@ namespace Ellucian.Colleague.Dtos.Student
         /// Faculty can search for students in the sections
         /// </summary>
         public bool CanSearchStudents { get; set; }
+
+        /// <summary>
+        /// Faculty can drop a student from their sectionss
+        /// </summary>
+        public bool CanDropStudent { get; set; }
+
+        /// <summary>
+        /// Faculty is elibigle to drop a student from their sections
+        /// </summary>
+        public bool IsEligibleToDrop { get; set; }
+
+        /// <summary>
+        /// Faculty has registration overrides in the sections
+        /// </summary>
+        public bool HasEligibilityOverrides { get; set; }
     }
 }

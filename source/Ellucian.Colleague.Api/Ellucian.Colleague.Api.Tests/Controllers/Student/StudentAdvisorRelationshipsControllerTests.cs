@@ -18,6 +18,10 @@ using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Security;
 using System.Net.Http.Headers;
+using System.Web.Http.Routing;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Colleague.Domain.Student;
+using System.Web.Http.Controllers;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -393,6 +397,84 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         public async Task StudentAdvisorRelationshipsController_DeleteStudentAdvisorRelationshipsAsync_Exception()
         {
             await studentAdvisorRelationshipsController.DeleteStudentAdvisorRelationshipsAsync(studentAdvisorRelationshipsCollection.FirstOrDefault().Id);
+        }
+
+        [TestMethod]
+        public async Task studentAdvisorRelationshipsController_GetStudentAdvisorRelationshipsAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "StudentAdvisorRelationships" },
+                { "action", "GetStudentAdvisorRelationshipsAsync" }
+            };
+            HttpRoute route = new HttpRoute("student-advisor-relationships", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentAdvisorRelationshipsController.Request.SetRouteData(data);
+            studentAdvisorRelationshipsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentAdivsorRelationships });
+
+            var controllerContext = studentAdvisorRelationshipsController.ControllerContext;
+            var actionDescriptor = studentAdvisorRelationshipsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            var tuple = new Tuple<IEnumerable<Dtos.StudentAdvisorRelationships>, int>(studentAdvisorRelationshipsCollection, 5);
+            studentAdvisorRelationshipsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                   .Returns(true);
+            studentAdvisorRelationshipsServiceMock.Setup(s => s.GetStudentAdvisorRelationshipsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(tuple);
+            var resp = await studentAdvisorRelationshipsController.GetStudentAdvisorRelationshipsAsync(new Paging(10, 0), new QueryStringFilter("criteria",""));
+
+            Object filterObject;
+            studentAdvisorRelationshipsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable<object>)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentAdivsorRelationships));
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task studentAdvisorRelationshipsController_GetPersonsActiveHoldsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "StudentAdvisorRelationships" },
+                { "action", "GetStudentAdvisorRelationshipsAsync" }
+            };
+            HttpRoute route = new HttpRoute("student-advisor-relationships", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentAdvisorRelationshipsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = studentAdvisorRelationshipsController.ControllerContext;
+            var actionDescriptor = studentAdvisorRelationshipsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.StudentAdvisorRelationships>, int>(studentAdvisorRelationshipsCollection, 5);
+
+                studentAdvisorRelationshipsServiceMock.Setup(s => s.GetStudentAdvisorRelationshipsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(tuple);
+                studentAdvisorRelationshipsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User is not authorized to view student-advisor-relationships."));
+                var resp = await studentAdvisorRelationshipsController.GetStudentAdvisorRelationshipsAsync(new Paging(10, 0), new QueryStringFilter("criteria", ""));
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
         }
     }
 }

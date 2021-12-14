@@ -17,7 +17,9 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<Entities.EthosApiBuilder> GetEthosApiBuilderByIdAsync(string id, EthosApiConfiguration configuration);
 
         Task<Entities.EthosApiBuilder> UpdateEthosApiBuilderAsync(EthosApiBuilder ethisApiBuilderEntity, EthosApiConfiguration configuration);
-        
+
+        Task DeleteEthosApiBuilderAsync(string id, EthosApiConfiguration configuration);
+
         Task<GuidLookupResult> GetRecordInfoFromGuidAsync(string id);
 
         Task<string> GetRecordIdFromTranslationAsync(string sourceData, string entityName, string sourceColumn = "", string tableName = "");

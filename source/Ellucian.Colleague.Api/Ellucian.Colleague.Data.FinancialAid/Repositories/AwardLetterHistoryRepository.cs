@@ -648,6 +648,20 @@ namespace Ellucian.Colleague.Data.FinancialAid.Repositories
 
                 awardLetter3Entity.OpeningParagraph = FormatParagraph(awardLetterHistoryRecord.AlhOpeningParagraph, paragraphSpacing);
                 awardLetter3Entity.ClosingParagraph = FormatParagraph(awardLetterHistoryRecord.AlhClosingParagraph, paragraphSpacing);
+                
+                //Adding spacing below for the Pre/Post Award and Post Closing paragraphs if they are populated
+                if (awardLetterHistoryRecord.AlhPreAwardText != null)
+                {
+                    awardLetter3Entity.PreAwardText = FormatParagraph(awardLetterHistoryRecord.AlhPreAwardText, paragraphSpacing);
+                }
+                if (awardLetterHistoryRecord.AlhPostAwardText != null)
+                {
+                    awardLetter3Entity.PostAwardText = FormatParagraph(awardLetterHistoryRecord.AlhPostAwardText, paragraphSpacing);
+                }
+                if (awardLetterHistoryRecord.AlhPostClosingText != null)
+                {
+                    awardLetter3Entity.PostClosingText = FormatParagraph(awardLetterHistoryRecord.AlhPostClosingText, paragraphSpacing);
+                }
 
                 //Set housing info if inidicated
                 if (!string.IsNullOrEmpty(awardLetterHistoryRecord.AlhHousingCode))

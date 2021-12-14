@@ -77,6 +77,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
             }
         }
 
+
         /// <summary>
         /// The student's total grants awarded. Only used for years 2020 onward
         /// </summary>
@@ -87,6 +88,80 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
                 if (Grants != null)
                 {
                     return (Grants.Count() > 0) ? new Nullable<int>(Grants.Sum(g => g.Amount)) : null;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// The student's total grants awarded. Only used for years 2020 onward
+        /// </summary>
+        public int? CfpGradTotalGrants
+        {
+            get
+            {
+                if (Grants != null)
+                {
+                    var cfpGradGrants = Grants.Where(g => g.AwardGroup != ShoppingSheetAwardGroup2.PellGrants);
+                    var total = (cfpGradGrants.Count() > 0) ? new Nullable<int>(cfpGradGrants.Sum(g => g.Amount)) : null;
+                    if (DisadvantagedStudentGrant != null)
+                    {
+                        total += DisadvantagedStudentGrant;
+                    }
+                    return total;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Total amount for CFP Pell Grants
+        /// </summary>
+        public int? CfpPellGrants
+        {
+            get
+            {
+                if (Grants != null)
+                {
+                    var cfpPellGrants = Grants.Where(g => g.AwardGroup == ShoppingSheetAwardGroup2.PellGrants);
+                    return (cfpPellGrants.Count() > 0) ? new Nullable<int>(cfpPellGrants.Sum(g => g.Amount)) : null;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Total scholarship amount of grad CFP
+        /// </summary>
+        public int? CfpGradTotalScholarships
+        {
+            get
+            {
+                if (Scholarships != null)
+                {
+                    var total = (Scholarships.Count() > 0) ? new int?(Scholarships.Sum(s => s.Amount)) : null;
+                    if (EmployerPaidTuitionBenefits != null)
+                    {
+                        total += EmployerPaidTuitionBenefits;
+                    }
+                    if (SchoolPaidTuitionBenefits != null)
+                    {
+                        total += SchoolPaidTuitionBenefits;
+                    }
+                    if (TuitionRemWaiver != null)
+                    {
+                        total += TuitionRemWaiver;
+                    }
+                    return total;
                 }
                 else
                 {
@@ -140,6 +215,39 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         }
 
         /// <summary>
+        /// Net costs for UG CFP
+        /// </summary>
+        public int? CfpUndergradNetCosts
+        {
+            get
+            {
+                var cost = (TotalEstimatedCost.HasValue) ? TotalEstimatedCost.Value : 0;
+                var grants = (TotalGrants.HasValue) ? TotalGrants.Value : 0;
+                var scholarships = (TotalScholarships.HasValue) ? TotalScholarships.Value : 0;
+                scholarships += (EmployerPaidTuitionBenefits.HasValue) ? EmployerPaidTuitionBenefits.Value : 0;
+                return cost - grants - scholarships;
+            }
+        }
+
+        /// <summary>
+        /// Net costs for grad CFP
+        /// </summary>
+        public int? CfpGradNetCosts
+        {
+            get
+            {
+                var cost = (TotalEstimatedCost.HasValue) ? TotalEstimatedCost.Value : 0;
+                var grants = (TotalGrants.HasValue) ? TotalGrants.Value : 0;
+                grants += (DisadvantagedStudentGrant.HasValue) ? DisadvantagedStudentGrant.Value : 0;
+                var scholarships = (TotalScholarships.HasValue) ? TotalScholarships.Value : 0;
+                scholarships += (EmployerPaidTuitionBenefits.HasValue) ? EmployerPaidTuitionBenefits.Value : 0;
+                scholarships += (SchoolPaidTuitionBenefits.HasValue) ? SchoolPaidTuitionBenefits.Value : 0;
+                scholarships += (TuitionRemWaiver.HasValue) ? TuitionRemWaiver.Value : 0;
+                return cost - grants - scholarships;
+            }
+        }
+
+        /// <summary>
         /// A list of the student's work options in the award year
         /// </summary>
         //public Dictionary<ShoppingSheetAwardGroup, int> WorkOptions { get; set; }
@@ -174,6 +282,124 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         /// A list of custom messages, specific to the student, to print on the shopping sheet.
         /// </summary>
         public List<string> NextStepsMessages { get; set; }
+
+        /// <summary>
+        /// Version typed associated with a given college financing plan
+        /// </summary>
+        public string CfpVersionType { get; set; }
+
+        /// <summary>
+        /// Interest rate for a sub loan
+        /// </summary>
+        public Decimal? SubInterestRate { get; set; }
+
+        /// <summary>
+        /// Origination fee for a sub loan
+        /// </summary>
+        public Decimal? SubOriginationFee { get; set; }
+
+        /// <summary>
+        /// Interest rate for an unsub loan
+        /// </summary>
+        public Decimal? UnsubInterestRate { get; set; }
+
+        /// <summary>
+        /// Origination fee for an unsub loan
+        /// </summary>
+        public Decimal? UnsubOriginationFee { get; set; }
+
+        /// <summary>
+        /// Interest rate associated with a private loan
+        /// </summary>
+        public Decimal? PrivateInterestRate { get; set; }
+
+        /// <summary>
+        /// Origination fee for a private loan
+        /// </summary>
+        public Decimal? PrivateOriginationFee { get; set; }
+
+        /// <summary>
+        /// Interest rate for an institutional loan
+        /// </summary>
+        public Decimal? InstitutionInterestRate { get; set; }
+
+        /// <summary>
+        /// Origination fee for an institutional loan
+        /// </summary>
+        public Decimal? InstitutionOriginationFee { get; set; }
+
+        /// <summary>
+        /// Interest rate for a grad plus loan
+        /// </summary>
+        public Decimal? GradPlusInterestRate { get; set; }
+
+        /// <summary>
+        /// Origination fee for a grad plus loan
+        /// </summary>
+        public Decimal? GradPlusOriginationFee { get; set; }
+
+        /// <summary>
+        /// Interest rate for HRSA loan
+        /// </summary>
+        public Decimal? HrsaInterestRate { get; set; }
+
+        /// <summary>
+        /// Origination fee for HRSA loan
+        /// </summary>
+        public Decimal? HrsaOriginationFee { get; set; }
+
+        /// <summary>
+        /// Interest rate for a plus loan
+        /// </summary>
+        public Decimal? PlusInterestRate { get; set; }
+
+        /// <summary>
+        /// Origination fee for a plus loan
+        /// </summary>
+        public Decimal? PlusOriginationFee { get; set; }
+
+        /// <summary>
+        /// Tuition benefits paid by an institution
+        /// </summary>
+        public int? SchoolPaidTuitionBenefits { get; set; }
+
+        /// <summary>
+        /// Tuition benefits paid by employer
+        /// </summary>
+        public int? EmployerPaidTuitionBenefits { get; set; }
+
+        /// <summary>
+        /// Tuition remission or waiver
+        /// </summary>
+        public int? TuitionRemWaiver { get; set; }
+
+        /// <summary>
+        /// Scholarships for Disadvantaged Students	
+        /// </summary>
+        public int? DisadvantagedStudentGrant { get; set; }
+
+        /// <summary>
+        /// Assistantships
+        /// </summary>
+        public int? Assistantships { get; set; }
+
+        /// <summary>
+        /// Total amount of the income share
+        /// </summary>
+        public int? IncomeShare { get; set; }
+
+        /// <summary>
+        /// Total amount of the graduate plus loans
+        /// </summary>
+        public int? GraduatePlusLoans { get; set; }
+
+        /// <summary>
+        /// Total amount of HRSA Loans
+        /// </summary>
+        public int? HrsaLoans { get; set; }
+
+
+
 
 
         /// <summary>

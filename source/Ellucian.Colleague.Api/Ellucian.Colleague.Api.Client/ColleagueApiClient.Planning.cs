@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Client.Exceptions;
 using Ellucian.Colleague.Dtos.Student.DegreePlans;
 using Ellucian.Colleague.Dtos.Planning;
@@ -12,11 +12,55 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Api.Client.Core;
 
 namespace Ellucian.Colleague.Api.Client
 {
     public partial class ColleagueApiClient
     {
+        /// <summary>
+        /// Retrieve all curriculum track codes available for a student for a given academic program code.
+        /// </summary>
+        /// <param name="studentId">The id for the student for which the curriculum tracks should be returned.</param>
+        /// <param name="programCode">The code for the program for which the curriculum tracks should be returned.</param>
+        /// <returns>A collection of <see cref="CurriculumTrack">curriculum tracks</see> for student and a given program code.</returns>
+        public async Task<IEnumerable<CurriculumTrack>> QueryCurriculumTracksForStudentByProgramAsync(CurriculumTrackQueryCriteria criteria)
+        {
+            if (criteria == null)
+            {
+                throw new ArgumentNullException("criteria", "Criteria cannot be null for Curriculum Track query.");
+            }
+            if (string.IsNullOrWhiteSpace(criteria.StudentId))
+            {
+                throw new ArgumentNullException("studentId", "Student Id is required to get program curriculum tracks.");
+            }
+            if (string.IsNullOrWhiteSpace(criteria.ProgramCode))
+            {
+                throw new ArgumentNullException("programCode", "Program Code is required to get program curriculum tracks.");
+            }
+
+            try
+            {
+                var urlPath = UrlUtility.CombineUrlPath(_qapiPath, _curriculumTrackPath);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath: urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<IEnumerable<CurriculumTrack>>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to find a curriculum track for the student " + criteria.StudentId + " and program code " + criteria.ProgramCode);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to retrieve curriculum tracks.");
+                throw;
+            }
+        }
+
         /// <summary>
         /// Retrieves a sample degree plan and shows how it would look applied to the student's degree plan but does NOT same the change.
         /// </summary>
@@ -65,6 +109,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Retrieves a sample degree plan and shows how it would look applied to the student's degree plan but does NOT same the change.
         /// </summary>
@@ -113,6 +158,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Retrieves a sample degree plan and shows how it would look applied to the student's degree plan but does NOT same the change.
         /// </summary>
@@ -161,6 +207,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Retrieves a sample degree plan and shows how it would look applied to the student's degree plan but does NOT same the change async.
         /// </summary>
@@ -209,6 +256,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Retrieves a sample degree plan and shows how it would look applied to the student's degree plan but does NOT same the change.
         /// </summary>
@@ -256,6 +304,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Retrieves a sample degree plan and shows how it would look applied to the student's degree plan but does NOT same the change async.
         /// </summary>
@@ -362,6 +411,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <param name="catalog">The catalog ID</param>
         /// <exception cref="System.ArgumentNullException">Thrown when the provided ID, Program, or Catalog are empty/null</exception>
         /// <returns>The DegreePlanPreview DTO</returns>
+        [Obsolete("Obsolete as of API version 1.32. Use PreviewSampleDegreePlan7Async.")]
         public async Task<DegreePlanPreview6> PreviewSampleDegreePlan6Async(int degreePlanId, string program, string termCode)
         {
             //make sure parameters are legit
@@ -401,6 +451,103 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
+        /// <summary>
+        /// Retrieves a sample degree plan and shows how it would look applied to the student's degree plan but does NOT apply the change.
+        /// </summary>
+        /// <param name="degreePlanId">The degree plan ID</param>
+        /// <param name="curriculumTrackCode">The curriculum track code</param>
+        /// <param name="termCode">The code for the term at which to start the sample plan</param>
+        /// <exception cref="System.ArgumentNullException">Thrown when the provided id, or curriculumTrackCode are empty/null</exception>
+        /// <returns>The DegreePlanPreview DTO</returns>
+        [Obsolete("Obsolete as of API version 1.33. Use PreviewSampleDegreePlan8Async.")]
+        public async Task<DegreePlanPreview6> PreviewSampleDegreePlan7Async(int degreePlanId, string curriculumTrackCode, string termCode)
+        {
+            //make sure parameters are legit
+            if (degreePlanId <= 0)
+            {
+                throw new ArgumentNullException("degreePlanId", "Degree Plan ID must be provided and be non zero.");
+            }
+            if (string.IsNullOrEmpty(curriculumTrackCode))
+            {
+                throw new ArgumentNullException("curriculumTrackCode", "Curriculum Track Code cannot be null or empty");
+            }
+            
+            try
+            {
+                var query = UrlUtility.BuildEncodedQueryString(new[] { "curriculumTrackCode", curriculumTrackCode, "firstTermCode", termCode });
+                var urlPath = UrlUtility.CombineUrlPath(new[] { _degreePlansPath, degreePlanId.ToString(), "preview-sample" });
+                urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, query);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion7);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<DegreePlanPreview6>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to find a sample plan to load for curriculum track code " + curriculumTrackCode);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to generate a Sample Plan for review.");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Retrieve a sample degree plan (curriculum track) for the given curriculum track code, using the provided term code as the first term.
+        /// The student's plan is unchanged in the database.
+        /// </summary>
+        /// <param name="degreePlanId">The degree plan id of the plan to use as the basis for the plan preview.</param>
+        /// <param name="curriculumTrackCode">The code of the curriculum Track from which the sample plan will be derived.</param>
+        /// <param name="firstTermCode">The code for the term at which to start the sample plan</param>
+        /// <param name="programCode">Academic program to evaluate when considering the student's academic history</param>
+        /// <returns>A degree plan preview which contains both a limited preview of courses suggested along with a version of the student's <see cref="DegreePlan4">DegreePlan</see> now including the overlaid sample degree plan.</returns>
+        /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.NotFound returned if a sample degree plan is not found, either for the specified program or a default sample</exception>
+        /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if the degree plan id or programCode is not provided.</exception>
+        /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required to view the degree plan</exception>
+        /// <exception> <see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned for other errors that may occur</exception>
+        /// <accessComments>
+        public async Task<DegreePlanPreview7> PreviewSampleDegreePlan8Async(int degreePlanId, string curriculumTrackCode, string firstTermCode, string programCode)
+        {
+            //make sure parameters are legit
+            if (degreePlanId <= 0)
+            {
+                throw new ArgumentNullException("degreePlanId", "Degree Plan ID must be provided and be non zero.");
+            }
+            if (string.IsNullOrEmpty(curriculumTrackCode))
+            {
+                throw new ArgumentNullException("curriculumTrackCode", "Curriculum Track Code cannot be null or empty");
+            }
+
+            try
+            {
+                var query = UrlUtility.BuildEncodedQueryString(new[] { "curriculumTrackCode", curriculumTrackCode, "firstTermCode", firstTermCode, "programCode", programCode });
+                var urlPath = UrlUtility.CombineUrlPath(new[] { _degreePlansPath, degreePlanId.ToString(), "preview-sample" });
+                urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, query);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion8);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<DegreePlanPreview7>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (ResourceNotFoundException rnfe)
+            {
+                logger.Error(rnfe, "Unable to find a sample plan to load for curriculum track code " + curriculumTrackCode);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to generate a Sample Plan for review.");
+                throw;
+            }
+        }
+
+
         /// <summary>
         /// OBSOLETE as f API version 1.2. Use PreviewSampleDegreePlan and UpdateDegreePlan
         /// Attempts to hydrate a student's degree plan with a sample plan from the academic program catalog.
@@ -479,7 +626,7 @@ namespace Ellucian.Colleague.Api.Client
 
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
-                
+
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<DegreePlanReviewRequest>>(response.Content.ReadAsStringAsync().Result);
             }
@@ -594,6 +741,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         [Obsolete("Obsolete with API 1.5. Use ArchiveDegreePlan2Async")]
         public async Task<DegreePlanArchive> ArchiveDegreePlanAsync(DegreePlan2 degreePlan)
         {
@@ -629,6 +777,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// Creates a new Degree Plan Archive for the given degree plan.
         /// </summary>
         /// <param name="degreePlan">The degree plan being archived</param>
@@ -670,6 +819,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// Creates a new Degree Plan Archive for the given degree plan.
         /// </summary>
         /// <param name="degreePlan">The degree plan being archived</param>
@@ -677,6 +827,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <exception cref="System.ArgumentNullException">Thrown when there is some other problem</exception>
         /// <returns>The newly-created Degree Plan archive</returns>
         [Obsolete("Obsolete with API 1.7. Use ArchiveDegreePlan3Async")]
+
         public async Task<DegreePlanArchive2> ArchiveDegreePlan2Async(DegreePlan3 degreePlan)
         {
             //make sure degree plan has been provided
@@ -717,6 +868,7 @@ namespace Ellucian.Colleague.Api.Client
         /// <exception cref="System.InvalidOperationException">Thrown when a degree plan archive cannot be created for the degree plan</exception>
         /// <exception cref="System.ArgumentNullException">Thrown when there is some other problem</exception>
         /// <returns>The newly-created Degree Plan archive</returns>
+
         public DegreePlanArchive2 ArchiveDegreePlan3(DegreePlan4 degreePlan)
         {
             //make sure degree plan has been provided
@@ -815,6 +967,7 @@ namespace Ellucian.Colleague.Api.Client
 
             try
             {
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 if (response.StatusCode == System.Net.HttpStatusCode.OK)
                 {
@@ -833,6 +986,7 @@ namespace Ellucian.Colleague.Api.Client
 
             return advisor;
         }
+
         /// <summary>
         /// Gets an Advisor by ID async.
         /// </summary>
@@ -856,6 +1010,7 @@ namespace Ellucian.Colleague.Api.Client
 
             try
             {
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
                 if (response.StatusCode == System.Net.HttpStatusCode.OK)
                 {
@@ -874,6 +1029,7 @@ namespace Ellucian.Colleague.Api.Client
 
             return advisor;
         }
+
         /// <summary>
         /// Gets an Advisee for an advisor.
         /// </summary>
@@ -899,6 +1055,8 @@ namespace Ellucian.Colleague.Api.Client
 
             var headers = new NameValueCollection();
             headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+            // Do not log the response body
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
 
             Advisee advisee = null;
 
@@ -922,6 +1080,7 @@ namespace Ellucian.Colleague.Api.Client
 
             return advisee;
         }
+
         /// <summary>
         /// Gets an Advisee for an advisor async.
         /// </summary>
@@ -947,6 +1106,8 @@ namespace Ellucian.Colleague.Api.Client
 
             var headers = new NameValueCollection();
             headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+            // Do not log the response body
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
 
             Advisee advisee = null;
 
@@ -970,6 +1131,7 @@ namespace Ellucian.Colleague.Api.Client
 
             return advisee;
         }
+
         /// <summary>
         /// Gets the assigned advisees for a particular advisor id Async.
         /// </summary>
@@ -994,6 +1156,8 @@ namespace Ellucian.Colleague.Api.Client
 
             var headers = new NameValueCollection();
             headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion2);
+            // Do not log the response body
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
 
             IEnumerable<Advisee> advisees = null;
             try
@@ -1020,6 +1184,7 @@ namespace Ellucian.Colleague.Api.Client
 
             return advisees;
         }
+
         /// <summary>
         /// Get a program evaluation
         /// </summary>
@@ -1053,6 +1218,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Get a program evaluation async.
         /// </summary>
@@ -1086,6 +1252,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Get a program evaluation async.
         /// </summary>
@@ -1157,6 +1324,42 @@ namespace Ellucian.Colleague.Api.Client
         }
 
         /// <summary>
+        /// Get a program evaluation async.
+        /// </summary>
+        /// <returns><see cref="ProgramEvaluation4"/>Returns a program evaluation</returns>
+        /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<ProgramEvaluation4> GetProgramEvaluation4Async(string id, string program, string catalogYear = null)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "ID cannot be empty/null for ProgramEvaluation retrieval.");
+            }
+            if (string.IsNullOrEmpty(program))
+            {
+                throw new ArgumentNullException("program", "Program cannot be empty/null for program results retrieval.");
+            }
+            try
+            {
+                string urlPath = UrlUtility.CombineUrlPath(_studentsPath, id, _evaluationsPath);
+                string query = UrlUtility.BuildEncodedQueryString(new[] { "program", program, "catalogYear", catalogYear });
+
+                urlPath = UrlUtility.CombineUrlPathAndArguments(urlPath, query);
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion4);
+                var response = await ExecuteGetRequestWithResponseAsync(urlPath, headers: headers);
+                var resource = JsonConvert.DeserializeObject<ProgramEvaluation4>(await response.Content.ReadAsStringAsync());
+                return resource;
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get ProgramEvaluation");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Get a list of program evaluations for the given student
         /// </summary>
         /// <param name="id">The ID of the student</param>
@@ -1192,6 +1395,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Get a list of program evaluations for the given student async.
         /// </summary>
@@ -1228,6 +1432,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Get a list of program evaluations for the given student async.
         /// </summary>
@@ -1264,6 +1469,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Get a list of program evaluations for the given student async.
         /// </summary>
@@ -1300,6 +1506,44 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
+        /// <summary>
+        /// Get a list of program evaluations for the given student async.
+        /// </summary>
+        /// <param name="id">The ID of the student</param>
+        /// <param name="programCodes">The list of codes of the Programs to be evaluated</param>
+        /// <returns><see cref="ProgramEvaluation4"/>Returns a list of program evaluations</returns>
+        /// <exception cref="ArgumentNullException">The resource id must be provided.</exception>
+        /// <exception cref="ResourceNotFoundException">The requested resource cannot be found.</exception>
+        public async Task<IEnumerable<ProgramEvaluation4>> QueryProgramEvaluations4Async(string id, List<string> programCodes)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException("id", "ID cannot be empty/null for ProgramEvaluation retrieval.");
+            }
+            if (programCodes == null || programCodes.Count() == 0)
+            {
+                throw new ArgumentNullException("programCodes", "Program Codes cannot be empty/null for program results retrieval.");
+            }
+            try
+            {
+                string[] pathStrings = new string[] { _qapiPath, _studentsPath, id, "evaluation" };
+                var urlPath = UrlUtility.CombineUrlPath(pathStrings);
+                // Build url path
+
+                var headers = new NameValueCollection();
+                headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion4);
+                var response = await ExecutePostRequestWithResponseAsync(programCodes, urlPath, headers: headers);
+                return JsonConvert.DeserializeObject<IEnumerable<ProgramEvaluation4>>(await response.Content.ReadAsStringAsync());
+            }
+            // Log any exception, then rethrow it and let calling code determine how to handle it.
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Unable to get ProgramEvaluations");
+                throw;
+            }
+        }
+
         /// <summary>
         /// For the given student and program, returns the appropriate notice text.
         /// </summary>
@@ -1333,6 +1577,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// For the given student and program, returns the appropriate notice text async.
         /// </summary>
@@ -1366,6 +1611,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Get all degree plan archives for a specified degree plan Id.
         /// </summary>
@@ -1391,6 +1637,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Get all degree plan archives for a specified degree plan Id async.
         /// </summary>
@@ -1416,6 +1663,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Get all degree plan archives for a specified degree plan Id.
         /// </summary>
@@ -1440,6 +1688,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Get all degree plan archives for a specified degree plan Id async.
         /// </summary>
@@ -1464,6 +1713,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+        
         /// <summary>
         /// Get plan archive report for a specified archive Id.
         /// </summary>
@@ -1489,6 +1739,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Get plan archive report for a specified archive Id async.
         /// </summary>
@@ -1514,6 +1765,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Searches for advisees within an advisor's assigned advisee list or within the global pool (depending on advisor's permissions).
         /// </summary>
@@ -1544,6 +1796,10 @@ namespace Ellucian.Colleague.Api.Client
             var criteria = new AdviseeSearchCriteria();
             criteria.AdviseeKeyword = adviseeKeyword;
             criteria.AdvisorKeyword = advisorKeyword;
+
+            // Do not log the response body
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
+
             try
             {
                 var response = ExecutePostRequestWithResponse(criteria, urlPath, headers: headers);
@@ -1568,6 +1824,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw new AdvisingException(AdvisingExceptionCodes.SearchFailed, ex);
             }
         }
+
         /// <summary>
         /// Searches for advisees within an advisor's assigned advisee list or within the global pool (depending on advisor's permissions) async.
         /// </summary>
@@ -1599,6 +1856,9 @@ namespace Ellucian.Colleague.Api.Client
             criteria.AdviseeKeyword = adviseeKeyword;
             criteria.AdvisorKeyword = advisorKeyword;
             criteria.IncludeActiveAdviseesOnly = includeActiveAdviseesOnly;
+            // Do not log the response body
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
+
             try
             {
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
@@ -1655,6 +1915,9 @@ namespace Ellucian.Colleague.Api.Client
             criteria.AdviseeKeyword = adviseeKeyword;
             criteria.AdvisorKeyword = advisorKeyword;
             criteria.IncludeActiveAdviseesOnly = includeActiveAdviseesOnly;
+            // Do not log the response body
+            AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
+
             try
             {
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
@@ -1679,6 +1942,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw new AdvisingException(AdvisingExceptionCodes.SearchFailed, ex);
             }
         }
+
         /// <summary>
         /// Request for a list of advisors by Advisor Id
         /// </summary>
@@ -1709,6 +1973,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Request for a list of advisors by Advisor Id async
         /// </summary>
@@ -1792,6 +2057,7 @@ namespace Ellucian.Colleague.Api.Client
                 string urlPath = UrlUtility.CombineUrlPath(pathStrings);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderPlanningVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecuteGetRequestWithResponse(urlPath, headers: headers);
                 var resource = JsonConvert.DeserializeObject<PlanningStudent>(response.Content.ReadAsStringAsync().Result);
                 return resource;
@@ -1824,6 +2090,7 @@ namespace Ellucian.Colleague.Api.Client
                 var urlPath = UrlUtility.CombineUrlPath(pathStrings);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderPlanningVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = ExecutePostRequestWithResponse(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<PlanningStudent>>(response.Content.ReadAsStringAsync().Result);
             }
@@ -1833,6 +2100,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// query planning students asynchronously
         /// </summary>
@@ -1853,6 +2121,7 @@ namespace Ellucian.Colleague.Api.Client
                 var urlPath = UrlUtility.CombineUrlPath(pathStrings);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderPlanningVersion1);
+                AddLoggingRestrictions(ref headers, Core.LoggingRestrictions.DoNotLogResponseContent);
                 var response = await ExecutePostRequestWithResponseAsync(criteria, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<IEnumerable<PlanningStudent>>(await response.Content.ReadAsStringAsync());
             }
@@ -1862,6 +2131,7 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
+
         /// <summary>
         /// Gets the set of permissions for the active advisor. This can only be run for the logged-in advisor, and not for any advisor by ID.
         /// If the currently-logged-in user is not an advisor then an AdvisingException with the proper code will be thrown.
@@ -1928,7 +2198,6 @@ namespace Ellucian.Colleague.Api.Client
             }
         }
 
-
         /// <summary>
         /// Retrieves the configuration information for Student Planning.
         /// </summary>
@@ -1971,6 +2240,9 @@ namespace Ellucian.Colleague.Api.Client
                 var urlPath = UrlUtility.CombineUrlPath(pathStrings);
                 var headers = new NameValueCollection();
                 headers.Add(AcceptHeaderKey, _mediaTypeHeaderVersion1);
+                // Do not log the response body
+                AddLoggingRestrictions(ref headers, LoggingRestrictions.DoNotLogResponseContent);
+
                 var response = await ExecutePostRequestWithResponseAsync(completeAdvisement, urlPath, headers: headers);
                 return JsonConvert.DeserializeObject<Advisee>(await response.Content.ReadAsStringAsync());
             }
@@ -1980,6 +2252,5 @@ namespace Ellucian.Colleague.Api.Client
                 throw;
             }
         }
-
     }
 }

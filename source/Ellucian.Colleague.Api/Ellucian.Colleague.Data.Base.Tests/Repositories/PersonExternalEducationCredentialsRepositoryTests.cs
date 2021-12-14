@@ -1,4 +1,4 @@
-//Copyright 2019 Ellucian Company L.P. and its affiliates.  
+//Copyright 2019-2020 Ellucian Company L.P. and its affiliates.  
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
@@ -284,7 +284,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
                 var expected = _personExternalEducationCredentialsCollection.FirstOrDefault();
                 var instAttendKey = string.Concat(expected.AcadPersonId, "*", expected.AcadInstitutionsId);
-                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<DataContracts.InstitutionsAttend>(instAttendKey, true)).ReturnsAsync(null);
+                dataAccessorMock.Setup(acc => acc.ReadRecordAsync<DataContracts.InstitutionsAttend>(instAttendKey, true)).ReturnsAsync(() => null);
                 var result = await personExternalEducationCredentialsRepo.GetExternalEducationCredentialsByGuidAsync(expected.Guid);
             }
 
@@ -374,7 +374,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 var personExternalEducationCredentialEntity = _personExternalEducationCredentialsCollection.FirstOrDefault();
 
                
-                dataAccessorMock.Setup(repo => repo.ReadRecordAsync<DataContracts.AcadCredentials>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataAccessorMock.Setup(repo => repo.ReadRecordAsync<DataContracts.AcadCredentials>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
 
                 var response = new UpdateAcadCredentialsResponse() { Guid = Guid.NewGuid().ToString() };
 
@@ -462,7 +462,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 var personExternalEducationCredentialEntity = _personExternalEducationCredentialsCollection.FirstOrDefault();
 
 
-                dataAccessorMock.Setup(repo => repo.ReadRecordAsync<DataContracts.AcadCredentials>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataAccessorMock.Setup(repo => repo.ReadRecordAsync<DataContracts.AcadCredentials>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
 
                 var response = new UpdateAcadCredentialsResponse() { Guid = Guid.NewGuid().ToString() };
 

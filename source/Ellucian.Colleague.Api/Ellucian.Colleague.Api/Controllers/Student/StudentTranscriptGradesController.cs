@@ -1,4 +1,4 @@
-﻿//Copyright 2018-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
@@ -6,6 +6,7 @@ using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
@@ -55,7 +56,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="criteria">filter criteria</param>
         /// <returns>List of StudentTranscriptGrades <see cref="Dtos.StudentTranscriptGrades"/> objects representing matching studentTranscriptGrades</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentTranscriptGrades, StudentPermissionCodes.UpdateStudentTranscriptGradesAdjustments })]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.StudentTranscriptGrades))]
@@ -77,6 +78,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _studentTranscriptGradesService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -133,8 +135,9 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired studentTranscriptGrades</param>
         /// <returns>A studentTranscriptGrades object <see cref="Dtos.StudentTranscriptGrades"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
-        [CustomMediaTypeAttributeFilter(ErrorContentType = "application/vnd.hedtech.integration.errors.v2+json")]
+        [HttpGet]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentTranscriptGrades, StudentPermissionCodes.UpdateStudentTranscriptGradesAdjustments })]
         public async Task<Dtos.StudentTranscriptGrades> GetStudentTranscriptGradesByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -152,6 +155,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _studentTranscriptGradesService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                    await _studentTranscriptGradesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                    await _studentTranscriptGradesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -196,6 +200,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="studentTranscriptGrades">DTO of the new studentTranscriptGrades</param>
         /// <returns>A studentTranscriptGrades object <see cref="Dtos.StudentTranscriptGrades"/> in EEDM format</returns>
         [HttpPost]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.StudentTranscriptGrades> PostStudentTranscriptGradesAsync([FromBody] Dtos.StudentTranscriptGrades studentTranscriptGrades)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
@@ -209,6 +214,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="studentTranscriptGrades">DTO of the updated studentTranscriptGrades</param>
         /// <returns>A studentTranscriptGrades object <see cref="Dtos.StudentTranscriptGrades"/> in EEDM format</returns>
         [HttpPut]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.StudentTranscriptGrades> PutStudentTranscriptGradesAsync([FromUri] string guid, [FromBody] Dtos.StudentTranscriptGrades studentTranscriptGrades)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
@@ -221,6 +227,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired studentTranscriptGrades</param>
         [HttpDelete]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task DeleteStudentTranscriptGradesAsync(string guid)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
@@ -236,7 +243,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <returns>List of StudentTranscriptGradesAdjustments <see cref="Dtos.StudentTranscriptGradesAdjustments"/> objects representing matching studentTranscriptGrades</returns>
         [HttpGet]
-        [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<IHttpActionResult> GetStudentTranscriptGradesAdjustmentsAsync(Paging page)
         {
             //Update is not supported for Colleague but HeDM requires full crud support.
@@ -248,6 +255,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired studentTranscriptGradesAdjustments</param>
         [HttpGet]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task GetStudentTranscriptGradesAdjustmentsByGuidAsync(string guid)
         {
             //Get is not supported for Colleague but HeDM requires full crud support.
@@ -260,8 +268,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID of the studentTranscriptGradesAdjustments to update</param>
         /// <param name="studentTranscriptGradesAdjustments">DTO of the updated studentTranscriptGradesAdjustments</param>
         /// <returns>A StudentTranscriptGradesAdjustments object <see cref="Dtos.StudentTranscriptGradesAdjustments"/> in EEDM format</returns>
-        [HttpPut, EedmResponseFilter]
-        [CustomMediaTypeAttributeFilter(ErrorContentType = "application/vnd.hedtech.integration.errors.v2+json")]
+        [HttpPut] [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.UpdateStudentTranscriptGradesAdjustments)]
         public async Task<Dtos.StudentTranscriptGrades> PutStudentTranscriptGradesAdjustmentsAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.StudentTranscriptGradesAdjustments studentTranscriptGradesAdjustments)
         {
             if (string.IsNullOrEmpty(guid))
@@ -290,7 +298,10 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _studentTranscriptGradesService.ValidatePermissions(GetPermissionsMetaData());
                 var dpList = await _studentTranscriptGradesService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
+
+                await _studentTranscriptGradesService.ImportExtendedEthosData(await ExtractExtendedData(await _studentTranscriptGradesService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
                 var studentTranscriptGradesReturn = await _studentTranscriptGradesService.UpdateStudentTranscriptGradesAdjustmentsAsync(
                   await PerformPartialPayloadMerge(studentTranscriptGradesAdjustments, async () => await _studentTranscriptGradesService.GetStudentTranscriptGradesAdjustmentsByGuidAsync(guid, true),
@@ -344,6 +355,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="studentTranscriptGradesAdjustments">DTO of the new studentTranscriptGrades</param>
         /// <returns>A studentTranscriptGrades object <see cref="Dtos.StudentTranscriptGradesAdjustments"/> in EEDM format</returns>
         [HttpPost]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         public async Task<Dtos.StudentTranscriptGrades> PostStudentTranscriptGradesAdjustmentsAsync([FromBody] Dtos.StudentTranscriptGradesAdjustments studentTranscriptGradesAdjustments)
         {
             //Create is not supported for Colleague but HeDM requires full crud support.

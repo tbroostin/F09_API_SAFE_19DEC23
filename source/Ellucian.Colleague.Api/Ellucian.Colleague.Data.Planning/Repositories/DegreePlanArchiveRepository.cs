@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -241,7 +241,7 @@ namespace Ellucian.Colleague.Data.Planning.Repositories
                         catch (Exception ex)
                         {
                             var archiveError = "DegreePlanCommentArchive record corrupt for DegreePlanArchive " + planArchiveDC.Recordkey;
-                            LogDataError("DegreePlanCommentArchive", comment.Recordkey, comment, ex, archiveError);
+                            logger.Error(ex, archiveError);
                         }
 
                     }

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Converters;
 using Ellucian.Colleague.Configuration;
 using Ellucian.Colleague.Data.Base;
@@ -18,6 +18,8 @@ using Ellucian.Web.Security;
 using Microsoft.Practices.Unity;
 using Microsoft.Practices.Unity.Configuration;
 using Newtonsoft.Json;
+using Serilog.Core;
+using Serilog.Events;
 using slf4net;
 using System;
 using System.Collections.Generic;
@@ -46,14 +48,20 @@ namespace Ellucian.Colleague.Api
         /// </summary>
         private static string ExecuteAllRulesInColleague = "ExecuteAllRulesInColleague";
 
-        private static string LogFile = "App_Data\\Logs\\ColleagueWebApi.log";
+        private static string LogFile = Path.Combine(AppDomain.CurrentDomain.GetData("DataDirectory").ToString(), "Logs", "ColleagueWebApi.log");
         private static string LogCategory = "ColleagueAPIApplication";
+        private static string LogComponentName = "ColleagueWebAPI";
         private static string colleagueTimeZone = "";
         private static string baseResourcePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "App_GlobalResources");
         private static string resourceCustomizationFilePath = AppDomain.CurrentDomain.GetData("DataDirectory").ToString() + @"\ResourceCustomization.json";
 
         private const string HedtechIntegrationStudentUnverifiedGradesSubmissionsFormat = "application/vnd.hedtech.integration.student-unverified-grades-submissions.v{0}+json";
         private const string HedtechIntegrationStudentTranscriptGradesAdjustmentsFormat = "application/vnd.hedtech.integration.student-transcript-grades-adjustments.v{0}+json";
+
+        /// <summary>
+        /// This property set/get an instance of the Serilog LoggingLevelSwitch
+        /// </summary>
+        public static LoggingLevelSwitch LoggingLevelSwitch { get; private set; }
 
         /// <summary>
         /// Initializes the dependency injection container.
@@ -121,8 +129,9 @@ namespace Ellucian.Colleague.Api
             Task.Run(async () => await Ellucian.Dmi.Client.Das.DasSessionPool.SetSizeAsync(collSettings.DasSettings.ConnectionPoolSize)).GetAwaiter().GetResult();
 
             // [2] setup logging (depends on settings). Override default log template with one that has timestamp.
-            SourceLevels logLevel = settings.LogLevel;
-            Ellucian.Logging.EnterpriseLibraryLoggerAdapter.Configure(LogFile, logLevel, LogCategory, template: "{timestamp}{newline}{message}{newline}");
+            LogEventLevel logEventLevel = settings.LogLevel;
+            LoggingLevelSwitch = new LoggingLevelSwitch(logEventLevel);
+            Ellucian.Logging.SerilogAdapter.Configure(LogFile, LoggingLevelSwitch, LogComponentName);
             ILogger logger = slf4net.LoggerFactory.GetLogger(LogCategory);
             container.RegisterInstance<ILogger>(logger);
 

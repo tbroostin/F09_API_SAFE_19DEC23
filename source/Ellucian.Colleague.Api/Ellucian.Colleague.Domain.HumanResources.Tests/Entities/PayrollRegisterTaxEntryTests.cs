@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -16,6 +16,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         public decimal? employerTaxAmount;
         public decimal? employeeTaxableAmount;
         public decimal? employerTaxableAmount;
+        public decimal? employeeAdjustmentAmount;
+        public decimal? employerAdjustmentAmount;
+        public decimal? employeeTaxableAdjustmentAmount;
+        public decimal? employerTaxableAdjustmentAmount;
+
         public PayrollRegisterTaxEntry taxEntry
         {
             get
@@ -35,6 +40,10 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             employeeTaxableAmount = 10m;
             employerTaxAmount = 15m;
             employerTaxableAmount = 22m;
+            employeeAdjustmentAmount = 34m;
+            employeeTaxableAdjustmentAmount = 200m;
+            employerAdjustmentAmount = -35m;
+            employerTaxableAdjustmentAmount = 100m;
         }
 
         [TestMethod]
@@ -68,6 +77,38 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         {
             taxCode = null;
             var error = taxEntry;
+        }
+
+        [TestMethod]
+        public void EmployeeAdjustmentAmount_GetSetTest()
+        {
+            var entry = new PayrollRegisterTaxEntry(taxCode, processingCode);
+            entry.EmployeeAdjustmentAmount = employeeAdjustmentAmount;
+            Assert.AreEqual(employeeAdjustmentAmount, entry.EmployeeAdjustmentAmount);
+        }
+
+        [TestMethod]
+        public void EmployerAdjustmentAmount_GetSetTest()
+        {
+            var entry = new PayrollRegisterTaxEntry(taxCode, processingCode);
+            entry.EmployerAdjustmentAmount = employerAdjustmentAmount;
+            Assert.AreEqual(employerAdjustmentAmount, entry.EmployerAdjustmentAmount);
+        }
+
+        [TestMethod]
+        public void EmployeeTaxableAdjustmentAmount_GetSetTest()
+        {
+            var entry = new PayrollRegisterTaxEntry(taxCode, processingCode);
+            entry.EmployeeTaxableAdjustmentAmount = employeeTaxableAdjustmentAmount;
+            Assert.AreEqual(employeeTaxableAdjustmentAmount, entry.EmployeeTaxableAdjustmentAmount);
+        }
+
+        [TestMethod]
+        public void EmployerTaxableAdjustmentAmount_GetSetTest()
+        {
+            var entry = new PayrollRegisterTaxEntry(taxCode, processingCode);
+            entry.EmployerTaxableAdjustmentAmount = employerTaxableAdjustmentAmount;
+            Assert.AreEqual(employerTaxableAdjustmentAmount, entry.EmployerTaxableAdjustmentAmount);
         }
     }
 }

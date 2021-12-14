@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Student.Entities;
 using System;
 using System.Collections.Generic;
@@ -24,7 +24,15 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// </summary>
         /// <param name="studentPetition">The student petition to add</param>
         /// <returns>Newly created student petition</returns>
-       Task<StudentPetition> AddStudentPetitionAsync(StudentPetition studentPetition);
+        Task<StudentPetition> AddStudentPetitionAsync(StudentPetition studentPetition);
+
+        /// <summary>
+        /// Update a student petition
+        /// </summary>
+        /// <param name="studentPetition">The student petition to update</param>
+        /// <returns>Updated student petition</returns>
+        Task<StudentPetition> UpdateStudentPetitionAsync(StudentPetition studentPetition);
+
         /// <summary>
         /// Get a student petition by Id
         /// </summary>

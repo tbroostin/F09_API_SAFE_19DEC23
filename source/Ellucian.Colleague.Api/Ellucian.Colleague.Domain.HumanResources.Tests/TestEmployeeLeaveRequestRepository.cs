@@ -39,6 +39,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             public string LeaveRequestId { get; set; }
             public DateTime LeaveDate { get; set; }
             public decimal? LeaveHours { get; set; }
+            public bool ProcessedInPayPeriod { get; set; }
         }
 
         public class LeaveRequestStatusRecord
@@ -173,35 +174,40 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                         Id = "1",
                         LeaveRequestId = "1",
                         LeaveDate = new DateTime(2019,11,05),
-                        LeaveHours = 8.00m
+                        LeaveHours = 8.00m,
+                        ProcessedInPayPeriod = false
                     },
                       new LeaveRequestDetailRecord()
                     {
                         Id = "2",
                         LeaveRequestId = "1",
                         LeaveDate = new DateTime(2019,11,06),
-                        LeaveHours = 8.00m
+                        LeaveHours = 8.00m,
+                        ProcessedInPayPeriod = false
                     },
                       new LeaveRequestDetailRecord()
                     {
                         Id = "961",
                         LeaveRequestId = "2",
                         LeaveDate = new DateTime(2019,04,04),
-                        LeaveHours = 4.00m
+                        LeaveHours = 4.00m,
+                        ProcessedInPayPeriod = false
                     },
                       new LeaveRequestDetailRecord()
                     {
                         Id = "963",
                         LeaveRequestId = "3",
                         LeaveDate = new DateTime(2019,10,01),
-                        LeaveHours = 4.00m
+                        LeaveHours = 4.00m,
+                        ProcessedInPayPeriod = false
                     },
                     new LeaveRequestDetailRecord()
                     {
                         Id = "123456",
                         LeaveRequestId = randomLeaveRequestId,
                         LeaveDate = DateTime.Today,
-                        LeaveHours = 8.00m
+                        LeaveHours = 8.00m,
+                        ProcessedInPayPeriod = false
                     },
                           new LeaveRequestDetailRecord()
                     {
@@ -334,7 +340,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             if (leaveRequestRecord.LeaveRequestDetailRecords != null && leaveRequestRecord.LeaveRequestDetailRecords.Any())
             {
                 leaveRquestDetails = new List<HumanResources.Entities.LeaveRequestDetail>();
-                leaveRequestRecord.LeaveRequestDetailRecords.ForEach(lrd => leaveRquestDetails.Add(new HumanResources.Entities.LeaveRequestDetail(lrd.Id, lrd.LeaveRequestId, lrd.LeaveDate, lrd.LeaveHours)));
+                leaveRequestRecord.LeaveRequestDetailRecords.ForEach(lrd => leaveRquestDetails.Add(new HumanResources.Entities.LeaveRequestDetail(lrd.Id, lrd.LeaveRequestId, lrd.LeaveDate, lrd.LeaveHours, lrd.ProcessedInPayPeriod)));
             }
 
             // To Do: Extract the LeaveRequestCommentRecords

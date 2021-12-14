@@ -221,6 +221,11 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Entities
         public bool bypassApprovals { get; set; }
 
         /// <summary>
+        /// A reference number specified for the requisition by an external system.
+        /// </summary>
+        public List<string> ReferenceNumbers { get; set; }
+
+        /// <summary>
         /// Vendor PreferredAddressId
         /// </summary>
         public string VendorPreferredAddressId { get; set; }

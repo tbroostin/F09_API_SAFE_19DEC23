@@ -614,7 +614,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             public async Task StudentHasNoMatchingAwardYearTest()
             {
                 studentAwardYearRepositoryMock.Setup(r => r.GetStudentAwardYearAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CurrentOfficeService>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
                 BuildAwardPackageChangeRequestService();
 
                 try
@@ -729,7 +729,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             {
                 studentAwardRepositoryMock.Setup(r => r.GetStudentAwardAsync(It.IsAny<string>(), It.IsAny<Domain.FinancialAid.Entities.StudentAwardYear>(),
                    It.IsAny<string>(), It.IsAny<IEnumerable<Domain.FinancialAid.Entities.Award>>(), It.IsAny<IEnumerable<Domain.FinancialAid.Entities.AwardStatus>>()))
-                   .ReturnsAsync(null);
+                   .ReturnsAsync(() => null);
                 BuildAwardPackageChangeRequestService();
                 try
                 {

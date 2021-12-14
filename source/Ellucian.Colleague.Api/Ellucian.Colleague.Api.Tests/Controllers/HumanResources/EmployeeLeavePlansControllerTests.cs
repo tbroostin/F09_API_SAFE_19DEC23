@@ -3,20 +3,26 @@ using Ellucian.Colleague.Api.Controllers.HumanResources;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Http.Exceptions;
+using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using slf4net;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
 {
@@ -219,6 +225,176 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.HumanResources
             var result = await empLeavePlansController.GetEmployeeLeavePlansByGuidAsync(guid);
             Assert.IsNotNull(result);
         }
+
+        //Permissions Tests
+
+        //Success
+        //Get 8
+        //GetEmployeeLeavePlansAsync
+        [TestMethod]
+        public async Task EmpLeavePlansController_GetEmployeeLeavePlansAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "EmployeeLeavePlans" },
+                { "action", "GetEmployeeLeavePlansAsync" }
+            };
+            HttpRoute route = new HttpRoute("employee-leave-plans", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            empLeavePlansController.Request.SetRouteData(data);
+            empLeavePlansController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.ViewEmployeeLeavePlans);
+
+            var controllerContext = empLeavePlansController.ControllerContext;
+            var actionDescriptor = empLeavePlansController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            empLeavePlansServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            empLeavePlansServiceMock.Setup(s => s.GetEmployeeLeavePlansAsync(It.IsAny<int>(), It.IsAny<int>(), bypassCache)).ReturnsAsync(tupleResult);
+            var result = await empLeavePlansController.GetEmployeeLeavePlansAsync(paging);
+
+            Object filterObject;
+            empLeavePlansController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewEmployeeLeavePlans));
+
+        }
+
+        //Exception
+        //Get 8
+        //GetEmployeeLeavePlansAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task EmpLeavePlansController_GetEmployeeLeavePlansAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "EmployeeLeavePlans" },
+                { "action", "GetEmployeeLeavePlansAsync" }
+            };
+            HttpRoute route = new HttpRoute("employee-leave-plans", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            empLeavePlansController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = empLeavePlansController.ControllerContext;
+            var actionDescriptor = empLeavePlansController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                empLeavePlansServiceMock.Setup(s => s.GetEmployeeLeavePlansAsync(It.IsAny<int>(), It.IsAny<int>(), bypassCache)).ThrowsAsync(new PermissionsException());
+                empLeavePlansServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view employee-leave-plans."));
+                await empLeavePlansController.GetEmployeeLeavePlansAsync(paging);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
+        //Success
+        //Get By Id 8
+        //GetEmployeeLeavePlansByGuidAsync
+        [TestMethod]
+        public async Task EmpLeavePlansController_GetEmployeeLeavePlansByGuidAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "EmployeeLeavePlans" },
+                { "action", "GetEmployeeLeavePlansByGuidAsync" }
+            };
+            HttpRoute route = new HttpRoute("employee-leave-plans", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            empLeavePlansController.Request.SetRouteData(data);
+            empLeavePlansController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(HumanResourcesPermissionCodes.ViewEmployeeLeavePlans);
+
+            var controllerContext = empLeavePlansController.ControllerContext;
+            var actionDescriptor = empLeavePlansController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            empLeavePlansServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            empLeavePlansServiceMock.Setup(s => s.GetEmployeeLeavePlansByGuidAsync(It.IsAny<string>(), bypassCache)).ReturnsAsync(empLeavePlans);
+            var result = await empLeavePlansController.GetEmployeeLeavePlansByGuidAsync(guid);
+
+
+            Object filterObject;
+            empLeavePlansController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(HumanResourcesPermissionCodes.ViewEmployeeLeavePlans));
+
+        }
+
+
+        //Exception
+        //Get By Id 8
+        //GetEmployeeLeavePlansByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task EmpLeavePlansController_GetEmployeeLeavePlansByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "EmployeeLeavePlans" },
+                { "action", "GetEmployeeLeavePlansByGuidAsync" }
+            };
+            HttpRoute route = new HttpRoute("employee-leave-plans", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            empLeavePlansController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = empLeavePlansController.ControllerContext;
+            var actionDescriptor = empLeavePlansController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                empLeavePlansServiceMock.Setup(s => s.GetEmployeeLeavePlansByGuidAsync(It.IsAny<string>(), bypassCache)).ThrowsAsync(new PermissionsException());
+                empLeavePlansServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view employee-leave-plans."));
+                await empLeavePlansController.GetEmployeeLeavePlansByGuidAsync(guid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
 
         #endregion
 

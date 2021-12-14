@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Data.Student.DataContracts;
@@ -110,7 +110,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task FinancialAidYearService_FinancialAidYears_With_NamedQuery_No_Terms()
             {
-                termRepositoryMock.Setup( repo => repo.GetAsync( It.IsAny<bool>() ) ).ReturnsAsync( null );
+                termRepositoryMock.Setup( repo => repo.GetAsync( It.IsAny<bool>() ) ).ReturnsAsync(() => null);
                 var results = await financialAidYearService.GetFinancialAidYearsAsync( "ba781f55-4279-4bc3-b952-bcca18a5bc21" );
                 Assert.AreEqual( 0, results.Count() );
             }

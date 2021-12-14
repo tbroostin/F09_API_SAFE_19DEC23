@@ -356,7 +356,7 @@ namespace Ellucian.Colleague.Data.FinancialAid.Tests.Repositories
             public async Task NullFinAidRecordThrowsExceptionTest()
             {
                 dataReaderMock.Setup(r => r.ReadRecordAsync<FinAid>(It.IsAny<string>(), true))
-                    .ReturnsAsync(null);                
+                    .ReturnsAsync(() => null);                
                 try
                 {
                     await actualRepository.CreateAwardPackageChangeRequestAsync(awardPackageChangeRequest, originalStudentAward);

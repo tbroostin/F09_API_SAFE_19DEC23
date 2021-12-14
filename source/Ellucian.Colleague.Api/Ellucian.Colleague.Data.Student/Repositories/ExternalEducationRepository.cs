@@ -1,4 +1,4 @@
-﻿/*Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
+﻿/*Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 
 using System;
 using System.Collections.Generic;
@@ -13,7 +13,6 @@ using Ellucian.Web.Cache;
 using Ellucian.Web.Http.Configuration;
 using slf4net;
 using Ellucian.Web.Dependency;
-using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague.DataContracts;
 
@@ -23,8 +22,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     public class ExternalEducationRepository : BaseColleagueRepository, IExternalEducationRepository
     {
         private readonly int _readSize;
-        private readonly string academicCredentialCriteria = "WITH LDM.GUID.SECONDARY.FLD EQ '' AND LDM.GUID.SECONDARY.KEY EQ '' AND LDM.GUID.ENTITY EQ 'ACAD.CREDENTIALS' AND LDM.GUID.PRIMARY.KEY EQ '{0}'";
-
+     
         public ExternalEducationRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)
         {
@@ -47,8 +45,6 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var coreDefaultData = GetDefaults();
 
             var hostInstitutionId = coreDefaultData.DefaultHostCorpId;
-
-
 
             if (!(string.IsNullOrEmpty(hostInstitutionId)))
             {
@@ -121,8 +117,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 throw new ArgumentNullException("id", "ID is required to get a AcademicCredentials.");
             }
-            var guidRecord = await DataReader.SelectAsync("LDM.GUID", string.Format(academicCredentialCriteria, id));
-            if (guidRecord == null || guidRecord.Count() > 1)
+            // var guidRecord = await DataReader.SelectAsync("LDM.GUID", string.Format(academicCredentialCriteria, id));
+
+            //var academicCredentialsDict = await GetAcadCredGuidsCollectionAsync(academicCredentialsIds);
+            var academicCredentialsDict = await GetAcadCredGuidsCollectionAsync(new List<string>() { id });
+            var guidRecord = GetGuid(id, academicCredentialsDict);
+
+            if (string.IsNullOrEmpty(guidRecord))
             {
                 throw new KeyNotFoundException(string.Format("No AcademicCredential was found for id {0}.", id));
             }
@@ -144,7 +145,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                     }
                 }
             }
-            return await BuildExternalEducationAsync(acadCredential, guidRecord.FirstOrDefault());
+            return await BuildExternalEducationAsync(acadCredential, guidRecord);
         }
 
 
@@ -153,7 +154,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var acadCredentialCollection = new List<ExternalEducation>();
             if (academicCredentialsIds != null && academicCredentialsIds.Any())
             {
-                var academicCredentialsDict = await GetAcadCredentialsGuidDictionary(academicCredentialsIds, academicCredentialCriteria);
+                var academicCredentialsDict = await GetAcadCredGuidsCollectionAsync(academicCredentialsIds);
 
                 foreach (var source in sources)
                 {
@@ -168,7 +169,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             if (source == null)
             {
-                throw new ArgumentNullException("source", "source required to build acadCredential.");
+                throw new ArgumentNullException("source", "source required to build AcadCredentials.");
             }
 
             ExternalEducation externalEducation = null;
@@ -232,34 +233,44 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }, Level1CacheTimeoutValue);
         }
 
-
+        
         /// <summary>
-        /// Gets dictionary with colleague id and guid key pair for ACAD.CREDENTIALS.
+        /// Using a collection of acadCred ids, get a dictionary collection of associated guids
         /// </summary>
-        /// <param name="ids"></param>
-        /// <returns></returns>
-        private async Task<Dictionary<string, string>> GetAcadCredentialsGuidDictionary(IEnumerable<string> ids, string criteria)
+        /// <param name="acadCredentialIds">collection of acadCred ids</param>
+        /// <returns>Dictionary consisting of a acadCredId (key) and guid (value)</returns>
+        private async Task<Dictionary<string, string>> GetAcadCredGuidsCollectionAsync(IEnumerable<string> acadCredentialIds)
         {
-            if (ids == null || !Enumerable.Any<string>(ids))
+  
+            if ((acadCredentialIds == null) || (acadCredentialIds != null && !acadCredentialIds.Any()))
             {
-                throw new ArgumentNullException("AcadCredentials id's are required.");
+                return new Dictionary<string, string>();
             }
+            var acadCredGuidCollection = new Dictionary<string, string>();
 
-            Dictionary<string, string> dict = new Dictionary<string, string>();
-
-            foreach (var id in ids)
+            var personGuidLookup = acadCredentialIds
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct().ToList()
+                .ConvertAll(p => new RecordKeyLookup("ACAD.CREDENTIALS", p, false)).ToArray();
+            var recordKeyLookupResults = await DataReader.SelectAsync(personGuidLookup);
+            foreach (var recordKeyLookupResult in recordKeyLookupResults)
             {
-                var guidRecords = await DataReader.SelectAsync("LDM.GUID", string.Format(criteria, id));
-                if (!dict.ContainsKey(id))
+                try
                 {
-                    if (guidRecords != null && guidRecords.Any())
+                    var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                    if (!acadCredGuidCollection.ContainsKey(splitKeys[1]))
                     {
-                        dict.Add(id, guidRecords[0]);
+                        acadCredGuidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
                     }
                 }
+                catch (Exception) // Do not throw error.
+                {
+                }
             }
-            return dict;
+
+            return acadCredGuidCollection;
         }
+
 
         private string GetGuid(string key, IDictionary<string, string> dict)
         {

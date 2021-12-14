@@ -54,6 +54,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// A pay cycle describes a date interval to which employee time worked is applied and processed
         /// Results can be limited by passing in a lookback date. Pay Periods with end dates before the specified lookback date will be omitted.
         /// </summary>
+        /// <accessComments>Any authenticated user can get these resources</accessComments>
         /// <param name="lookbackDate">A optional date which is used to filter previous pay periods with end dates prior to this date.</param>
         /// <returns>A List of pay cycle dtos</returns>
         [HttpGet]

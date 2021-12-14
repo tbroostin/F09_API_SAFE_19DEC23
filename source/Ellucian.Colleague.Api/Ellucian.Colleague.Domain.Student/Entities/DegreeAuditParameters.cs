@@ -27,17 +27,23 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// </summary>
         public bool ShowRelatedCourses { get; set; }
         /// <summary>
+        /// This is to exclude completed courses that are marked as "Possible Replace In Progress" for being replaced 
+        /// by another In-Progress or Planned course marked as "Possible Replacement"
+        /// </summary>
+        public bool ExcludeCompletedPossibleReplaceInProgressCoursesFromGPA { get; set; }
+        /// <summary>
         /// Constructor for DegreeAuditParameters
         /// </summary>
         /// <param name="extraCourses">What method to use for extra courses</param>
         /// <param name="useLowGrade">Should low grades be used</param>
         /// <param name="modifiedDefaultSort">Has default sort specification been modified</param>
-        public DegreeAuditParameters(ExtraCourses extraCourses, bool showRelatedCourses=false,  bool useLowGrade = false, bool modifiedDefaultSort = false)
+        public DegreeAuditParameters(ExtraCourses extraCourses, bool showRelatedCourses=false,  bool useLowGrade = false, bool modifiedDefaultSort = false, bool excludeCoursesInGPA = false)
         {
             ExtraCourseHandling = extraCourses;
             UseLowGrade = useLowGrade;
             ModifiedDefaultSort = modifiedDefaultSort;
             ShowRelatedCourses = showRelatedCourses;
+            ExcludeCompletedPossibleReplaceInProgressCoursesFromGPA = excludeCoursesInGPA;
         }
     }
 }

@@ -60,5 +60,11 @@ namespace Ellucian.Colleague.Domain.Student.Repositories
         /// <param name="code">ResidencyStatus code</param>
         /// <returns>Guid</returns>
         Task<string> GetResidencyStatusGuidAsync(string code);
+        /// <summary>
+        /// Get Student's Academic Levels
+        /// </summary>
+        /// <param name="studentId">Student Id</param>
+        /// <returns>An IEnumerable list of student's academic levels</returns>
+        Task<IEnumerable<Ellucian.Colleague.Domain.Student.Entities.StudentAcademicLevel>> GetStudentAcademicLevelsAsync(string studentId);
     }
 }

@@ -60,7 +60,6 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
         /// <returns>Collection of <see cref="BudgetCodes">budgetCodes</see> objects</returns>          
         public async Task<IEnumerable<BudgetCodes>> GetBudgetCodesAsync(bool bypassCache = false)
         {
-            CheckViewBudgetCodesPermission();
             var budgetCodesCollection = new List<Ellucian.Colleague.Dtos.BudgetCodes>();
 
             var budgetCodesEntities = await _budgetRepository.GetBudgetCodesAsync(bypassCache);
@@ -85,8 +84,6 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
         /// <returns>The <see cref="BudgetCodes">budgetCodes</see></returns>
         public async Task<BudgetCodes> GetBudgetCodesByGuidAsync(string guid, bool bypassCache = true)
         {
-            CheckViewBudgetCodesPermission();
-
             try
             {
                 string corpName = await _referenceDataRepository.GetCorpNameAsync();
@@ -103,21 +100,6 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
             catch (ArgumentException ex)
             {
                 throw new ArgumentException(ex.Message);
-            }
-        }
-
-        /// <summary>
-        /// Permissions code that allows an external system to do a READ operation. This API will integrate information related to outgoing payments that 
-        /// could be deemed personal.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckViewBudgetCodesPermission()
-        {
-            var hasPermission = HasPermission(BudgetManagementPermissionCodes.ViewBudgetCode);
-
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view budget-codes.");
             }
         }
 

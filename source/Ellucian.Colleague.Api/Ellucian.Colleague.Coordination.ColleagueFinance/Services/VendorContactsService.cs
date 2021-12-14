@@ -1,4 +1,4 @@
-//Copyright 2020 Ellucian Company L.P. and its affiliates.
+//Copyright 2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -61,7 +61,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>Collection of VendorContacts DTO objects</returns>
         public async Task<Tuple<IEnumerable<VendorContacts>, int>> GetVendorContactsAsync(int offset, int limit, Dtos.VendorContacts criteria, bool bypassCache = false)
         {
-            CheckViewVendorContactsPermission();
 
             var vendorContactsCollection = new List<Ellucian.Colleague.Dtos.VendorContacts>();
             IEnumerable<OrganizationContact> entities = new List<OrganizationContact>();
@@ -116,15 +115,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>VendorContacts DTO object</returns>
         public async Task<Ellucian.Colleague.Dtos.VendorContacts> GetVendorContactsByGuidAsync(string guid, bool bypassCache = true)
         {
-            CheckViewVendorContactsPermission();
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid", "GUID is required to get a Vendor Contacts.");
+            }
 
             try
             {
-                if (string.IsNullOrEmpty(guid))
-                {
-                    throw new ArgumentNullException("guid", "GUID is required to get a Vendor Contacts.");
-                }
-
                 var entity = await _vendorContactsRepository.GetGetVendorContactsByGuidAsync(guid);
                 Dictionary<string, string> vendorGuidCollection = await _vendorsRepository.GetVendorGuidsCollectionAsync(new List<string>() { entity.VendorId });
 
@@ -145,9 +142,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 throw new KeyNotFoundException(string.Format("No vendor-contacts was found for guid '{0}'", guid), ex);
             }
-            catch(RepositoryException e)
+            catch (RepositoryException e)
             {
-                IntegrationApiExceptionAddError( e.Errors[0].Message, "GUID.Not.Found", guid, "", System.Net.HttpStatusCode.NotFound );
+                IntegrationApiExceptionAddError(e.Errors[0].Message, "GUID.Not.Found", guid, "", System.Net.HttpStatusCode.NotFound);
                 throw IntegrationApiException;
             }
         }
@@ -265,19 +262,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             return dto;
         }
 
-        /// <summary>
-        /// Permissions code that allows an external system to perform the READ operation.
-        /// </summary>
-        private void CheckViewVendorContactsPermission()
-        {
-            var hasPermission = HasPermission(ColleagueFinancePermissionCodes.ViewVendorContacts);
-
-            if (!hasPermission)
-            {
-                IntegrationApiExceptionAddError("User '" + CurrentUser.UserId + "' does not have permission to view vendor-contacts.", "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
-                throw IntegrationApiException;
-            }
-        }
+       
 
         #region vendor contact initiation process
 

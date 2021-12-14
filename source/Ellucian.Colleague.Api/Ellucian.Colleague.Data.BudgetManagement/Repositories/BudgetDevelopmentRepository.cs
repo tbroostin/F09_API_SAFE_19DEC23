@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.BudgetManagement.DataContracts;
 using Ellucian.Colleague.Data.BudgetManagement.Transactions;
@@ -62,7 +62,10 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
             {
                 // Get the list of budget officers for the current user for the working budget.
                 var selectionCriteria = "WITH BO.BUDGET EQ '" + workingBudgetId + "'" + " AND BO.LOGIN EQ '" + userOperatorId + "'";
+                var debugSelectionCriteria = "WITH BO.BUDGET EQ '" + workingBudgetId + "'" + " AND BO.LOGIN EQ 'valuefromuserOperatorId'";
                 var possibleWorkingBudgetOfficersIds = await DataReader.SelectAsync("BUD.OFCR", selectionCriteria);
+
+                logger.Debug("==> Select budget officers for the current user for the working budget (debugSelectionCriteria): " + debugSelectionCriteria + " <==");
 
                 // If there are any budget officer records containing the working budget and the current user ID,
                 // read the budget officer records and then get the BUD.OFCR records where there is an association entry
@@ -70,6 +73,8 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                 // one of the budget officers for the working budget.
                 if (possibleWorkingBudgetOfficersIds != null && possibleWorkingBudgetOfficersIds.Any())
                 {
+                    logger.Debug("==> possibleWorkingBudgetOfficersIds Length ==> " + possibleWorkingBudgetOfficersIds.Length + " <==");
+
                     Collection<BudOfcr> budgetOfficerRecords = new Collection<BudOfcr>();
                     budgetOfficerRecords = await DataReader.BulkReadRecordAsync<BudOfcr>(possibleWorkingBudgetOfficersIds);
                     string[] workingBudgetOfficerRecordIds;
@@ -96,16 +101,39 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                                 {
                                     foreach (var budOfcr in allBudOfcrIds)
                                     {
-                                        workingBudgetBudgetOfficerEntities.Add(new BudgetOfficer(budOfcr));
+                                        if (!string.IsNullOrWhiteSpace(budOfcr))
+                                        {
+                                            workingBudgetBudgetOfficerEntities.Add(new BudgetOfficer(budOfcr));
+                                        }
                                     }
+                                }
+                                else
+                                {
+                                    logger.Debug("==> allBudOfcrIds is null or empty. <==");
                                 }
 
                                 // If there were any budget officers for the working budget, update the budget officer domain entities with
                                 // the budget officer login (OPERS) ID and name.
                                 await UpdateBudgetOfficerWithIdAndNameAsync(workingBudgetId, workingBudgetBudgetOfficerEntities, allBudOfcrIds);
                             }
+                            else
+                            {
+                                logger.Debug("==> No BOC.budgetId records read (bocDataContracts is null or empty). <==");
+                            }
+                        }
+                        else
+                        {
+                            logger.Debug("==> No budget officers records assigned to the budget (workingBudgetOfficerRecordIds is null or empty). <==");
                         }
                     }
+                    else
+                    {
+                        logger.Debug("==> No budget officers records read (budgetOfficerRecords is null or empty). <==");
+                    }
+                }
+                else
+                {
+                    logger.Debug("==> No budget officers selected (possibleWorkingBudgetOfficersIds is null or empty). <==");
                 }
             }
             return workingBudgetBudgetOfficerEntities;
@@ -154,12 +182,24 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                             // Obtain a list with all the responsibility unit domain entities for the user for the working budget.
                             await DetermineResponsibilityUnitIdsAsync(workingBudgetId, masterResponsibilityIds, workingBudgetReportingUnitEntities);
                         }
+                        else
+                        {
+                            logger.Debug("==> masterResponsibilityIds is null or empty after DetermineMasterResponsibilityIds. <==");
+                        }
 
                         // Add the description to the reporting units.
                         if (workingBudgetReportingUnitEntities != null && workingBudgetReportingUnitEntities.Any())
                         {
                             await PopulateReportingUnitsDescriptionAsync(workingBudgetReportingUnitEntities);
                         }
+                        else
+                        {
+                            logger.Debug("==> workingBudgetReportingUnitEntities is null or empty after DetermineResponsibilityUnitIdsAsync. <==");
+                        }
+                    }
+                    else
+                    {
+                        logger.Debug("==> No BOC records read (bocDataContracts is null or empty after GetBudOctlRecordsForBudgetOfficersAssignedToUser). <==");
                     }
                 }
             }
@@ -208,6 +248,10 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                         }
                     }
                 }
+                else
+                {
+                    logger.Debug("==> No BUD.OFCR records read (allBudgetOfficerRecords is null or empty). <==");
+                }
 
                 if (uniqueLoginIds != null && uniqueLoginIds.Any())
                 {
@@ -232,6 +276,10 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                         }
                     }
                 }
+                else
+                {
+                    logger.Debug("==> uniqueLoginIds is null or empty. <==");
+                }
             }
         }
 
@@ -253,14 +301,14 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
             // Verify the contents of the method arguments.
             if (string.IsNullOrEmpty(workingBudgetId))
             {
+                logger.Debug("==> There is no working budget ID defined <==");
                 throw new ArgumentNullException("workingBudgetId", "There is no working budget ID defined.");
             }
             if (string.IsNullOrEmpty(currentUserPersonId))
             {
+                logger.Debug("==> There is no currentUserPersonId <==");
                 throw new ArgumentNullException("currentUserPersonId", "There is no current user PERSON ID.");
             }
-
-            LogData(criteria, null);
 
             IList<string> majorComponentStartPosition = glAccountStructure.MajorComponentStartPositions;
 
@@ -278,7 +326,11 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
             {
                 // Get the list of budget officers for the current user for the working budget.
                 var selectionCriteria = "WITH BO.BUDGET EQ '" + workingBudgetId + "'" + " AND BO.LOGIN EQ '" + userOperatorId + "'";
+                var debugSelectionCriteria = "WITH BO.BUDGET EQ '" + workingBudgetId + "'" + " AND BO.LOGIN EQ 'valuefromuserOperatorId'";
+
                 var possibleWorkingBudgetOfficersIds = await DataReader.SelectAsync("BUD.OFCR", selectionCriteria);
+
+                logger.Debug("==> Select budget officers for the current user for the working budget (debugSelectionCriteria) ==> " + debugSelectionCriteria + " <==");
 
                 // If there are any budget officer records containing the working budget and the current user ID,
                 // read the budget officer records and then get the BUD.OFCR records where there is an association entry
@@ -286,6 +338,8 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                 // one of the budget officers for the working budget.
                 if (possibleWorkingBudgetOfficersIds != null && possibleWorkingBudgetOfficersIds.Any())
                 {
+                    logger.Debug("==> possibleWorkingBudgetOfficersIds Length ==> " + possibleWorkingBudgetOfficersIds.Length);
+
                     Collection<BudOfcr> budgetOfficerRecords = new Collection<BudOfcr>();
                     budgetOfficerRecords = await DataReader.BulkReadRecordAsync<BudOfcr>(possibleWorkingBudgetOfficersIds);
                     string[] workingBudgetOfficerRecordIds;
@@ -307,14 +361,23 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                             {
                                 // Determine the BWK.workingbudget IDs using the BOC.workingbudget records.
                                 string[] allBwkIds = await DetermineBudWorkIdsAsync(workingBudgetId, bocDataContracts, criteria, masterResponsibilityIds);
+
                                 if (allBwkIds != null && allBwkIds.Any())
                                 {
+                                    logger.Debug("==> allBwkIds after DetermineBudWorkIdsAsync:\n " + string.Join(", ", allBwkIds));
+
                                     // Apply the filter, get the specific rage requested, bulk read BWK.workingbudget records, and build the domain entity.
                                     workingBudgetEntity = await AddBudgetLineItemsToWorkingBudgetEntity2Async(workingBudgetEntity, workingBudgetId, allBwkIds, criteria, startPosition, recordCount, budgetConfigurationComparables, glAccountStructure);
+                                }
+                                else
+                                {
+                                    logger.Debug("==> allBwkIds is null or empty. <==");
                                 }
 
                                 if (workingBudgetEntity.LineItems != null && workingBudgetEntity.LineItems.Any())
                                 {
+                                    logger.Debug("==> workingBudgetEntity.LineItems Count ==> " + workingBudgetEntity.LineItems.Count());
+
                                     // Get the login and name for the budget officers in each line items
                                     workingBudgetEntity = await PopulateBudgetOfficerAsync(workingBudgetEntity, workingBudgetId);
 
@@ -324,10 +387,34 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                                     // Determine if the user's authorization date for the reporting unit has passed.
                                     workingBudgetEntity = await DetermineIfUserAuthorizationDateHasPassed2Async(workingBudgetEntity, workingBudgetId, masterResponsibilityIds);
                                 }
+                                else
+                                {
+                                    logger.Debug("==> workingBudgetEntity.LineItems is null or empty. <==");
+                                }
+                            }
+                            else
+                            {
+                                logger.Debug("==> No BOC records read (bocDataContracts is null or empty). <==");
                             }
                         }
+                        else
+                        {
+                            logger.Debug("==> No budget officers records assigned to the budget (workingBudgetOfficerRecordIds is null or empty). <==");
+                        }
+                    }
+                    else
+                    {
+                        logger.Debug("==> No budget officers records read (budgetOfficerRecords is null or empty). <==");
                     }
                 }
+                else
+                {
+                    logger.Debug("==> No budget officers selected (possibleWorkingBudgetOfficersIds is null or empty). <==");
+                }
+            }
+            else
+            {
+                logger.Debug("==> userOperatorId is null or empty. <==");
             }
             return workingBudgetEntity;
         }
@@ -421,7 +508,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                                             }
                                             else
                                             {
-                                                logger.Error(string.Format("The file {0} has no record for budget account {1}.", bwkSuiteFileName, account));
+                                                logger.Error(string.Format("==> The file {0} has no record for budget account {1}. <==", bwkSuiteFileName, account));
                                                 throw new ArgumentNullException("budWorkDataContract", "There is no budget line item for the budget account ID.");
                                             }
                                         }
@@ -558,6 +645,8 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                         if (!string.IsNullOrEmpty(responsibility))
                         {
                             // the criteria gets the uppermost responsibility unit and its children.
+                            // The selection statement needs to be updated to the commented part. Already researched; not implemented yet.
+                            // bctCriteria = "WITH @ID LIKE '\"" + responsibility + "_\"...' OR WITH @ID EQ '" + responsibility + "'";
                             bctCriteria = "WITH @ID LIKE '" + responsibility + "_...' OR WITH @ID EQ '" + responsibility + "'";
                         }
 
@@ -674,7 +763,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
 
             // This method is only called if bwkIds contains any IDs.
 
-            logger.Debug("List of all BUD.WORK IDs assigned to the user (allBwkIds):\n " + string.Join(", ", allBwkIds));
+            logger.Debug("==> List of all BUD.WORK IDs assigned to the user (allBwkIds):\n " + string.Join(", ", allBwkIds));
 
             // Apply the filter criteria to the list of resolved BUD.WORK IDs.
             // To avoid a selection statment that may reach the length limit, 
@@ -682,8 +771,8 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
             // The returned budget accounts are sorted by the user criteria if they selected any.
             string[] filteredBwkIds = await ApplyFilterCriteriaAsync(allBwkIds, criteria, bwkSuiteFileName);
 
-            logger.Debug("After ApplyFilterCriteriaAsync.");
-            logger.Debug("List of BUD.WORK IDs after applying filter criteria (filteredBwkIds):\n " + string.Join(", ", filteredBwkIds));
+            logger.Debug("==> After ApplyFilterCriteriaAsync. <==");
+            logger.Debug("==> List of BUD.WORK IDs after applying filter criteria (filteredBwkIds):\n " + string.Join(", ", filteredBwkIds));
 
             if (filteredBwkIds != null && filteredBwkIds.Any())
             {
@@ -691,13 +780,13 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                 int totalLineItems = filteredBwkIds.Count();
                 workingBudgetEntity.TotalLineItems = totalLineItems;
 
-                logger.Debug(string.Format("Total number of budget accounts after applying filter and before paging is {0}.", totalLineItems));
+                logger.Debug(string.Format("==> Total number of budget accounts after applying filter and before paging is {0}. <==", totalLineItems));
 
                 // Obtain the specific range requested for pagination.
                 string[] pagedBwksArray = CalculateRequestedLineItems(startPosition, recordCount, filteredBwkIds.ToArray());
 
-                logger.Debug("After CalculateRequestedLineItems.");
-                logger.Debug("List of BUD.WORK IDs after applying paging (pagedBwksArray):\n " + string.Join(", ", pagedBwksArray));
+                logger.Debug("==> After CalculateRequestedLineItems. <==");
+                logger.Debug("==> List of BUD.WORK IDs after applying paging (pagedBwksArray):\n " + string.Join(", ", pagedBwksArray));
 
                 if (pagedBwksArray != null && pagedBwksArray.Any())
                 {
@@ -772,14 +861,14 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                                     }
                                     else
                                     {
-                                        logger.Debug(string.Format("Cannot find subtotal {0} in the GL account structure; skip it.", i));
+                                        logger.Debug(string.Format("==> Cannot find subtotal {0} in the GL account structure; skip it. <==", i));
                                     }
                                 }
                             }
                             else
                             {
 
-                                logger.Debug(string.Format("Subtotal number {0} does not have a type; skip it.", i));
+                                logger.Debug(string.Format("==> Subtotal number {0} does not have a type; skip it. <==", i));
                             }
 
                             // Get the number of subtotals.
@@ -787,11 +876,11 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                             noOfSubtotals = j;
                         }
 
-                        logger.Debug("subtotalType " + string.Join(", ", subtotalType));
-                        logger.Debug("subtotalName " + string.Join(", ", subtotalName));
-                        logger.Debug("subtotalOrder " + string.Join(", ", subtotalOrder));
-                        logger.Debug("subtotalStartPositions " + string.Join(", ", subtotalStartPositions));
-                        logger.Debug("subtotalStartLengths " + string.Join(", ", subtotalStartLengths));
+                        logger.Debug("==> subtotalType " + string.Join(", ", subtotalType) + " <==");
+                        logger.Debug("==> subtotalName " + string.Join(", ", subtotalName) + " <==");
+                        logger.Debug("==> subtotalOrder " + string.Join(", ", subtotalOrder) + " <==");
+                        logger.Debug("==> subtotalStartPositions " + string.Join(", ", subtotalStartPositions) + " <==");
+                        logger.Debug("==> subtotalStartLengths " + string.Join(", ", subtotalStartLengths) + " <==");
                     }
 
                     // Obtain the first budget account ID for the requested page.
@@ -817,10 +906,10 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                         // This is the position index relative to 0.
                         lastPagedBudgetAccountIndex = pagedBwksArray.Length - 1;
 
-                        logger.Debug("No subtotals chosen.");
-                        logger.Debug(string.Format("firstPagedBudgetAccountIndex is {0}", firstPagedBudgetAccountIndex));
-                        logger.Debug(string.Format("lastPagedBudgetAccountIndex is {0}", lastPagedBudgetAccountIndex));
-                        logger.Debug("List of BUD.WORK IDs to read (fullRangeSubtotalsBwkIds):\n " + string.Join(", ", fullRangeSubtotalsBwkIds));
+                        logger.Debug("==> No subtotals chosen. <==");
+                        logger.Debug(string.Format("==> firstPagedBudgetAccountIndex is {0} <==", firstPagedBudgetAccountIndex));
+                        logger.Debug(string.Format("==> lastPagedBudgetAccountIndex is {0} <==", lastPagedBudgetAccountIndex));
+                        logger.Debug("==> List of BUD.WORK IDs to read (fullRangeSubtotalsBwkIds):\n " + string.Join(", ", fullRangeSubtotalsBwkIds));
                     }
                     else
                     {
@@ -837,10 +926,10 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                             // Set the index of the last budget account to the last one.
                             lastPagedBudgetAccountIndex = filteredBwkIds.Length - 1;
 
-                            logger.Debug(string.Format("Subtotals chosen; it is the last page."));
-                            logger.Debug(string.Format("firstPagedBudgetAccountIndex is {0}", firstPagedBudgetAccountIndex));
-                            logger.Debug(string.Format("lastPagedBudgetAccountIndex is {0}", lastPagedBudgetAccountIndex));
-                            logger.Debug("List of BUD.WORK IDs to read (fullRangeSubtotalsBwkIds):\n " + string.Join(", ", fullRangeSubtotalsBwkIds));
+                            logger.Debug(string.Format(" ==> Subtotals chosen; it is the last page. <=="));
+                            logger.Debug(string.Format("==> firstPagedBudgetAccountIndex is {0} <==", firstPagedBudgetAccountIndex));
+                            logger.Debug(string.Format("==> lastPagedBudgetAccountIndex is {0} <==", lastPagedBudgetAccountIndex));
+                            logger.Debug("==> List of BUD.WORK IDs to read (fullRangeSubtotalsBwkIds):\n " + string.Join(", ", fullRangeSubtotalsBwkIds));
                         }
                         else
                         {
@@ -859,10 +948,10 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                             // The BUD.WORK records to read will be from the first one selected to the last one in the page plus one from the next page.
                             fullRangeSubtotalsBwkIds = filteredBwkIds.Take(numberBwkRecordsToRead).ToArray();
 
-                            logger.Debug(string.Format("Subtotals chosen; it is not the last page."));
-                            logger.Debug(string.Format("firstPagedBudgetAccountIndex is {0}", firstPagedBudgetAccountIndex));
-                            logger.Debug(string.Format("lastPagedBudgetAccountIndex is {0}", lastPagedBudgetAccountIndex));
-                            logger.Debug("List of BUD.WORK IDs to read (fullRangeSubtotalsBwkIds):\n " + string.Join(", ", fullRangeSubtotalsBwkIds));
+                            logger.Debug(string.Format("==> Subtotals chosen; it is not the last page. <=="));
+                            logger.Debug(string.Format("==> firstPagedBudgetAccountIndex is {0} <==", firstPagedBudgetAccountIndex));
+                            logger.Debug(string.Format("==> lastPagedBudgetAccountIndex is {0} <==", lastPagedBudgetAccountIndex));
+                            logger.Debug("==> List of BUD.WORK IDs to read (fullRangeSubtotalsBwkIds):\n " + string.Join(", ", fullRangeSubtotalsBwkIds));
                         }
                     }
 
@@ -901,7 +990,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                         // Do not process the last record because that is the first budget account of the next page.
                         // Do not process any possible preceding records because those are used for subtotals only.
 
-                        logger.Debug(string.Format("Reading BUD.WORK records from (firstPagedBudgetAccountIndex) {0} to (lastPagedBudgetAccountIndex) {1}.", firstPagedBudgetAccountIndex, lastPagedBudgetAccountIndex));
+                        logger.Debug(string.Format("==> Reading BUD.WORK records from (firstPagedBudgetAccountIndex) {0} to (lastPagedBudgetAccountIndex) {1}. <==", firstPagedBudgetAccountIndex, lastPagedBudgetAccountIndex));
 
                         for (int b = firstPagedBudgetAccountIndex; b <= lastPagedBudgetAccountIndex; b++)
                         {
@@ -1009,7 +1098,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                                                 subtotalLineItem.SubtotalLineItem = subtotalItem;
                                                 workingBudgetEntity.AddLineItem(subtotalLineItem);
 
-                                                logger.Debug(string.Format("Created subtotal line with sequence number {0} for value {1} name {2}.", sequenceNo, subtotalItem.SubtotalValue, subtotalItem.SubtotalName));
+                                                logger.Debug(string.Format("==> Created subtotal line with sequence number {0} for value {1} name {2}. <==", sequenceNo, subtotalItem.SubtotalValue, subtotalItem.SubtotalName));
 
                                                 // Reset the applicable subtotal comparison values.
                                                 if (subtotalType[j] == "BO")
@@ -1021,7 +1110,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                                                     subtotalValues[j] = budworkRecord.Recordkey.Substring(subtotalStartPositions[j], subtotalStartLengths[j]);
                                                 }
 
-                                                logger.Debug(string.Format("Reset subtotal arrays to subtotal type {0} subtotal value {1} subtotal name {2}.", subtotalType[j], subtotalValues[j], subtotalName[j]));
+                                                logger.Debug(string.Format("==> Reset subtotal arrays to subtotal type {0} subtotal value {1} subtotal name {2}. <==", subtotalType[j], subtotalValues[j], subtotalName[j]));
 
                                                 // Reset the applicable subtotal amounts.
                                                 subtotalWorkingAmount[j] = 0;
@@ -1058,7 +1147,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                                                         }
                                                         break;
                                                     default:
-                                                        logger.Debug(string.Format("Trying to detect a subtotal number has incorrect value {0}", j));
+                                                        logger.Debug(string.Format("==> Trying to detect a subtotal number has incorrect value {0} <==", j));
                                                         break;
                                                 }
                                             }
@@ -1221,7 +1310,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                             // one on the next page, to see what subtotals, if any, have to display at the end of this page.
                             if (isLastPage)
                             {
-                                logger.Debug("Adding subtotal lines to the end of the last page.");
+                                logger.Debug("==> Adding subtotal lines to the end of the last page. <==");
 
                                 // It is the last page so we need to display all calculated subtotals.
                                 for (int j = noOfSubtotals - 1; j >= 0; j--)
@@ -1277,7 +1366,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                                     subtotalLineItem.SubtotalLineItem = subtotalItem;
                                     workingBudgetEntity.AddLineItem(subtotalLineItem);
 
-                                    logger.Debug(string.Format("Adding subtotal line with sequence number {0}, subtotal type {1} subtotal value {2} subtotal name {3}.",
+                                    logger.Debug(string.Format("==> Adding subtotal line with sequence number {0}, subtotal type {1} subtotal value {2} subtotal name {3}. <==",
                                         sequenceNo, subtotalType[j], subtotalValues[j], subtotalName[j]));
 
                                     switch (j)
@@ -1304,7 +1393,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                                             }
                                             break;
                                         default:
-                                            logger.Debug(string.Format("Trying to detect a subtotal number when processing the last page has incorrect value {0}", j));
+                                            logger.Debug(string.Format("==> Trying to detect a subtotal number when processing the last page has incorrect value {0} <==", j));
                                             break;
                                     }
 
@@ -1315,7 +1404,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                             if (!isLastPage)
                             {
 
-                                logger.Debug("Adding subtotal lines to the end of a page that is not the last.");
+                                logger.Debug("==> Adding subtotal lines to the end of a page that is not the last. <==");
 
                                 // Assign the first budget account in the next page.
                                 string nextBudgetAccountId = filteredBwkIds[lastPagedBudgetAccountIndex + 1];
@@ -1392,7 +1481,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                                             subtotalLineItem.SubtotalLineItem = subtotalItem;
                                             workingBudgetEntity.AddLineItem(subtotalLineItem);
 
-                                            logger.Debug(string.Format("Adding subtotal line with sequence number {0}, subtotal type {1} subtotal value {2} subtotal name {3}.",
+                                            logger.Debug(string.Format("==> Adding subtotal line with sequence number {0}, subtotal type {1} subtotal value {2} subtotal name {3}. <==",
                                                                           sequenceNo, subtotalType[j], subtotalValues[j], subtotalName[j]));
 
                                             switch (j)
@@ -1419,7 +1508,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                                                     }
                                                     break;
                                                 default:
-                                                    logger.Debug(string.Format("Trying to detect a subtotal number when it is not the last page has incorrect value {0}", j));
+                                                    logger.Debug(string.Format("==> Trying to detect a subtotal number when it is not the last page has incorrect value {0} <==", j));
                                                     break;
                                             }
                                         }
@@ -1435,7 +1524,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                             if (!isFirstPage && pageHasSubtotals)
                             {
 
-                                logger.Debug("Checking to see if amounts for the subtotal lines on the page need to be updated with amounts from previous pages.");
+                                logger.Debug("==> Checking to see if amounts for the subtotal lines on the page need to be updated with amounts from previous pages. <==");
 
                                 // Obtain the subtotal line items.
                                 var lineItemsWithSubtotals = workingBudgetEntity.LineItems.Where(x => x.SubtotalLineItem != null);
@@ -1520,7 +1609,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
 
                                 // Start looping backwards through the BUD.WORK records from the last one on the previous page.
 
-                                logger.Debug(string.Format("Reading previous BUD.WORK records from (firstPreviousBudgetAccountIndex) {0}.", firstPreviousBudgetAccountIndex));
+                                logger.Debug(string.Format("==> Reading previous BUD.WORK records from (firstPreviousBudgetAccountIndex) {0}. <==", firstPreviousBudgetAccountIndex));
 
                                 for (int i = firstPreviousBudgetAccountIndex; i >= 0; i--)
                                 {
@@ -1742,7 +1831,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                                 {
                                     workingBudgetEntity.LineItems.Where(y => y.SequenceNumber == firstSubtotal1DisplayLine).FirstOrDefault().SubtotalLineItem = subtotal1Item;
 
-                                    logger.Debug(string.Format("Amounts updated for subtotal line with sequence number {0}, subtotal type {1} subtotal value {2} subtotal name {3}.",
+                                    logger.Debug(string.Format("==> Amounts updated for subtotal line with sequence number {0}, subtotal type {1} subtotal value {2} subtotal name {3}. <==",
                                                                   subtotal1Item.SubtotalOrder, subtotal1Item.SubtotalType, subtotal1Item.SubtotalValue, subtotal1Item.SubtotalName));
 
                                 }
@@ -1750,14 +1839,14 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                                 {
                                     workingBudgetEntity.LineItems.Where(y => y.SequenceNumber == firstSubtotal2DisplayLine).FirstOrDefault().SubtotalLineItem = subtotal2Item;
 
-                                    logger.Debug(string.Format("Amounts updated for subtotal line with sequence number {0}, subtotal type {1} subtotal value {2} subtotal name {3}.",
+                                    logger.Debug(string.Format("==> Amounts updated for subtotal line with sequence number {0}, subtotal type {1} subtotal value {2} subtotal name {3}. <==",
                                                                   subtotal2Item.SubtotalOrder, subtotal2Item.SubtotalType, subtotal2Item.SubtotalValue, subtotal2Item.SubtotalName));
                                 }
                                 if (subtotal3Updated)
                                 {
                                     workingBudgetEntity.LineItems.Where(y => y.SequenceNumber == firstSubtotal3DisplayLine).FirstOrDefault().SubtotalLineItem = subtotal3Item;
 
-                                    logger.Debug(string.Format("Amounts updated for subtotal line with sequence number {0}, subtotal type {1} subtotal value {2} subtotal name {3}.",
+                                    logger.Debug(string.Format("==> Amounts updated for subtotal line with sequence number {0}, subtotal type {1} subtotal value {2} subtotal name {3}. <==",
                                                                   subtotal3Item.SubtotalOrder, subtotal3Item.SubtotalType, subtotal3Item.SubtotalValue, subtotal3Item.SubtotalName));
                                 }
                             }
@@ -1766,12 +1855,12 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                 }
                 else
                 {
-                    logger.Debug("pagedBwksArray is null or empty. No budget line items returned.");
+                    logger.Debug("==> pagedBwksArray is null or empty. No budget line items returned. <==");
                 }
             }
             else
             {
-                logger.Debug("filteredBwkIds is null or empty. No budget line items returned.");
+                logger.Debug("==> filteredBwkIds is null or empty. No budget line items returned. <==");
             }
             return workingBudgetEntity;
         }
@@ -1834,7 +1923,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
         /// <returns>An array containing the filtered and sorted budget accounts.</returns>
         private async Task<string[]> ApplyFilterCriteriaAsync(string[] allBwkIds, WorkingBudgetQueryCriteria criteria, string bwkSuiteFileName)
         {
-            logger.Debug("About to apply filter criteria.");
+            logger.Debug("==> About to apply filter criteria. <==");
 
             string[] filteredBudgetAccountIDs = allBwkIds;
             if (criteria != null && criteria.ComponentCriteria.Any())
@@ -1905,7 +1994,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                             }
                         }
 
-                        logger.Debug(string.Format("About to SelectAsync componentFilterCriteria {0}", componentFilterCriteria));
+                        logger.Debug(string.Format("==> About to SelectAsync (these are GL account components) componentFilterCriteria {0} <==", componentFilterCriteria));
 
                         // Select the filtered IDs for the specific BUD.WORK file.
                         // Each selection works off the previously selected list. The criteria is connected by ANDs.
@@ -1947,7 +2036,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                     // The budget accounts need to also be sorted by the ID.
                     sortFilterCriteria = sortFilterCriteria + "BY BUD.WORK.ID";
 
-                    logger.Debug(string.Format("About to SelectAsync sort criteria sortFilterCriteria {0}", sortFilterCriteria));
+                    logger.Debug(string.Format("==> About to SelectAsync sort criteria sortFilterCriteria {0} <==", sortFilterCriteria));
 
                     tempBwkIdsToSort = filteredBudgetAccountIDs;
                     filteredBudgetAccountIDs = await DataReader.SelectAsync(bwkSuiteFileName, tempBwkIdsToSort, sortFilterCriteria);
@@ -1970,14 +2059,14 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
             if (staffContract == null)
             {
                 // The general ledger user has no Staff record.
-                logger.Error(string.Format("Person {0} has no Staff record.", currentUserPersonId));
+                logger.Error(string.Format("==> Person {0} has no Staff record. <==", currentUserPersonId));
             }
             else
             {
                 if (string.IsNullOrEmpty(staffContract.StaffLoginId))
                 {
                     // There is no login (operator ID) on the Staff record.
-                    logger.Error(string.Format("Person {0} has an incomplete Staff record.", currentUserPersonId));
+                    logger.Error(string.Format("==> Person {0} has an incomplete Staff record. <==", currentUserPersonId));
                 }
                 else
                 {
@@ -2002,10 +2091,10 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
             var distinctBudgetOfficerIds = budgetItems.Where(x => x.BudgetOfficer != null &&
             !string.IsNullOrEmpty(x.BudgetOfficer.BudgetOfficerId)).Select(x => x.BudgetOfficer.BudgetOfficerId).Distinct().ToArray();
 
-            logger.Debug("List of distinctBudgetOfficerIds " + string.Join(", ", distinctBudgetOfficerIds));
-
             if (distinctBudgetOfficerIds != null && distinctBudgetOfficerIds.Any())
             {
+                logger.Debug("==> Reading BUD.OFCR for distinctBudgetOfficerIds and looping through them <==");
+
                 var uniqueLoginIds = new List<string>();
                 // Read the BUD.OFCR records for the budget officer IDs.
                 // The different budget officer IDs can have the same login, different logins, or no login.
@@ -2038,10 +2127,10 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                     }
                 }
 
-                logger.Debug("List of uniqueLoginIds " + string.Join(", ", uniqueLoginIds));
-
                 if (uniqueLoginIds != null && uniqueLoginIds.Any())
                 {
+                    logger.Debug("==> Reading UT.OPERS for uniqueLoginIds and looping through them <==");
+
                     // Read the OPERS records.
                     var operRecords = await DataReader.BulkReadRecordAsync<Opers>("UT.OPERS", uniqueLoginIds.ToArray(), true);
                     if (operRecords != null && operRecords.Any())
@@ -2077,11 +2166,18 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                                 subtotalLine.SubtotalDescription = budgetItemForBudgetOfficerId.BudgetOfficer.BudgetOfficerName;
                             }
 
-                            logger.Debug(string.Format("Adding budget officer name {0} to subtotal line with value {1}.",
-                                budgetItemForBudgetOfficerId.BudgetOfficer.BudgetOfficerName, subtotalLine.SubtotalValue));
+                            logger.Debug(string.Format("==> Adding budget officer name to subtotal line with value {0}. <==", subtotalLine.SubtotalValue));
                         }
                     }
                 }
+                else
+                {
+                    logger.Debug("==> uniqueLoginIds is null or empty <==");
+                }
+            }
+            else
+            {
+                logger.Debug("==> distinctBudgetOfficerIds is null or empty <==");
             }
             return workingBudgetEntity;
         }
@@ -2231,7 +2327,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                 }
                 else
                 {
-                    logger.Error(string.Format("The BUDGET record {0} does not have required field for finalized date.", workingBudgetId));
+                    logger.Error(string.Format("==> The BUDGET record {0} does not have required field for finalized date. <==", workingBudgetId));
                 }
             }
             return workingBudgetEntity;
@@ -2319,7 +2415,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                                     }
                                     else
                                     {
-                                        logger.Error(string.Format("The BUDGET record {0} does not have required field for finalized date.", workingBudgetId));
+                                        logger.Error(string.Format("==> The BUDGET record {0} does not have required field for finalized date. <==", workingBudgetId));
                                     }
                                 }
                             }
@@ -2336,7 +2432,7 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                         }
                         else
                         {
-                            logger.Error(string.Format("The {0} in the file {1} does not exist.", unitId, bctSuiteFileName));
+                            logger.Error(string.Format("==> The {0} in the file {1} does not exist. <==", unitId, bctSuiteFileName));
                         }
                     }
                 }
@@ -2413,6 +2509,8 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                 if (!string.IsNullOrEmpty(responsibility))
                 {
                     // the criteria gets the uppermost responsibility unit and its children.
+                    // The selection statement needs to be updated to the commented part. Already researched; not implemented yet.
+                    // bctCriteria = "WITH @ID LIKE '\"" + responsibility + "_\"...' OR WITH @ID EQ '" + responsibility + "'";
                     bctCriteria = "WITH @ID LIKE '" + responsibility + "_...' OR WITH @ID EQ '" + responsibility + "'";
 
                     // Select the responsibility unit IDs and add them to a list.
@@ -2446,6 +2544,8 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
             string[] reportingUnitIds = workingBudgetReportingUnitEntities.Where(x => x.ReportingUnitId != null &&
                                          !string.IsNullOrEmpty(x.ReportingUnitId)).Select(x => x.ReportingUnitId).Distinct().ToArray();
 
+            logger.Debug("==> In PopulateReportingUnitsDescriptionAsync - reportingUnitIds:\n " + string.Join(", ", reportingUnitIds));
+
             // Read the BUD.RESP records for the reporting unit IDs.
             var budRespRecords = await DataReader.BulkReadRecordAsync<BudResp>(reportingUnitIds);
             if (budRespRecords != null && budRespRecords.Any())
@@ -2457,6 +2557,10 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                     var unit = workingBudgetReportingUnitEntities.Where(x => x.ReportingUnitId != null && x.ReportingUnitId == budResp.Recordkey).FirstOrDefault();
                     unit.Description = budResp.BrDesc;
                 }
+            }
+            else
+            {
+                logger.Debug("==> No BUD.RESP records read (budRespRecords is null or empty). <==");
             }
             return workingBudgetReportingUnitEntities;
         }
@@ -2505,6 +2609,8 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                     }
                 }
 
+                logger.Debug("==> List of master responsibilityIds (masterResponsibilityIds):\n " + string.Join(", ", masterResponsibilityIds));
+
                 // Now that we the have master list of uppermost responsibility IDs associated with the BUD.OFCR IDs for which the user is a budget officer
                 // for the working budget, then get all of the subordinate responsibility units by selecting records that begin with the same string.
                 //
@@ -2518,16 +2624,29 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                     if (!string.IsNullOrEmpty(responsibility))
                     {
                         // the criteria gets the uppermost responsibility unit and its children.
+                        // The selection statement needs to be updated to the commented part. Already researched; not implemented yet.
+                        // bctCriteria = "WITH @ID LIKE '\"" + responsibility + "_\"...' OR WITH @ID EQ '" + responsibility + "'";
                         bctCriteria = "WITH @ID LIKE '" + responsibility + "_...' OR WITH @ID EQ '" + responsibility + "'";
                     }
 
                     var bctSuiteFileName = "BCT." + workingBudgetId;
                     var responsbilityDataContracts = await DataReader.BulkReadRecordAsync<BudCtrl>(bctSuiteFileName, bctCriteria, true);
 
-                    // For each set of responsibility data contracts, build a unique string array of budget officer IDs and add them to a master list
-                    // of budget officer IDs for all master responsibility IDs. 
-                    tempRespList = responsbilityDataContracts.Select(x => x.BcBofId).Distinct().OrderBy(x => x).ToList();
-                    allBudOfcrList.AddRange(tempRespList);
+                    logger.Debug("==> bctCriteria: " + bctCriteria + " <==");
+
+                    if (responsbilityDataContracts != null && responsbilityDataContracts.Any())
+                    {
+                        logger.Debug(string.Format("==> responsbilityDataContracts.Count {0}. <==", responsbilityDataContracts.Count));
+
+                        // For each set of responsibility data contracts, build a unique string array of budget officer IDs and add them to a master list
+                        // of budget officer IDs for all master responsibility IDs. 
+                        tempRespList = responsbilityDataContracts.Select(x => x.BcBofId).Distinct().OrderBy(x => x).ToList();
+                        allBudOfcrList.AddRange(tempRespList);
+                    }
+                    else
+                    {
+                        logger.Debug("==> responsbilityDataContracts is null or empty <==");
+                    }
                 }
 
                 // If there is a master list of budget officer IDs, make it unique and ordered, and make it the master array that is returned.
@@ -2535,7 +2654,17 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                 {
                     allBudOfcrArray = allBudOfcrList.Distinct().OrderBy(x => x).ToArray();
                 }
+                else
+                {
+                    logger.Debug("==> allBudOfcrArray is empty <==");
+                }
             }
+            else
+            {
+                logger.Debug("==> bocResponsibilityIds is null or empty <==");
+            }
+            logger.Debug("==> (allBudOfcrArray count: " + allBudOfcrArray.Length + " <==");
+
             return allBudOfcrArray;
         }
 
@@ -2551,7 +2680,11 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
 
             // Get the list of budget officers for the current user for the working budget.
             var selectionCriteria = "WITH BO.BUDGET EQ '" + workingBudgetId + "'" + " AND BO.LOGIN EQ '" + userOperatorId + "'";
+            var debugSelectionCriteria = "WITH BO.BUDGET EQ '" + workingBudgetId + "'" + " AND BO.LOGIN EQ 'valuefromuserOperatorId'";
+
             var possibleWorkingBudgetOfficersIds = await DataReader.SelectAsync("BUD.OFCR", selectionCriteria);
+
+            logger.Debug("==> Select budget officers for the current user for the working budget (debugSelectionCriteria) ==> " + debugSelectionCriteria + " <==");
 
             // If there are any budget officer records containing the working budget and the current user ID,
             // read the budget officer records and then get the BUD.OFCR records where there is an association entry
@@ -2559,6 +2692,8 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
             // one of the budget officers for the working budget.
             if (possibleWorkingBudgetOfficersIds != null && possibleWorkingBudgetOfficersIds.Any())
             {
+                logger.Debug(string.Format("==> possibleWorkingBudgetOfficersIds.Length {0}. <==", possibleWorkingBudgetOfficersIds.Length));
+
                 Collection<BudOfcr> budgetOfficerRecords = new Collection<BudOfcr>();
                 budgetOfficerRecords = await DataReader.BulkReadRecordAsync<BudOfcr>(possibleWorkingBudgetOfficersIds);
                 string[] workingBudgetOfficerRecordIds;
@@ -2577,22 +2712,34 @@ namespace Ellucian.Colleague.Data.BudgetManagement.Repositories
                         var bocSuiteFileName = "BOC." + workingBudgetId;
                         bocDataContracts = await DataReader.BulkReadRecordAsync<BudOctl>(bocSuiteFileName, workingBudgetOfficerRecordIds, true);
                     }
+                    else
+                    {
+                        logger.Debug("==> No BOC records read (workingBudgetOfficerRecordIds is null or empty). <==");
+                    }
                 }
+                else
+                {
+                    logger.Debug("==> No budget officers records read (budgetOfficerRecords is null or empty). <==");
+                }
+            }
+            else
+            {
+                logger.Debug("==> possibleWorkingBudgetOfficersIds null or empty <==");
             }
 
             return bocDataContracts;
         }
 
 
-        private void LogData(object objectToLog, string stringToLog)
-        {
-            if (objectToLog != null)
-            {
-                logger.Debug(JsonConvert.SerializeObject(objectToLog));
-            }
-        }
 
-        #region Obsolete/Deprecated
+
+        //////////////////////////////////////////////////////
+        //                                                  //
+        //               DEPRECATED / OBSOLETE              //
+        //                                                  //
+        //////////////////////////////////////////////////////
+
+        #region DEPRECATED / OBSOLETE
 
         /// <summary>
         /// Gets a working budget for a user.

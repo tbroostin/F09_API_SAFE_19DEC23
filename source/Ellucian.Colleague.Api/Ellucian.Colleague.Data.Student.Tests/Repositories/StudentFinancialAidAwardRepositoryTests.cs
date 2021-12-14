@@ -199,6 +199,17 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                             RecordGuid = allFinancialAidAwards.Where(f => f.StudentId == a.StudentId).FirstOrDefault().Guid,
                         }).ToList())));
 
+            var tcCollection = new Collection<TcAcyr>(allFinancialAidAwards.Select(a =>
+                        new TcAcyr()
+                        {
+                            Recordkey = a.StudentId + "*" + a.AwardFundId,
+                            TcTaTerms = new List<string>() { a.StudentId + "*" + a.AwardFundId + "*" + allFinancialAidAwards.FirstOrDefault().AidYearId },
+                            RecordGuid = allFinancialAidAwards.Where(f => f.StudentId == a.StudentId).FirstOrDefault().Guid,
+                        }).ToList());
+            var results = new Ellucian.Data.Colleague.BulkReadOutput<TcAcyr>() { BulkRecordsRead = tcCollection };
+            dataReaderMock.Setup(d => d.BulkReadRecordWithInvalidKeysAndRecordsAsync<TcAcyr>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>()))
+                .ReturnsAsync(results);
+
             dataReaderMock.Setup(d => d.BulkReadRecordAsync<TaAcyr>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>()))
                 .Returns<string, string[], bool>((x, y, z) =>
                     Task.FromResult(new Collection<TaAcyr>(allStudentAwardHistoryByPeriods.Select(a =>

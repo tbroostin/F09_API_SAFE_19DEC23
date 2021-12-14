@@ -54,11 +54,77 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             var studentAcademicPeriodEntities = new List<StudentAcademicPeriod>();
             int totalCount = 0;
             string[] subList = null;
+            bool useParagraphSelect = true;
+            if (filterPersonIds != null && filterPersonIds.Any())
+            {
+                useParagraphSelect = false;
+            }
 
             try
             {
                 string studentAcademicPeriodsCacheKey = CacheSupport.BuildCacheKey(AllStudentAcademicPeriodsCache, person, academicPeriod, filterPersonIds, newStudentStatuses);
-                var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                if (useParagraphSelect)
+                {
+                    var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                        this,
+                        ContainsKey,
+                        GetOrAddToCacheAsync,
+                        AddOrUpdateCacheAsync,
+                        transactionInvoker,
+                        studentAcademicPeriodsCacheKey,
+                        "STUDENT.TERMS",
+                        offset,
+                        limit,
+                        AllStudentAcademicPeriodsCacheTimeout,
+                        async () =>
+                        {
+                            #region additional filters
+                            var additionalCriteria = new StringBuilder();
+                            if (!string.IsNullOrEmpty(person))
+                            {
+                                additionalCriteria.Append("WITH STTR.STUDENT = '" + person + "'");
+                            }
+                            if (!string.IsNullOrEmpty(academicPeriod))
+                            {
+                                if (additionalCriteria.Length > 0)
+                                {
+                                    additionalCriteria.Append(" AND ");
+                                }
+                                additionalCriteria.Append("WITH STTR.TERM EQ '" + academicPeriod + "'");
+                            }
+                            if (newStudentStatuses != null && newStudentStatuses.Any())
+                            {
+                                if (additionalCriteria.Length > 0)
+                                {
+                                    additionalCriteria.Append(" AND ");
+                                }
+
+                                additionalCriteria.Append("WITH STTR.CURRENT.STATUS EQ '" + (string.Join(" ", newStudentStatuses.Distinct())).Replace(" ", "' '") + "'");
+                            }
+
+                            #endregion
+
+                            var selectParagraph = new List<string>();
+                            selectParagraph.Add("GET.STU.ACAD.PERIOD.KEYS");
+
+                            CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
+                            {
+                                criteria = additionalCriteria.ToString(),
+                                paragraph = selectParagraph
+                            };
+                            return requirements;
+                        });
+
+                    if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
+                    {
+                        return new Tuple<IEnumerable<StudentAcademicPeriod>, int>(studentAcademicPeriodEntities, 0);
+                    }
+                    subList = keyCacheObject.Sublist.ToArray();
+                    totalCount = keyCacheObject.TotalCount.Value;
+                }
+                else
+                {
+                    var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
                     this,
                     ContainsKey,
                     GetOrAddToCacheAsync,
@@ -74,7 +140,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         #region extract students
                         var validStudents = new List<Students>();
 
-                       
+
                         if (!string.IsNullOrEmpty(person))
                         {
                             int newSize = filterPersonIds.Count() + 1;
@@ -97,7 +163,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                         //NEED TO select from STUDENTS to avoid invalid pointer errors if selecting directly from STUDENT.TERMS
                         filterPersonIds = await DataReader.SelectAsync("STUDENTS", filterPersonIds, studentCriteria.ToString());
-                        
+
                         for (int i = 0; i < filterPersonIds.Count(); i += bulkReadSize)
                         {
                             var subListStudents = filterPersonIds.Skip(i).Take(bulkReadSize).ToArray();
@@ -131,7 +197,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         #endregion
 
                         #region get student terms
-                       
+
                         var studentTermdIds = await DataReader.SelectAsync("STUDENT.TERMS", studentTermKeys.Distinct().ToArray(), additionalCriteria.ToString());
 
                         // Group by combinations of students and terms
@@ -174,12 +240,13 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         return requirements;
                     });
 
-                if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
-                {
-                    return new Tuple<IEnumerable<StudentAcademicPeriod>, int>(studentAcademicPeriodEntities, 0);
+                    if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
+                    {
+                        return new Tuple<IEnumerable<StudentAcademicPeriod>, int>(studentAcademicPeriodEntities, 0);
+                    }
+                    subList = keyCacheObject.Sublist.ToArray();
+                    totalCount = keyCacheObject.TotalCount.Value;
                 }
-                subList = keyCacheObject.Sublist.ToArray();
-                totalCount = keyCacheObject.TotalCount.Value;
 
                 var keysSubList = new List<string>();
                 var idKeys = new List<string>();

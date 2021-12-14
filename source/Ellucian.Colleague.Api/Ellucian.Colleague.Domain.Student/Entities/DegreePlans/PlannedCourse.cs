@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -18,32 +18,36 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
         private WaitlistStatus _WaitlistedStatus;
         private string _AddedBy;
         private DateTimeOffset? _AddedOn;
+        private string _CoursePlaceholderId;
 
         #region Constructor
 
         /// <summary>
         /// Planned course constructor
         /// </summary>
-        /// <param name="course">ID of course being planned. Required</param>
+        /// <param name="course">ID of course being planned. Required when CoursePlaceholder is empty</param>
         /// <param name="section">ID of section being planned. Optional</param>
         /// <param name="gradingType">Grading type, defaults to Graded</param>
         /// <param name="status">Waitlist status, defaults to Not Waitlisted</param>
         /// <param name="addedBy">Added by, defaults to null</param>
         /// <param name="addedOn">Added on, defaults to null</param>
-        public PlannedCourse(string course, string section = null, GradingType gradingType = GradingType.Graded, 
-            WaitlistStatus status = WaitlistStatus.NotWaitlisted, 
-            string addedBy = null, DateTimeOffset? addedOn = null)
+        /// <param name="coursePlaceholder">ID of course placeholder being planned. Required when Course is empty</param>
+        public PlannedCourse(string course, string section = null, GradingType gradingType = GradingType.Graded,
+            WaitlistStatus status = WaitlistStatus.NotWaitlisted,
+            string addedBy = null, DateTimeOffset? addedOn = null, string coursePlaceholder = null)
         {
-            if (string.IsNullOrEmpty(course))
+            if (string.IsNullOrEmpty(course) && string.IsNullOrEmpty(coursePlaceholder))
             {
-                throw new ArgumentNullException("course", "Planned Course requires CourseId");
+                throw new ArgumentNullException("course", "Planned Course requires either a CourseId or a CoursePlaceholderId");
             }
+
             _CourseId = course;
             _SectionId = section;
             _GradingType = gradingType;
             _WaitlistedStatus = status;
             _AddedBy = addedBy;
             _AddedOn = addedOn;
+            _CoursePlaceholderId = coursePlaceholder;
         }
 
         #endregion
@@ -80,6 +84,10 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
         /// </summary>
         public DateTimeOffset? AddedOn { get { return _AddedOn; } }
 
+        /// <summary>
+        /// The course placholder ID
+        /// </summary>
+        public string CoursePlaceholderId { get { return _CoursePlaceholderId; } }
         #endregion
 
         #region Optional Properties
@@ -92,12 +100,13 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
         /// </summary>
         public bool? IsProtected { get; set; }
 
+
         // DegreePlanService does validation of this data against the section credit ranges.
         /// <summary>
         /// Gets or sets the credits.
         /// </summary>
         public decimal? Credits { get; set; }
-        
+
         private List<PlannedCourseWarning> _Warnings = new List<PlannedCourseWarning>();
         /// <summary>
         /// Validation warnings for this course/section
@@ -105,10 +114,7 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
         public List<PlannedCourseWarning> Warnings
         {
             get { return _Warnings; }
-        }  
-      
-
-
+        }
         #endregion
 
         /// <summary>
@@ -134,7 +140,8 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
         }
 
         /// <summary>
-        /// PlannedCourses are equal if their course ids and section ids match, or if their course ids match and section ids are both null.
+        /// PlannedCourses are equal if their course ids and section ids match, or if their course ids match and section ids are both null or
+        /// if their course ids and section ids are both null and course placeholder ids match.
         /// </summary>
         /// <param name="obj"></param>
         /// <returns></returns>
@@ -150,30 +157,23 @@ namespace Ellucian.Colleague.Domain.Student.Entities.DegreePlans
                 return false;
             }
 
-            // Not sure this is necessary but comparing string to null was 
-            // behaving oddly in the last line.
-
-            if ((string.IsNullOrEmpty(this.SectionId) && !(string.IsNullOrEmpty(other.SectionId))) ||
-               (string.IsNullOrEmpty(other.SectionId) && !(string.IsNullOrEmpty(this.SectionId))))
-            {
-                return false;
-            }
-
-            return other.CourseId.Equals(CourseId) && ((other.SectionId == null && this.SectionId == null) || other.SectionId.Equals(SectionId)) && other.GradingType.Equals(GradingType) && other.Credits.Equals(Credits);
+            return other.CourseId == this.CourseId && 
+                other.SectionId == this.SectionId &&
+                other.CoursePlaceholderId == this.CoursePlaceholderId &&
+                other.GradingType == this.GradingType &&
+                other.Credits == this.Credits;
         }
 
         public override int GetHashCode()
         {
-            return  (CourseId + SectionId).GetHashCode();
+            return (CourseId + SectionId + CoursePlaceholderId).GetHashCode();
         }
 
         public override string ToString()
         {
-            string sect = " S:" + (SectionId ?? " null");
-            return "Planned Course: C:" + CourseId + sect;
+            string sect = " SectionId: " + (SectionId ?? "null");
+            string placeholder = " CoursePlaceholderId: " + (CoursePlaceholderId ?? "null");
+            return "Planned Course: CourseId: " + CourseId + sect + placeholder;
         }
-
     }
-
-
 }

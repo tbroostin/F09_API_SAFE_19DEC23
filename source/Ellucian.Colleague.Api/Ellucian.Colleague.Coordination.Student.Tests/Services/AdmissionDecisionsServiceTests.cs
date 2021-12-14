@@ -1,4 +1,4 @@
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 
 using System;
@@ -150,13 +150,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             Assert.AreEqual(3, results.Item1.Count());
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task AdmissionDecisionsService_GetAdmissionDecisionsAsync_PermissionsException()
-        {
-            _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
-            await _admissionDecisionsService.GetAdmissionDecisionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<bool>());
-        }
+        //[TestMethod]
+        //[ExpectedException(typeof(PermissionsException))]
+        //public async Task AdmissionDecisionsService_GetAdmissionDecisionsAsync_PermissionsException()
+        //{
+        //    _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
+        //    await _admissionDecisionsService.GetAdmissionDecisionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<string>(), It.IsAny<bool>());
+        //}
 
         [TestMethod]
         [ExpectedException(typeof(KeyNotFoundException))]
@@ -191,14 +191,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 await _admissionDecisionsService.GetAdmissionDecisionsByGuidAsync(admissionDecisionsGuid, true);
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task AdmissionDecisionsService_GetAdmissionDecisionsByGuidAsync_PermissionsException()
-        {
-            _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
+        //[TestMethod]
+        //[ExpectedException(typeof(PermissionsException))]
+        //public async Task AdmissionDecisionsService_GetAdmissionDecisionsByGuidAsync_PermissionsException()
+        //{
+        //    _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
 
-            await _admissionDecisionsService.GetAdmissionDecisionsByGuidAsync(null);
-        }
+        //    await _admissionDecisionsService.GetAdmissionDecisionsByGuidAsync(null);
+        //}
 
         [TestMethod]
         [ExpectedException(typeof(KeyNotFoundException))]
@@ -218,14 +218,14 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             Assert.AreEqual(expectedResults.Guid, actualResult.Id);
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task AdmissionDecisionsService_CreateAdmissionDecisionAsync_PermissionsException()
-        {
-            _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
+        //[TestMethod]
+        //[ExpectedException(typeof(PermissionsException))]
+        //public async Task AdmissionDecisionsService_CreateAdmissionDecisionAsync_PermissionsException()
+        //{
+        //    _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
 
-            await _admissionDecisionsService.CreateAdmissionDecisionAsync(admissionDecisionDTOIn);
-        }
+        //    await _admissionDecisionsService.CreateAdmissionDecisionAsync(admissionDecisionDTOIn);
+        //}
 
         [TestMethod]
         [ExpectedException(typeof(IntegrationApiException))]
@@ -239,7 +239,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         public async Task AdmissionDecisionsService_CreateAdmissionDecisionAsync_ID_With_Guid_ArgumentException()
         {
             admissionDecisionDTOIn.Id = Guid.NewGuid().ToString();
-            _applicationStatusRepositoryMock.SetupSequence(i => i.GetApplicationStatusKey(It.IsAny<string>()))
+            _applicationStatusRepositoryMock.Setup(i => i.GetApplicationStatusKey(It.IsAny<string>()))
                     .Returns(Task.FromResult(new Tuple<string, string, string>("", "", "")));
             var result = await _admissionDecisionsService.CreateAdmissionDecisionAsync(admissionDecisionDTOIn);
         }
@@ -279,16 +279,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             _applicationStatusRepositoryMock.SetupSequence(i => i.GetApplicationStatusKey(It.IsAny<string>()))
                     .Returns(Task.FromResult(new Tuple<string, string, string>("APPLICATIONS", "1", "")));
             admissionDecisionDTOIn.DecisionType.Id = Guid.NewGuid().ToString();
-            var result = await _admissionDecisionsService.CreateAdmissionDecisionAsync(admissionDecisionDTOIn);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(IntegrationApiException))]
-        public async Task AdmissionDecisionsService_CreateAdmissionDecisionAsync_SpecialProcessingCode_MS_InvalidOperationException()
-        {
-            _applicationStatusRepositoryMock.SetupSequence(i => i.GetApplicationStatusKey(It.IsAny<string>()))
-                    .Returns(Task.FromResult(new Tuple<string, string, string>("APPLICATIONS", "1", "")));
-            _admissionDecisionTypeCollection.First().SpecialProcessingCode = "MS";
             var result = await _admissionDecisionsService.CreateAdmissionDecisionAsync(admissionDecisionDTOIn);
         }
 

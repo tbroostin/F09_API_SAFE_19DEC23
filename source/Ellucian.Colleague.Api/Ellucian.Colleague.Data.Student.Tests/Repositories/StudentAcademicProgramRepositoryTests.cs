@@ -198,7 +198,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task StudentAcademicProgramRepositoryTests_GetStudentAcademicProgramByGuidAsync_StudentProgram_NotAvailable_For_Guid()
             {
-                dataReaderMock.Setup(r => r.ReadRecordAsync<StudentPrograms>(It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<StudentPrograms>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 await studentAcademicProgramRepository.GetStudentAcademicProgramByGuidAsync(guid, defaultInstitutionId);
             }
 
@@ -229,7 +229,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task StudentAcademicProgramRepositoryTests_GetStudentAcademicProgramByGuid2Async_StudentProgram_NotAvailable_For_Guid()
             {
-                dataReaderMock.Setup(r => r.ReadRecordAsync<StudentPrograms>(It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<StudentPrograms>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 await studentAcademicProgramRepository.GetStudentAcademicProgramByGuid2Async(guid, defaultInstitutionId);
             }
 
@@ -330,7 +330,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 academicCredentials.FirstOrDefault().AcadPersonId = "2";
                 List<string> ids = new List<string>() { "1", "2" };
-                dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Students>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Students>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 var result = await studentAcademicProgramRepository.GetStudentAcademicPrograms2Async(defaultInstitutionId, 0, 1, true, guid, DateTime.Today.AddDays(-100).ToString(),
                     DateTime.Today.AddDays(100).ToString(), guid, guid, "active", guid, guid, guid, DateTime.Today.AddDays(-20).ToString(), null, ids, guid, "active");
 
@@ -1364,22 +1364,12 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             {
                 academicCredentials.FirstOrDefault().AcadPersonId = "2";
                 List<string> ids = new List<string>() { "1", "2" };
-                dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Students>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Students>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 dataReaderMock.Setup(repo => repo.SelectAsync("STUDENT.PROGRAMS", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(new string[] { });
                 var result = await studentAcademicProgramRepository.GetStudentAcademicPrograms3Async(defaultInstitutionId, 0, 1, true, guid, DateTime.Today.AddDays(-100).ToString(),
                     DateTime.Today.AddDays(100).ToString(), guid, guid, "active", guid, guid, guid, DateTime.Today.AddDays(-20).ToString(), null, ids, guid, "active");
 
                 Assert.AreEqual( 0, result.Item2);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
-            public async Task StudentAcademicProgramRepositoryTests_GetStudentAcademicPrograms3Async_RepositoryException()
-            {
-                dataReaderMock.Setup(d => d.ReadRecordAsync<Students>(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new RepositoryException());
-
-                await studentAcademicProgramRepository.GetStudentAcademicPrograms3Async(defaultInstitutionId, 0, 1, true, guid, DateTime.Today.AddDays(-100).ToString(),
-                    DateTime.Today.AddDays(100).ToString(), guid, guid, "active", guid, guid, guid, DateTime.Today.AddDays(-20).ToString(), new List<string> { guid }, new List<string> { guid }, guid, "active");
             }
 
             [TestMethod]
@@ -1405,17 +1395,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 var result = await studentAcademicProgramRepository.GetStudentAcademicPrograms3Async(defaultInstitutionId, 0, 1, true);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
-            public async Task StudentAcademicProgramRepositoryTests_GetStudentAcademicPrograms3Async_ArgumentException()
-            {
-                dataReaderMock.Setup(d => d.ReadRecordAsync<Students>(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new ArgumentException());
-
-                await studentAcademicProgramRepository.GetStudentAcademicPrograms3Async(defaultInstitutionId, 0, 1, true, guid, DateTime.Today.AddDays(-100).ToString(),
-                    DateTime.Today.AddDays(100).ToString(), guid, guid, "active", guid, guid, guid, DateTime.Today.AddDays(-20).ToString(), new List<string> { guid }, new List<string> { guid }, guid, "active");
-            }
-
-            [TestMethod]
+                        [TestMethod]
             public async Task StudentAcademicProgramRepositoryTests_GetStudentAcademicPrograms3Async_Invalid_Statuses_From_Repository()
             {
                 studentPrograms.StprStatus = new List<string>() { };
@@ -2534,21 +2514,11 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
                     .ReturnsAsync(resp);
 
-                dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Students>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.Students>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
                 var result = await studentAcademicProgramRepository.GetStudentAcademicPrograms4Async(defaultInstitutionId, 0, 1, true, guid, DateTime.Today.AddDays(-100).ToString(),
                     DateTime.Today.AddDays(100).ToString(), guid, guid, "active", guid, guid, guid, DateTime.Today.AddDays(-20).ToString(), null, ids, guid, "active");
 
                 Assert.AreEqual(0, result.Item2);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
-            public async Task StudentAcademicProgramRepositoryTests_GetStudentAcademicPrograms4Async_RepositoryException()
-            {
-                dataReaderMock.Setup(d => d.ReadRecordAsync<Students>(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new RepositoryException());
-
-                await studentAcademicProgramRepository.GetStudentAcademicPrograms4Async(defaultInstitutionId, 0, 1, true, guid, DateTime.Today.AddDays(-100).ToString(),
-                    DateTime.Today.AddDays(100).ToString(), guid, guid, "active", guid, guid, guid, DateTime.Today.AddDays(-20).ToString(), new List<string> { guid }, new List<string> { guid }, guid, "active");
             }
 
             [TestMethod]
@@ -2573,17 +2543,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
 
                 var result = await studentAcademicProgramRepository.GetStudentAcademicPrograms4Async(defaultInstitutionId, 0, 1, true);
             }
-
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentException))]
-            public async Task StudentAcademicProgramRepositoryTests_GetStudentAcademicPrograms4Async_ArgumentException()
-            {
-                dataReaderMock.Setup(d => d.ReadRecordAsync<Students>(It.IsAny<string>(), It.IsAny<bool>())).ThrowsAsync(new ArgumentException());
-
-                await studentAcademicProgramRepository.GetStudentAcademicPrograms4Async(defaultInstitutionId, 0, 1, true, guid, DateTime.Today.AddDays(-100).ToString(),
-                    DateTime.Today.AddDays(100).ToString(), guid, guid, "active", guid, guid, guid, DateTime.Today.AddDays(-20).ToString(), new List<string> { guid }, new List<string> { guid }, guid, "active");
-            }
-
+            
             [TestMethod]
             public async Task StudentAcademicProgramRepositoryTests_GetStudentAcademicPrograms4Async_Invalid_Statuses_From_Repository()
             {

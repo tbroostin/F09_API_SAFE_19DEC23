@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -51,6 +51,11 @@ namespace Ellucian.Colleague.Domain.Student.Entities
         /// Flag indicating whether or not the Colleague Self-Service Quick Registration workflow is enabled
         /// </summary>
         public bool QuickRegistrationIsEnabled { get; private set; }
+
+        /// <summary>
+        /// Indicates whether or not Faculty can add authorization from the waitlist
+        /// </summary>
+        public bool AllowFacultyAddAuthFromWaitlist { get; set; }
 
         /// <summary>
         /// List of terms for which the Colleague Self-Service Quick Registration workflow may be used

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -105,6 +105,13 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <param name="ignoreCache">Bypass cache flag</param>
         /// <returns>Collection of buildings</returns>
         Task<IEnumerable<Building>> GetBuildingsAsync(bool ignoreCache);
+
+        /// <summary>
+        /// Get guid for building code
+        /// </summary>
+        /// <param name="code">Building code</param>
+        /// <returns>Guid</returns>
+        Task<string> GetBuildingGuidAsync(string code);
 
         /// <summary>
         /// Get a collection of buildings
@@ -844,6 +851,14 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         Task<IEnumerable<School>> GetSchoolsAsync(bool ignoreCache);
 
         /// <summary>
+        /// Get a collection of schools
+        /// Omit/exclude invalid schools (unlike GetSchoolsAsync which returns null values for invalid schools)
+        /// </summary>
+        /// <param name="ignoreCache">Bypass cache flag</param>
+        /// <returns>Collection of schools</returns>
+        Task<IEnumerable<School>> GetSchools2Async(bool ignoreCache);
+
+        /// <summary>
         /// Get guid for Schools code
         /// </summary>
         /// <param name="code">Schools code</param>
@@ -986,9 +1001,8 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <summary>
         /// Get host country for Colleague environment.
         /// </summary>   
-        /// <param name="hostCountry">hostCountry</param>
         /// <returns>Colleague host country</returns>
-        Task<string> GetHostCountry(string hostCountry);
+        Task<string> GetHostCountryAsync();
 
         /// <summary>
         /// Gets items condition.
@@ -1017,6 +1031,13 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// </summary>
         /// <returns>Place domain entity</returns>
         Task<Place> GetPlaceByGuidAsync(string guid);
+
+        /// <summary>
+        ///  Get and return a single place entity by guid without using the cache
+        ///  where the PLACES.REGION ne null but PLACES.SUB.REGION equal null.  
+        /// </summary>
+        /// <returns>Place domain entity</returns>
+        Task<Place> GetRegionPlaceByGuidAsync(string guid);
 
         /// <summary>
         /// Get a collection of AlternativeCredentialTypes.

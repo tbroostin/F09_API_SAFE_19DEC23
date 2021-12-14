@@ -1,4 +1,5 @@
-﻿using Ellucian.Colleague.Coordination.Student.Services;
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Coordination.Student.Tests.UserFactories;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -137,13 +138,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
 
             #region GETALL & GET BY ID
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task GetAdmissionApplicationSupportingItemsAsync_PermissionsException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                await admissionApplicationSupportingItemsService.GetAdmissionApplicationSupportingItemsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>());
-            }
+            
 
             [TestMethod]
             public async Task AdmsnApplnSupptngItemsService_GetAdmissionApplicationSupportingItemsAsync()
@@ -162,13 +157,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 }
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task GetAdmissionApplicationSupportingItemsByGuidAsync_PermissionsException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                await admissionApplicationSupportingItemsService.GetAdmissionApplicationSupportingItemsByGuidAsync(guid);
-            }
 
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
@@ -330,15 +318,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             #endregion
 
             #region POST
-
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-
-            public async Task CreateAdmissionApplicationSupportingItemsAsync_PermissionsException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
-            }
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
@@ -525,7 +504,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 try
                 {
-                    admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.GetIdFromGuidAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
+                    admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.GetIdFromGuidAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(() => null);
                     await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
                 }
                 catch (IntegrationApiException ex)
@@ -543,7 +522,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             {
                 try
                 {
-                    admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.GetIdFromGuidAsync("333d73eb-7194-4988-872d-0d425df8dfd0", It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(null);
+                    admissionApplicationSupportingItemsRepositoryMock.Setup(x => x.GetIdFromGuidAsync("333d73eb-7194-4988-872d-0d425df8dfd0", It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(() => null);
                     await admissionApplicationSupportingItemsService.CreateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
                 }
                 catch (IntegrationApiException ex)
@@ -625,15 +604,6 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             #endregion
 
             #region PUT
-
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-
-            public async Task UpdateAdmissionApplicationSupportingItemsAsync_PermissionsException()
-            {
-                roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { });
-                await admissionApplicationSupportingItemsService.UpdateAdmissionApplicationSupportingItemsAsync(admissionApplicationSupportingItems);
-            }
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]

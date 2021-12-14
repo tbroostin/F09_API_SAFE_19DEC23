@@ -134,6 +134,48 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         }
 
         [TestMethod]
+        [ExpectedException(typeof(RepositoryException))]
+        public async Task AccountFundsAvailableRepository_CheckAvailableFundsAsync_ReturningErrors()
+        {
+            DataContracts.Glstruct glStruct = testGeneralLedgerConfigurationRepository.GlStructDataContract;
+            DataContracts.Glclsdef glClassDef = testGeneralLedgerConfigurationRepository.GlClassDefDataContract;
+
+            dataReaderMock.Setup(reader => reader.ReadRecordAsync<DataContracts.Glstruct>("ACCOUNT.PARAMETERS", "ACCT.STRUCTURE", It.IsAny<bool>()))
+                .ReturnsAsync(glStruct);
+
+            dataReaderMock.Setup(reader => reader.ReadRecordAsync<DataContracts.Glclsdef>("ACCOUNT.PARAMETERS", "GL.CLASS.DEF", It.IsAny<bool>()))
+                .ReturnsAsync(glClassDef);
+
+            var accountingString = "11-01-01-00-10501-53011";
+
+            var fundsAvailable = new Domain.ColleagueFinance.Entities.FundsAvailable(accountingString)
+            { TransactionDate = DateTime.Now, Amount = 150 };
+
+            var checkAvailableFundsResponse = new CheckAvailableFundsResponse()
+            {
+                Error = true,
+                ErrorCodes = new List<string>() { "Validation.Exception" },
+                ErrorMessages = new List<string>() { "Invalid Error Message" }
+            };
+
+            transManagerMock.Setup(i => i.ExecuteAsync<CheckAvailableFundsRequest, CheckAvailableFundsResponse>(It.IsAny<CheckAvailableFundsRequest>()))
+                .ReturnsAsync(checkAvailableFundsResponse);
+
+            try
+            {
+                var result = await accountFundsAvailableRepository.CheckAvailableFundsAsync
+                    (new List<Domain.ColleagueFinance.Entities.FundsAvailable>() { fundsAvailable });
+            }
+            catch (RepositoryException ex)
+            {
+                Assert.AreEqual(1, ex.Errors.Count);
+                Assert.AreEqual("Invalid Error Message", ex.Errors.ElementAt(0).Message);
+                Assert.AreEqual("Validation.Exception", ex.Errors.ElementAt(0).Code);
+                throw ex;
+            }
+        }
+
+        [TestMethod]
         public async Task AccountFundsAvailableRepository_CheckAvailableFundsAsync_Override()
         {
             DataContracts.Glstruct glStruct = testGeneralLedgerConfigurationRepository.GlStructDataContract;
@@ -244,7 +286,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 GlAvailableList = new List<GlAvailableList>()
                     { new GlAvailableList () {
                         AccountingStrings = accountingString,
-                        AvailableStatus = "AVAILABLE",
+                        AvailableStatus = "NOT.APPLICABLE",
                         Currency = "USD",
                         GlAmts = 150,
                         ItemsId = "100",
@@ -454,7 +496,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task AccountFundsAvailableRepository_GetReqStatusByItemNumber_NullItems()
         {
-            dataReaderMock.Setup(i => i.ReadRecordAsync<DataContracts.Items>("1", It.IsAny<bool>())).ReturnsAsync(null);
+            dataReaderMock.Setup(i => i.ReadRecordAsync<DataContracts.Items>("1", It.IsAny<bool>())).ReturnsAsync(() => null);
             var result = await accountFundsAvailableRepository.GetReqStatusByItemNumber("1");
         }
 
@@ -477,7 +519,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 }
             };
             dataReaderMock.Setup(i => i.ReadRecordAsync<DataContracts.Items>("1", It.IsAny<bool>())).ReturnsAsync(item);
-            dataReaderMock.Setup(i => i.BulkReadRecordAsync<DataContracts.Requisitions>("REQUISITIONS", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+            dataReaderMock.Setup(i => i.BulkReadRecordAsync<DataContracts.Requisitions>("REQUISITIONS", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
             var result = await accountFundsAvailableRepository.GetReqStatusByItemNumber("1");
         }
 
@@ -485,7 +527,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task AccountFundsAvailableRepository_GetBpoAsync_GetPOStatusByItemNumber_KeyNotFoundException()
         {
-            dataReaderMock.Setup(i => i.ReadRecordAsync<DataContracts.Items>("1", It.IsAny<bool>())).ReturnsAsync(null);
+            dataReaderMock.Setup(i => i.ReadRecordAsync<DataContracts.Items>("1", It.IsAny<bool>())).ReturnsAsync(() => null);
             var result = await accountFundsAvailableRepository.GetPOStatusByItemNumber("1");
         }
 
@@ -508,7 +550,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 }
             };
             dataReaderMock.Setup(i => i.ReadRecordAsync<DataContracts.Items>("1", It.IsAny<bool>())).ReturnsAsync(item);
-            dataReaderMock.Setup(i => i.BulkReadRecordAsync<DataContracts.PurchaseOrders>("PURCHASE.ORDERS", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+            dataReaderMock.Setup(i => i.BulkReadRecordAsync<DataContracts.PurchaseOrders>("PURCHASE.ORDERS", It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
             var result = await accountFundsAvailableRepository.GetPOStatusByItemNumber("1");
         }
 
@@ -516,7 +558,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task AccountFundsAvailableRepository_GetBpoAsync_With_Result_KeyNotFoundException()
         {
-            dataReaderMock.Setup(i => i.ReadRecordAsync<DataContracts.Items>("1", It.IsAny<bool>())).ReturnsAsync(null);
+            dataReaderMock.Setup(i => i.ReadRecordAsync<DataContracts.Items>("1", It.IsAny<bool>())).ReturnsAsync(() => null);
             var result = await accountFundsAvailableRepository.GetBpoAsync("1");
         }
 
@@ -524,7 +566,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task AccountFundsAvailableRepository_With_Project_Null()
         {
-            dataReaderMock.Setup(reader => reader.BulkReadRecordAsync<DataContracts.Projects>(It.IsAny<string>(), true)).ReturnsAsync(null);
+            dataReaderMock.Setup(reader => reader.BulkReadRecordAsync<DataContracts.Projects>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
 
             var actual = await accountFundsAvailableRepository.GetProjectAvailableFundsAsync("11_00_01_00_20603_52010", 25, "SALIL-TEST", It.IsAny<DateTime?>());
         }
@@ -538,7 +580,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
                 Recordkey = "1",
             };
             dataReaderMock.Setup(reader => reader.BulkReadRecordAsync<DataContracts.Projects>(It.IsAny<string>(), true)).ReturnsAsync(new Collection<DataContracts.Projects>() { resultProject });
-            dataReaderMock.Setup(reader => reader.BulkReadRecordAsync<DataContracts.ProjectsLineItems>(It.IsAny<string>(), true)).ReturnsAsync(null);
+            dataReaderMock.Setup(reader => reader.BulkReadRecordAsync<DataContracts.ProjectsLineItems>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
 
             var actual = await accountFundsAvailableRepository.GetProjectAvailableFundsAsync("11_00_01_00_20603_52010", 25, "SALIL-TEST", It.IsAny<DateTime?>());
         }
@@ -600,7 +642,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task AccountFundsAvailableRepository_Null_Results_KeyNotFoundException()
         {
-            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.GlAccts>(It.IsAny<string>(), true)).ReturnsAsync(null);
+            dataReaderMock.Setup(repo => repo.ReadRecordAsync<DataContracts.GlAccts>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
             var actual = await accountFundsAvailableRepository.GetAvailableFundsAsync("11_00_01_00_20603_52010", 25, "2017");
         }
 

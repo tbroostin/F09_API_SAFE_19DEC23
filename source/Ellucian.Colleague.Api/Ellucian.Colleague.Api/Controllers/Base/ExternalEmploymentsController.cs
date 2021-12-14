@@ -1,4 +1,4 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -20,6 +20,7 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
+using Ellucian.Colleague.Domain.Base;
 
 namespace Ellucian.Colleague.Api.Controllers.Base
 {
@@ -48,10 +49,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// <summary>
         /// Return all externalEmployments
         /// </summary>
-        
+
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
-                /// <returns>List of ExternalEmployments <see cref="Dtos.ExternalEmployments"/> objects representing matching externalEmployments</returns>
-        [HttpGet]
+        /// <returns>List of ExternalEmployments <see cref="Dtos.ExternalEmployments"/> objects representing matching externalEmployments</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, PermissionsFilter(BasePermissionCodes.ViewAnyExternalEmployments)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetExternalEmploymentsAsync(Paging page)
@@ -66,6 +68,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
+                _externalEmploymentsService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -87,7 +90,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -116,7 +119,8 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// </summary>
         /// <param name="guid">GUID to desired externalEmployments</param>
         /// <returns>A externalEmployments object <see cref="Dtos.ExternalEmployments"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(BasePermissionCodes.ViewAnyExternalEmployments)]
         public async Task<Dtos.ExternalEmployments> GetExternalEmploymentsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -134,6 +138,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             }
             try
             {
+                _externalEmploymentsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                     await _externalEmploymentsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await _externalEmploymentsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -148,7 +153,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {

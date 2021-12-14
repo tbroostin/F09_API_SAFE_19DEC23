@@ -206,6 +206,7 @@ namespace Ellucian.Web.Http.Tests.ModelBinding
             actionContext.Request.Content = new StringContent(bodyString, Encoding.UTF8, "application/json");
             actionContext.Request.SetConfiguration(config);
             actionContext.Request.SetRouteData(data);
+            actionContext.Request.Headers.Add("Accept", "application/vnd.hedtech.integration.v1.0.0+json");
 
             Mock<HttpActionDescriptor> _actionDescriptorMock = new Mock<HttpActionDescriptor>() { CallBase = true };
             _actionDescriptorMock.Setup(ad => ad.GetCustomAttributes<CustomMediaTypeAttributeFilter>())
@@ -250,6 +251,7 @@ namespace Ellucian.Web.Http.Tests.ModelBinding
             actionContext.Request.Content = new StringContent(bodyString, Encoding.UTF8, "application/json");
             actionContext.Request.SetConfiguration(config);
             actionContext.Request.SetRouteData(data);
+            actionContext.Request.Headers.Add("Accept", "application/vnd.hedtech.integration.v1.0.0+json");
 
             Mock<HttpActionDescriptor> _actionDescriptorMock = new Mock<HttpActionDescriptor>() { CallBase = true };
             _actionDescriptorMock.Setup(ad => ad.GetCustomAttributes<CustomMediaTypeAttributeFilter>())
@@ -296,6 +298,7 @@ namespace Ellucian.Web.Http.Tests.ModelBinding
             actionContext.Request.Content = new StringContent(bodyString, Encoding.UTF8, "application/json");
             actionContext.Request.SetConfiguration(config);
             actionContext.Request.SetRouteData(data);
+            actionContext.Request.Headers.Add("Accept", "application/vnd.hedtech.integration.v1.0.0+json");
 
             Mock<HttpActionDescriptor> _actionDescriptorMock = new Mock<HttpActionDescriptor>() { CallBase = true };
             _actionDescriptorMock.Setup(ad => ad.GetCustomAttributes<CustomMediaTypeAttributeFilter>())
@@ -341,6 +344,7 @@ namespace Ellucian.Web.Http.Tests.ModelBinding
             actionContext.Request.Content = new StringContent(bodyString, Encoding.UTF8, "application/json");
             actionContext.Request.SetConfiguration(config);
             actionContext.Request.SetRouteData(data);
+            actionContext.Request.Headers.Add("Accept", "application/vnd.hedtech.integration.v1.0.0+json");
 
             Mock<HttpActionDescriptor> _actionDescriptorMock = new Mock<HttpActionDescriptor>() { CallBase = true };
             _actionDescriptorMock.Setup(ad => ad.GetCustomAttributes<CustomMediaTypeAttributeFilter>())
@@ -388,6 +392,7 @@ namespace Ellucian.Web.Http.Tests.ModelBinding
             actionContext.Request.Content = new StringContent(bodyString, Encoding.UTF8, "application/json");
             actionContext.Request.SetConfiguration(config);
             actionContext.Request.SetRouteData(data);
+            actionContext.Request.Headers.Add("Accept", "application/vnd.hedtech.integration.v1.0.0+json");
 
             Mock<HttpActionDescriptor> _actionDescriptorMock = new Mock<HttpActionDescriptor>() { CallBase = true };
             _actionDescriptorMock.Setup(ad => ad.GetCustomAttributes<CustomMediaTypeAttributeFilter>())
@@ -436,6 +441,7 @@ namespace Ellucian.Web.Http.Tests.ModelBinding
             actionContext.Request.Content = new StringContent(bodyString, Encoding.UTF8, "application/json");
             actionContext.Request.SetConfiguration(config);
             actionContext.Request.SetRouteData(data);
+            actionContext.Request.Headers.Add("Accept", "application/vnd.hedtech.integration.v1.0.0+json");
 
 
             Mock<HttpActionDescriptor> _actionDescriptorMock = new Mock<HttpActionDescriptor>() { CallBase = true };
@@ -487,6 +493,7 @@ namespace Ellucian.Web.Http.Tests.ModelBinding
             actionContext.Request.Content = new StringContent(bodyString, Encoding.UTF8, "application/json");
             actionContext.Request.SetConfiguration(config);
             actionContext.Request.SetRouteData(data);
+            actionContext.Request.Headers.Add("Accept", "application/vnd.hedtech.integration.v1.0.0+json");
 
             var metadataProvider = _modelMetadataProviderMock.Object;
             var metaData = new System.Web.Http.Metadata.ModelMetadata(metadataProvider, controller.GetType(), null, _testData.GetType(), "id");

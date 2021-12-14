@@ -553,6 +553,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             return configurationDto;
         }
 
+        #endregion
 
         #region OBSOLETE METHODS
 
@@ -603,8 +604,6 @@ namespace Ellucian.Colleague.Coordination.Base.Services
 
             return configurationDto;
         }
-
-        #endregion
 
         #endregion
     }

@@ -52,7 +52,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <returns>All FinancialAidYear objects.</returns>
         [CustomMediaTypeAttributeFilter( ErrorContentType = IntegrationErrors2 )]
-        [HttpGet, ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
+        [HttpGet, ValidateQueryStringFilter(NamedQueries = new string[] { "academicPeriod" }), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("academicPeriod", typeof(Dtos.Filters.AcademicPeriodNamedQueryFilter))]
         [EedmResponseFilter]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.FinancialAidYear>> GetFinancialAidYearsAsync(QueryStringFilter academicPeriod)

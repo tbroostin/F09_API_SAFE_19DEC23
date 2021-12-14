@@ -229,6 +229,9 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
 
             // User with no GL access
             GeneralLedgerUsers.Add(new GeneralLedgerUser("9999999", "Kleehammer"));
+
+            // User for testing general-ledger-transactions
+            GeneralLedgerUsers.Add(new GeneralLedgerUser("0004319", "vaidya"));
         }
 
         public async Task<GeneralLedgerUser> GetGeneralLedgerUserAsync(string id, string fullAccessRole, string classificationName, IEnumerable<string> expenseValues)

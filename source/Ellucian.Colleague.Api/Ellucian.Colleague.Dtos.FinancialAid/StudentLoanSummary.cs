@@ -40,6 +40,11 @@ namespace Ellucian.Colleague.Dtos.FinancialAid
         public DateTime? PlusLoanMpnExpirationDate { get; set; }
 
         /// <summary>
+        /// Placeholder
+        /// </summary>
+        public DateTime? GraduatePlusLoanMpnExpirationDate { get; set; }
+
+        /// <summary>
         /// Aggregate amount of all student loan debt - this amount can be higher than the sum of all 
         /// StudentLoanHistory amounts
         /// </summary>
@@ -49,6 +54,21 @@ namespace Ellucian.Colleague.Dtos.FinancialAid
         /// Flag that denotes whether the Informed Borrower checklist item is completed.
         /// </summary>
         public List<InformedBorrowerItem> InformedBorrowerItem { get; set; }
+
+        /// <summary>
+        /// List of PLUS Loan Item objects
+        /// </summary>
+        public List<PlusLoanItem> PlusLoanItems { get; set; }
+
+        /// <summary>
+        /// Placeholder
+        /// </summary>
+        public List<PlusApplicationItem> PlusApplicationItems { get; set; }
+
+        /// <summary>
+        /// placeholder
+        /// </summary>
+        public List<PlusMpnItem> PlusMpnItems { get; set; }
 
         /// <summary>
         /// A list of loan totals from other schools for this student.

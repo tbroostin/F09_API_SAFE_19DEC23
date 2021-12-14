@@ -14,6 +14,7 @@ using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Data.HumanResources.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Data.Base.DataContracts;
+using Ellucian.Colleague.Domain.Base.Transactions;
 
 namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 {
@@ -60,6 +61,34 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 .ReturnsAsync(positionsCollDataList);
 
             dataReaderMock.Setup(repo => repo.SelectAsync("PERPOS", It.IsAny<string>())).ReturnsAsync(personIdList.ToArray());
+            
+            GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+            {
+                Offset = 0,
+                Limit = 1,
+                CacheName = "AllInstitutionJobs:",
+                Entity = "PERPOS",
+                Sublist = personIdList,
+                TotalCount = personIdList.Count,
+                KeyCacheInfo = new List<KeyCacheInfo>()
+                {
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 5905,
+                        KeyCacheMin = 1,
+                        KeyCachePart = "000",
+                        KeyCacheSize = 5905
+                    },
+                    new KeyCacheInfo()
+                    {
+                        KeyCacheMax = 7625,
+                        KeyCacheMin = 5906,
+                        KeyCachePart = "001",
+                        KeyCacheSize = 1720
+                    }
+                }
+            };
+            transManagerMock.Setup(tran => tran.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>())).ReturnsAsync(resp);
 
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Perpos>("PERPOS", It.IsAny<string[]>(), It.IsAny<bool>()))
                 .ReturnsAsync(perposCollDataList);

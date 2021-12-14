@@ -1,4 +1,4 @@
-﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.ColleagueFinance;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Base.Services;
@@ -29,6 +29,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         private Mock<IAdapterRegistry> adapterRegistryMock;
         private Mock<IColleagueFinanceTaxFormPdfService> taxFormPdfServiceMock;
         private Mock<ITaxFormConsentService> taxFormConsentServiceMock;
+        private Mock<IConfigurationService> configurationServiceMock;
 
         private Mock<ILogger> loggerMock;
         private ColleagueFinanceTaxFormPdfsController controller;
@@ -45,6 +46,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             adapterRegistryMock = new Mock<IAdapterRegistry>();
             taxFormPdfServiceMock = new Mock<IColleagueFinanceTaxFormPdfService>();
             taxFormConsentServiceMock = new Mock<ITaxFormConsentService>();
+            configurationServiceMock = new Mock<IConfigurationService>();
             loggerMock = new Mock<ILogger>();
 
 
@@ -55,7 +57,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
             taxFormPdfServiceMock.Setup(m => m.Get1099MiscPdfDataAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(form1099MiData);
 
             taxFormPdfServiceMock.Setup(m => m.Populate1099MiscPdf(It.IsAny<Form1099MIPdfData>(), It.IsAny<string>())).Returns(new byte[0]);
-            controller = new ColleagueFinanceTaxFormPdfsController(adapterRegistryMock.Object, loggerMock.Object, taxFormPdfServiceMock.Object, taxFormConsentServiceMock.Object)
+            controller = new ColleagueFinanceTaxFormPdfsController(adapterRegistryMock.Object, loggerMock.Object, taxFormPdfServiceMock.Object, taxFormConsentServiceMock.Object, configurationServiceMock.Object)
             {
                 Request = new HttpRequestMessage()
             };

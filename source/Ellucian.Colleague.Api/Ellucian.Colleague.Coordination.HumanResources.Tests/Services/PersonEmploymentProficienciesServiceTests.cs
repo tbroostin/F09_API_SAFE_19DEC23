@@ -3,7 +3,9 @@ using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos;
+using Ellucian.Data.Colleague;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -39,6 +41,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             protected Ellucian.Colleague.Domain.Entities.Role viewPersonEmploymentProf = new Ellucian.Colleague.Domain.Entities.Role(1, "VIEW.PERSON.EMPL.PROFICIENCIES");
 
             private string guid = "5a1a02c4-21da-4cbb-98f1-bfd47cba87cd";
+            GuidLookupResult guidLookUpResult = new GuidLookupResult() { Entity = "HR.IND.SKILL", PrimaryKey = "ABC" };
 
             #endregion
 
@@ -81,14 +84,18 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                     new Domain.HumanResources.Entities.PersonEmploymentProficiency()
                     {
                         Guid = "5a1a02c4-21da-4cbb-98f1-bfd47cba87cd",
+                        ProficiencyId = "CAP",
                         PersonId = "1",
                         StartOn = DateTime.Today,
-                        EndOn = DateTime.Today.AddDays(10)
+                        EndOn = DateTime.Today.AddDays(10),
+                        RecordKey = "ABC"
                     },
                     new Domain.HumanResources.Entities.PersonEmploymentProficiency()
                     {
                         Guid = "6a1a02c4-21da-4cbb-98f1-bfd47cba87cd",
-                        PersonId = "1"
+                        ProficiencyId = "CAP",
+                        PersonId = "1",
+                        RecordKey = "123"
                     }
                 };
 
@@ -98,25 +105,59 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             #endregion
 
             [TestMethod]
-            [ExpectedException(typeof(MissingFieldException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetPersonEmploymentProficienciesAsync_MissingFieldException_Guid_Null()
             {
                 tupleResult.Item1.FirstOrDefault().Guid = null;
 
                 repositoryMock.Setup(r => r.GetPersonEmploymentProficienciesAsync(It.IsAny<int>(), It.IsAny<int>(), true)).ReturnsAsync(tupleResult);
 
-                await service.GetPersonEmploymentProficienciesAsync(0, 10, true);
+                try
+                {
+                    await service.GetPersonEmploymentProficienciesAsync(0, 10, true);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "Record is missing GUID, Entity: ‘HR.IND.SKILL’, Record ID: ‘ABC’" && error.Code == "Bad.Data")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(MissingFieldException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetPersonEmploymentProficienciesAsync_MissingFieldException_PersonId_Null()
             {
                 tupleResult.Item1.FirstOrDefault().PersonId = null;
 
                 repositoryMock.Setup(r => r.GetPersonEmploymentProficienciesAsync(It.IsAny<int>(), It.IsAny<int>(), true)).ReturnsAsync(tupleResult);
 
-                await service.GetPersonEmploymentProficienciesAsync(0, 10, true);
+                try
+                {
+                    await service.GetPersonEmploymentProficienciesAsync(0, 10, true);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "Record is missing Person ID, Entity: ‘HR.IND.SKILL’, Record ID: ‘" + tupleResult.Item1.FirstOrDefault().RecordKey + "’" && error.Code == "Bad.Data")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                    throw ex;
+                }
             }
 
             [TestMethod]
@@ -124,6 +165,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             {
                 repositoryMock.Setup(r => r.GetPersonEmploymentProficienciesAsync(It.IsAny<int>(), It.IsAny<int>(), true)).ReturnsAsync(tupleResult);
                 repositoryMock.Setup(r => r.GetGuidFromID(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(guid);
+                repositoryMock.Setup(r => r.GetInfoFromGuidAsync(It.IsAny<string>())).ReturnsAsync(guidLookUpResult);
 
                 var result = await service.GetPersonEmploymentProficienciesAsync(0, 10, true);
 
@@ -132,12 +174,29 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetPersonEmploymentProficienciesByGuidAsync_KeyNotFoundException()
             {
                 repositoryMock.Setup(r => r.GetPersonEmploymentProficiency(It.IsAny<string>())).ThrowsAsync(new KeyNotFoundException());
 
-                await service.GetPersonEmploymentProficienciesByGuidAsync(guid);
+                try
+                {
+                    await service.GetPersonEmploymentProficienciesByGuidAsync(guid);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "person-employment-proficiencies not found for GUID " + guid && error.Code == "GUID.Not.Found")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                    throw ex;
+                }
             }
 
             [TestMethod]
@@ -150,25 +209,59 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(MissingFieldException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetPersonEmploymentProficienciesByGuidAsync_MissingFieldException_Guid_Null()
             {
                 collection.FirstOrDefault().Guid = null;
 
                 repositoryMock.Setup(r => r.GetPersonEmploymentProficiency(It.IsAny<string>())).ReturnsAsync(collection.FirstOrDefault());
 
-                await service.GetPersonEmploymentProficienciesByGuidAsync(guid);
+                try
+                {
+                    await service.GetPersonEmploymentProficienciesByGuidAsync(guid);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "Record is missing GUID, Entity: ‘HR.IND.SKILL’, Record ID: ‘ABC’" && error.Code == "Bad.Data")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(MissingFieldException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetPersonEmploymentProficienciesByGuidAsync_MissingFieldException_PersonId_Null()
             {
                 collection.FirstOrDefault().PersonId = null;
 
                 repositoryMock.Setup(r => r.GetPersonEmploymentProficiency(It.IsAny<string>())).ReturnsAsync(collection.FirstOrDefault());
 
-                await service.GetPersonEmploymentProficienciesByGuidAsync(guid);
+                try
+                {
+                    await service.GetPersonEmploymentProficienciesByGuidAsync(guid);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.IsTrue(ex.Errors.Count > 0, "Error Count");
+                    bool messageFound = false;
+                    foreach (var error in ex.Errors)
+                    {
+                        if (error.Message == "Record is missing Person ID, Entity: ‘HR.IND.SKILL’, Record ID: ‘" + tupleResult.Item1.FirstOrDefault().RecordKey + "’" && error.Code == "Bad.Data")
+                        {
+                            messageFound = true;
+                        }
+                    }
+                    Assert.IsTrue(messageFound, "Appropriate Error Message found in error collection.");
+                    throw ex;
+                }
             }
 
             [TestMethod]
@@ -176,6 +269,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             {
                 repositoryMock.Setup(r => r.GetPersonEmploymentProficiency(It.IsAny<string>())).ReturnsAsync(collection.FirstOrDefault());
                 repositoryMock.Setup(r => r.GetGuidFromID(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(guid);
+                repositoryMock.Setup(r => r.GetInfoFromGuidAsync(It.IsAny<string>())).ReturnsAsync(guidLookUpResult);
 
                 var result = await service.GetPersonEmploymentProficienciesByGuidAsync(guid);
 

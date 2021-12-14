@@ -179,21 +179,29 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             #endregion
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
             public async Task PurchaseOrderReceiptRepository_Empty_PoReceiptIntg_From_Repository()
             {
-                dataReaderMock.Setup(d => d.BulkReadRecordAsync<PoReceiptIntg>("PO.RECEIPT.INTG", It.IsAny<string[]>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.BulkReadRecordAsync<PoReceiptIntg>("PO.RECEIPT.INTG", It.IsAny<string[]>(), true)).ReturnsAsync(() => null);
 
-                await PurchaseOrderReceiptRepository.GetPurchaseOrderReceiptsAsync(0, 2);
+                var result = await PurchaseOrderReceiptRepository.GetPurchaseOrderReceiptsAsync(0, 2);
+                var item1 = result.Item1;
+                var item2 = result.Item2;
+                Assert.IsInstanceOfType(result, typeof(Tuple<IEnumerable<PurchaseOrderReceipt>, int>));
+                Assert.IsInstanceOfType(item1, typeof(List<PurchaseOrderReceipt>));
+                Assert.AreEqual(0, item2);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
             public async Task PurchaseOrderReceiptRepositoryGetPurchaseOrderReceipts_PoReceiptIntg_Null_From_Repository()
             {
-                dataReaderMock.Setup(d => d.BulkReadRecordAsync<PoReceiptIntg>("PO.RECEIPT.INTG", It.IsAny<string[]>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.BulkReadRecordAsync<PoReceiptIntg>("PO.RECEIPT.INTG", It.IsAny<string[]>(), true)).ReturnsAsync(() => null);
 
-                await PurchaseOrderReceiptRepository.GetPurchaseOrderReceiptsAsync(0, 2);
+                var result = await PurchaseOrderReceiptRepository.GetPurchaseOrderReceiptsAsync(0, 2);
+                var item1 = result.Item1;
+                var item2 = result.Item2;
+                Assert.IsInstanceOfType(result, typeof(Tuple<IEnumerable<PurchaseOrderReceipt>, int>));
+                Assert.IsInstanceOfType(item1, typeof(List<PurchaseOrderReceipt>));
+                Assert.AreEqual(0, item2);
             }
 
             [TestMethod]
@@ -210,7 +218,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             {
                 var purchaseOrderID = "1";
 
-                var criteria = string.Format("WITH PRI.PO.ID EQ '{0}'", purchaseOrderID);
+                var criteria = string.Format("WITH PRI.RECEIVED.BY NE '' AND WITH PRI.PO.ID EQ '{0}'", purchaseOrderID);
 
                 dataReaderMock.Setup(d => d.SelectAsync("PO.RECEIPT.INTG", criteria)).ReturnsAsync(new string[] { "1" });
 
@@ -225,7 +233,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             {
                 var purchaseOrderID = "1";
 
-                var criteria = string.Format("WITH PRI.PO.ID EQ '{0}'", purchaseOrderID);
+                var criteria = string.Format("WITH PRI.RECEIVED.BY NE '' AND WITH PRI.PO.ID EQ '{0}'", purchaseOrderID);
                 dataReaderMock.Setup(d => d.SelectAsync("PO.RECEIPT.INTG", criteria)).ReturnsAsync(new string[] { });
 
                 var result = await PurchaseOrderReceiptRepository.GetPurchaseOrderReceiptsAsync(0, 2, purchaseOrderID);
@@ -236,18 +244,18 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
 
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(KeyNotFoundException))]
             public async Task PurchaseOrderReceiptRepository_GetPurchaseOrderReceiptByGuidAsync_Empty_Guid()
             {
                 await PurchaseOrderReceiptRepository.GetPurchaseOrderReceiptByGuidAsync(null);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(KeyNotFoundException))]
             public async Task PurchaseOrderReceiptRepository_GetPurchaseOrderReceiptByGuidAsync_RecordKey_NotFound()
             {
-                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(null);
-                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(() => null);
+                dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
                 await PurchaseOrderReceiptRepository.GetPurchaseOrderReceiptByGuidAsync(guid);
             }
 
@@ -255,14 +263,14 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task PurchaseOrderReceiptRepository_GetPurchaseOrderReceiptByGuidAsync_Record_NotFound()
             {
-                dataReaderMock.Setup(d => d.ReadRecordAsync<PoReceiptIntg>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
-                //dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+                dataReaderMock.Setup(d => d.ReadRecordAsync<PoReceiptIntg>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
+                //dataReaderMock.Setup(d => d.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
 
                 await PurchaseOrderReceiptRepository.GetPurchaseOrderReceiptByGuidAsync(guid);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(RepositoryException))]
             public async Task PurchaseOrderReceiptRepository_GetPurchaseOrderReceiptByGuidAsync_EmptyGuid_FromRepo()
             {
                 var poReceiptIntg = poReceiptIntgs.FirstOrDefault(x => x.RecordGuid == guid);
@@ -285,7 +293,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(RepositoryException))]
             public async Task PurchaseOrderReceiptRepository_GetPurchaseOrderReceiptByGuidAsync_NullGuid()
             {
                 var poReceiptIntg = poReceiptIntgs.FirstOrDefault();
@@ -315,7 +323,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(KeyNotFoundException))]
             public async Task PurchaseOrderReceiptRepository_CreatePurchaseOrderReceipt_Empty_FromRepo()
             {
                 response = new CreateProcurementReceiptResponse()

@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories;
@@ -2170,7 +2170,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             {
                 exceptionCaught = true;
                 Assert.AreEqual(typeof(PermissionsException), ex.GetType());
-                Assert.AreEqual(ex.Message, "The current user 0000004 is not the person 0000001 that owns the record returned from the repository");
+                Assert.AreEqual(ex.Message, "The current user 0000004 is not the person that owns the record returned from the repository");
             }
             Assert.IsTrue(exceptionCaught);
         }

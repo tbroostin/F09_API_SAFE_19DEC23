@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -9,6 +9,7 @@ using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Data.Colleague;
 using Ellucian.Web.Adapters;
+using Ellucian.Web.Http.Exceptions;
 using Ellucian.Web.Security;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -202,8 +203,69 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personRepoMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("29c20aa1-c1f1-4be9-8af9-d63cc92afcee");
 
                 var result = await personHoldService.GetPersonHoldAsync("2");
-                string notifyValue = result.NotificationIndicator.Value.ToString().Equals("Notify", StringComparison.InvariantCultureIgnoreCase) ? "Y" : "";
-                Assert.AreEqual(personRestriction.NotificationIndicator, notifyValue);
+                //string notifyValue = result.NotificationIndicator.Value.ToString().Equals("Notify", StringComparison.InvariantCultureIgnoreCase) ? "Y" : "";
+                // Assert.AreEqual(personRestriction.NotificationIndicator, notifyValue);
+                Assert.AreEqual(result.NotificationIndicator, NotificationIndicatorType.Notify);
+            }
+
+            [TestMethod]
+            public async Task PersonHoldService_GetPersonHoldByIdAsync_Y_RestPrtlDisplayFlag()
+            {
+                PersonRestriction personRestriction = allPersonRestrictionsEntities.FirstOrDefault(i => i.Id.Equals("2"));
+                // personRestriction.NotificationIndicator = "Y";
+                personHoldsTypeCollection = new List<Domain.Base.Entities.Restriction>(); 
+                personHoldsTypeCollection.Add(new Domain.Base.Entities.Restriction("1df164eb-8178-4321-a9f7-24f12d3991d8", "R0002", "Test", null, null, null, null, null, null, null, null, null) 
+                { 
+                        RestIntgCategory = Domain.Base.Entities.RestrictionCategoryType.Financial, RestPrtlDisplayFlag = "Y" }
+                );
+
+                referenceRepositoryMock.Setup(i => i.GetRestrictionsWithCategoryAsync(It.IsAny<bool>())).ReturnsAsync(personHoldsTypeCollection);
+                personHoldsRepoMock.Setup(i => i.GetPersonHoldByIdAsync("2")).ReturnsAsync(personRestriction);
+                personHoldsRepoMock.Setup(i => i.GetStudentHoldGuidFromIdAsync("2")).ReturnsAsync("9a9bdb5f-b827-4ea0-80cc-c8b9ac17325b");
+                personRepoMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("29c20aa1-c1f1-4be9-8af9-d63cc92afcee");
+
+                var result = await personHoldService.GetPersonHoldAsync("2");
+                //string notifyValue = result.NotificationIndicator.Value.ToString().Equals("Notify", StringComparison.InvariantCultureIgnoreCase) ? "Y" : "";
+                //Assert.AreEqual(personRestriction.NotificationIndicator, notifyValue);
+                Assert.AreEqual(result.NotificationIndicator, NotificationIndicatorType.Notify);
+            }
+            [TestMethod]
+            public async Task PersonHoldService_GetPersonHoldByIdAsync_N_RestPrtlDisplayFlag()
+            {
+                PersonRestriction personRestriction = allPersonRestrictionsEntities.FirstOrDefault(i => i.Id.Equals("2"));
+                // personRestriction.NotificationIndicator = "Y";
+                personHoldsTypeCollection = new List<Domain.Base.Entities.Restriction>();
+                personHoldsTypeCollection.Add(new Domain.Base.Entities.Restriction("1df164eb-8178-4321-a9f7-24f12d3991d8", "R0002", "Test", null, null, null, null, null, null, null, null, null)
+                {
+                    RestIntgCategory = Domain.Base.Entities.RestrictionCategoryType.Financial,
+                    RestPrtlDisplayFlag = "N"
+                }
+                );
+
+                referenceRepositoryMock.Setup(i => i.GetRestrictionsWithCategoryAsync(It.IsAny<bool>())).ReturnsAsync(personHoldsTypeCollection);
+                personHoldsRepoMock.Setup(i => i.GetPersonHoldByIdAsync("2")).ReturnsAsync(personRestriction);
+                personHoldsRepoMock.Setup(i => i.GetStudentHoldGuidFromIdAsync("2")).ReturnsAsync("9a9bdb5f-b827-4ea0-80cc-c8b9ac17325b");
+                personRepoMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("29c20aa1-c1f1-4be9-8af9-d63cc92afcee");
+
+                var result = await personHoldService.GetPersonHoldAsync("2");
+                //string notifyValue = result.NotificationIndicator.Value.ToString().Equals("Watch", StringComparison.InvariantCultureIgnoreCase) ? "Y" : "";
+                //Assert.AreEqual(personRestriction.NotificationIndicator, notifyValue);
+                Assert.AreEqual(result.NotificationIndicator, NotificationIndicatorType.Watch);
+            }
+
+            [TestMethod]
+            public async Task PersonHoldService_GetPersonHoldByIdAsync_N_NotifyIndicator()
+            {
+                PersonRestriction personRestriction = allPersonRestrictionsEntities.FirstOrDefault(i => i.Id.Equals("2"));
+                personRestriction.NotificationIndicator = "N";
+                referenceRepositoryMock.Setup(i => i.GetRestrictionsWithCategoryAsync(It.IsAny<bool>())).ReturnsAsync(personHoldsTypeCollection);
+                personHoldsRepoMock.Setup(i => i.GetPersonHoldByIdAsync("2")).ReturnsAsync(personRestriction);
+                personHoldsRepoMock.Setup(i => i.GetStudentHoldGuidFromIdAsync("2")).ReturnsAsync("9a9bdb5f-b827-4ea0-80cc-c8b9ac17325b");
+                personRepoMock.Setup(i => i.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync("29c20aa1-c1f1-4be9-8af9-d63cc92afcee");
+
+                var result = await personHoldService.GetPersonHoldAsync("2");
+                //string notifyValue = result.NotificationIndicator.Value.ToString().Equals("Watch", StringComparison.InvariantCultureIgnoreCase) ? "Y" : "";
+                Assert.AreEqual(result.NotificationIndicator, NotificationIndicatorType.Watch);
             }
 
             [TestMethod]
@@ -426,7 +488,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task GetPersonHoldByIdAsync_InvalidId_ArgumentNullException()
             {
-                personHoldsRepoMock.Setup(i => i.GetPersonHoldByIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+                personHoldsRepoMock.Setup(i => i.GetPersonHoldByIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 var result = await personHoldService.GetPersonHoldAsync("123");
             }
 
@@ -443,7 +505,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task GetPersonHoldByIdAsync_Restriction_Null_ArgumentNullException()
             {
                 referenceRepositoryMock.Setup(i => i.GetRestrictionsWithCategoryAsync(It.IsAny<bool>())).ReturnsAsync(personHoldsTypeCollection);
@@ -471,59 +533,82 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
 
                 var result = await personHoldService.GetPersonHoldAsync("2");
             }
-
           
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task DeletePersonHoldAsync_PersonHoldId_Null_ArgumentNullException()
             {
                 deleteRegistrationRole.AddPermission(new Ellucian.Colleague.Domain.Entities.Permission(Ellucian.Colleague.Domain.Base.PersonHoldsPermissionCodes.DeletePersonHold));
                 roleRepoMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { deleteRegistrationRole });
 
                 personHoldsRepoMock.Setup(i => i.GetStudentHoldIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("");
-                await personHoldService.DeletePersonHoldAsync("123");
+                try
+                {
+                    await personHoldService.DeletePersonHoldAsync("123");
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.AreEqual("Person-holds not found for guid: '123'.", ex.Errors.FirstOrDefault().Message);
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task DeletePersonHoldAsync_PermissionException()
-            {
-                deleteRegistrationRole.AddPermission(null);
-                await personHoldService.DeletePersonHoldAsync("123");
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Create_Update_PersonNull_ArgumentNullException()
             {
                 string personHoldGuid = "23977f85-f200-479f-9eee-3921bb4667d3";
                 Dtos.PersonHold personHold = personHolds.FirstOrDefault(i => i.Id == personHoldGuid);
                 personHold.Person = null;
-                await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                try
+                {
+                    await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.AreEqual("Must provide person for person-holds", ex.Errors.FirstOrDefault().Message);
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Create_Update_PersonIdNull_ArgumentNullException()
             {
                 string personHoldGuid = "23977f85-f200-479f-9eee-3921bb4667d3";
                 Dtos.PersonHold personHold = personHolds.FirstOrDefault(i => i.Id == personHoldGuid);
                 personHold.Person.Id = string.Empty;
-                await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                try
+                {
+                    await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.AreEqual("Must provide person id for person-holds", ex.Errors.FirstOrDefault().Message);
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Create_Update_PersonHoldTypeTypeNull_ArgumentNullException()
             {
                 string personHoldGuid = "23977f85-f200-479f-9eee-3921bb4667d3";
                 Dtos.PersonHold personHold = personHolds.FirstOrDefault(i => i.Id == personHoldGuid);
                 personHold.PersonHoldTypeType = null;
-                await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                try
+                {
+                    await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.AreEqual("Must provide person hold type for person-holds", ex.Errors.FirstOrDefault().Message);
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Create_Update_PersonHoldTypeTypeNull_KeyNotFoundException()
             {
                 string personHoldGuid = "23977f85-f200-479f-9eee-3921bb4667d3";
@@ -532,63 +617,111 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 Dtos.PersonHold personHold = personHolds.FirstOrDefault(i => i.Id == personHoldGuid);
                 personHold.PersonHoldTypeType.Detail.Id = "528ea4c6-b778-4a2c-8a68-b5878c70e9b3";
                 personRepoMock.Setup(i => i.GetPersonByGuidNonCachedAsync(studentGuid)).ReturnsAsync(new Domain.Base.Entities.Person("1234", "Bhole") { FirstName = "Jon", PersonCorpIndicator = "" });
-                await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                try
+                {
+                    await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.AreEqual("Person hold type associated with id '" + personHold.PersonHoldTypeType.Detail.Id + "' was not found", ex.Errors.FirstOrDefault().Message);
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Create_Update_PersonHoldCategoryNull_ArgumentNullException()
             {
                 string personHoldGuid = "23977f85-f200-479f-9eee-3921bb4667d3";
                 Dtos.PersonHold personHold = personHolds.FirstOrDefault(i => i.Id == personHoldGuid);
                 personHold.PersonHoldTypeType.PersonHoldCategory = null;
-                await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                try
+                {
+                    await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.AreEqual("The category is required if the type is included in the payload.", ex.Errors.FirstOrDefault().Message);
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Create_Update_PersonHoldCategoryNull_DetailId_NotNull_ArgumentNullException()
             {
                 string personHoldGuid = "23977f85-f200-479f-9eee-3921bb4667d3";
                 Dtos.PersonHold personHold = personHolds.FirstOrDefault(i => i.Id == personHoldGuid);
                 personHold.PersonHoldTypeType.PersonHoldCategory = null;
                 personHold.PersonHoldTypeType.Detail = null;
-                await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                try
+                {
+                    await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.AreEqual("Must provide person hold category for person-holds", ex.Errors.FirstOrDefault().Message);
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(ArgumentNullException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Create_Update_PersonHoldTypeType_DetailId_Null_ArgumentNullException()
             {
                 string personHoldGuid = "23977f85-f200-479f-9eee-3921bb4667d3";
                 Dtos.PersonHold personHold = personHolds.FirstOrDefault(i => i.Id == personHoldGuid);
                 personHold.PersonHoldTypeType.Detail.Id = string.Empty;
-                await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                try
+                {
+                    await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.AreEqual("Must provide id if person hold type details is included for person-holds", ex.Errors.FirstOrDefault().Message);
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Create_Update_StartOn_GT_EndOn_ArgumentNullException()
             {
                 string personHoldGuid = "23977f85-f200-479f-9eee-3921bb4667d3";
                 Dtos.PersonHold personHold = personHolds.FirstOrDefault(i => i.Id == personHoldGuid);
                 personHold.StartOn = DateTimeOffset.MaxValue;
                 personHold.EndOn = DateTimeOffset.MinValue;
-                await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                try
+                {
+                    await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.AreEqual("The hold start date must be on or before the hold end date.", ex.Errors.FirstOrDefault().Message);
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Create_Update_GetPersonIdFromGuidAsync_personIdNull_ArgumentNullException()
             {
                 string personHoldGuid = "23977f85-f200-479f-9eee-3921bb4667d3";
                 Dtos.PersonHold personHold = personHolds.FirstOrDefault(i => i.Id == personHoldGuid);
                 personRepoMock.Setup(i => i.GetPersonIdFromGuidAsync(It.IsAny<string>())).ReturnsAsync("");
-                await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                try
+                {
+                    await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.AreEqual("Person ID associated to id '" + personHold.Person.Id + "' not found", ex.Errors.FirstOrDefault().Message);
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Create_Update_GetPersonIdFromGuidAsync_HoldTypeNull_ArgumentNullException()
             {
                 string personHoldGuid = "23977f85-f200-479f-9eee-3921bb4667d3";
@@ -598,11 +731,19 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 personRepoMock.Setup(i => i.GetPersonIdFromGuidAsync(studentGuid)).ReturnsAsync("1234");
                 referenceRepositoryMock.Setup(i => i.GetRestrictionsWithCategoryAsync(It.IsAny<bool>())).ReturnsAsync(personHoldsTypeCollection);
                 personHold.PersonHoldTypeType.Detail.Id = "abc";
-                await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                try
+                {
+                    await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.AreEqual("Person ID associated to id '" + personHold.Person.Id + "' not found", ex.Errors.FirstOrDefault().Message);
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Create_Update_GetPersonIdFromGuidAsync_WithDetailNull_HoldTypeNull_ArgumentNullException()
             {
                 string personHoldGuid = "23977f85-f200-479f-9eee-3921bb4667d3";
@@ -613,11 +754,19 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 referenceRepositoryMock.Setup(i => i.GetRestrictionsWithCategoryAsync(It.IsAny<bool>())).ReturnsAsync(personHoldsTypeCollection);
                 personHold.PersonHoldTypeType.Detail = null;
                 personHold.PersonHoldTypeType.PersonHoldCategory = PersonHoldCategoryTypes.Health;
-                await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                try
+                {
+                    await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.AreEqual("Person hold type associated with category '" + personHold.PersonHoldTypeType.PersonHoldCategory.ToString() + "' was not found", ex.Errors.FirstOrDefault().Message);
+                    throw ex;
+                }
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task Create_Update_GetPersonIdFromGuidAsync_PersonCorpIndicatorIsY_InvalidOperationException()
             {
                 string personHoldGuid = "23977f85-f200-479f-9eee-3921bb4667d3";
@@ -628,7 +777,15 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 referenceRepositoryMock.Setup(i => i.GetRestrictionsWithCategoryAsync(It.IsAny<bool>())).ReturnsAsync(personHoldsTypeCollection);
                 personHold.PersonHoldTypeType.Detail = null;
                 personHold.PersonHoldTypeType.PersonHoldCategory = PersonHoldCategoryTypes.Health;
-                await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                try
+                {
+                    await personHoldService.UpdatePersonHoldAsync(personHoldGuid, personHold);
+                }
+                catch (IntegrationApiException ex)
+                {
+                    Assert.AreEqual("The person specified is an organization, not a person.", ex.Errors.FirstOrDefault().Message);
+                    throw ex;
+                }
             }
             #endregion
         }      

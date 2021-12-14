@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -228,7 +228,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [ExpectedException(typeof (ArgumentNullException))]
         public async Task StudentPaymentService_GetByIDAsync_NotFound()
         {
-            _studentPaymentRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+            _studentPaymentRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             var actual = await _studentPaymentService.GetByIdAsync(studentPaymentEntity.Guid);
         }
 
@@ -457,7 +457,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [TestMethod]
         public async Task StudentPaymentService_GetAsync_paymentType_NoResultPerson()
         {
-            _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+            _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
             var actuals = await _studentPaymentService.GetAsync(0, 100, true, "234", "", "", "");
             Assert.AreEqual(0, actuals.Item1.Count());
@@ -840,7 +840,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task StudentPaymentService_GetByIDAsync2_NotFound()
         {
-            _studentPaymentRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+            _studentPaymentRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             var actual = await _studentPaymentService.GetByIdAsync2(studentPaymentEntity.Guid);
         }
 
@@ -1069,7 +1069,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [TestMethod]
         public async Task StudentPaymentService_GetAsync2_paymentType_NoResultPerson()
         {
-            _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+            _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
             var actuals = await _studentPaymentService.GetAsync2(0, 100, true, "234", "", "", "");
             Assert.AreEqual(0, actuals.Item1.Count());
@@ -1473,7 +1473,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [ExpectedException(typeof(KeyNotFoundException))]
         public async Task StudentPaymentService_GetByIdAsync3_NotFound()
         {
-            _studentPaymentRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+            _studentPaymentRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
             var actual = await _studentPaymentService.GetByIdAsync3(studentPaymentEntity.Guid);
         }
 
@@ -1702,7 +1702,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         [TestMethod]
         public async Task StudentPaymentService_GetAsync3_paymentType_NoResultPerson()
         {
-            _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(null);
+            _personRepositoryMock.Setup(x => x.GetPersonGuidFromIdAsync(It.IsAny<string>())).ReturnsAsync(() => null);
 
             var actuals = await _studentPaymentService.GetAsync3(0, 100, true, "234", "", "", "");
             Assert.AreEqual(0, actuals.Item1.Count());

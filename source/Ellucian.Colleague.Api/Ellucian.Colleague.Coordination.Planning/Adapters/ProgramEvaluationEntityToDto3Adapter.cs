@@ -50,6 +50,10 @@ namespace Ellucian.Colleague.Coordination.Planning.Adapters
                 programEvaluationDto.ProgramRequirements = new ProgramRequirementsDtoAdapter(adapterRegistry, logger).MapToType(Source.ProgramRequirements);
             }
 
+            var acadResultReplacedStatusMapper = new AutoMapperAdapter<Domain.Student.Entities.ReplacedStatus, Dtos.Student.ReplacedStatus>(adapterRegistry, logger);
+            var acadResultReplacementStatusMapper = new AutoMapperAdapter<Domain.Student.Entities.ReplacementStatus, Dtos.Student.ReplacementStatus>(adapterRegistry, logger);
+            var academicCreditsMapper = new AutoMapperAdapter<Domain.Student.Entities.AcademicCredit, Dtos.Student.AcademicCredit3>(adapterRegistry, logger);
+         
             programEvaluationDto.OtherPlannedCredits = new List<Dtos.Student.Requirements.PlannedCredit>();
             if (Source.OtherPlannedCredits.Count() > 0)
             {
@@ -57,6 +61,8 @@ namespace Ellucian.Colleague.Coordination.Planning.Adapters
                 foreach (var plannedCredit in Source.OtherPlannedCredits)
                 {
                     var evalPlannedCourse = new Dtos.Student.Requirements.PlannedCredit();
+                    evalPlannedCourse.ReplacedStatus = acadResultReplacedStatusMapper.MapToType(plannedCredit.ReplacedStatus);
+                    evalPlannedCourse.ReplacementStatus = acadResultReplacementStatusMapper.MapToType(plannedCredit.ReplacementStatus);
                     evalPlannedCourse = evaluationPlannedCreditDtoAdapter.MapToType(plannedCredit);
                     evalPlannedCourse.CourseId = plannedCredit.Course.Id;
                     programEvaluationDto.OtherPlannedCredits.Add(evalPlannedCourse);
@@ -72,7 +78,6 @@ namespace Ellucian.Colleague.Coordination.Planning.Adapters
                 {
                     if (additionalReq != null)
                     {
-
                         programEvaluationDto.AdditionalRequirements.Add(requirementDtoAdapter.MapToType(additionalReq));
                     }
                 }

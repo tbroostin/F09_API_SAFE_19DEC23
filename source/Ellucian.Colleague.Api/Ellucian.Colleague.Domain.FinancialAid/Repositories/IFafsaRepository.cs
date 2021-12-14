@@ -26,5 +26,21 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Repositories
         /// <returns>A list of all FAFSAs from the given student ids and award years</returns>
         Task<IEnumerable<Fafsa>> GetFafsasAsync(IEnumerable<string> studentIds, IEnumerable<string> awardYearCodes);
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="studentId"></param>
+        /// <param name="awardYears"></param>
+        /// <returns></returns>
+        Task<IEnumerable<ProfileEFC>> GetEfcAsync(string studentId, IEnumerable<StudentAwardYear> awardYears);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="studentId"></param>
+        /// <param name="awardYears"></param>
+        /// <returns></returns>
+        Task<IEnumerable<ProfileEFC>> GetFafsaEfcAsync(string studentId, IEnumerable<StudentAwardYear> awardYears);
+
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -50,10 +50,14 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             if (string.IsNullOrWhiteSpace(taxForm))
                 throw new ArgumentNullException("taxForm", "The tax form type must be specified.");
 
+            var effectiveTaxForm = taxForm;
+
             switch (taxForm)
             {
                 case TaxFormTypes.FormW2C:
                 case TaxFormTypes.FormW2:
+                    // Both W2 and W2C tax forms use the W2 consent; there aren't separate consents for W2 and W2C.
+                    effectiveTaxForm = TaxFormTypes.FormW2;
                     if (!(HasPermission(BasePermissionCodes.ViewW2) && CurrentUser.IsPerson(personId)) && !HasPermission(BasePermissionCodes.ViewEmployeeW2))
                     {
                         throw new PermissionsException("Insufficient access to W2 data.");
@@ -106,7 +110,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
 
             var taxFormConsent2Dtos = new List<Dtos.Base.TaxFormConsent2>();
-            var taxFormConsents = await this.taxFormConsentRepository.Get2Async(personId, taxForm);
+            var taxFormConsents = await this.taxFormConsentRepository.Get2Async(personId, effectiveTaxForm);
 
             var adapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.TaxFormConsent2, Dtos.Base.TaxFormConsent2>();
             foreach (var item in taxFormConsents)

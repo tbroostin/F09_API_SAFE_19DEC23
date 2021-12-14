@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -447,8 +447,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
                 var proxyAccessPermissions = new List<ProxyAccessPermission>()
                 {
-                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today),
-                    new ProxyAccessPermission("", "0003900", "0004100", "SFAA", DateTime.Today)
+                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today, DateTime.Today.AddDays(1)),
+                    new ProxyAccessPermission("", "0003900", "0004100", "SFAA", DateTime.Today, DateTime.Today.AddDays(1))
                 };
                 var proxyPermissionAssignment = new ProxyPermissionAssignment("0003900", proxyAccessPermissions);
                 transManagerMock.Setup(mgr =>
@@ -476,8 +476,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
                 var proxyAccessPermissions = new List<ProxyAccessPermission>()
                 {
-                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today),
-                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today)
+                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today, DateTime.Today.AddDays(1)),
+                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today, DateTime.Today.AddDays(1))
                 };
                 var proxyPermissionAssignment = new ProxyPermissionAssignment("0003900", proxyAccessPermissions);
                 transManagerMock.Setup(mgr =>
@@ -503,8 +503,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
                 var proxyAccessPermissions = new List<ProxyAccessPermission>()
                 {
-                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today),
-                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today)
+                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today, DateTime.Today.AddDays(1)),
+                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today, DateTime.Today.AddDays(1))
                 };
                 var proxyPermissionAssignment = new ProxyPermissionAssignment("0003900", proxyAccessPermissions);
                 transManagerMock.Setup(mgr =>
@@ -523,8 +523,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
                 var proxyAccessPermissions = new List<ProxyAccessPermission>()
                 {
-                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today),
-                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today)
+                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today, DateTime.Today.AddDays(1)),
+                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today, DateTime.Today.AddDays(1))
                 };
                 var proxyPermissionAssignment = new ProxyPermissionAssignment("0003900", proxyAccessPermissions);
                 transManagerMock.Setup(mgr =>
@@ -546,8 +546,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
                 var proxyAccessPermissions = new List<ProxyAccessPermission>()
                 {
-                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today),
-                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today)
+                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today, DateTime.Today.AddDays(1)),
+                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today, DateTime.Today.AddDays(1))
                 };
                 var proxyPermissionAssignment = new ProxyPermissionAssignment("0003900", proxyAccessPermissions);
                 transManagerMock.Setup(mgr =>
@@ -569,8 +569,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
                 var proxyAccessPermissions = new List<ProxyAccessPermission>()
                 {
-                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today),
-                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today)
+                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today, DateTime.Today.AddDays(1)),
+                    new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today, DateTime.Today.AddDays(1))
                 };
                 var proxyPermissionAssignment = new ProxyPermissionAssignment("0003900", proxyAccessPermissions);
                 transManagerMock.Setup(mgr =>
@@ -588,8 +588,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                   
                 var proxyAccessPermissions = new List<ProxyAccessPermission>()
                     {
-                        new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today),
-                        new ProxyAccessPermission("", "0003900", "0004100", "SFAA", DateTime.Today)
+                        new ProxyAccessPermission("", "0003900", "0004100", "SFMAP", DateTime.Today, DateTime.Today.AddDays(1)),
+                        new ProxyAccessPermission("", "0003900", "0004100", "SFAA", DateTime.Today, DateTime.Today.AddDays(1))
                     };
                 var proxyPermissionAssignment = new ProxyPermissionAssignment("0003900", proxyAccessPermissions);
                 transManagerMock.Setup(mgr =>
@@ -926,7 +926,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
 
                 dataReaderMock.Setup<Task<ProxyCandidates>>(accessor =>
                     accessor.ReadRecordAsync<ProxyCandidates>
-                    (It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+                    (It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
 
                 proxyRepository = new ProxyRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object);
 

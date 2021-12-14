@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
@@ -23,6 +23,12 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Hosting;
 using HousingRequest = Ellucian.Colleague.Dtos.HousingRequest;
+using System.Web.Http.Routing;
+using System.Collections;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Colleague.Domain.Base;
+using System.Web.Http.Controllers;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -120,6 +126,85 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 housingRequestServiceMock = null;
                 adapterRegistryMock = null;
                 loggerMock = null;
+            }
+
+            //Example Get permission success 
+            [TestMethod]
+            public async Task housingRequestsController_GetHousingRequestsAsync_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "HousingRequests" },
+                { "action", "GetHousingRequestsAsync" }
+            };
+                HttpRoute route = new HttpRoute("meal-plan-requests", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                housingRequestsController.Request.SetRouteData(data);
+                housingRequestsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.ViewHousingRequest, StudentPermissionCodes.CreateHousingRequest });
+
+                var controllerContext = housingRequestsController.ControllerContext;
+                var actionDescriptor = housingRequestsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                var tuple = new Tuple<IEnumerable<Dtos.HousingRequest>, int>(housingRequestDtos, 3);
+                housingRequestServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                housingRequestServiceMock.Setup(s => s.GetHousingRequestsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(tuple);
+                var resp = await housingRequestsController.GetHousingRequestsAsync(new Paging(10, 0));
+
+                Object filterObject;
+                housingRequestsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewHousingRequest));
+                Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateHousingRequest));
+
+            }
+
+            //Example Get permission exception
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task housingRequestsController_GetHousingRequestsAsync_Invalid_Permissionsn()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "HousingRequests" },
+                { "action", "GetHousingRequestsAsync" }
+            };
+                HttpRoute route = new HttpRoute("housing-requests", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                housingRequestsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = housingRequestsController.ControllerContext;
+                var actionDescriptor = housingRequestsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                    housingRequestServiceMock.Setup(s => s.GetHousingRequestsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>())).ThrowsAsync(new Exception());
+                    housingRequestServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view housing-requests."));
+                    var resp = await housingRequestsController.GetHousingRequestsAsync(new Paging(10, 10));
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
             }
 
             [TestMethod]
@@ -751,6 +836,88 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 #endregion
 
+                //Example Post permission success 
+                [TestMethod]
+                public async Task housingRequestsController_PostHousingRequestsAsync_Permissions()
+                {
+                    var contextPropertyName = "PermissionsFilter";
+
+                    HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "HousingRequests" },
+                { "action", "PostHousingRequestsAsync" }
+            };
+                    HttpRoute route = new HttpRoute("housing-requests", routeValueDict);
+                    HttpRouteData data = new HttpRouteData(route);
+                    housingRequestsController.Request.SetRouteData(data);
+                    housingRequestsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                    var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.CreateHousingRequest });
+
+                    var controllerContext = housingRequestsController.ControllerContext;
+                    var actionDescriptor = housingRequestsController.ActionContext.ActionDescriptor
+                             ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                    var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    housingRequestServiceMock.Setup(h => h.CreateHousingRequestAsync(It.IsAny<HousingRequest>())).ReturnsAsync(housingRequest);
+                    var result = await housingRequestsController.PostHousingRequestAsync(housingRequest);
+
+                    Assert.IsNotNull(result);
+                    Assert.AreEqual(result.Id, housingRequest.Id);
+
+                    Object filterObject;
+                    housingRequestsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                    var cancelToken = new System.Threading.CancellationToken(false);
+                    Assert.IsNotNull(filterObject);
+
+                    var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                         .Select(x => x.ToString())
+                                         .ToArray();
+
+                    Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateHousingRequest));
+
+                }
+
+                //Example Post permission exception
+                [TestMethod]
+                [ExpectedException(typeof(HttpResponseException))]
+                public async Task housingRequestsController_PutHousingRequestsAsync_Invalid_Permissionsn()
+                {
+                    HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "HousingRequests" },
+                { "action", "PostHousingRequestsAsync" }
+            };
+                    HttpRoute route = new HttpRoute("housing-requests", routeValueDict);
+                    HttpRouteData data = new HttpRouteData(route);
+                    housingRequestsController.Request.SetRouteData(data);
+
+                    var permissionsFilter = new PermissionsFilter("invalid");
+
+                    var controllerContext = housingRequestsController.ControllerContext;
+                    var actionDescriptor = housingRequestsController.ActionContext.ActionDescriptor
+                             ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                    var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                    try
+                    {
+                        await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                        housingRequestServiceMock.Setup(h => h.CreateHousingRequestAsync(It.IsAny<HousingRequest>())).ReturnsAsync(housingRequest);
+                        housingRequestServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                            .Throws(new PermissionsException("User 'npuser' does not have permission to update housing-requests."));
+
+                        var result = await housingRequestsController.PostHousingRequestAsync(housingRequest);
+
+                    }
+                    catch (PermissionsException ex)
+                    {
+                        throw ex;
+                    }
+                }
+
                 [TestMethod]
                 [ExpectedException(typeof(HttpResponseException))]
                 public async Task HousingRequestsController_PostHousingRequestAsync_Request_Body()
@@ -1006,6 +1173,94 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 }
 
                 #endregion
+
+                //Example Put permission success 
+                [TestMethod]
+                public async Task housingRequestsController_PutHousingRequestsAsync_Permissions()
+                {
+                    var contextPropertyName = "PermissionsFilter";
+
+                    HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "HousingRequests" },
+                { "action", "PutHousingRequestsAsync" }
+            };
+                    HttpRoute route = new HttpRoute("housing-requests", routeValueDict);
+                    HttpRouteData data = new HttpRouteData(route);
+                    housingRequestsController.Request.SetRouteData(data);
+                    housingRequestsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                    var permissionsFilter = new PermissionsFilter(new string[] { StudentPermissionCodes.CreateHousingRequest });
+
+                    var controllerContext = housingRequestsController.ControllerContext;
+                    var actionDescriptor = housingRequestsController.ActionContext.ActionDescriptor
+                             ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                    var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+
+                    housingRequestServiceMock.Setup(h => h.GetHousingRequestByGuidAsync(It.IsAny<string>(), false)).ReturnsAsync(housingRequest);
+                    housingRequestServiceMock.Setup(h => h.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
+                    housingRequestServiceMock.Setup(h => h.UpdateHousingRequestAsync(It.IsAny<string>(), It.IsAny<HousingRequest>())).ReturnsAsync(housingRequest);
+
+                    var result = await housingRequestsController.PutHousingRequestAsync(guid, housingRequest);
+
+                    Assert.IsNotNull(result);
+                    Assert.AreEqual(result.Id, housingRequest.Id);
+
+                    Object filterObject;
+                    housingRequestsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                    var cancelToken = new System.Threading.CancellationToken(false);
+                    Assert.IsNotNull(filterObject);
+
+                    var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                         .Select(x => x.ToString())
+                                         .ToArray();
+
+                    Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.CreateHousingRequest));
+
+                }
+
+                //Example Put permission exception
+                [TestMethod]
+                [ExpectedException(typeof(HttpResponseException))]
+                public async Task housingRequestsController_PutHousingRequestsAsync_Invalid_Permissionsn()
+                {
+                    HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "HousingRequests" },
+                { "action", "PutHousingRequestsAsync" }
+            };
+                    HttpRoute route = new HttpRoute("housing-requests", routeValueDict);
+                    HttpRouteData data = new HttpRouteData(route);
+                    housingRequestsController.Request.SetRouteData(data);
+
+                    var permissionsFilter = new PermissionsFilter("invalid");
+
+                    var controllerContext = housingRequestsController.ControllerContext;
+                    var actionDescriptor = housingRequestsController.ActionContext.ActionDescriptor
+                             ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                    var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                    try
+                    {
+                        await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                        housingRequestServiceMock.Setup(h => h.GetHousingRequestByGuidAsync(It.IsAny<string>(), false)).ReturnsAsync(housingRequest);
+                        housingRequestServiceMock.Setup(h => h.GetDataPrivacyListByApi(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(new List<string>());
+                        housingRequestServiceMock.Setup(h => h.UpdateHousingRequestAsync(It.IsAny<string>(), It.IsAny<HousingRequest>())).ReturnsAsync(housingRequest);
+                        housingRequestServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                            .Throws(new PermissionsException("User 'npuser' does not have permission to update housing-requests."));
+
+                        var result = await housingRequestsController.PutHousingRequestAsync(guid, housingRequest);
+
+                    }
+                    catch (PermissionsException ex)
+                    {
+                        throw ex;
+                    }
+                }
 
                 [TestMethod]
                 [ExpectedException(typeof(HttpResponseException))]

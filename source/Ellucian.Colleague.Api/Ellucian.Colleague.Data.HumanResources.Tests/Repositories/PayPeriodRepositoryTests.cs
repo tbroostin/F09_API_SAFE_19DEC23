@@ -203,13 +203,13 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
+            [ExpectedException(typeof(RepositoryException))]
             public async Task PayPeriodsRepo_GetsGetPayPeriods_Exception()
             {
-                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
-                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(null);
-                dataReaderMock.Setup(dr => dr.SelectAsync("LDM.GUID", It.IsAny<string>())).ReturnsAsync(null);
-                dataAccessorMock.Setup(da => da.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(null);
+                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
+                dataReaderMock.Setup(dr => dr.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(() => null);
+                dataReaderMock.Setup(dr => dr.SelectAsync("LDM.GUID", It.IsAny<string>())).ReturnsAsync(() => null);
+                dataAccessorMock.Setup(da => da.SelectAsync(It.IsAny<RecordKeyLookup[]>())).ReturnsAsync(() => null);
 
                 await payPeriodsRepo.GetPayPeriodsAsync(0, 2, bypassCache: true);
             }

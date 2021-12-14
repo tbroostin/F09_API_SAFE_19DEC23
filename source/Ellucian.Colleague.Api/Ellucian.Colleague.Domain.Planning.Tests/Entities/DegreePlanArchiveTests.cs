@@ -218,17 +218,17 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
             public void CreatedDegreePlanArchive_ArchiveCourses()
             {
                 var plannedCoursesCount = degreePlan.NonTermPlannedCourses.Count();
-                // For plan 3 there should be 1 nonterm course
+                // For plan 3 there should be 1 nonterm course and 1 course placeholder should be ignored
+
                 Assert.AreEqual(degreePlan.NonTermPlannedCourses.Count(), archive.ArchivedCourses.Where(a => string.IsNullOrEmpty(a.TermCode)).Count());
                 foreach (var termid in degreePlan.TermIds)
                 {
-                    var plannedCourses = degreePlan.GetPlannedCourses(termid);
+                    var plannedCourses = degreePlan.GetPlannedCourses(termid).Where(c => !string.IsNullOrEmpty(c.CourseId));
                     plannedCoursesCount = plannedCoursesCount + plannedCourses.Count();
                     Assert.AreEqual(plannedCourses.Count(), archive.ArchivedCourses.Where(ac => ac.TermCode == termid).Count());
                 }
                 Assert.AreEqual(plannedCoursesCount, archive.ArchivedCourses.Count());
             }
-
         }
 
         [TestClass]
@@ -242,6 +242,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
             private IEnumerable<Section> sections;
             private IEnumerable<Term> registrationTerms;
             private DegreePlan degreePlan;
+            private DegreePlan placeholderDegreePlan;
             private IEnumerable<AcademicCredit> academicCredits;
             private IEnumerable<Grade> grades;
 
@@ -257,12 +258,25 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
                 degreePlan = await (new TestStudentDegreePlanRepository()).GetAsync(4);
                 var academicCredits = await new TestAcademicCreditRepository().GetAsync();
                 degreePlan.Notes = new List<DegreePlanNote>();
+
+                placeholderDegreePlan = await (new TestStudentDegreePlanRepository()).GetAsync(3);
+                placeholderDegreePlan.Notes = new List<DegreePlanNote>();
             }
 
             [TestCleanup]
             public void Cleanup()
             {
                 archive = null;
+            }
+
+            [TestMethod]
+            public void CoursePlacholder_Ignored()
+            {
+                var ac1 = new AcademicCredit("123");
+                ac1 = null;
+                academicCredits = new List<AcademicCredit>() { ac1 };
+                archive = Ellucian.Colleague.Domain.Planning.Entities.DegreePlanArchive.CreateDegreePlanArchive(placeholderDegreePlan, "1111111", studentPrograms, courses, sections, academicCredits, grades);
+                Assert.IsTrue(archive.ArchivedCourses.Count() == 7);
             }
 
             [TestMethod]

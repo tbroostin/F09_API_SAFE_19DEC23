@@ -93,7 +93,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             }
         }
 
-        public async Task<IEnumerable<PersonPosition>> GetPersonPositionsAsync(IEnumerable<string> personIds, DateTime? startDate = null)
+        public async Task<IEnumerable<PersonPosition>> GetPersonPositionsAsync(IEnumerable<string> personIds, DateTime? lookupStartDate = null)
         {
             var records = personPositionRecords.Where(p => personIds.Contains(p.personId));
 
@@ -102,11 +102,14 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             {
                 if (record != null)
                 {
-                    try
+                    if ((lookupStartDate.HasValue && (record.endDate == null || record.endDate >= lookupStartDate.Value)) || !lookupStartDate.HasValue)
                     {
-                        entities.Add(BuildPersonPosition(record));
-                    }
-                    catch (Exception) { }
+                        try
+                        {
+                            entities.Add(BuildPersonPosition(record));
+                        }
+                        catch (Exception) { }
+                    }                    
                 }
             }
 

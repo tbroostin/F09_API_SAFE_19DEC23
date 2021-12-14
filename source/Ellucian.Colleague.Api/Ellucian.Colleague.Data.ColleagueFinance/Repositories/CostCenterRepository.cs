@@ -1,9 +1,10 @@
-﻿// Copyright 2016-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.Transactions;
@@ -62,27 +63,28 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <param name="fiscalYear">The GL fiscal year.</param>
         /// <param name="criteria">Cost center filter criteria.</param>
         /// <param name="personId">ID of the user.</param>
+        /// <param name="includeJustificationNotes">Show Justification Notes flag.</param>
         /// <returns>Returns the list of cost centers assigned to the user or the selected cost center.</returns>
         public async Task<IEnumerable<CostCenter>> GetCostCentersAsync(GeneralLedgerUser generalLedgerUser, CostCenterStructure costCenterStructure,
             GeneralLedgerClassConfiguration glClassConfiguration, string selectedCostCenterId, string fiscalYear, CostCenterQueryCriteria costCenterCriteria,
-            string personId)
+            string personId, bool includeJustificationNotes = false)
         {
             #region Error checking
             if (generalLedgerUser == null)
             {
-                LogDataError("generalLedgerUser", "", generalLedgerUser);
+                logger.Error("==> generalLedgerUser is null <==");
                 return costCenters;
             }
 
             if (costCenterStructure == null)
             {
-                LogDataError("costCenterStructure", "", costCenterStructure);
+                logger.Error("==> costCenterStructure is null <==");
                 return costCenters;
             }
 
             if (glClassConfiguration == null)
             {
-                LogDataError("glClassConfiguration", "", glClassConfiguration);
+                logger.Error("==> glClassConfiguration is null <==");
                 return costCenters;
             }
 
@@ -90,8 +92,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             if ((generalLedgerUser.ExpenseAccounts == null || !generalLedgerUser.ExpenseAccounts.Any()) &&
                 (generalLedgerUser.RevenueAccounts == null || !generalLedgerUser.RevenueAccounts.Any()))
             {
-                LogDataError("ExpenseAccounts", "", generalLedgerUser.ExpenseAccounts);
-                LogDataError("RevenueAccounts", "", generalLedgerUser.RevenueAccounts);
+                logger.Error("==> generalLedgerUser.ExpenseAccounts is null <==");
+                logger.Error("==> generalLedgerUser.RevenueAccounts is null <==");
                 return costCenters;
             }
 
@@ -100,13 +102,13 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             if (genLdgrDataContract == null)
             {
-                logger.Warn("Missing GEN.LDGR record for ID: " + fiscalYear);
+                logger.Error("==> Missing GEN.LDGR record for year: " + fiscalYear + " <==");
                 return costCenters;
             }
 
             if (string.IsNullOrEmpty(genLdgrDataContract.GenLdgrStatus))
             {
-                logger.Warn("GEN.LDGR status is null.");
+                logger.Error("==> GEN.LDGR status is null or empty <==");
                 return costCenters;
             }
 
@@ -132,6 +134,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             // Check whether we only want one cost center.
             if (!string.IsNullOrEmpty(selectedCostCenterId))
             {
+                logger.Debug("==> The current request is for a single cost center. <==");
+
                 // Loop through each expense/revenue GL account the user has access to.
                 foreach (var expenseacct in expenseRevenueGlAccounts)
                 {
@@ -158,6 +162,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
 
             #region Apply filter criteria
+
+            logger.Debug("==> Begin \"Apply filter criteria\" region. <==");
 
             // If we have filter component criteria, limit the list of expense/revenue
             // accounts using the filter component criteria.
@@ -231,8 +237,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                         componentFilterCriteria = componentFilterCriteria + "OR " + rangeFilterCriteria;
                                     }
                                 }
-
                                 filteredExpenseRevenueAccounts = await DataReader.SelectAsync("GL.ACCTS", tempFilteredAccounts, componentFilterCriteria);
+
+                                logger.Debug("componentFilterCriteria ==> " + componentFilterCriteria);
                             }
                         }
                         expenseRevenueGlAccounts = filteredExpenseRevenueAccounts;
@@ -276,7 +283,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             {
                 #region Get open year amounts from GL.ACCTS
 
-                // Bulk read the GL Account records. At this point expenseAccounts contains the list of revenue/expense
+                logger.Debug("==> Begin \"Get open year amounts from GL.ACCTS\" region. <==");
+
+                // Bulk read the GL Account records. At this point expenseRevenueGlAccounts contains the list of revenue/expense
                 // GL accounts the user has access for all cost centers or just for the selected cost center.
                 if (FilterUtility.IsFilterWideOpen(costCenterCriteria) && string.IsNullOrEmpty(selectedCostCenterId))
                 {
@@ -391,7 +400,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                 }
                                 catch (ApplicationException aex)
                                 {
-                                    LogDataError("", "", umbrella, aex);
+                                    logger.Error(aex, string.Format("==> Something is wrong with umbrella {0} <==.", umbrella));
                                 }
                             }
                         }
@@ -514,6 +523,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                                             if (umbrellaAccount == null)
                                             {
+                                                logger.Error(string.Format("==> The GL.ACCTS data contract is null for GL account {0}. <==", umbrellaGlAccount));
                                                 throw new ApplicationException("The GL.ACCTS data contract is null for GL number " + umbrellaGlAccount);
                                             }
 
@@ -562,7 +572,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                                     }
                                     catch (ApplicationException aex)
                                     {
-                                        LogDataError("", "", umbrella, aex);
+                                        logger.Error(aex, string.Format("==> Something is wrong with poolee {0}. <==", poolee));
                                     }
                                 }
                             }
@@ -610,7 +620,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                         // If the GL account has information for the fiscal year passed in, process the amounts.
                         if (glAccountAmounts != null)
                         {
-                            // Create GL account for poolee and populate budget, actual and encumbrance amounts.
+                            // Create GL account for the non-pooled and populate budget, actual and encumbrance amounts.
                             var nonPooledGlAccount = new CostCenterGlAccount(nonPooledAccount.Recordkey, GlBudgetPoolType.None);
                             nonPooledGlAccount.BudgetAmount = glAccountAmounts.GlBudgetPostedAssocMember.HasValue ? glAccountAmounts.GlBudgetPostedAssocMember.Value : 0m;
                             nonPooledGlAccount.BudgetAmount += glAccountAmounts.GlBudgetMemosAssocMember.HasValue ? glAccountAmounts.GlBudgetMemosAssocMember.Value : 0m;
@@ -649,6 +659,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             else
             {
                 #region Get closed year amounts from GLS.FYR
+
+                logger.Debug("==> Begin \"Get closed year amounts from GLS.FYR\" region. <==");
 
                 // If the fiscal year is closed, obtain the information from GLS.FYR and ENC.FYR.
                 // Bulk read the GLS.FYR records.
@@ -984,6 +996,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
                 #region Get closed year amounts from ENC.FYR
 
+                logger.Debug("==> Begin \"Get closed year amounts from ENC.FYR\" region. <==");
+
                 // Now obtain the requisition amounts from ENC.FYR because they are not stored in GLS.FYR.
 
                 // Bulk read the ENC.FYR records using the list of GL accounts that the user has access to,
@@ -1273,6 +1287,8 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             #region Populate component descriptions
 
+            logger.Debug("==> Begin \"Populate component descriptions\" region. <==");
+
             // Bulk read the component descriptions then assign the descriptions.
             // First read the Function descriptions
             if (glComponentsToBulkRead.Where(x => x.ComponentType == GeneralLedgerComponentType.Function).Any())
@@ -1301,7 +1317,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 foreach (var fdDesc in fdDescs)
                 {
                     var selectedComponent = glComponentsToBulkRead.Where(x => x.Id == fdDesc.Recordkey
-                        && x.ComponentType == GeneralLedgerComponentType.Fund).ToList().FirstOrDefault();
+                    && x.ComponentType == GeneralLedgerComponentType.Fund).ToList().FirstOrDefault();
 
                     if (selectedComponent != null)
                         selectedComponent.Description = fdDesc.FdDescription;
@@ -1318,7 +1334,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 foreach (var loDesc in loDescs)
                 {
                     var selectedComponent = glComponentsToBulkRead.Where(x => x.Id == loDesc.Recordkey
-                        && x.ComponentType == GeneralLedgerComponentType.Location).ToList().FirstOrDefault();
+                    && x.ComponentType == GeneralLedgerComponentType.Location).ToList().FirstOrDefault();
 
                     if (selectedComponent != null)
                         selectedComponent.Description = loDesc.LoDescription;
@@ -1335,7 +1351,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 foreach (var obDesc in obDescs)
                 {
                     var selectedComponent = glComponentsToBulkRead.Where(x => x.Id == obDesc.Recordkey
-                        && x.ComponentType == GeneralLedgerComponentType.Object).ToList().FirstOrDefault();
+                    && x.ComponentType == GeneralLedgerComponentType.Object).ToList().FirstOrDefault();
 
                     if (selectedComponent != null)
                         selectedComponent.Description = obDesc.ObDescription;
@@ -1352,7 +1368,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 foreach (var soDesc in soDescs)
                 {
                     var selectedComponent = glComponentsToBulkRead.Where(x => x.Id == soDesc.Recordkey
-                        && x.ComponentType == GeneralLedgerComponentType.Source).ToList().FirstOrDefault();
+                    && x.ComponentType == GeneralLedgerComponentType.Source).ToList().FirstOrDefault();
 
                     if (selectedComponent != null)
                         selectedComponent.Description = soDesc.SoDescription;
@@ -1369,7 +1385,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                 foreach (var unDesc in unDescs)
                 {
                     var selectedComponent = glComponentsToBulkRead.Where(x => x.Id == unDesc.Recordkey
-                        && x.ComponentType == GeneralLedgerComponentType.Unit).ToList().FirstOrDefault();
+                    && x.ComponentType == GeneralLedgerComponentType.Unit).ToList().FirstOrDefault();
 
                     if (selectedComponent != null)
                         selectedComponent.Description = unDesc.UnDescription;
@@ -1454,7 +1470,9 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
 
             #endregion
 
-            #region Remove inactive accounts with no activity
+            #region Remove active accounts with no activity
+
+            logger.Debug("==> Begin \"Remove active accounts with no activity\" region. <==");
 
             // Get the non pooled account GL account number strings from the CostCenterGlAccounts from all of the cost centers
             // where all of the amounts are zero.
@@ -1581,6 +1599,41 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             #endregion
 
+            #region Retrieve justification notes
+
+            logger.Debug("==> Begin \"Retrieve justification notes\" region. <==");
+
+            try
+            {
+                // Only include justification notes when accessing a single cost center and the client has configured the option to show justification notes.
+                if (includeJustificationNotes && costCenters.Count == 1)
+                {
+                    var glNumbers = costCenters.First().CostCenterSubtotals.SelectMany(ccs => ccs.GlAccounts).Select(ccgla => ccgla.GlAccountNumber);
+                    var justificationNotesDictionary = await GetBudgetJustificationNotes(glNumbers, fiscalYear);
+                    foreach (var subtotal in costCenters.First().CostCenterSubtotals)
+                    {
+                        if (subtotal != null && subtotal.GlAccounts != null)
+                        {
+                            foreach (var glAccount in subtotal.GlAccounts)
+                            {
+                                if (glAccount != null && glAccount.GlAccountNumber != null)
+                                {
+                                    var notes = string.Empty;
+                                    justificationNotesDictionary.TryGetValue(glAccount.GlAccountNumber, out notes);
+                                    glAccount.JustificationNotes = notes ?? string.Empty;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                logger.Error(e, "==> Could not map Justification Notes. <==");
+            }
+
+            #endregion
+
             return costCenters;
         }
 
@@ -1614,7 +1667,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
         /// <summary>
         /// Add the list of GL components passed in to a master list for bulk read.
         /// </summary>
-        /// <param name="glComponentsForCostCenter">List of GL components to add to a master list for buld read.</param>
+        /// <param name="glComponentsForCostCenter">List of GL components to add to a master list for bulk read.</param>
         private void GatherGlDescriptionComponents(IEnumerable<GeneralLedgerComponentDescription> glComponentsForCostCenter)
         {
             // Add the cost center GL components to the bulk read list.
@@ -1970,16 +2023,77 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             }
             catch (ApplicationException aex)
             {
-                logger.Warn("Invalid/unsupported GL class.");
+                logger.Error(aex, string.Format("==> Invalid/unsupported GL class for GL account {0}. <==", glAccount));
                 glClass = GlClass.Asset;
             }
             catch (Exception ex)
             {
-                logger.Warn("Error occurred determining GL class for GL account number.");
+                logger.Error(ex, string.Format("==> Error occurred determining GL class for GL account number {0}. <==", glAccount));
                 glClass = GlClass.Asset;
             }
 
             return glClass;
+        }
+
+        /// <summary>
+        /// Gets the justification notes for the budget based on the GL Accounts and fiscal year combination.
+        /// </summary>
+        /// <param name="glAccount">List of General Ledger numbers</param>
+        /// <param name="fiscalYear">Fiscal year to determine what GEN.LDGR record to go after.</param>
+        /// <returns></returns>
+        private async Task<Dictionary<string, string>> GetBudgetJustificationNotes(IEnumerable<string> glAccounts, string fiscalYear)
+        {
+            Dictionary<string, string> dictionary = new Dictionary<string, string>();
+
+            GenLdgr generalLedgerRecord = await DataReader.ReadRecordAsync<GenLdgr>(fiscalYear);
+            if (generalLedgerRecord == null)
+            {
+                logger.Debug(string.Format("==> Cannot retrieve justification notes because GEN.LDGR is missing for {0}. <==", fiscalYear));
+                throw new ApplicationException("Missing GEN.LDGR record for fiscal year " + fiscalYear);
+            }
+
+
+            if (!string.IsNullOrEmpty(generalLedgerRecord.GenLdgrBudgetId) && glAccounts != null && glAccounts.Any())
+            {
+                var budWorkRecords = await DataReader.BulkReadRecordAsync<BudWork>("BWK." + generalLedgerRecord.GenLdgrBudgetId, glAccounts.Distinct().ToArray());
+                if (budWorkRecords != null && budWorkRecords.Any())
+                {
+                    foreach (var budWorkRecord in budWorkRecords)
+                    {
+                        var justificationNotes = new StringBuilder();
+                        if (budWorkRecord.BwNotes != null && budWorkRecord.BwNotes.Any())
+                        {
+                            // Convert the justification notes multi-valued field into a single string.
+                            foreach (var note in budWorkRecord.BwNotes)
+                            {
+                                if (string.IsNullOrWhiteSpace(note))
+                                {
+                                    justificationNotes.Append(Environment.NewLine + Environment.NewLine);
+                                }
+                                else
+                                {
+                                    if (justificationNotes.Length > 0)
+                                    {
+                                        justificationNotes.Append(" ");
+                                    }
+                                    justificationNotes.Append(note);
+                                }
+                            }
+                        }
+
+                        // Add justification notes to the dictionary.
+                        if (!dictionary.ContainsKey(budWorkRecord.Recordkey))
+                        {
+                            dictionary.Add(budWorkRecord.Recordkey, justificationNotes.ToString());
+                        }
+                    }
+                }
+            }
+            else
+            {
+                logger.Debug("==> Justification notes can only be retrieved if there is a budget ID in the GEN.LDGR record AND there are GL numbers for which we want to retrieve justification notes. <==");
+            }
+            return dictionary;
         }
 
         #endregion

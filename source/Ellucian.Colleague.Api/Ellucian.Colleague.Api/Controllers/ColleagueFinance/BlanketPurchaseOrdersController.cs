@@ -25,6 +25,7 @@ using Ellucian.Web.Http.ModelBinding;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Dtos.EnumProperties;
 using System.Linq;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 
 namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 {
@@ -107,7 +108,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <param name="criteria">Filtering Criteria object</param>
         /// <returns>List of BlanketPurchaseOrders <see cref="Dtos.BlanketPurchaseOrders"/> objects representing matching BlanketPurchaseOrders</returns>
-        [HttpGet]
+        [HttpGet, PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewBlanketPurchaseOrders, ColleagueFinancePermissionCodes.UpdateBlanketPurchaseOrders })]
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
@@ -124,6 +125,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                blanketPurchaseOrderService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -179,7 +181,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="id">GUID to desired purchaseOrders</param>
         /// <returns>A BlanketPurchaseOrders object <see cref="Dtos.BlanketPurchaseOrders"/> in EEDM format</returns>
-        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2), PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewBlanketPurchaseOrders, ColleagueFinancePermissionCodes.UpdateBlanketPurchaseOrders })]
         [HttpGet, EedmResponseFilter]
         public async Task<Dtos.BlanketPurchaseOrders> GetBlanketPurchaseOrdersByGuidAsync(string id)
         {
@@ -199,6 +201,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                blanketPurchaseOrderService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                     await blanketPurchaseOrderService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                     await blanketPurchaseOrderService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -245,7 +248,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <returns>A BlanketPurchaseOrders object <see cref="Dtos.BlanketPurchaseOrders"/> in EEDM format</returns>
 
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(ColleagueFinancePermissionCodes.UpdateBlanketPurchaseOrders)]
         public async Task<Dtos.BlanketPurchaseOrders> PostBlanketPurchaseOrdersAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.BlanketPurchaseOrders blanketPurchaseOrders)
         {
             if (blanketPurchaseOrders == null)
@@ -256,6 +259,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
             try
             {
+                blanketPurchaseOrderService.ValidatePermissions(GetPermissionsMetaData());
                 if (blanketPurchaseOrders.Id != Guid.Empty.ToString())
                 {
                     throw new ArgumentNullException("blanketPurchaseOrdersDto", "Nil GUID must be used in POST operation.");
@@ -318,7 +322,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="blanketPurchaseOrders">DTO of the updated blanketPurchaseOrders</param>
         /// <returns>A blanketPurchaseOrders object <see cref="Dtos.BlanketPurchaseOrders"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(ColleagueFinancePermissionCodes.UpdateBlanketPurchaseOrders)]
         public async Task<Dtos.BlanketPurchaseOrders> PutBlanketPurchaseOrdersAsync([FromUri] string id, [ModelBinder(typeof(EedmModelBinder))] Dtos.BlanketPurchaseOrders blanketPurchaseOrders)
         {
             if (string.IsNullOrEmpty(id))
@@ -348,6 +352,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
             try
             {
+                blanketPurchaseOrderService.ValidatePermissions(GetPermissionsMetaData());
                 // get Data Privacy List
                 var dpList = await blanketPurchaseOrderService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
@@ -490,7 +495,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                         message: "The vendor country can only be 'CAN' or 'USA' when submitting a blanket purchase order."));
                 }
             }
-            
+
             if (bpo.Comments != null)
             {
                 foreach (var comments in bpo.Comments)
@@ -554,6 +559,12 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 integrationApiException.AddError(new IntegrationApiError("blanketPurchaseOrders.orderDetails",
                     "blanket-purchase-orders request validation failed", guid: sourceGuid, id: sourceId,
                     message: "The orderDetails is a required property when submitting a blanket purchase order."));
+            }
+            if (bpo.OrderDetails != null && bpo.OrderDetails.Any() && bpo.OrderDetails.Count > 1)
+            {
+                integrationApiException.AddError(new IntegrationApiError("blanketPurchaseOrders.orderDetails",
+                    "blanket-purchase-orders request validation failed", guid: sourceGuid, id: sourceId,
+                    message: "No more than one orderDetails property is supported."));
             }
             if (bpo.OrderDetails != null && bpo.OrderDetails.Any())
             {
@@ -644,7 +655,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                                     if (allocated.Amount != null)
                                     {
                                         try
-                                        { 
+                                        {
                                             defaultCurrency = checkCurrency(defaultCurrency, allocated.Amount.Currency);
                                         }
                                         catch (ArgumentException ex)
@@ -663,7 +674,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                                 if (allocation.TaxAmount != null)
                                 {
                                     try
-                                    { 
+                                    {
                                         defaultCurrency = checkCurrency(defaultCurrency, allocation.TaxAmount.Currency);
                                     }
                                     catch (ArgumentException ex)
@@ -683,7 +694,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                                 if (allocation.AdditionalAmount != null)
                                 {
                                     try
-                                    { 
+                                    {
                                         defaultCurrency = checkCurrency(defaultCurrency, allocation.AdditionalAmount.Currency);
                                     }
                                     catch (ArgumentException ex)
@@ -703,7 +714,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                                 if (allocation.DiscountAmount != null)
                                 {
                                     try
-                                    { 
+                                    {
                                         defaultCurrency = checkCurrency(defaultCurrency, allocation.DiscountAmount.Currency);
                                     }
                                     catch (ArgumentException ex)
@@ -743,7 +754,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                         if (detail.Amount.Currency != null)
                         {
                             try
-                            { 
+                            {
                                 defaultCurrency = checkCurrency(defaultCurrency, detail.Amount.Currency);
                             }
                             catch (ArgumentException ex)

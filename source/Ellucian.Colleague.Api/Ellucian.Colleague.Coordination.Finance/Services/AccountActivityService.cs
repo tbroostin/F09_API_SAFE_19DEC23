@@ -46,7 +46,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
             // They're allowed to see another's data if they are a proxy for that user or have the admin permission
             if (!CurrentUser.IsPerson(studentId) && !HasProxyAccessForPerson(studentId) && !hasAdminPermission)
             {
-                logger.Info(CurrentUser + " does not have permission code " + FinancePermissionCodes.ViewStudentAccountActivity);
+                logger.Error(CurrentUser.PersonId + " does not have permission code " + FinancePermissionCodes.ViewStudentAccountActivity);
                 throw new PermissionsException();
             }
         }
@@ -159,7 +159,7 @@ namespace Ellucian.Colleague.Coordination.Finance.Services
         {
             CheckPermission(id);
 
-            var accountHolderEntity = _arRepository.GetAccountHolder(id);
+            var accountHolderEntity = Task.Run(async () => await _arRepository.GetAccountHolderAsync(id)).GetAwaiter().GetResult();
             var adapter = _adapterRegistry.GetAdapter<Ellucian.Colleague.Domain.Finance.Entities.AccountHolder, AccountHolder>();
             var accountHolderDto = adapter.MapToType(accountHolderEntity);
             

@@ -203,7 +203,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             public async Task NullEvaluationsFromRepositoryReturnsEmptyListTest()
             {
                 academicProgressRepositoryMock.Setup(r => r.GetStudentAcademicProgressEvaluationResultsAsync(It.IsAny<string>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
                 actualEvaluations = await actualService.GetAcademicProgressEvaluationsAsync(studentId);
                 Assert.AreEqual(0, actualEvaluations.Count());
                 loggerMock.Verify(l => l.Info(string.Format("No evaluationResults exist for student {0}", studentId)));
@@ -406,7 +406,7 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Tests.Services
             public async Task NullEvaluationsFromRepositoryReturnsEmptyListTest()
             {
                 academicProgressRepositoryMock.Setup(r => r.GetStudentAcademicProgressEvaluationResultsAsync(It.IsAny<string>()))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
                 actualEvaluations = await actualService.GetAcademicProgressEvaluations2Async(studentId);
                 Assert.AreEqual(0, actualEvaluations.Count());
                 loggerMock.Verify(l => l.Info(string.Format("No evaluationResults exist for student {0}", studentId)));

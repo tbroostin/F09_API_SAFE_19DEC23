@@ -193,5 +193,42 @@ namespace Ellucian.Colleague.Dtos.FinancialAid
         /// </summary>
         public string StudentAwardLetterBudgetDetailsDescription { get; set; }
 
+        /// <summary>
+        /// Flag that indicates whether to display the Studente Loan Checklist Items
+        /// </summary>
+        public bool ShowStudentLoanInfo { get; set; }
+
+        /// <summary>
+        /// Flag that indicates whether to display the Parent Loan Checklist Items
+        /// </summary>
+        public bool ShowParentLoanInfo { get; set; }
+
+        /// <summary>
+        /// Flag that indicates whether to display the Plus Application Checklist Items
+        /// </summary>
+        public bool ShowPlusApplicationInfo { get; set; }
+
+        /// <summary>
+        /// Flag that indicates whether to display the ASLA Checklist Item
+        /// </summary>
+        public bool ShowAslaInfo { get; set; }
+
+        /// <summary>
+        /// Message to display if no status is assigned for required documents
+        /// </summary>
+        public string FaBlankStatusText { get; set; }
+
+
+        /// <summary>
+        /// Message to display if no due date is assigned for required documents
+        /// </summary>
+        public string FaBlankDueDateText { get; set; }
+
+        /// <summary>
+        /// Message to display as an alert on all FA pages
+        /// </summary>
+        public string FspNotificationText { get; set; }
+
+
     }
 }

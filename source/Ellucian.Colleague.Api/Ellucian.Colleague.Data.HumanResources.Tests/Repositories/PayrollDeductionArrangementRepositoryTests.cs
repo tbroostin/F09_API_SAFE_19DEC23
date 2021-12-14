@@ -4,15 +4,14 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
-using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Data.Colleague;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Data.HumanResources.Transactions;
+using Ellucian.Colleague.Domain.Base.Transactions;
 
 namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 {
@@ -30,49 +29,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             MockInitialize();
             TestDataSetup();
             repositoryUnderTest = new PayrollDeductionArrangementRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
-
-            #region
-            //TestDataSetup();
-
-            //dataReaderMock.Setup(repo => repo.SelectAsync("EMPLOYES", It.IsAny<string>())).ReturnsAsync(employeeIdList.ToArray());
-
-            //dataReaderMock.Setup(repo => repo.SelectAsync("HRPER", It.IsAny<string>())).ReturnsAsync(hrperIdList.ToArray());
-
-            //dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Employes>(It.IsAny<string[]>(), It.IsAny<bool>()))
-            //    .ReturnsAsync(employesCollDataList);
-
-            //dataReaderMock.Setup(repo => repo.SelectAsync("PERPOS", It.IsAny<string>(),
-            //            It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(personIdList.ToArray());
-
-            //dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Perpos>(It.IsAny<string[]>(), It.IsAny<bool>()))
-            //    .ReturnsAsync(perposCollDataList);
-
-            //dataReaderMock.Setup(repo => repo.SelectAsync("PERPOSWG", It.IsAny<string>(),
-            //            It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(personIdList.ToArray());
-
-            //dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Perposwg>(It.IsAny<string[]>(), It.IsAny<bool>()))
-            //    .ReturnsAsync(perposwgCollDataList);
-
-            //dataReaderMock.Setup(repo => repo.SelectAsync("PERSTAT", It.IsAny<string>(),
-            //            It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(personIdList.ToArray());
-
-            //dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Perstat>(It.IsAny<string[]>(), It.IsAny<bool>()))
-            //    .ReturnsAsync(perstatCollDataList);
-
-            //dataReaderMock.Setup(repo => repo.SelectAsync("PERBEN", It.IsAny<string>(),
-            //            It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(personIdList.ToArray());
-
-            //dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Perben>(It.IsAny<string[]>(), It.IsAny<bool>()))
-            //    .ReturnsAsync(perbenCollDataList);
-
-            //dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Hrper>(It.IsAny<string[]>(), It.IsAny<bool>()))
-            //    .ReturnsAsync(hrperCollDataList);
-
-            //string fileName = "CORE.PARMS";
-            //string field = "LDM.DEFAULTS";
-            //LdmDefaults ldmDefaults = new LdmDefaults() { LdmdExcludeBenefits = excludeBenefits, LdmdLeaveStatusCodes = leaveStatuses };
-            //dataReaderMock.Setup(repo => repo.ReadRecord<LdmDefaults>(fileName, field, It.IsAny<bool>())).Returns(ldmDefaults);
-            #endregion
         }
 
         [TestMethod]
@@ -103,7 +59,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         [TestMethod]
         public async Task PayrollDeductionArrangementRepositoryTests_GetHostCountryParams_Params_Null()
         {
-            dataReaderMock.Setup(d => d.ReadRecordAsync<Data.Base.DataContracts.IntlParams>("INTL.PARAMS", "INTERNATIONAL", true)).ReturnsAsync(null);
+            dataReaderMock.Setup(d => d.ReadRecordAsync<Data.Base.DataContracts.IntlParams>("INTL.PARAMS", "INTERNATIONAL", true)).ReturnsAsync(() => null);
             var actual = await repositoryUnderTest.GetHostCountryAsync();
             Assert.IsNotNull(actual);
             Assert.AreEqual("USA", actual);
@@ -122,20 +78,6 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             var actual = await repositoryUnderTest.GetAsync(0, 2, true, "Filter2", "Filter3", "Filter4", "Filter5");
             Assert.IsNotNull(actual);
             Assert.AreEqual(2, actual.Item1.Count());
-        }
-
-        [TestMethod]
-        public async Task PayrollDeductionArrangementRepositoryTests_GetAsync_PerbenNull_LogError()
-        {
-            string[] primaryKeys = new[] { "1", "2" };
-            string[] perbenKeys = new[] { "1", "2" };
-            dataReaderMock.Setup(reader => reader.SelectAsync("PERBEN", It.IsAny<string>())).ReturnsAsync(primaryKeys);
-            dataReaderMock.Setup(reader => reader.SelectAsync("PERBEN", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(perbenKeys);
-            dataReaderMock.Setup(reader => reader.BulkReadRecordAsync<Perben>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(null);
-            dataReaderMock.Setup(reader => reader.BulkReadRecordAsync<Perbencs>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(perbenCsCollection);
-
-            var actual = await repositoryUnderTest.GetAsync(0, 2, true, "Filter2", "Filter3", "Filter4", "Filter5");
-            Assert.IsNotNull(actual);
         }
 
         [TestMethod]
@@ -202,7 +144,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             Dictionary<string, GuidLookupResult> guidLookupResult = new Dictionary<string, GuidLookupResult>();
             guidLookupResult.Add("PERBEN", new GuidLookupResult() { Entity = "PERBEN", PrimaryKey = "1", SecondaryKey = "2" });
             dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(guidLookupResult);
-            // dataReaderMock.Setup(reader => reader.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+            // dataReaderMock.Setup(reader => reader.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
             transManagerMock.Setup(tr => tr.ExecuteAsync<CreateUpdatePerbenRequest, CreateUpdatePerbenResponse>(It.IsAny<CreateUpdatePerbenRequest>())).ReturnsAsync(new CreateUpdatePerbenResponse() { Guid = "1" });
             dataReaderMock.Setup(reader => reader.ReadRecordAsync<Perben>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(perbenCollection[0]);
             dataReaderMock.Setup(reader => reader.BulkReadRecordAsync<Perbencs>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(perbenCsCollection);
@@ -241,17 +183,16 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         }
 
         [TestMethod]
-        [ExpectedException(typeof(RepositoryException))]
-        public async Task PayrollDeductionArrangementRepositoryTests_GetById_RepositoryException()
+        [ExpectedException(typeof(KeyNotFoundException))]
+        public async Task PayrollDeductionArrangementRepositoryTests_GetById_KeyNotFoundException()
         {
-            dataReaderMock.Setup(reader => reader.ReadRecordAsync<Perben>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
-            //dataReaderMock.Setup(reader => reader.BulkReadRecordAsync<Perbencs>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(perbenCsCollection);
-
-            var actual = await repositoryUnderTest.GetByIdAsync("1");
+            dataReaderMock.Setup(reader => reader.ReadRecordAsync<Perben>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
+         
+            await repositoryUnderTest.GetByIdAsync("1");
         }
 
         [TestMethod]
-        [ExpectedException(typeof(RepositoryException))]
+        [ExpectedException(typeof(KeyNotFoundException))]
         public async Task PayrollDeductionArrangementRepositoryTests_GetById_PerbenIntgIntervalNUll_PerbenIntgMonPayPeriodsNull()
         {
             perbenCollection = new Collection<Perben>() 
@@ -273,28 +214,9 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 new Perben(){ PerbenBdId = "2", AllBenefitCosts = new List<string>(){"1", "2"}, PerbenHrpId = "2" }
             };
             dataReaderMock.Setup(reader => reader.ReadRecordAsync<Perben>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(perbenCollection[0]);
-            //dataReaderMock.Setup(reader => reader.BulkReadRecordAsync<Perbencs>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(perbenCsCollection);
-
+            
             var actual = await repositoryUnderTest.GetByIdAsync("1");
             Assert.IsNotNull(actual);
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(ArgumentNullException))]
-        public async Task PayrollDeductionArrangementRepositoryTests_GetAsync_ArgumentNullException()
-        {
-            string[] primaryKeys = new[] { "1", "2" };
-            string[] perbenKeys = new[] { "1", "2" };
-            var perbenCollection = new Collection<Perben>() 
-            {
-                new Perben(){ PerbenBdId = "1", AllBenefitCosts = new List<string>(){"1", "2"} }
-            };
-            dataReaderMock.Setup(reader => reader.SelectAsync("PERBEN", It.IsAny<string>())).ReturnsAsync(primaryKeys);
-            dataReaderMock.Setup(reader => reader.SelectAsync("PERBEN", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(perbenKeys);
-            dataReaderMock.Setup(reader => reader.BulkReadRecordAsync<Perben>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(perbenCollection);
-            dataReaderMock.Setup(reader => reader.BulkReadRecordAsync<Perbencs>(It.IsAny<string[]>(), It.IsAny<bool>())).ReturnsAsync(null);
-
-            var actual = await repositoryUnderTest.GetAsync(0, 2, status: "Cancelled");
         }
 
         [TestMethod]
@@ -302,6 +224,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
         public async Task PayrollDeductionArrangementRepositoryTests_GetAsync_RepositoryException()
         {
             dataReaderMock.Setup(reader => reader.SelectAsync("PERBEN", It.IsAny<string>())).ThrowsAsync(new RepositoryException());
+
+            transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+               .ThrowsAsync(new RepositoryException());
+
             var actual = await repositoryUnderTest.GetAsync(0, 2, status: "Cancelled");
         }
 
@@ -391,6 +317,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             perbenCollection = new Collection<Perben>() 
             {
                 new Perben(){ 
+                   
                     PerbenBdId = "1",
                     PerbenHrpId = "1",
                     AllBenefitCosts = new List<string>(){"1", "2"}, 
@@ -402,9 +329,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                     PerbenEnrollDate = DateTime.Now.AddDays(-5),
                     PerbenIntgInterval = 1,
                     PerbenIntgMonPayPeriods = new List<int?>(){1},
-                    PerbenChangeReasons = new List<string>(){"PerbenChangeReasons"}
+                    PerbenChangeReasons = new List<string>(){"PerbenChangeReasons"},
+                    
                 },
-                new Perben(){ PerbenBdId = "2", AllBenefitCosts = new List<string>(){"1", "2"}, PerbenHrpId = "2" }
+                new Perben(){ PerbenBdId = "2", AllBenefitCosts = new List<string>(){"1", "2"}, PerbenHrpId = "2", RecordGuid =  Guid.NewGuid().ToString() }
             };
             perbenCsCollection = new Collection<Perbencs>() 
             {
@@ -418,6 +346,36 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 },
                 new Perbencs(){ PbcBdId = "2", PbcHrpId = "2", PbcEndDate = DateTime.Today }
             };
+
+
+            GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+            {
+                Offset = 0,
+                Limit = 100,
+                CacheName = "AllPayrollDeducationArrangements",
+                Entity = "",
+                Sublist = new List<string>() { "1" },
+                TotalCount = 1,
+                KeyCacheInfo = new List<KeyCacheInfo>()
+               {
+                   new KeyCacheInfo()
+                   {
+                       KeyCacheMax = 5905,
+                       KeyCacheMin = 1,
+                       KeyCachePart = "000",
+                       KeyCacheSize = 5905
+                   },
+                   new KeyCacheInfo()
+                   {
+                       KeyCacheMax = 7625,
+                       KeyCacheMin = 5906,
+                       KeyCachePart = "001",
+                       KeyCacheSize = 1720
+                   }
+               }
+            };
+            transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                .ReturnsAsync(resp);
         }
     }
 }

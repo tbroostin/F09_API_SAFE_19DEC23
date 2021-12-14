@@ -62,6 +62,13 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Repositories
         Task<IDictionary<string, string>> GetProjectIdsFromReferenceNo(string[] projectRefNo);
 
         /// <summary>
+        /// Get a requisition id by guid
+        /// </summary>
+        /// <param name="guid">guid</param>
+        /// <returns>id</returns>
+        Task<string> GetRequisitionsIdFromGuidAsync(string guid);
+
+        /// <summary>
         /// Get the GUID for a buyer using its ID
         /// </summary>
         /// <param name="id">The Entity ID we are looking for</param>

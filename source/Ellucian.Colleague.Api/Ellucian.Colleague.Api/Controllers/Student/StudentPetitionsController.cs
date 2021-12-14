@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -89,6 +89,42 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         }
 
         /// <summary>
+        /// Update Student Petition
+        /// </summary>
+        /// <param name="studentPetition">StudentPetition dto object</param>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. Forbidden returned if the user is not allowed to update student petitions.</exception>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. BadRequest returned if the DTO is not present in the request or any unexpected error has occured.</exception>
+        /// <returns>
+        /// If successful, returns the updated Student Petition in an http response with resource locator information. 
+        /// If failure, returns the exception information. 
+        /// </returns>
+        /// <accessComments>
+        /// User must have correct permission code, depending on petition type:
+        /// CREATE.STUDENT.PETITION
+        /// CREATE.FACULTY.CONSENT
+        /// </accessComments>
+        public async Task<HttpResponseMessage> PutStudentPetitionAsync([FromBody] Dtos.Student.StudentPetition studentPetition)
+        {
+            try
+            {
+                Dtos.Student.StudentPetition updatedPetitionDto = await _service.UpdateStudentPetitionAsync(studentPetition);
+                var response = Request.CreateResponse<Dtos.Student.StudentPetition>(HttpStatusCode.Created, updatedPetitionDto);
+                SetResourceLocationHeader("GetStudentPetition", new { studentPetitionId = updatedPetitionDto.Id, sectionId = updatedPetitionDto.SectionId, type = updatedPetitionDto.Type.ToString() });
+                return response;
+            }
+            catch (PermissionsException peex)
+            {
+                _logger.Error(peex.ToString());
+                throw CreateHttpResponseException(peex.Message, HttpStatusCode.Forbidden);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, ex.ToString());
+                throw CreateHttpResponseException(ex.Message, HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
         /// Returns the requested student petition based on the student petition Id, section Id, and type.
         /// The user making this request must be an instructor of the section for which the petition is being requested or it will generate a permission exception.
         /// </summary>
@@ -160,6 +196,49 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             {
                 _logger.Error(e, e.Message);
                 throw CreateHttpResponseException("Error occurred retrieving the student petitions." + System.Net.HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Returns the student overload petitions
+        /// </summary>
+        /// <param name="studentId">Id of the student </param>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. Forbidden returned if the user is not allowed to retrieve overload petitions.</exception>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>. BadRequest returned if the DTO is not present in the request or any unexpected error has occured.</exception>
+        /// <returns>A list of <see cref="StudentOverloadPetition">StudentOverloadPetition</see> object</returns>
+        /// <accessComments>
+        /// 1. A student can access their own data
+        /// 2. An Advisor with any of the following codes is accessing the student's data if the student is not assigned advisee.
+        /// VIEW.ANY.ADVISEE
+        /// REVIEW.ANY.ADVISEE
+        /// UPDATE.ANY.ADVISEE
+        /// ALL.ACCESS.ANY.ADVISEE
+        /// 3. An Advisor with any of the following codes is accessing the student's data if the student is assigned advisee.
+        /// VIEW.ASSIGNED.ADVISEES
+        /// REVIEW.ASSIGNED.ADVISEES
+        /// UPDATE.ASSIGNED.ADVISEES
+        /// ALL.ACCESS.ASSIGNED.ADVISEES
+        /// </accessComments>
+        public async Task<IEnumerable<Dtos.Student.StudentOverloadPetition>> GetStudentOverloadPetitionsAsync(string studentId)
+        {
+            if (string.IsNullOrEmpty(studentId))
+            {
+                _logger.Error("Unable to get student overload petitions. Invalid studentId " + studentId);
+                throw CreateHttpResponseException("Unable to get student overload petitions. Invalid studentId", HttpStatusCode.BadRequest);
+            }
+            try
+            {
+                return await _studentPetitionService.GetStudentOverloadPetitionsAsync(studentId);
+            }
+            catch (PermissionsException pe)
+            {
+                _logger.Error(pe, pe.Message);
+                throw CreateHttpResponseException("Access to Student Overload Petition is forbidden.", System.Net.HttpStatusCode.Forbidden);
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e, e.Message);
+                throw CreateHttpResponseException("Error occurred retrieving the student overload petitions." + System.Net.HttpStatusCode.BadRequest);
             }
         }
     }

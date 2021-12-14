@@ -1,4 +1,4 @@
-﻿/*Copyright 2019-2020 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2019-2021 Ellucian Company L.P. and its affiliates.*/
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
 using System.Web.Http;
@@ -66,6 +66,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         ///</summary>
         /// <accessComments>
         /// If the current user is an employee, all of the employee's leave requests will be returned.
+        /// If the current user is a leave approver or a proxy of the leave approver, leave requests of all the supervisees will be returned. 
         /// </accessComments>
         /// <param name="effectivePersonId">
         ///  Optional parameter for passing effective person Id
@@ -98,7 +99,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <accessComments>
         /// 1) Any authenticated user can view their own leave request information.
-        /// 2) Leave approvers(users with the permission APPROVE.REJECT.LEAVE.REQUEST) can view the leave request information of their supervisees. 
+        /// 2) Leave approvers(users with the permission APPROVE.REJECT.LEAVE.REQUEST) or their proxies can view the leave request information of their supervisees. 
         /// </accessComments>
         /// <param name="id">Leave Request Id</param>
         /// <param name="effectivePersonId">Optional parameter for passing effective person Id</param>
@@ -133,7 +134,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <accessComments>
         /// 1) Any authenticated user can view their own leave request information within the date range.
-        /// 2) Timecard approvers(users with the permission APPROVE.REJECT.TIME.ENTRY) can view the leave request information of their supervisees, within the date range. 
+        /// 2) Timecard approvers(users with the permission APPROVE.REJECT.TIME.ENTRY) or their proxies can view the leave request information of their supervisees, within the date range. 
         /// </accessComments>
         /// <param name="startDate">Start date of timecard week</param>
         /// <param name="endDate">End date of timecard week</param>
@@ -218,7 +219,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <accessComments>
         /// 1) Any authenticated user can create a leave request status record for their own leave request.
-        /// 2) Leave approvers(users with the permission APPROVE.REJECT.LEAVE.REQUEST) can create a leave request status record for the leave requests of their supervisees. 
+        /// 2) Leave approvers(users with the permission APPROVE.REJECT.LEAVE.REQUEST) or their proxies can create a leave request status record for the leave requests of their supervisees. 
         /// </accessComments>
         /// <param name="status">Leave Request Status DTO</param>
         /// <param name="effectivePersonId">Optional parameter - Current user or proxy user person id.</param>
@@ -288,18 +289,20 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         ///     1.  403 - User does not have permission to get supervisee information
         /// </summary>
         /// <accessComments>
-        ///  Current user must be Leave Approver/supervisor (users with the permission APPROVE.REJECT.LEAVE.REQUEST) to fetch all of their supervisees
+        ///  Current user must be Leave Approver(users with the permission APPROVE.REJECT.LEAVE.REQUEST) or their proxy to fetch all of their supervisees
         /// </accessComments>
+        /// <param name="effectivePersonId">
+        ///  Optional parameter for passing effective person Id
+        /// </param>
         /// <returns><see cref="HumanResourceDemographics">List of HumanResourceDemographics DTOs</see></returns>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned any unexpected error has occured.</exception>
         /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user is not allowed to fetch supervisees.</exception>
         [HttpGet]
-        public async Task<IEnumerable<HumanResourceDemographics>> GetSuperviseesByPrimaryPositionForSupervisorAsync()
+        public async Task<IEnumerable<HumanResourceDemographics>> GetSuperviseesByPrimaryPositionForSupervisorAsync([FromUri] string effectivePersonId = null)
         {
-
             try
             {
-                return await _employeeLeaveRequestService.GetSuperviseesByPrimaryPositionForSupervisorAsync();
+                return await _employeeLeaveRequestService.GetSuperviseesByPrimaryPositionForSupervisorAsync(effectivePersonId);
             }
             catch (PermissionsException e)
             {
@@ -312,6 +315,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
                 throw CreateHttpResponseException(supervisorsUnexpectedErrorMessage, HttpStatusCode.BadRequest);
             }
         }
+       
         /// <summary>
         /// This endpoint will update an existing Leave Request along with its Leave Request Details. 
         /// </summary>
@@ -375,7 +379,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <accessComments>
         /// 1) Any authenticated user can create a comment associated with their own leave request.     
-        /// 2) Leave approvers(users with the permission APPROVE.REJECT.LEAVE.REQUEST) can create a comment for the leave requests of their supervisees.  
+        /// 2) Leave approvers(users with the permission APPROVE.REJECT.LEAVE.REQUEST) or their proxies can create a comment for the leave requests of their supervisees.  
         /// </accessComments>     
         /// <param name="leaveRequestComment">Leave Request Comment DTO</param>
         /// <param name="effectivePersonId">Optional parameter for passing effective person Id</param>

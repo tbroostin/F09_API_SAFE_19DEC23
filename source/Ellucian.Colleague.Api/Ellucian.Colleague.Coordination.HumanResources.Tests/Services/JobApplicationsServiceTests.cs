@@ -17,6 +17,7 @@ using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Domain.HumanResources;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 {
@@ -25,6 +26,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
     {
         private const string jobApplicationsGuid = "7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc";
         private const string jobApplicationsPersonId = "PID";
+        private const string personGuid = "1dd56e2d-9b99-4a5b-ab84-55131a31f2e3";
         private ICollection<JobApplication> _jobApplicationsCollection;
         private Tuple<IEnumerable<JobApplication>, int> jobApplicationsTuple;
         private ICollection<JobApplications> _jobApplicationsDtoCollection;
@@ -68,6 +70,15 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                     new JobApplications() { Id = "849e6a7c-6cd4-4f98-8a73-ab0aa3627f0d", Person = new GuidObject2("d2253ac7-9931-4560-b42f-1fccd43c952e") },
                     new JobApplications() { Id = "d2253ac7-9931-4560-b42f-1fccd43c952e", Person = new GuidObject2("7a2bf6b5-cdcd-4c8f-b5d8-3053bf5b3fbc") }
                 };
+
+            
+
+            var personGuidDictionary = new Dictionary<string, string>() { };
+            personGuidDictionary.Add("PID", personGuid);
+            personGuidDictionary.Add("PID2", "a7cbdbbe-131e-4b91-9c99-d9b65c41f1c8");
+            personGuidDictionary.Add("PID3", "ae91ddf9-0b25-4008-97c5-76ac5fe570a3");
+            _personRepositoryMock.Setup(repo => repo.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>()))
+                .ReturnsAsync(personGuidDictionary);
 
             jobApplicationsDtoTuple = new Tuple<IEnumerable<JobApplications>, int>(_jobApplicationsDtoCollection, _jobApplicationsDtoCollection.Count);
 
@@ -121,20 +132,17 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         public async Task JobApplicationsService_GetJobApplicationsAsync_Expected()
         {
             var expectedResults = _jobApplicationsCollection.FirstOrDefault(c => c.Guid == jobApplicationsGuid);
-            
-            _jobApplicationRepositoryMock.Setup(repo => repo.GetGuidFromIdAsync(It.IsAny<string>(), It.IsAny<string>()))
-                 .ReturnsAsync(expectedResults.PersonId);
 
             var actualResult =
                 (await _jobApplicationsService.GetJobApplicationsAsync(0, 2, true)).Item1.FirstOrDefault(x => x.Id == jobApplicationsGuid);
             
             Assert.AreEqual(expectedResults.Guid, actualResult.Id);
-            Assert.AreEqual(expectedResults.PersonId, actualResult.Person.Id);
+            Assert.AreEqual(personGuid, actualResult.Person.Id);
 
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(ArgumentNullException))]
         public async Task JobApplicationsService_GetJobApplicationsByGuidAsync_Empty()
         {
             _jobApplicationRepositoryMock.Setup(repo => repo.GetJobApplicationByIdAsync(It.IsAny<string>()))
@@ -143,7 +151,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
         }
 
         [TestMethod]
-        [ExpectedException(typeof(KeyNotFoundException))]
+        [ExpectedException(typeof(ArgumentNullException))]
         public async Task JobApplicationsService_GetJobApplicationsByGuidAsync_Null()
         {
             _jobApplicationRepositoryMock.Setup(repo => repo.GetJobApplicationByIdAsync(It.IsAny<string>()))
@@ -167,15 +175,12 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             var expectedResults =
                 _jobApplicationsCollection.First(c => c.Guid == jobApplicationsGuid);
 
-            _jobApplicationRepositoryMock.Setup(repo => repo.GetGuidFromIdAsync(It.IsAny<string>(), It.IsAny<string>()))
-                 .ReturnsAsync(expectedResults.PersonId);
-
             var actualResult =
                 await _jobApplicationsService.GetJobApplicationsByGuidAsync(jobApplicationsGuid);
             
             
             Assert.AreEqual(expectedResults.Guid, actualResult.Id);
-            Assert.AreEqual(expectedResults.PersonId, actualResult.Person.Id);
+            Assert.AreEqual(personGuid, actualResult.Person.Id);
 
         }
 

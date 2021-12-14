@@ -447,7 +447,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             [TestMethod]
             public async Task StudentFinancialAidAwardService__GetStudentFinancialAidAwards2Async_EmptySet()
             {
-                referenceRepositoryMock.Setup(i => i.GetPersonIdsByPersonFilterGuidAsync(It.IsAny<string>())).ReturnsAsync(null);
+                referenceRepositoryMock.Setup(i => i.GetPersonIdsByPersonFilterGuidAsync(It.IsAny<string>())).ReturnsAsync(() => null);
                 var studentFinancialAidAwards = await studentFinancialAidAwardService.Get2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Dtos.StudentFinancialAidAward2>(), Guid.NewGuid().ToString(), It.IsAny<bool>(), It.IsAny<bool>());
 
                 Assert.IsNotNull(studentFinancialAidAwards);

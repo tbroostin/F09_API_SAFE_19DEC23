@@ -11,6 +11,7 @@ using System.Diagnostics;
 using Ellucian.Logging;
 using Ellucian.Colleague.Configuration;
 using System.Web.Configuration;
+using Serilog.Events;
 
 namespace Ellucian.Web.Http.Configuration
 {
@@ -186,11 +187,11 @@ namespace Ellucian.Web.Http.Configuration
 
             collSettings.GeneralSettings = general;
 
-            var logLevel = SourceLevels.Off;
+            var serilogLevel = LogEventLevel.Fatal;
             var logElement = doc.Descendants(Level).FirstOrDefault();
             if (logElement != null)
             {
-                logLevel = EnterpriseLibraryLoggerAdapter.LevelFromString(logElement.Value);
+                serilogLevel = SerilogAdapter.LevelFromString(logElement.Value);
             }
 
             var profileName = string.Empty;
@@ -201,7 +202,7 @@ namespace Ellucian.Web.Http.Configuration
             }
 
 
-            return new Settings(collSettings, logLevel) { ProfileName = profileName };
+            return new Settings(collSettings, serilogLevel) { ProfileName = profileName };
         }
 
         public void Update(Settings settings)
@@ -216,7 +217,7 @@ namespace Ellucian.Web.Http.Configuration
             colleague.Add(new XElement(HostnameOverride, settings.ColleagueSettings.DmiSettings.HostNameOverride));
             colleague.Add(new XElement(ConnectionPoolSize, settings.ColleagueSettings.DmiSettings.ConnectionPoolSize.ToString()));
             colleague.Add(new XElement(SharedSecret, Encrypt(settings.ColleagueSettings.DmiSettings.SharedSecret)));
-            
+
             colleague.Add(new XElement(DasEnvironment, settings.ColleagueSettings.DasSettings.AccountName));
             colleague.Add(new XElement(DasAddress, settings.ColleagueSettings.DasSettings.IpAddress));
             colleague.Add(new XElement(DasPort, settings.ColleagueSettings.DasSettings.Port.ToString()));
@@ -227,11 +228,16 @@ namespace Ellucian.Web.Http.Configuration
             colleague.Add(new XElement(DasPassword, Encrypt(settings.ColleagueSettings.DasSettings.DbPassword)));
 
             colleague.Add(new XElement(UseDasDatareader, settings.ColleagueSettings.GeneralSettings.UseDasDatareader.ToString()));
-            
+
             root.Add(colleague);
 
             var logging = new XElement(Level, settings.LogLevel.ToString());
-            root.Add(logging);
+            var loggingOff = new XElement(Level, SourceLevels.Off.ToString());
+
+            if (settings.LogLevel == LogEventLevel.Fatal)
+                root.Add(loggingOff);
+            else
+                root.Add(logging);
 
             var profileName = new XElement(ProfileName, settings.ProfileName);
             root.Add(profileName);
@@ -259,7 +265,7 @@ namespace Ellucian.Web.Http.Configuration
             {
                 throw new Exception("No access to update file '" + BackupFilename + "'. " +
                     "Verify the application pool is running as an identity with permissions to update the App_Data folder.", uae);
-            }            
+            }
 
         }
 

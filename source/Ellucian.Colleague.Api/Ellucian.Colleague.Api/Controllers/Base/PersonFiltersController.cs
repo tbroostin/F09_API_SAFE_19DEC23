@@ -46,6 +46,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves all person filters.
         /// </summary>
         /// <returns>All PersonFilters objects.</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter, ValidateQueryStringFilter(new string[] {"code", "title" })]
         [QueryStringFilterFilter("criteria", typeof(Dtos.PersonFilter))]
         [FilteringFilter(IgnoreFiltering = true)]
@@ -88,6 +89,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
                 return personFiltersEntities;
             }
+            catch (IntegrationApiException ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(ex));
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -101,6 +107,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves all person filters.
         /// </summary>
         /// <returns>All PersonFilters objects.</returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         public async Task<IEnumerable<Ellucian.Colleague.Dtos.PersonFilter>> GetPersonFiltersAsync()
         {
@@ -123,6 +130,11 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
                 return personFiltersEntities;
             }
+            catch (IntegrationApiException ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(ex));
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
@@ -136,6 +148,7 @@ namespace Ellucian.Colleague.Api.Controllers.Base
         /// Retrieves a person filter by ID.
         /// </summary>
         /// <returns>A <see cref="Ellucian.Colleague.Dtos.PersonFilter">PersonFilter.</see></returns>
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
         [HttpGet, EedmResponseFilter]
         public async Task<Ellucian.Colleague.Dtos.PersonFilter> GetPersonFilterByIdAsync(string id)
         {
@@ -156,10 +169,15 @@ namespace Ellucian.Colleague.Api.Controllers.Base
 
                 return await _demographicService.GetPersonFilterByGuidAsync(id);
             }
+            catch (IntegrationApiException ex)
+            {
+                _logger.Error(ex.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(ex));
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex.ToString());
-                throw CreateHttpResponseException(ex.Message);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(ex));
             }
         }
 

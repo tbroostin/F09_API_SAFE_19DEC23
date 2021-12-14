@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -12,7 +12,6 @@ using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
-using Ellucian.Web.Utility;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.Exceptions;
@@ -20,6 +19,7 @@ using Ellucian.Web.Http.Configuration;
 using Ellucian.Colleague.Data.Student.Transactions;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
+using Ellucian.Colleague.Domain.Base.Services;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -34,6 +34,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         private Collection<NonCourses> nonCourseDataContracts;
         // Sets the maximum number of records to bulk read at one time
         readonly int readSize;
+        const string AllStudentTestScoresCache = "AllStudentTestScores";
+
+        const int AllStudentTestScoresCacheTimeout = 20;
 
         public StudentTestScoresRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)
@@ -92,7 +95,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             return _studentNonCourseStatuses;
         }
 
-        private ApplValcodes GetAplicationTestSources()
+        private ApplValcodes GetApplicationTestSources()
         {
             if (_studentApplicationTestSources != null)
             {
@@ -140,59 +143,60 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             if (string.IsNullOrEmpty(id))
             {
-                var errorMessage = string.Format("Student Non Courses record with ID : '{0}' is not a valid student aptitude assessment.", id);
+                var errorMessage = "ID is required to get a student aptitude assessment.";
                 throw new ArgumentException(errorMessage);
             }
             var stuNonCourseId = await GetRecordKeyFromGuidAsync(id);
-            try
-            {
-                if (string.IsNullOrEmpty(stuNonCourseId))
-                {
-                    var errorMessage = string.Format("Student Non Courses record with ID : '{0}' is not a valid student aptitude assessment.", id);
-                    throw new KeyNotFoundException(errorMessage);
-                }
 
-                // Get STUDENT.NON.COURSES data for the student
-                var tests = new List<Domain.Student.Entities.StudentTestScores>();
-                var studentNonCourse = await DataReader.ReadRecordAsync<DataContracts.StudentNonCourses>(stuNonCourseId);
-                if (studentNonCourse == null)
+            if (string.IsNullOrEmpty(stuNonCourseId))
+            {
+                var errorMessage = string.Format("Student Non Courses record with ID : '{0}' is not a valid student aptitude assessment.", id);
+                throw new KeyNotFoundException(errorMessage);
+            }
+
+            // Get STUDENT.NON.COURSES data for the student
+            var tests = new List<Domain.Student.Entities.StudentTestScores>();
+            var studentNonCourse = await DataReader.ReadRecordAsync<DataContracts.StudentNonCourses>(stuNonCourseId);
+            if (studentNonCourse == null)
+            {
+                throw new KeyNotFoundException("Invalid Student Non Course ID: " + stuNonCourseId);
+            }
+            if ((!string.IsNullOrEmpty(studentNonCourse.StncPersonId)) && (!string.IsNullOrEmpty(studentNonCourse.StncNonCourse)) && (!string.IsNullOrEmpty(studentNonCourse.StncTitle) && (!string.IsNullOrEmpty(studentNonCourse.StncCategory))))
+            {
+
+                // Restrict to Admissions, Placement, and Other test types
+                var nonCourses = GetNonCourseCategories();
+                if (nonCourses == null)
                 {
-                    throw new KeyNotFoundException("Invalid Student Non Course ID: " + stuNonCourseId);
+                    var errorMessage = "NON.COURSE.CATEGORIES not found.";
+                    throw new RepositoryException(errorMessage);
                 }
-                if ((!string.IsNullOrEmpty(studentNonCourse.StncPersonId)) && (!string.IsNullOrEmpty(studentNonCourse.StncNonCourse)) && (!string.IsNullOrEmpty(studentNonCourse.StncTitle) && (!string.IsNullOrEmpty(studentNonCourse.StncCategory))))
+                var codeAssoc = nonCourses.ValsEntityAssociation
+                    .Where(v => v.ValInternalCodeAssocMember.Equals(studentNonCourse.StncCategory)).FirstOrDefault();
+                if (codeAssoc == null)
                 {
-                   
-                    // Restrict to Admissions, Placement, and Other test types
-                    var codeAssoc = GetNonCourseCategories().ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == studentNonCourse.StncCategory).FirstOrDefault();
-                    if (codeAssoc == null)
-                    {
-                        var errorMessage = string.Format("Student Non Courses record with ID : '{0}' has an invalid category of '{1}'", studentNonCourse.RecordGuid, studentNonCourse.StncCategory);
-                        logger.Warn(errorMessage);
-                        throw new ArgumentException(errorMessage);
-                    }
-                    if (codeAssoc != null && ((codeAssoc.ValActionCode1AssocMember == "A") || (codeAssoc.ValActionCode1AssocMember == "P") || (codeAssoc.ValActionCode1AssocMember == "T")))
-                    {
-                        var studentNonCoursesData = new Collection<DataContracts.StudentNonCourses>() { studentNonCourse };
-                        tests = (BuildStudentTestScores(studentNonCoursesData.ToList())).ToList();
-                    }
-                    else
-                    {
-                        var errorMessage = string.Format("Student Non Courses record with ID : '{0}' is not a valid student aptitude assessment.", studentNonCourse.RecordGuid);
-                        throw new ArgumentException(errorMessage);
-                    }
+                    var errorMessage = string.Format("Student Non Courses record with ID : '{0}' has an invalid category of '{1}'", studentNonCourse.RecordGuid, studentNonCourse.StncCategory);
+                    throw new RepositoryException(errorMessage);
+                }
+                if (codeAssoc != null && ((codeAssoc.ValActionCode1AssocMember == "A") || (codeAssoc.ValActionCode1AssocMember == "P") || (codeAssoc.ValActionCode1AssocMember == "T")))
+                {
+                    var studentNonCoursesData = new Collection<DataContracts.StudentNonCourses>() { studentNonCourse };
+                    tests = (BuildStudentTestScores(studentNonCoursesData.ToList())).ToList();
                 }
                 else
                 {
-                    var errorMessage = string.Format("Student Non Courses record with ID : '{0}' is missing required data.", studentNonCourse.RecordGuid);
-                    throw new ArgumentException(errorMessage);
+                    var errorMessage = string.Format("Student Non Courses record with ID : '{0}' is not a valid student aptitude assessment.", studentNonCourse.RecordGuid);
+                    throw new RepositoryException(errorMessage);
                 }
-
-                return tests.FirstOrDefault();
             }
-            catch (Exception ex)
+            else
             {
-                throw ex;
+                var errorMessage = string.Format("Student Non Courses record with ID : '{0}' is missing required data.", studentNonCourse.RecordGuid);
+                throw new RepositoryException(errorMessage);
             }
+
+            return tests.FirstOrDefault();
+
         }
 
         /// <summary>
@@ -292,14 +296,22 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
 
             string criteria = "";
-            
+            int totalCount = 0;
+            string studentTestScoresCacheKey = CacheSupport.BuildCacheKey(AllStudentTestScoresCache,
+                studentId, assessmentId, filterPersonIds, personFilter);
+            string[] subList = null;
             var studentNonCourseEntities = new List<Domain.Student.Entities.StudentTestScores>();
             string nonCourseTypes = string.Empty;
             var repositoryException = new RepositoryException();
             //get the list of valid non courses type
             // Restrict to Admissions, Placement, and Other test types
 
-            var codeAssoc = GetNonCourseCategories().ValsEntityAssociation.Where(sp1 => sp1.ValActionCode1AssocMember == "A" || sp1.ValActionCode1AssocMember == "P" || sp1.ValActionCode1AssocMember == "T");
+            var nonCourseCategories = this.GetNonCourseCategories();
+            if (nonCourseCategories == null)
+            {
+                return new Tuple<IEnumerable<Domain.Student.Entities.StudentTestScores>, int>(new List<Domain.Student.Entities.StudentTestScores>(), 0);
+            }
+            var codeAssoc = nonCourseCategories.ValsEntityAssociation.Where(sp1 => sp1.ValActionCode1AssocMember == "A" || sp1.ValActionCode1AssocMember == "P" || sp1.ValActionCode1AssocMember == "T");
             if (codeAssoc != null && codeAssoc.Any())
             {
                 foreach (var val in codeAssoc)
@@ -311,68 +323,82 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             else
                 return new Tuple<IEnumerable<Domain.Student.Entities.StudentTestScores>, int>(new List<Domain.Student.Entities.StudentTestScores>(), 0);
 
+            var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                studentTestScoresCacheKey,
+                "",
+                offset,
+                limit,
+                AllStudentTestScoresCacheTimeout,
 
-            string studentTestScoresCacheKey = string.Concat("AllStudentTestScoreKeys", studentId, assessmentId, personFilter);
-            if (offset == 0 && ContainsKey(BuildFullCacheKey(studentTestScoresCacheKey)))
-            {
-                ClearCache(new List<string> { studentTestScoresCacheKey });
-            }
-            string[] studentTestScoreIds = null;
-            studentTestScoreIds = await GetOrAddToCacheAsync<string[]>(studentTestScoresCacheKey,
-               async () =>
-               {
-                   string[] limitingKeys = new string[] { };
-                   if (filterPersonIds != null && filterPersonIds.ToList().Any())
-                   {
-                       // Set limiting keys to previously retrieved personIds from SAVE.LIST.PARMS
+                async () =>
+                {
+                    string[] limitingKeys = new string[] { };
+                    if (filterPersonIds != null && filterPersonIds.ToList().Any())
+                    {
+                        // Set limiting keys to previously retrieved personIds from SAVE.LIST.PARMS
+                        var personCriteria = "WITH PST.STUDENT.NON.COURSES NE '' BY.EXP PST.STUDENT.NON.COURSES SAVING PST.STUDENT.NON.COURSES";
+                        limitingKeys = await DataReader.SelectAsync("PERSON.ST", filterPersonIds, personCriteria);
+                        if (limitingKeys == null || !limitingKeys.Any())                       
+                            return new CacheSupport.KeyCacheRequirements()
+                            {
+                                NoQualifyingRecords = true
+                            };
+                    }
+                    //apply student filters
+                    if (!string.IsNullOrEmpty(studentId))
+                    {
+                        // Select the student's record matching the person specified in the filter.
+                        criteria = "WITH STNC.PERSON.ID EQ '" + studentId + "' ";
+                        limitingKeys = await DataReader.SelectAsync("STUDENT.NON.COURSES", limitingKeys != null && limitingKeys.Any() ? limitingKeys.ToArray() : null, criteria);
+                        if (limitingKeys == null || !limitingKeys.Any())
+                            return new CacheSupport.KeyCacheRequirements()
+                            {
+                                NoQualifyingRecords = true
+                            };
+                    }
 
-                       var personCriteria = "WITH PST.STUDENT.NON.COURSES NE '' BY.EXP PST.STUDENT.NON.COURSES SAVING PST.STUDENT.NON.COURSES";
-                       limitingKeys = await DataReader.SelectAsync("PERSON.ST", filterPersonIds, personCriteria);
-                       if (limitingKeys == null || !limitingKeys.Any())
-                           return studentTestScoreIds;
+                    if (!string.IsNullOrEmpty(assessmentId))
+                    {
+                        // Select the records matching the noncourse specified in the filter
+                        criteria = "WITH STNC.NON.COURSE EQ '" + assessmentId + "' AND STNC.SCORE.DEC NE ''";
+                        limitingKeys = await DataReader.SelectAsync("STUDENT.NON.COURSES", limitingKeys != null && limitingKeys.Any() ? limitingKeys.ToArray() : null, criteria);
+                        if (limitingKeys == null || !limitingKeys.Any())
+                            return new CacheSupport.KeyCacheRequirements()
+                            {
+                                NoQualifyingRecords = true
+                            };
+                    }
 
-                   }
+                    //we are only looking for those non courses that are of type test
+                    criteria = string.Concat("WITH STNC.SCORE.DEC NE '' AND WITH STNC.CATEGORY EQ ", nonCourseTypes);
+                    limitingKeys = await DataReader.SelectAsync("STUDENT.NON.COURSES", limitingKeys != null && limitingKeys.Any() ? limitingKeys.ToArray() : null, criteria);
+                    if (limitingKeys == null || !limitingKeys.Any())
+                        return new CacheSupport.KeyCacheRequirements()
+                        {
+                            NoQualifyingRecords = true
+                        };
 
-                   //apply student filters
-                   if (!string.IsNullOrEmpty(studentId))
-                   {
-                       // Select the student's record matching the person specified in the filter.
-                       criteria = "WITH STNC.PERSON.ID EQ '" + studentId + "' ";
-                       limitingKeys = await DataReader.SelectAsync("STUDENT.NON.COURSES", limitingKeys != null && limitingKeys.Any() ? limitingKeys.ToArray() : null, criteria);
-                       if (limitingKeys == null || !limitingKeys.Any())
-                           return studentTestScoreIds;
-                   }
+                    var requirements = new CacheSupport.KeyCacheRequirements()
+                    {
+                        limitingKeys = limitingKeys.Distinct().ToList(),
+                    };
 
-                   if (!string.IsNullOrEmpty(assessmentId))
-                   {
-                       // Select the records matching the noncourse specified in the filter
-                       criteria = "WITH STNC.NON.COURSE EQ '" + assessmentId + "' AND STNC.SCORE.DEC NE ''";
-                       limitingKeys =await DataReader.SelectAsync("STUDENT.NON.COURSES", limitingKeys != null && limitingKeys.Any() ? limitingKeys.ToArray() : null, criteria);
-                       if (limitingKeys == null || !limitingKeys.Any())
-                           return studentTestScoreIds;
-                   }
+                    return requirements;
+                });
 
-                   //we are only looking for those non courses that are of type test
-                   criteria = string.Concat("WITH STNC.SCORE.DEC NE '' AND WITH STNC.CATEGORY EQ ", nonCourseTypes);
-                   limitingKeys = await DataReader.SelectAsync("STUDENT.NON.COURSES", limitingKeys != null && limitingKeys.Any() ? limitingKeys.ToArray() : null, criteria);
-                   if (limitingKeys == null || !limitingKeys.Any())
-                       return studentTestScoreIds;
-
-                   studentTestScoreIds = limitingKeys;
-
-                   Array.Sort(studentTestScoreIds);
-                   return studentTestScoreIds;
-               });
-
-            if (studentTestScoreIds == null || !studentTestScoreIds.Any())
+            if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
             {
                 return new Tuple<IEnumerable<Domain.Student.Entities.StudentTestScores>, int>(new List<Domain.Student.Entities.StudentTestScores>(), 0);
             }
+            subList = keyCache.Sublist.ToArray();
 
-            //limitingKeys.Sort();
-            var totalCount = studentTestScoreIds.Count();
-            var studentNonCourseDataSubList = studentTestScoreIds.Skip(offset).Take(limit).ToArray();
-            var results = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.StudentNonCourses>("STUDENT.NON.COURSES", studentNonCourseDataSubList);
+            totalCount = keyCache.TotalCount.Value;
+            var results = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.StudentNonCourses>("STUDENT.NON.COURSES", subList);
             if (results.Equals(default(BulkReadOutput<DataContracts.StudentNonCourses>)))
                 return new Tuple<IEnumerable<Domain.Student.Entities.StudentTestScores>, int>(new List<Domain.Student.Entities.StudentTestScores>(), 0);
             if (results.InvalidKeys.Any() || results.InvalidRecords.Any())
@@ -413,14 +439,59 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         {
             var tests = new List<Domain.Student.Entities.StudentTestScores>();
             var repositoryException = new RepositoryException();
-            if (studentNonCoursesData != null && studentNonCoursesData.Count() > 0)
+            if (studentNonCoursesData != null && studentNonCoursesData.Any())
             {
                 // Build TestResult Data from student non courses selected
                 foreach (var stncData in studentNonCoursesData)
                 {
                     try
                     {
-                        Domain.Student.Entities.StudentTestScores stncTest = new Domain.Student.Entities.StudentTestScores(stncData.RecordGuid, stncData.StncPersonId, stncData.StncNonCourse, stncData.StncTitle, stncData.StncStartDate.GetValueOrDefault(DateTime.MinValue));
+                        if (string.IsNullOrEmpty(stncData.StncPersonId))
+                        {
+                            repositoryException.AddError(new RepositoryError("Bad.Data", "Missing Student ID")
+                            {
+                                SourceId = stncData != null ? stncData.Recordkey : "",
+                                Id = stncData != null ? stncData.RecordGuid : ""
+                            });
+                        }
+                        if (string.IsNullOrEmpty(stncData.StncNonCourse))
+                        {
+                            repositoryException.AddError(new RepositoryError("Bad.Data", "Missing NonCourse code")
+                            {
+                                SourceId = stncData != null ? stncData.Recordkey : "",
+                                Id = stncData != null ? stncData.RecordGuid : ""
+                            });
+                        }
+                        if (string.IsNullOrEmpty(stncData.StncTitle))
+                        {
+                            repositoryException.AddError(new RepositoryError("Bad.Data", "Missing Title/Description")
+                            {
+                                SourceId = stncData != null ? stncData.Recordkey : "",
+                                Id = stncData != null ? stncData.RecordGuid : ""
+                            });
+                        }
+                        if (string.IsNullOrEmpty(stncData.RecordGuid))
+                        {
+                            repositoryException.AddError(new RepositoryError("Bad.Data", "Missing RecordGuid")
+                            {
+                                SourceId = stncData != null ? stncData.Recordkey : "",
+                                Id = stncData != null ? stncData.RecordGuid : ""
+                            });
+                        }
+                        if (stncData.StncStartDate == null)
+                        {
+                            repositoryException.AddError(new RepositoryError("Bad.Data", "Missing start date")
+                            {
+                                SourceId = stncData != null ? stncData.Recordkey : "",
+                                Id = stncData != null ? stncData.RecordGuid : ""
+                            });
+                        }
+                        // check for required fields, otherwise the domain entity constructor will throw errors.
+                        if (repositoryException.Errors.Any())
+                        {
+                            throw repositoryException;
+                        }
+                        var stncTest = new Domain.Student.Entities.StudentTestScores(stncData.RecordGuid, stncData.StncPersonId, stncData.StncNonCourse, stncData.StncTitle, stncData.StncStartDate.GetValueOrDefault(DateTime.MinValue));
 
                         stncTest.Score = stncData.StncScoreDec;
                         stncTest.Percentile1 = stncData.StncPct;
@@ -432,9 +503,14 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                             var statusCodeAssoc = GetStudentNonCourseStatuses().ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == stncData.StncStatus).FirstOrDefault();
                             if (statusCodeAssoc == null)
                             {
-                                var errorMessage = string.Format("Student Non Courses record with ID : '{0}' has an invalid status of '{1}'", stncData.RecordGuid, stncData.StncStatus);
-                                logger.Warn(errorMessage);
-                                throw new ArgumentException(errorMessage);
+                                var errorMessage = string.Format("Student Non Courses record has an invalid status: '{0}'", stncData.StncStatus);
+                                
+                                repositoryException.AddError(new RepositoryError("Bad.Data", errorMessage)
+                                {
+                                    SourceId = stncData != null ? stncData.Recordkey : "",
+                                    Id = stncData != null ? stncData.RecordGuid : ""
+                                });
+
                             }
                             else
                             {
@@ -450,12 +526,15 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                         if (!string.IsNullOrWhiteSpace(stncData.StncSource))
                         {
-                            var statusCodeAssoc = GetAplicationTestSources().ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == stncData.StncSource).FirstOrDefault();
+                            var statusCodeAssoc = GetApplicationTestSources().ValsEntityAssociation.Where(v => v.ValInternalCodeAssocMember == stncData.StncSource).FirstOrDefault();
                             if (statusCodeAssoc == null)
                             {
-                                var errorMessage = string.Format("Student Non Courses record with ID : '{0}' has an invalid source of '{1}'", stncData.RecordGuid, stncData.StncSource);
-                                logger.Warn(errorMessage);
-                                throw new ArgumentException(errorMessage);
+                                var errorMessage = string.Format("Student Non Courses record has an invalid source: '{0}'", stncData.StncSource);
+                                repositoryException.AddError(new RepositoryError("Bad.Data", errorMessage)
+                                {
+                                    SourceId = stncData != null ? stncData.Recordkey : "",
+                                    Id = stncData != null ? stncData.RecordGuid : ""
+                                });
                             }
                             else
                             {
@@ -471,13 +550,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
 
                     catch (Exception ex)
                     {
-                        logger.Error(ex.Message);
-                        var message = string.Concat(ex.Message, ". Entity: 'STUDENT.NON.COURSES', Record ID: '", stncData.Recordkey, "'");
-
-                        repositoryException.AddError(new RepositoryError("invalid Student Aptitude Assessments", message)
+                        repositoryException.AddError(new RepositoryError("Bad.Data", ex.Message)
                         {
-                            //SourceId = stncData.Recordkey,
-                            //Id = stncData.RecordGuid
+                            SourceId = stncData != null ? stncData.Recordkey : "",
+                            Id = stncData != null ? stncData.RecordGuid : ""
                         });
                     }
                 }
@@ -510,7 +586,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 {
                     var errorMessage = string.Format("Error(s) occurred updating studentTestScores '{0}':", studentTestScoresEntity.Guid);
                     var exception = new RepositoryException(errorMessage);
-                    updateResponse.UpdateStudentAptitudeAsessmentErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
+                    updateResponse.UpdateStudentAptitudeAsessmentErrors.ForEach(e => exception.AddError(
+                        new RepositoryError("Create.Update.Exception", 
+                        string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
 
                     logger.Error(errorMessage);
                     throw exception;
@@ -544,12 +622,12 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             // If we don't have a source but we do have "unofficial" in reported, find the first source that represents "unofficial".
             if (string.IsNullOrWhiteSpace(studentTestScoresEntity.Source) && !string.IsNullOrWhiteSpace(studentTestScoresEntity.ApplicationTestSource) && studentTestScoresEntity.ApplicationTestSource.Equals("1", StringComparison.InvariantCultureIgnoreCase))
             {
-                var statusCodeAssoc = GetAplicationTestSources().ValsEntityAssociation.Where(v => v.ValActionCode1AssocMember.Equals("1", StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+                var statusCodeAssoc = GetApplicationTestSources().ValsEntityAssociation.Where(v => v.ValActionCode1AssocMember.Equals("1", StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
                 if (statusCodeAssoc == null)
                 {
                     var errorMessage = string.Format("Error(s) occurred updating studentTestScores '{0}':", studentTestScoresEntity.Guid);
                     var exception = new RepositoryException(errorMessage);
-                    exception.AddError(new RepositoryError("StudentAptitude.Reported.Invalid", "An 'unofficial' assessment requires a match to source however, no source was found that represents 'unofficial'. "));
+                    exception.AddError(new RepositoryError("Bad.Data", "An 'unofficial' assessment requires a match to source however, no source was found that represents 'unofficial'. "));
                     throw exception;
                 }
                 else
@@ -584,7 +662,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 var errorMessage = string.Format("Error(s) occurred creating studentTestScores '{0}':", studentTestScoresEntity.Guid);
                 var exception = new RepositoryException(errorMessage);
-                createResponse.UpdateStudentAptitudeAsessmentErrors.ForEach(e => exception.AddError(new RepositoryError("studentTestScores", e.ErrorMessages)));
+                createResponse.UpdateStudentAptitudeAsessmentErrors.ForEach(e => exception.AddError(
+                    new RepositoryError("Create.Update.Exception", e.ErrorMessages)));
                 logger.Error(errorMessage);
                 throw exception;
             }
@@ -624,7 +703,8 @@ namespace Ellucian.Colleague.Data.Student.Repositories
             {
                 var errorMessage = string.Format("Error(s) occurred deleting student aptitude assessment '{0}':", guid);
                 var exception = new RepositoryException(errorMessage);
-                response.DeleteStudentAptitudeAssessmentErrors.ForEach(e => exception.AddError(new RepositoryError(string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
+                response.DeleteStudentAptitudeAssessmentErrors.ForEach(e => exception.AddError(
+                    new RepositoryError("Delete.Exception", string.IsNullOrEmpty(e.ErrorCodes) ? "" : e.ErrorCodes, e.ErrorMessages)));
                 logger.Error(errorMessage);
                 throw exception;
             }

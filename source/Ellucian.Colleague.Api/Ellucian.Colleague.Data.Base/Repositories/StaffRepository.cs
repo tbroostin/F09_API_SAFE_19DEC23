@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using Ellucian.Colleague.Domain.Base.Entities;
@@ -127,7 +127,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                     catch (Exception ex)
                     {
-                        logger.Error(ex.Message);
+                        logger.Error(ex, "Couldn't validate STAFF record.");
                     }
                 }
             }
@@ -184,7 +184,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     }
                     catch (Exception ex)
                     {
-                        logger.Error(ex.Message);
+                        logger.Error(ex, "Could not validate STAFF record.");
                     }
 
                 }

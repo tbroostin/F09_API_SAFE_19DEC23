@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -42,6 +42,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
                 lineItemGlDistributionDto.Quantity = 0.00m;
                 lineItemGlDistributionDto.Amount = 0.00m;
                 lineItemGlDistributionDto.GlAccountDescription = null;
+                lineItemGlDistributionDto.BudgetAmount = 0.00m;
+                lineItemGlDistributionDto.EncumbranceAmount = 0.00m;
+                lineItemGlDistributionDto.RequisitionAmount = 0.00m;
+                lineItemGlDistributionDto.ActualAmount = 0.00m;
             }
             else
             {
@@ -52,6 +56,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Adapters
                 lineItemGlDistributionDto.Quantity = Source.Quantity;
                 lineItemGlDistributionDto.Amount = Source.Amount;
                 lineItemGlDistributionDto.GlAccountDescription = Source.GlAccountDescription;
+                lineItemGlDistributionDto.BudgetAmount = Source.BudgetAmount;
+                lineItemGlDistributionDto.EncumbranceAmount = Source.EncumbranceAmount;
+                lineItemGlDistributionDto.RequisitionAmount = Source.RequisitionAmount;
+                lineItemGlDistributionDto.ActualAmount = Source.ActualAmount;
             }
 
             lineItemGlDistributionDto.IsMasked = Source.Masked;

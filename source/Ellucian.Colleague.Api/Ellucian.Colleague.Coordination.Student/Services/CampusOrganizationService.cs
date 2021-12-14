@@ -1,21 +1,20 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Web.Dependency;
 using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Coordination.Base.Services;
-using Ellucian.Web.Http.Exceptions;
-using Ellucian.Colleague.Dtos.Resources;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Colleague.Dtos.Student;
-using Ellucian.Colleague.Domain.Student;
+using Ellucian.Colleague.Domain.Exceptions;
+using System.Net;
+using Ellucian.Colleague.Dtos;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -24,6 +23,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
     {
         IPersonBaseRepository _personBaseRepository;
         private readonly ICampusOrganizationRepository _campusOrganizationRepository;
+        private readonly IPersonRepository _personRepository;
         private readonly IStudentReferenceDataRepository _studentReferenceDataRepository;
         private readonly ILogger logger;
         private readonly IConfigurationRepository _configurationRepository;
@@ -34,12 +34,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
 
 
         public CampusOrganizationService(IAdapterRegistry adapterRegistry, IPersonBaseRepository personBaseRepository, ICampusOrganizationRepository campusOrganizationRepository,
-            IStudentReferenceDataRepository studentReferenceDataRepository, IConfigurationRepository configurationRepository, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger)
+            IStudentReferenceDataRepository studentReferenceDataRepository, IPersonRepository personRepository, IConfigurationRepository configurationRepository, ICurrentUserFactory currentUserFactory, IRoleRepository roleRepository, ILogger logger)
             : base(adapterRegistry, currentUserFactory, roleRepository, logger, configurationRepository: configurationRepository)
         {
             _campusOrganizationRepository = campusOrganizationRepository;
             _personBaseRepository = personBaseRepository;
             _studentReferenceDataRepository = studentReferenceDataRepository;
+            _personRepository = personRepository;
             _configurationRepository = configurationRepository;
             if (logger == null)
             {
@@ -202,60 +203,33 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>Tuple<IEnumerable<Dtos.CampusInvolvement>, int></returns>
         public async Task<Tuple<IEnumerable<Dtos.CampusInvolvement>, int>> GetCampusInvolvementsAsync(int offset, int limit, bool bypassCache)
         {
-            // get user permissions
-            CheckUserCampusInvolvementViewPermissions();
-
-            var campusInvolvementsList = new List<Dtos.CampusInvolvement>();
-
-            var responses = await _campusOrganizationRepository.GetCampusInvolvementsAsync(offset, limit);
-            campusInvolvementsList = await ConvertCampusInvolvementEntityToDtoAsync(responses.Item1) as List<Dtos.CampusInvolvement>;
-            return new Tuple<IEnumerable<Dtos.CampusInvolvement>, int>(campusInvolvementsList, responses.Item2);
-        }
-
-        /// <summary>
-        /// Converts campus involvement entities to dtos
-        /// After discussion this property with HEDM, it turns out that we don't need 
-        /// to have any elaborate logic to determine the academic periods that might 
-        /// correlate to a membership period (e.g. startOn and endOn in this schema). 
-        /// This property wasn't intended for that, but was included in the schema 
-        /// so that Banner could share campus involvements when they only have a term 
-        /// specified rather than a date range.  As a result, we don't need to populate this for the GET. 
-        /// For a POST or PUT we would need to consume this into a special INTG element, but we don't have 
-        /// to deal w/ that work until we support the Create, Update, or Delete operations. 
-        /// </summary>
-        /// <param name="campusInvolvementEntities"></param>
-        /// <returns>IEnumerable<Dtos.CampusInvolvement></returns>
-        private async Task<IEnumerable<Dtos.CampusInvolvement>> ConvertCampusInvolvementEntityToDtoAsync(IEnumerable<Domain.Student.Entities.CampusInvolvement> campusInvolvementEntities)
-        {
-            List<Dtos.CampusInvolvement> campusInvolvementDtos = new List<Dtos.CampusInvolvement>();
-
-            var campOrgIds = campusInvolvementEntities.Where(i => !string.IsNullOrEmpty(i.CampusOrganizationId)).Select(ordId => ordId.CampusOrganizationId).Distinct();
-
-            var campusOrgEntities = await _campusOrganizationRepository.GetCampusOrganizationsAsync(true);
-            campusInvolvementRoles = await _studentReferenceDataRepository.GetCampusInvolvementRolesAsync(true);
-
-
-            var filteredCampusOrgEntities = campusOrgEntities.Where(i => campOrgIds.Contains(i.Code));
-
-            if (campusInvolvementEntities != null && campusInvolvementEntities.Any())
+            Tuple<IEnumerable<Domain.Student.Entities.CampusInvolvement>, int> campusInvolvementEntitiesTuple = null;
+            try
             {
-                foreach (var campusInvolvementEntity in campusInvolvementEntities)
-                {
-                    Dtos.CampusInvolvement campusInvolvementDto = new Dtos.CampusInvolvement();
-                    campusInvolvementDto.Id = campusInvolvementEntity.CampusInvolvementId;
-                    campusInvolvementDto.PersonId = await ConvertParentOrganizationIdToDtoAsync(campusInvolvementEntity.PersonId);
-                    campusInvolvementDto.AcademicPeriod = null;
-                    campusInvolvementDto.CampusOrganizationId = ConvertCampusOrgEntityIdToGuid(campusInvolvementEntity.CampusOrganizationId, filteredCampusOrgEntities);
-                    campusInvolvementDto.InvolvementStartOn = campusInvolvementEntity.StartOn;
-                    campusInvolvementDto.InvolvementEndOn = campusInvolvementEntity.EndOn;
-                    campusInvolvementDto.InvolvementRole = await ConvertInvolvementRoleToGuid(campusInvolvementEntity.RoleId);
+                campusInvolvementEntitiesTuple = await _campusOrganizationRepository.GetCampusInvolvementsAsync(offset, limit);
 
-                    campusInvolvementDtos.Add(campusInvolvementDto);
+                var campusInvolvementEntities = campusInvolvementEntitiesTuple.Item1;
+                var totalCount = campusInvolvementEntitiesTuple.Item2;
+
+                var campusInvolvementsDto = new List<Dtos.CampusInvolvement>();
+                if (campusInvolvementEntities != null && campusInvolvementEntities.Any())
+                {
+                    campusInvolvementsDto = (await BuildCampusInvolvementsDtoAsync(campusInvolvementEntities)).ToList();
+
+                    return campusInvolvementsDto.Any() ? new Tuple<IEnumerable<Dtos.CampusInvolvement>, int>(campusInvolvementsDto, totalCount) :
+                        new Tuple<IEnumerable<Dtos.CampusInvolvement>, int>(new List<Dtos.CampusInvolvement>(), 0);
+                }
+                else
+                {
+                    return new Tuple<IEnumerable<Dtos.CampusInvolvement>, int>(new List<Dtos.CampusInvolvement>(), 0);
                 }
             }
-
-            return campusInvolvementDtos;
-        }       
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+        }
 
         /// <summary>
         /// Returns campus involvement by Id
@@ -268,90 +242,253 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// For a POST or PUT we would need to consume this into a special INTG element, but we don't have 
         /// to deal w/ that work until we support the Create, Update, or Delete operations.
         /// </summary>         
-        /// <param name="id">id</param>
+        /// <param name="guid">guid</param>
         /// <returns>Dtos.CampusInvolvement</returns>
-        public async Task<Dtos.CampusInvolvement> GetCampusInvolvementByGuidAsync(string id)
+        public async Task<Dtos.CampusInvolvement> GetCampusInvolvementByGuidAsync(string guid)
         {
-            // get user permissions
-            CheckUserCampusInvolvementViewPermissions();
+            if (string.IsNullOrEmpty(guid))
+            {
+                IntegrationApiExceptionAddError("GUID is required to get a campus involvement.", "Missing.GUID");
+                throw IntegrationApiException;
+            }
 
-            var campusInvolvementEntity = await _campusOrganizationRepository.GetGetCampusInvolvementByIdAsync(id);
+            var campusInvolvementDto = new Dtos.CampusInvolvement();
+            Domain.Student.Entities.CampusInvolvement campusInvolvementEntity = null;
+            try
+            {
+                campusInvolvementEntity = await _campusOrganizationRepository.GetGetCampusInvolvementByIdAsync(guid);
+                if (campusInvolvementEntity != null)
+                {
+                    var campusInvolvementsDto = (await BuildCampusInvolvementsDtoAsync(new List<Domain.Student.Entities.CampusInvolvement>()
+                    {campusInvolvementEntity})).ToList();
 
-            var campusOrgEntities = await _campusOrganizationRepository.GetCampusOrganizationsAsync(true);
-            campusInvolvementRoles = await _studentReferenceDataRepository.GetCampusInvolvementRolesAsync(true);
-
-            var filteredCampusOrgEntities = campusOrgEntities.Where(i => i.Code.Equals(campusInvolvementEntity.CampusOrganizationId, StringComparison.OrdinalIgnoreCase));
-
-            Dtos.CampusInvolvement campusInvolvementDto = new Dtos.CampusInvolvement();
-            campusInvolvementDto.Id = campusInvolvementEntity.CampusInvolvementId;
-            campusInvolvementDto.PersonId = await ConvertParentOrganizationIdToDtoAsync(campusInvolvementEntity.PersonId);
-            campusInvolvementDto.AcademicPeriod = null;
-            campusInvolvementDto.CampusOrganizationId = ConvertCampusOrgEntityIdToGuid(campusInvolvementEntity.CampusOrganizationId, filteredCampusOrgEntities);
-            campusInvolvementDto.InvolvementStartOn = campusInvolvementEntity.StartOn;
-            campusInvolvementDto.InvolvementEndOn = campusInvolvementEntity.EndOn;
-            campusInvolvementDto.InvolvementRole = await ConvertInvolvementRoleToGuid(campusInvolvementEntity.RoleId);
-
-
+                    if (campusInvolvementsDto.Any())
+                    {
+                        campusInvolvementDto = campusInvolvementsDto.FirstOrDefault();
+                    }
+                }
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex, guid: guid);
+                throw IntegrationApiException;
+            }
+            catch (KeyNotFoundException)
+            {
+                throw new KeyNotFoundException("campus-involvements not found for GUID " + guid);
+            }
+            if (campusInvolvementEntity == null)
+            {
+                throw new KeyNotFoundException("campus-involvements not found for GUID " + guid);
+            }
             return campusInvolvementDto;
+        }        
+
+        /// <summary>
+        /// BuildCampusInvolvementsDtoAsync
+        /// </summary>
+        /// <param name="sources">Collection of campus involvement domain entities</param>
+        /// <param name="bypassCache">bypassCache flag.  Defaulted to false</param>
+        /// <returns>Collection of CampusInvolvement DTO objects </returns>
+        private async Task<IEnumerable<Dtos.CampusInvolvement>> BuildCampusInvolvementsDtoAsync(IEnumerable<Domain.Student.Entities.CampusInvolvement> sources)
+        {
+            if ((sources == null) || (!sources.Any()))
+            {
+                return null;
+            }
+            var campusInvolvementDtos = new List<Dtos.CampusInvolvement>();
+            Dictionary<string, string> personGuidCollection = null;
+            Dictionary<string, string> campusOrganizationsGuidCollection = null;
+            Dictionary<string, string> campusInvolvementRolesGuidCollection = null;
+
+            try
+            {
+                var personIds = sources
+                     .Where(x => (!string.IsNullOrEmpty(x.PersonId)))
+                     .Select(x => x.PersonId).Distinct().ToList();
+                personGuidCollection = await this._personRepository.GetPersonGuidsCollectionAsync(personIds);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message);
+            }
+
+            try
+            {
+                var campusOrganizationIds = sources
+                     .Where(x => (!string.IsNullOrEmpty(x.CampusOrganizationId)))
+                     .Select(x => x.CampusOrganizationId).Distinct().ToList();
+                campusOrganizationsGuidCollection = await _campusOrganizationRepository.GetGuidsCollectionAsync(campusOrganizationIds, "CAMPUS.ORGS");
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message);
+            }
+
+            try
+            {
+                var campusInvolvementRoleIds = sources
+                     .Where(x => (!string.IsNullOrEmpty(x.RoleId)))
+                     .Select(x => x.RoleId).Distinct().ToList();
+                campusInvolvementRolesGuidCollection = await _campusOrganizationRepository.GetGuidsCollectionAsync(campusInvolvementRoleIds, "ROLES");
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message);
+            }
+
+            foreach (var source in sources)
+            {
+                try
+                {
+                    campusInvolvementDtos.Add(ConvertCampusInvolvementEntityToDtoAsync(source,
+                        personGuidCollection, campusOrganizationsGuidCollection, campusInvolvementRolesGuidCollection));
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message);
+                }
+            }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            return campusInvolvementDtos;
         }
 
         /// <summary>
-        /// Converts involvement code to guid object2
+        /// Converts campus involvement entity to dto
+        /// After discussion this property with HEDM, it turns out that we don't need 
+        /// to have any elaborate logic to determine the academic periods that might 
+        /// correlate to a membership period (e.g. startOn and endOn in this schema). 
+        /// This property wasn't intended for that, but was included in the schema 
+        /// so that Banner could share campus involvements when they only have a term 
+        /// specified rather than a date range.  As a result, we don't need to populate this for the GET. 
+        /// For a POST or PUT we would need to consume this into a special INTG element, but we don't have 
+        /// to deal w/ that work until we support the Create, Update, or Delete operations. 
         /// </summary>
-        /// <param name="roleId"></param>
-        /// <returns></returns>
-        private async Task<Dtos.GuidObject2> ConvertInvolvementRoleToGuid(string roleId)
+        /// <param name="campusInvolvementEntities"></param>
+        /// <returns>Dtos.CampusInvolvement</returns>
+        private Dtos.CampusInvolvement ConvertCampusInvolvementEntityToDtoAsync(Domain.Student.Entities.CampusInvolvement source,
+            Dictionary<string, string> personGuidCollection,
+            Dictionary<string, string> campusOrganizationsGuidCollection,
+            Dictionary<string, string> campusInvolvementRolesGuidCollection)
         {
-            Dtos.GuidObject2 guidObject = null;
-            
-            if (string.IsNullOrEmpty(roleId))
-            {
-                return guidObject;
-            }
+            if (source == null)
+                return null;
 
-            if (campusInvolvementRoles == null)
-            {
-                campusInvolvementRoles = await _studentReferenceDataRepository.GetCampusInvolvementRolesAsync(true);
-            }
+            var campusInvolvementDto = new Dtos.CampusInvolvement();
+            var guid = source.CampusInvolvementId;
+            var id = source.CampusOrganizationId + "*" + source.PersonId;
 
-            var campusInvRole = campusInvolvementRoles.FirstOrDefault(i => i.Code.Equals(roleId, StringComparison.OrdinalIgnoreCase));
-            if (campusInvRole != null)
-            {
-                guidObject = new Dtos.GuidObject2(campusInvRole.Guid);
-            }
+            campusInvolvementDto.Id = guid;
+            campusInvolvementDto.PersonId = ConvertPersonIdToGuid(source.PersonId, personGuidCollection, guid, id);
+            campusInvolvementDto.AcademicPeriod = null;
+            campusInvolvementDto.CampusOrganizationId = ConvertCampusOrganizationIdToGuid(source.CampusOrganizationId, campusOrganizationsGuidCollection, guid, id);
+            campusInvolvementDto.InvolvementStartOn = source.StartOn;
+            campusInvolvementDto.InvolvementEndOn = source.EndOn;
+            campusInvolvementDto.InvolvementRole = ConvertCampusInvolvementRoleIdToGuid(source.RoleId, campusInvolvementRolesGuidCollection, guid, id);
+            return campusInvolvementDto;
+        }               
 
-            return guidObject;
+        /// <summary>
+        /// Convert a personID to a Guid Object
+        /// </summary>
+        /// <param name="personId">a personID</param>
+        /// <param name="personGuidCollection">a dictionary of associated person guids and ids</param>
+        /// <param name="guid">campus involvement guid</param>
+        /// <param name="id">campus org members id</param>
+        /// <returns>guidObject</returns>
+        private Dtos.GuidObject2 ConvertPersonIdToGuid(string personId, Dictionary<string, string> personGuidCollection, string guid, string id)
+        {
+            if (personId == null)
+            {
+                return null;
+            }
+            var personGuid = string.Empty;
+
+            if (personGuidCollection == null)
+            {
+                IntegrationApiExceptionAddError(string.Format("Unable to locate guid for person ID : '{0}'", personId),
+                           guid: guid, id: id, httpStatusCode: HttpStatusCode.NotFound);
+            }
+            else
+            {
+
+                personGuidCollection.TryGetValue(personId, out personGuid);
+                if (string.IsNullOrEmpty(personGuid))
+                {
+                    IntegrationApiExceptionAddError(string.Format("Unable to locate guid for person ID : '{0}'", personId),
+                              guid: guid, id: id, httpStatusCode: HttpStatusCode.NotFound);
+                }
+            }
+            return (string.IsNullOrEmpty(personGuid)) ? null : new GuidObject2(personGuid);
         }
 
         /// <summary>
-        /// Gets campus organization id
+        /// Convert a campus organization id to a Guid Object
         /// </summary>
-        /// <param name="campusOrgEntityId"></param>
-        /// <param name="filteredCampusOrgEntities"></param>
-        /// <returns>Dtos.GuidObject2</returns>
-        private Dtos.GuidObject2 ConvertCampusOrgEntityIdToGuid(string campusOrgEntityId, IEnumerable<Domain.Student.Entities.CampusOrganization> filteredCampusOrgEntities)
+        /// <param name="campusOrganizationId">a campus organization id</param>
+        /// <param name="campusOrganizationsGuidCollection">a dictionnary of associated campus organization guids and ids</param>
+        /// <param name="guid">campus involvement guid</param>
+        /// <param name="id">campus org members id</param>
+        private Dtos.GuidObject2 ConvertCampusOrganizationIdToGuid(string campusOrganizationId, Dictionary<string, string> campusOrganizationsGuidCollection, string guid, string id)
         {
-            Dtos.GuidObject2 campusOrgId = null;
-
-            var entity = filteredCampusOrgEntities.FirstOrDefault(i => i.Code.Equals(campusOrgEntityId, StringComparison.OrdinalIgnoreCase));
-            if (entity != null)
+            if (campusOrganizationId == null)
             {
-                campusOrgId = new Dtos.GuidObject2(entity.Guid);
+                return null;
             }
-            return campusOrgId;
+            var campusOrganizationGuid = string.Empty;
+
+            if (campusOrganizationsGuidCollection == null)
+            {
+                IntegrationApiExceptionAddError(string.Format("Unable to locate guid for campus organization ID : '{0}'", campusOrganizationId),
+                           guid: guid, id: id, httpStatusCode: HttpStatusCode.NotFound);
+            }
+            else
+            {
+
+                campusOrganizationsGuidCollection.TryGetValue(campusOrganizationId, out campusOrganizationGuid);
+                if (string.IsNullOrEmpty(campusOrganizationGuid))
+                {
+                    IntegrationApiExceptionAddError(string.Format("Unable to locate guid for campus organization ID : '{0}'", campusOrganizationId),
+                              guid: guid, id: id, httpStatusCode: HttpStatusCode.NotFound);
+                }
+            }
+            return (string.IsNullOrEmpty(campusOrganizationGuid)) ? null : new GuidObject2(campusOrganizationGuid);
         }
 
         /// <summary>
-        /// Verifies if the user has the correct permissions to view a person.
+        /// Convert a campus involvement role id to a Guid Object
         /// </summary>
-        private void CheckUserCampusInvolvementViewPermissions()
+        /// <param name="campusInvolvementRoleId">a campus involvement role id</param>
+        /// <param name="campusInvolvementRolesGuidCollection">a dictionary of associated campus involvement roles guids and ids</param>
+        /// <param name="guid">campus involvement guid</param>
+        /// <param name="id">campus org members id</param>
+        private Dtos.GuidObject2 ConvertCampusInvolvementRoleIdToGuid(string campusInvolvementRoleId, Dictionary<string, string> campusInvolvementRolesGuidCollection, string guid, string id)
         {
-            // access is ok if the current user has the view campus involvements permission
-            if (!HasPermission(StudentPermissionCodes.ViewCampusInvolvements))
+            if (campusInvolvementRoleId == null)
             {
-                logger.Error("User '" + CurrentUser.UserId + "' is not authorized to view campus-involvements.");
-                throw new PermissionsException("User is not authorized to view campus-involvements.");
+                return null;
             }
+            var campusInvolvementRoleGuid = string.Empty;
+
+            if (campusInvolvementRolesGuidCollection == null)
+            {
+                IntegrationApiExceptionAddError(string.Format("Unable to locate guid for campus involvement role ID : '{0}'", campusInvolvementRoleId),
+                           guid: guid, id: id, httpStatusCode: HttpStatusCode.NotFound);
+            }
+            else
+            {
+
+                campusInvolvementRolesGuidCollection.TryGetValue(campusInvolvementRoleId, out campusInvolvementRoleGuid);
+                if (string.IsNullOrEmpty(campusInvolvementRoleGuid))
+                {
+                    IntegrationApiExceptionAddError(string.Format("Unable to locate guid for campus involvement role ID : '{0}'", campusInvolvementRoleId),
+                              guid: guid, id: id, httpStatusCode: HttpStatusCode.NotFound);
+                }
+            }
+            return (string.IsNullOrEmpty(campusInvolvementRoleGuid)) ? null : new GuidObject2(campusInvolvementRoleGuid);
         }
 
         #endregion

@@ -1,10 +1,8 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates. */
 
 using Ellucian.Colleague.Coordination.HumanResources.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
-using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
-using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Repositories;
 using Ellucian.Web.Adapters;
 using Ellucian.Web.Security;
@@ -16,6 +14,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 {
@@ -57,11 +56,6 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             BuildData();
             // Set up current user
             _currentUserFactory = new CurrentUserSetup.PersonUserFactory();
-
-            // Mock permissions
-            var permissionView = new Ellucian.Colleague.Domain.Entities.Permission(HumanResourcesPermissionCodes.ViewContributionPayrollDeductions);
-            personRole.AddPermission(permissionView);
-            _roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() {personRole});
 
             _contributionPayrollDeductionsService = new ContributionPayrollDeductionsService(_contributionPayrollDeductionsRepositoryMock.Object, baseConfigurationRepository,
                 _adapterRegistryMock.Object, _currentUserFactory, _roleRepositoryMock.Object, _loggerMock.Object);
@@ -120,7 +114,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
                 Assert.AreEqual(expected.Guid, actual.Id);
                 Assert.AreEqual(expected.Amount, actual.Amount.Value);
                 Assert.AreEqual(expected.DeductionDate, actual.DeductedOn);
-                Assert.AreEqual(expected.ArrangementGuid, actual.Arrangement.Id);
+                
                 
             }
         }
@@ -152,8 +146,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
             Assert.AreEqual(expected.Guid, actual.Id);
             Assert.AreEqual(expected.Amount, actual.Amount.Value);
             Assert.AreEqual(expected.DeductionDate, actual.DeductedOn);
-            Assert.AreEqual(expected.ArrangementGuid, actual.Arrangement.Id);
-            
+           
         }
 
         [TestMethod]
@@ -174,7 +167,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
         
         [TestMethod]
-        [ExpectedException(typeof (Exception))]
+        [ExpectedException(typeof (IntegrationApiException))]
         public async Task ContributionPayrollDeductions_GET_ById_ReturnsNullEntity_Exception()
         {
             var id = "ce4d68f6-257d-4052-92c8-17eed0f088fa";
@@ -187,13 +180,22 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Tests.Services
 
             _contributionPayrollDeductionsEntities = new List<Domain.HumanResources.Entities.PayrollDeduction>()
             {
-                new PayrollDeduction(contributionPayrollDeductionsGuid, "123", "456", arrangementGuid, new DateTime(2017, 01, 01), "USD", 52),
-                new PayrollDeduction("905c69ff-280b-4ed3-9474-662a43616a8a", "123", "456", arrangementGuid, new DateTime(2017, 01, 02), "USD", 60)
+                new PayrollDeduction(contributionPayrollDeductionsGuid, "123", "456", new DateTime(2017, 01, 01), "USD", 52),
+                new PayrollDeduction("905c69ff-280b-4ed3-9474-662a43616a8a", "123", "456", new DateTime(2017, 01, 02), "USD", 60)
 
             };
             _contributionPayrollDeductionsEntityTuple = new Tuple<IEnumerable<Domain.HumanResources.Entities.PayrollDeduction>, int>(_contributionPayrollDeductionsEntities, _contributionPayrollDeductionsEntities.Count());
             _contributionPayrollDeductionsRepositoryMock.Setup(i => i.GetContributionPayrollDeductionsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(_contributionPayrollDeductionsEntityTuple);
             _contributionPayrollDeductionsRepositoryMock.Setup(i => i.GetContributionPayrollDeductionByGuidAsync(It.IsAny<string>())).ReturnsAsync(_contributionPayrollDeductionsEntities.ToList()[0]);
+
+            var personGuidCollection = new Dictionary<string, string>();
+            personGuidCollection.Add("123", arrangementGuid);
+            personGuidCollection.Add("456", arrangementGuid);
+
+            _contributionPayrollDeductionsRepositoryMock.Setup(i => i.GetPerbenGuidsCollectionAsync(It.IsAny<List<string>>())).ReturnsAsync(personGuidCollection);
+                
+
+
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -22,7 +22,7 @@ using System.Web.Http.ModelBinding;
 using Ellucian.Web.Http.ModelBinding;
 using System.Net.Http;
 using Ellucian.Colleague.Domain.Base.Exceptions;
-using System.Web;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -129,7 +129,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="studentUnverifiedGradesSubmissions">DTO of the updated studentUnverifiedGradesSubmissions</param>
         /// <returns>A StudentUnverifiedGrades object <see cref="Dtos.StudentUnverifiedGrades"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPut, EedmResponseFilter]
+        [HttpPut, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions)]
         public async Task<Dtos.StudentUnverifiedGrades> PutStudentUnverifiedGradesSubmissionsAsync([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.StudentUnverifiedGradesSubmissions studentUnverifiedGradesSubmissions)
         {
            
@@ -159,7 +159,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
-               
+                _studentUnverifiedGradesService.ValidatePermissions(GetPermissionsMetaData());
                 var dpList = await _studentUnverifiedGradesService.GetDataPrivacyListByApi(GetRouteResourceName(), true);
 
                 // Save incoming Last Attendance info for later comparison after partial put logic
@@ -202,6 +202,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
                         }
                     }
                 }
+
+                await _studentUnverifiedGradesService.ImportExtendedEthosData(await ExtractExtendedData(await _studentUnverifiedGradesService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
 
                 var studentUnverifiedGradesReturn = await _studentUnverifiedGradesService.UpdateStudentUnverifiedGradesSubmissionsAsync(studentUnverifiedGradesDto);
 
@@ -253,7 +255,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="studentUnverifiedGradesSubmissions">DTO of the new studentUnverifiedGradesSubmissions</param>
         /// <returns>A studentUnverifiedGrades object <see cref="Dtos.StudentUnverifiedGrades"/> in HeDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPost]
+        [HttpPost, PermissionsFilter(StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions)]
         public async Task<Dtos.StudentUnverifiedGrades> PostStudentUnverifiedGradesSubmissionsAsync(Dtos.StudentUnverifiedGradesSubmissions studentUnverifiedGradesSubmissions)
         {
             
@@ -272,7 +274,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
-      
+                _studentUnverifiedGradesService.ValidatePermissions(GetPermissionsMetaData());
                 await _studentUnverifiedGradesService.ImportExtendedEthosData(await ExtractExtendedData(await _studentUnverifiedGradesService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));
                 var response = await _studentUnverifiedGradesService.CreateStudentUnverifiedGradesSubmissionsAsync(studentUnverifiedGradesSubmissions);
                 //store dataprivacy list and get the extended data to store

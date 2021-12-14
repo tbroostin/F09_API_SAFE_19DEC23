@@ -10,6 +10,8 @@ namespace Ellucian.Colleague.Domain.Finance.Entities.AccountDue
 
         public DateTime? DueDate { get; set; }
 
+        public DateTimeOffset? DueDateOffset { get; set; }
+
         public string Description { get; set; }
 
         public bool Overdue { get; set; }

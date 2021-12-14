@@ -17,6 +17,7 @@ using Ellucian.Colleague.Dtos.Student.DegreePlans;
 using Ellucian.Colleague.Domain.Base.Exceptions;
 using Ellucian.Colleague.Domain.Student.Exceptions;
 using Ellucian.Colleague.Coordination.Student.Services;
+using Ellucian.Data.Colleague.Exceptions;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -259,7 +260,14 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         {
             try
             {
-                return await _studentDegreePlanService.GetDegreePlan6Async(id, validate, includeDrops);
+                var degreePlanAcadHistory = await _studentDegreePlanService.GetDegreePlan6Async(id, validate, includeDrops);
+                return degreePlanAcadHistory;
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Timeout have occurred while retrieval of degree plan for the student {0}", id);
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (PermissionsException peex)
             {
@@ -496,10 +504,19 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         public async Task<DegreePlanAcademicHistory3> Put6Async(DegreePlan4 degreePlan)
         {
             DegreePlanAcademicHistory3 returnDto = null;
-
+            if (degreePlan == null)
+            {
+                throw new ArgumentNullException("degreePlan", "degreePlan is null while updating degree plan");
+            }
             try
             {
                 returnDto = await _studentDegreePlanService.UpdateDegreePlan6Async(degreePlan);
+            }
+            catch (ColleagueSessionExpiredException tex)
+            {
+                string message = string.Format("Timeout have occurred while updating degree plan with Id {0}", degreePlan.Id);
+                _logger.Error(tex, message);
+                throw CreateHttpResponseException(message, HttpStatusCode.Unauthorized);
             }
             catch (InvalidOperationException ioex)
             {

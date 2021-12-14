@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base;
 using Ellucian.Colleague.Dtos.Base;
@@ -30,6 +30,7 @@ namespace Ellucian.Colleague.Coordination.Base.Adapters
             taxFormConfigurationDto.ConsentText = Source.ConsentParagraphs.ConsentText;
             taxFormConfigurationDto.ConsentWithheldText = Source.ConsentParagraphs.ConsentWithheldText;
             taxFormConfigurationDto.IsBypassingConsentPermitted = Source.IsBypassingConsentPermitted;
+            taxFormConfigurationDto.HideConsent = Source.HideConsent;
 
             return taxFormConfigurationDto;
         }

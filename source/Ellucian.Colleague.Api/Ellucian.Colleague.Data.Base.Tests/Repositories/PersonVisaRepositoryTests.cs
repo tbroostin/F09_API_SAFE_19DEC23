@@ -284,7 +284,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             {
                 var foreignPerson = foreignPersonDataContracts.First();
                 var person = personDataContracts.First();
-                dataReaderMock.Setup(i => i.ReadRecordAsync<ForeignPerson>("1", It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(i => i.ReadRecordAsync<ForeignPerson>("1", It.IsAny<bool>())).ReturnsAsync(() => null);
 
                 var actual = await personVisaRepository.GetPersonVisaByIdAsync("1");
             }
@@ -296,7 +296,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
                 var foreignPerson = foreignPersonDataContracts.First();
                 var person = personDataContracts.First();
                 dataReaderMock.Setup(i => i.ReadRecordAsync<ForeignPerson>("1", It.IsAny<bool>())).ReturnsAsync(foreignPerson);
-                dataReaderMock.Setup(i => i.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("1", It.IsAny<bool>())).ReturnsAsync(null);
+                dataReaderMock.Setup(i => i.ReadRecordAsync<Ellucian.Colleague.Data.Base.DataContracts.Person>("1", It.IsAny<bool>())).ReturnsAsync(() => null);
 
                 var actual = await personVisaRepository.GetPersonVisaByIdAsync("1");
             }

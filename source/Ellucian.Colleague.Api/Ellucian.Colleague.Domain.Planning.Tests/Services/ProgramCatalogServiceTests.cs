@@ -1,9 +1,11 @@
-﻿// Copyright 2013-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2013-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.Planning.Entities;
 using Ellucian.Colleague.Domain.Planning.Services;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Entities.Requirements;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using slf4net;
 using System;
 using System.Collections.Generic;
 
@@ -23,6 +25,8 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Services
             private CatalogPolicy catalogPolicy;
             private List<StudentProgram> studentPrograms = new List<StudentProgram>();
             private int currentYear = DateTime.Today.Year;
+            private Mock<ILogger> loggerMock;
+            private ILogger logger;
 
             [TestInitialize]
             public void Initialize()
@@ -47,13 +51,15 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Services
                 p1 = new Program("BA.ENGL", "Bachelors of Arts English", depts, true, academicLevel, cf, true);
                 p2 = new Program("BA.MATH", "Bachelors of Arts Math", depts, true, academicLevel, cf, true);
                 p3 = new Program("BA.ART", "Bachelors of Arts Art", depts, true, academicLevel, cf, true);
-                p3.Catalogs = new List<string>() { "2008", "2009", "2010", "2011", "2012", "2013", "2020" };
+                p3.Catalogs = new List<string>() { "2008", "2009", "2010", "2011", "2012", "2013", "2020", currentYear.ToString() };
 
                 //Set up the student programs
                 StudentProgram sp1 = new StudentProgram(studentId, p1.Code, "2009");
                 studentPrograms.Add(sp1);
                 StudentProgram sp2 = new StudentProgram(studentId, p2.Code, "2008");
                 studentPrograms.Add(sp2);
+                loggerMock = new Mock<ILogger>();
+                logger = loggerMock.Object;
             }
 
             [TestCleanup]
@@ -63,12 +69,10 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Services
             }
 
             [TestMethod]
-            [Ignore]
-            //TODO: VINAYAN 1/8/2020 - Remove before next integrations.          
             public void Policy_CurrentProgramCatalog_ReturnValue()
             {
                 catalogPolicy = CatalogPolicy.CurrentCatalogYear;
-                string defaultCatalog = ProgramCatalogService.DeriveDefaultCatalog(p3, studentPrograms, allCatalogs, catalogPolicy);
+                string defaultCatalog = ProgramCatalogService.DeriveDefaultCatalog(p3, studentPrograms, allCatalogs, catalogPolicy, logger);
                 Assert.AreEqual(currentYear.ToString(), defaultCatalog);
             }
 
@@ -76,7 +80,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Services
             public void Policy_StudentCatalogYear_ReturnValue()
             {
                 catalogPolicy = CatalogPolicy.StudentCatalogYear;
-                string defaultCatalog = ProgramCatalogService.DeriveDefaultCatalog(p3, studentPrograms, allCatalogs, catalogPolicy);
+                string defaultCatalog = ProgramCatalogService.DeriveDefaultCatalog(p3, studentPrograms, allCatalogs, catalogPolicy, logger);
                 Assert.AreEqual("2008", defaultCatalog);
             }
 
@@ -86,7 +90,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Services
             {
                 catalogPolicy = CatalogPolicy.StudentCatalogYear;
                 IEnumerable<StudentProgram> emptyStudentPrograms = new List<StudentProgram>();
-                string defaultCatalog = ProgramCatalogService.DeriveDefaultCatalog(p3, emptyStudentPrograms, allCatalogs, catalogPolicy);
+                string defaultCatalog = ProgramCatalogService.DeriveDefaultCatalog(p3, emptyStudentPrograms, allCatalogs, catalogPolicy, logger);
             }
 
             [TestMethod]
@@ -94,7 +98,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Services
             public void StudentHasNullPrograms()
             {
                 catalogPolicy = CatalogPolicy.StudentCatalogYear;
-                string defaultCatalog = ProgramCatalogService.DeriveDefaultCatalog(p3, null, allCatalogs, catalogPolicy);
+                string defaultCatalog = ProgramCatalogService.DeriveDefaultCatalog(p3, null, allCatalogs, catalogPolicy, logger);
             }
 
             [TestMethod]
@@ -103,7 +107,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Services
             {
                 catalogPolicy = CatalogPolicy.StudentCatalogYear;
                 ICollection<Catalog> emptyCatalogs = new List<Catalog>();
-                string defaultCatalog = ProgramCatalogService.DeriveDefaultCatalog(p3, studentPrograms, emptyCatalogs, catalogPolicy);
+                string defaultCatalog = ProgramCatalogService.DeriveDefaultCatalog(p3, studentPrograms, emptyCatalogs, catalogPolicy, logger);
             }
 
             [TestMethod]
@@ -111,7 +115,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Services
             public void NullCatalogs()
             {
                 catalogPolicy = CatalogPolicy.StudentCatalogYear;
-                string defaultCatalog = ProgramCatalogService.DeriveDefaultCatalog(p3, studentPrograms, null, catalogPolicy);
+                string defaultCatalog = ProgramCatalogService.DeriveDefaultCatalog(p3, studentPrograms, null, catalogPolicy, logger);
             }
 
             [TestMethod]
@@ -119,7 +123,7 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Services
             public void NullProgram()
             {
                 catalogPolicy = CatalogPolicy.StudentCatalogYear;
-                string defaultCatalog = ProgramCatalogService.DeriveDefaultCatalog(null, studentPrograms, allCatalogs, catalogPolicy);
+                string defaultCatalog = ProgramCatalogService.DeriveDefaultCatalog(null, studentPrograms, allCatalogs, catalogPolicy, logger);
             }
         }
     }

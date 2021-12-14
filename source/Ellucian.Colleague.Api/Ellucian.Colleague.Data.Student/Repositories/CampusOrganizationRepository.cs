@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
@@ -7,13 +7,14 @@ using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Cache;
 using Ellucian.Web.Dependency;
 using Ellucian.Web.Http.Configuration;
-using Ellucian.Web.Utility;
 using slf4net;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Domain.Base.Services;
+using Ellucian.Colleague.Domain.Entities;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Data.Student.Repositories
 {
@@ -21,6 +22,9 @@ namespace Ellucian.Colleague.Data.Student.Repositories
     public class CampusOrganizationRepository : BaseColleagueRepository, ICampusOrganizationRepository
     {
         private readonly int bulkReadSize;
+        const string AllCampusInvolvementsCache = "AllCampusInvolvements";
+        const int AllCampusInvolvementsCacheTimeout = 20;
+
         public CampusOrganizationRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings settings)
             : base(cacheProvider, transactionFactory, logger)
         {
@@ -207,25 +211,84 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns></returns>
         public async Task<Tuple<IEnumerable<CampusInvolvement>, int>> GetCampusInvolvementsAsync(int offset, int limit)
         {
-            var campusInlvIds = await DataReader.SelectAsync("CAMPUS.ORG.MEMBERS", "");
-            Array.Sort(campusInlvIds);
+            int totalCount = 0;
+            string campusInvolvementsCacheKey = CacheSupport.BuildCacheKey(AllCampusInvolvementsCache);
+            string[] subList = null;
 
-            var totalCount = campusInlvIds.Count();
+            var campusInvolvementEntities = new List<Domain.Student.Entities.CampusInvolvement>();
 
-            var campusOrgsDataContracts = new List<CampusOrgMembers>();
+            var repositoryException = new RepositoryException();
 
-            var sublist = campusInlvIds.Skip(offset).Take(limit);
+            var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                campusInvolvementsCacheKey,
+                "",
+                offset,
+                limit,
+                AllCampusInvolvementsCacheTimeout,
 
-            var newCampusInlvIds = sublist.ToArray();
+                async () =>
+                {
+                    var campusOrgMemberIds = await DataReader.SelectAsync("CAMPUS.ORG.MEMBERS", null);
+                    if (campusOrgMemberIds == null || !campusOrgMemberIds.Any())
+                    {
+                        return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                    }
+                    var requirements = new CacheSupport.KeyCacheRequirements()
+                    {
+                        limitingKeys = campusOrgMemberIds.Distinct().ToList(),
+                    };
 
-            if (newCampusInlvIds.Any())
+                    return requirements;
+                });
+
+            if (keyCache == null || keyCache.Sublist == null || !keyCache.Sublist.Any())
             {
-                var bulkData = await DataReader.BulkReadRecordAsync<CampusOrgMembers>("CAMPUS.ORG.MEMBERS", newCampusInlvIds);
-                campusOrgsDataContracts.AddRange(bulkData);
+                return new Tuple<IEnumerable<Domain.Student.Entities.CampusInvolvement>, int>(new List<Domain.Student.Entities.CampusInvolvement>(), 0);
             }
-            var campusInvolvementList = BuildCampusInvolvemments(campusOrgsDataContracts);
+            subList = keyCache.Sublist.ToArray();
 
-            return new Tuple<IEnumerable<CampusInvolvement>, int>(campusInvolvementList, totalCount); 
+            totalCount = keyCache.TotalCount.Value;
+            var results = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.CampusOrgMembers>("CAMPUS.ORG.MEMBERS", subList);
+
+            if (results.Equals(default(BulkReadOutput<DataContracts.CampusOrgMembers>)))
+                return new Tuple<IEnumerable<Domain.Student.Entities.CampusInvolvement>, int>(new List<Domain.Student.Entities.CampusInvolvement>(), 0);
+           
+            if (results.InvalidKeys.Any() || results.InvalidRecords.Any())
+            {
+                if (results.InvalidKeys.Any())
+                {
+                    repositoryException.AddErrors(results.InvalidKeys
+                        .Select(key => new RepositoryError("invalid.key",
+                        string.Format("Unable to locate the following key '{0}'.", key.ToString()))));
+                }
+                if (results.InvalidRecords.Any())
+                {
+                    repositoryException.AddErrors(results.InvalidRecords
+                       .Select(r => new RepositoryError("invalid.record",
+                       string.Format("Error: '{0}'. Entity: 'CAMPUS.ORG.MEMBERS', Record ID: '{1}' ", r.Value, r.Key))
+                       { }));
+                }
+                throw repositoryException;
+            }
+            try
+            {
+                campusInvolvementEntities = BuildCampusInvolvemments(results.BulkRecordsRead.ToList()).ToList();
+
+            }
+            catch (RepositoryException ex)
+            {
+                repositoryException.AddErrors(ex.Errors);
+            }
+            if (repositoryException.Errors.Any())
+            {
+                throw repositoryException;
+            }
+            return new Tuple<IEnumerable<Domain.Student.Entities.CampusInvolvement>, int>(campusInvolvementEntities, totalCount);
         }
 
         /// <summary>
@@ -235,8 +298,21 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns>CampusInvolvement</returns>
         public async Task<CampusInvolvement> GetGetCampusInvolvementByIdAsync(string id)
         {
+            if (string.IsNullOrEmpty(id))
+            {
+                var errorMessage = "ID is required to get a campus involvement.";
+                throw new ArgumentException(errorMessage);
+            }
             var campusInvId = await GetRecordKeyFromGuidAsync(id);
+            if (string.IsNullOrEmpty(campusInvId))
+            {
+                var errorMessage = string.Format("Campus Org Members record with ID : '{0}' is not a valid campus involvement.", id);
+                throw new KeyNotFoundException(errorMessage);
+            }
             var campusOrgsDataContract = await DataReader.ReadRecordAsync<CampusOrgMembers>("CAMPUS.ORG.MEMBERS", campusInvId);
+            if (campusOrgsDataContract == null)
+            {
+                throw new KeyNotFoundException("Invalid Campus Org Member ID: " + campusInvId);}
             var campusInvolvementEntity = BuildCampusInvolvemment(campusOrgsDataContract);
 
             return campusInvolvementEntity;
@@ -265,32 +341,117 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         /// <returns></returns>
         private CampusInvolvement BuildCampusInvolvemment(CampusOrgMembers campusOrgsDataContract)
         {
-            string[] ids = campusOrgsDataContract.Recordkey.Split('*');
-            CampusInvolvement campusInvolvement = new CampusInvolvement(campusOrgsDataContract.RecordGuid, ids[0], ids[1]);
-
-            if (campusOrgsDataContract.CmpmStartDates != null && campusOrgsDataContract.CmpmStartDates.Any())
+            var repositoryException = new RepositoryException();
+            try
             {
-                campusInvolvement.StartOn = campusOrgsDataContract.CmpmStartDates.Where(dt => dt != null).OrderByDescending(d => d.Value).FirstOrDefault();
-            }
-
-            if (campusOrgsDataContract.CmpmEndDates != null && campusOrgsDataContract.CmpmEndDates.Any())
-            {
-                campusInvolvement.EndOn = campusOrgsDataContract.CmpmEndDates.Where(dt => dt != null).OrderByDescending(d => d.Value).FirstOrDefault();
-            }
-
-            campusInvolvement.AcademicPeriodId = string.Empty;
-
-            if (campusOrgsDataContract.CmpmRoles.Any())
-            {
-                var roleId = campusOrgsDataContract.CmpmRoles.FirstOrDefault();
-                if (!string.IsNullOrEmpty(roleId))
+                string[] ids = campusOrgsDataContract.Recordkey.Split('*');
+                if (string.IsNullOrEmpty(ids[0]))
                 {
-                    campusInvolvement.RoleId = roleId;
+                    repositoryException.AddError(new RepositoryError("Bad.Data", "Missing Person ID")
+                    {
+                        SourceId = campusOrgsDataContract != null ? campusOrgsDataContract.Recordkey : "",
+                        Id = campusOrgsDataContract != null ? campusOrgsDataContract.RecordGuid : ""
+                    });
                 }
+                if (string.IsNullOrEmpty(ids[1]))
+                {
+                    repositoryException.AddError(new RepositoryError("Bad.Data", "Missing Campus Organization ID")
+                    {
+                        SourceId = campusOrgsDataContract != null ? campusOrgsDataContract.Recordkey : "",
+                        Id = campusOrgsDataContract != null ? campusOrgsDataContract.RecordGuid : ""
+                    });
+                }
+                if (string.IsNullOrEmpty(campusOrgsDataContract.RecordGuid))
+                {
+                    repositoryException.AddError(new RepositoryError("Bad.Data", "Missing Campus Involvements GUID, Entity: 'CAMPUS.ORG.MEMBERS', Record ID: '" + campusOrgsDataContract.Recordkey + "'")
+                    {
+                        SourceId = campusOrgsDataContract != null ? campusOrgsDataContract.Recordkey : ""
+                    });
+                }
+                // check for required fields, otherwise the domain entity constructor will throw errors.
+                if (repositoryException.Errors.Any())
+                {
+                    throw repositoryException;
+                }
+                CampusInvolvement campusInvolvement = new CampusInvolvement(campusOrgsDataContract.RecordGuid, ids[0], ids[1]);
+
+                if (campusOrgsDataContract.CmpmStartDates != null && campusOrgsDataContract.CmpmStartDates.Any())
+                {
+                    campusInvolvement.StartOn = campusOrgsDataContract.CmpmStartDates.Where(dt => dt != null).OrderByDescending(d => d.Value).FirstOrDefault();
+                }
+
+                if (campusOrgsDataContract.CmpmEndDates != null && campusOrgsDataContract.CmpmEndDates.Any())
+                {
+                    campusInvolvement.EndOn = campusOrgsDataContract.CmpmEndDates.Where(dt => dt != null).OrderByDescending(d => d.Value).FirstOrDefault();
+                }
+
+                campusInvolvement.AcademicPeriodId = string.Empty;
+
+                if (campusOrgsDataContract.CmpmRoles.Any())
+                {
+                    var roleId = campusOrgsDataContract.CmpmRoles.FirstOrDefault();
+                    if (!string.IsNullOrEmpty(roleId))
+                    {
+                        campusInvolvement.RoleId = roleId;
+                    }
+                }
+                return campusInvolvement;
             }
-            return campusInvolvement;
+            catch (Exception ex)
+            {
+                repositoryException.AddError(new RepositoryError("Bad.Data", ex.Message)
+                {
+                    SourceId = campusOrgsDataContract != null ? campusOrgsDataContract.Recordkey : "",
+                    Id = campusOrgsDataContract != null ? campusOrgsDataContract.RecordGuid : ""
+                });
+                throw repositoryException;
+            }
         }
 
         #endregion
+
+        /// <summary>
+        /// Using a collection of  ids, get a dictionary collection of associated guids
+        /// </summary>
+        /// <param name="ids">collection of  ids</param>
+        /// <returns>Dictionary consisting of a ids (key) and guids (value)</returns>
+        public async Task<Dictionary<string, string>> GetGuidsCollectionAsync(IEnumerable<string> ids, string filename)
+        {
+            if ((ids == null) || (ids != null && !ids.Any()))
+            {
+                return new Dictionary<string, string>();
+            }
+            var guidCollection = new Dictionary<string, string>();
+            try
+            {
+                var guidLookup = ids
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct().ToList()
+                    .ConvertAll(p => new RecordKeyLookup(filename, p, false)).ToArray();
+
+                var recordKeyLookupResults = await DataReader.SelectAsync(guidLookup);
+
+                if ((recordKeyLookupResults != null) && (recordKeyLookupResults.Any()))
+                {
+                    foreach (var recordKeyLookupResult in recordKeyLookupResults)
+                    {
+                        if (recordKeyLookupResult.Value != null)
+                        {
+                            var splitKeys = recordKeyLookupResult.Key.Split(new[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+                            if (!guidCollection.ContainsKey(splitKeys[1]))
+                            {
+                                guidCollection.Add(splitKeys[1], recordKeyLookupResult.Value.Guid);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format("Error occured while getting guids for {0}.", filename), ex); ;
+            }
+
+            return guidCollection;
+        }
     }
 }

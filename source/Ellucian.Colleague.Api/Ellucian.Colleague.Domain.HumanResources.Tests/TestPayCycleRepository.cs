@@ -17,6 +17,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
         {
             public string id;
             public string description;
+            public string selfServiceDescription;
             public string payFrequency;
             public string workWeekStartDay;
             public DayOfWeek startDay;
@@ -29,6 +30,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             public List<DateTime?> paycheckDate;
             public List<string> periodStatus;
             public List<string> takeBenefits;
+            public bool displayInSelfService;
         }
 
         public class PayPeriodRecord
@@ -146,6 +148,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             {
                 id = "BW",
                 description = "Bi-weekly 26/year",
+                selfServiceDescription = "self-service bw",
                 payFrequency = "BW",
                 workWeekStartDay = "SU",
                 payClassIds = new List<string>() {"BWS", "BWH"},                
@@ -160,11 +163,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 paycheckDate = new List<DateTime?>(),
                 periodStatus = new List<string>(),
                 takeBenefits = new List<string>(),
+                displayInSelfService = true
             },
             new PayCycleRecord()
             {
                 id = "SM",
                 description = "Semi-monthly 24/year",
+                selfServiceDescription = "ss 24/year",
                 payFrequency = "SM",
                 workWeekStartDay = "M",
                 payClassIds = new List<string>() {"SMS", "ADSM", "ADM"},
@@ -179,6 +184,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
                 paycheckDate = new List<DateTime?>(),
                 periodStatus = new List<string>(),
                 takeBenefits = new List<string>(),
+                displayInSelfService = false
             },
             new PayCycleRecord()
             {
@@ -233,7 +239,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests
             {
                 annualPayFrequency = payCycleFrequencies.FirstOrDefault(f => f.Code == record.payFrequency).AnnualPayFrequency;
             }
-
+            string description = !string.IsNullOrEmpty(record.selfServiceDescription) ? record.selfServiceDescription : record.description;
             return new PayCycle(record.id, record.description, record.startDay)
             {
                 PayClassIds = record.payClassIds,

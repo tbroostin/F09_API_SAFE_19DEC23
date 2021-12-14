@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Diagnostics;
@@ -350,7 +350,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
                         catch (Exception ex)
                         {
-                            logger.Error(ex, "Unable to add formatted name to person " + personData.Recordkey + " with type " + pFormat.PersonFormattedNameTypesAssocMember + " and name " + pFormat.PersonFormattedNamesAssocMember);
+                            logger.Error(ex, "Unable to add formatted name to person " + personData.Recordkey + " with type " + pFormat.PersonFormattedNameTypesAssocMember);
                         }
                     }
                 }
@@ -421,7 +421,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 }
                 catch (Exception e)
                 {
-                    logger.Warn(e, string.Format("Unable to determine the educational goal for '{0}' ", studentData.Recordkey));
+                    logger.Error(e, string.Format("Unable to determine the educational goal for '{0}' ", studentData.Recordkey));
                 }
 
 
@@ -438,7 +438,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
                         catch (Exception ex)
                         {
-                            logger.Warn(ex, string.Format("Unable to process an Email Address for Student: '{0}'", studentData.Recordkey));
+                            logger.Error(ex, string.Format("Unable to process an Email Address for Student: '{0}'", studentData.Recordkey));
                         }
                     }
                 }
@@ -463,7 +463,7 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                         }
                         catch (Exception ex)
                         {
-                            logger.Warn(ex, string.Format("Unable to process a completed advisement for Student: '{0}'", studentData.Recordkey));
+                            logger.Error(ex, string.Format("Unable to process a completed advisement for Student: '{0}'", studentData.Recordkey));
                         }
                     }
                 }

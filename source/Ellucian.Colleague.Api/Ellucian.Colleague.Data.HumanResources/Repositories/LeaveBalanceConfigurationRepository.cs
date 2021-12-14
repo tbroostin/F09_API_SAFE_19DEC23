@@ -1,10 +1,6 @@
-﻿/*Copyright 2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2018-2021 Ellucian Company L.P. and its affiliates.*/
 using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Web.Dependency;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Ellucian.Data.Colleague;
 using Ellucian.Web.Cache;
@@ -31,6 +27,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
             if (hrssDefaults != null)
             {
                 leaveManagementConfiguration.ExcludedLeavePlanIds = hrssDefaults.HrssExcludeLeavePlanIds;
+                //Set the threshold 
+                leaveManagementConfiguration.LeaveRequestLookbackDays = hrssDefaults.HrssLeaveLkbk;
             }
             else
             {

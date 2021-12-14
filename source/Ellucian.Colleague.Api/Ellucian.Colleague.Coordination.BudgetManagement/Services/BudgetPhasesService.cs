@@ -80,11 +80,11 @@ namespace Ellucian.Colleague.Coordination.BudgetManagement.Services
             }
             catch (KeyNotFoundException ex)
             {
-                throw new KeyNotFoundException("No budget phase was found for guid " + guid, ex);
+                throw new KeyNotFoundException("No budget-phases was found for GUID " + guid, ex);
             }
             catch (InvalidOperationException ex)
             {
-                throw new KeyNotFoundException("No budget phase was found for guid " + guid, ex);
+                throw new KeyNotFoundException("No budget-phases was found for GUID " + guid, ex);
             }
             catch (ArgumentException ex)
             {

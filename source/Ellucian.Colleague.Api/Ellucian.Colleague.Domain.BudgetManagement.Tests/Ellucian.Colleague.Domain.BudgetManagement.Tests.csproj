@@ -36,30 +36,39 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Ellucian.Colleague.Configuration, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Colleague.Configuration.dll</HintPath>
+    <Reference Include="Castle.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
+      <HintPath>..\packages\Castle.Core.4.4.0\lib\net45\Castle.Core.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Domain, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Colleague.Domain.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Configuration, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.25.0.10\lib\net472\Ellucian.Colleague.Configuration.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Legacy, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Colleague.Legacy.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Domain, Version=1.25.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.25.0.10\lib\net472\Ellucian.Colleague.Domain.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Colleague.Property, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Colleague.Property.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Legacy, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Colleague.Legacy.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Data.Colleague, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Data.Colleague.dll</HintPath>
+    <Reference Include="Ellucian.Colleague.Property, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Colleague.Property.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.Dmi.Client, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Dmi.Client.dll</HintPath>
+    <Reference Include="Ellucian.Data.Colleague, Version=1.25.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.25.0.10\lib\net472\Ellucian.Data.Colleague.dll</HintPath>
     </Reference>
-    <Reference Include="Ellucian.Dmi.Runtime, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.Dmi.Runtime.dll</HintPath>
+    <Reference Include="Ellucian.Dmi.Client, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.Dmi.Client.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Ellucian.Dmi.Runtime, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.25.0.10\lib\net472\Ellucian.Dmi.Runtime.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Logging, Version=1.0.0.1, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.248\lib\net451\Ellucian.Logging.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Ellucian.Logging.MSEL.1.0.0.256\lib\net451\Ellucian.Logging.dll</HintPath>
     </Reference>
     <Reference Include="Ellucian.Web.Cache, Version=1.0.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
       <HintPath>..\packages\Ellucian.Web.Cache.1.0.0.188\lib\net451\Ellucian.Web.Cache.dll</HintPath>
@@ -77,13 +86,15 @@
       <HintPath>..\packages\Ellucian.Web.Utility.1.0.0.184\lib\net451\Ellucian.Web.Utility.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.23.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\Ellucian.WebServices.Core.Config.dll</HintPath>
+    <Reference Include="Ellucian.WebServices.Core.Config, Version=1.22.0.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\Ellucian.WebServices.Core.Config.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="KellermanSoftware.Compare-NET-Objects, Version=2.1.0.0, Culture=neutral, PublicKeyToken=d970ace04cc85217, processorArchitecture=MSIL">
       <HintPath>..\packages\CompareNETObjects.2.01.0.0\lib\net451\KellermanSoftware.Compare-NET-Objects.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.IdentityModel, Version=3.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.IdentityModel.6.1.7600.16394\lib\net35\Microsoft.IdentityModel.dll</HintPath>
       <Private>True</Private>
@@ -116,36 +127,50 @@
       <HintPath>..\packages\Unity.Interception.2.1.505.2\lib\NET35\Microsoft.Practices.Unity.Interception.Configuration.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Moq, Version=4.2.1506.2016, Culture=neutral, PublicKeyToken=69f491c39445e920, processorArchitecture=MSIL">
-      <HintPath>..\packages\Moq.4.2.1506.2016\lib\net40\Moq.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Moq, Version=4.15.0.0, Culture=neutral, PublicKeyToken=69f491c39445e920, processorArchitecture=MSIL">
+      <HintPath>..\packages\Moq.4.15.2\lib\net45\Moq.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Serilog, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
+      <HintPath>..\packages\Serilog.2.10.0\lib\net46\Serilog.dll</HintPath>
+    </Reference>
+    <Reference Include="Serilog.Sinks.File, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
+      <HintPath>..\packages\Serilog.Sinks.File.4.1.0\lib\net45\Serilog.Sinks.File.dll</HintPath>
     </Reference>
     <Reference Include="slf4net, Version=0.1.32.1, Culture=neutral, PublicKeyToken=592edb3b6b36b5ba, processorArchitecture=MSIL">
       <HintPath>..\packages\slf4net.0.1.32.1\lib\net35\slf4net.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\System.dll</HintPath>
+    <Reference Include="System">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\System.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="System.ComponentModel.DataAnnotations, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\System.ComponentModel.DataAnnotations.dll</HintPath>
+    <Reference Include="System.ComponentModel.DataAnnotations">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\System.ComponentModel.DataAnnotations.dll</HintPath>
+      <Private>True</Private>
     </Reference>
+    <Reference Include="System.Configuration" />
     <Reference Include="System.IdentityModel" />
     <Reference Include="System.IdentityModel.Services" />
     <Reference Include="System.IdentityModel.Tokens.Jwt, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\System.IdentityModel.Tokens.Jwt.4.0.1\lib\net45\System.IdentityModel.Tokens.Jwt.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="System.Runtime.Serialization, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <HintPath>..\packages\EllucianColleagueDataAPI.1.23.0.5\lib\net472\System.Runtime.Serialization.dll</HintPath>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=4.0.4.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.5.3\lib\net461\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.Serialization">
+      <HintPath>..\packages\EllucianColleagueDataAPI.1.22.0.7\lib\net472\System.Runtime.Serialization.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Threading.Tasks.Dataflow, Version=4.5.24.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Tpl.Dataflow.4.5.24\lib\portable-net45+win8+wpa81\System.Threading.Tasks.Dataflow.dll</HintPath>
       <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.5.4\lib\net461\System.Threading.Tasks.Extensions.dll</HintPath>
     </Reference>
     <Reference Include="Thinktecture.IdentityModel, Version=3.4.6.0, Culture=neutral, PublicKeyToken=55c547a3498c89fb, processorArchitecture=MSIL">
       <HintPath>..\packages\Thinktecture.IdentityModel.3.4.6\lib\net45\Thinktecture.IdentityModel.dll</HintPath>

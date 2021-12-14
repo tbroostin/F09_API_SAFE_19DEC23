@@ -1,4 +1,4 @@
-﻿// Copyright 2015 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Web.Adapters;
 using slf4net;
 using System;
@@ -24,6 +24,7 @@ namespace Ellucian.Colleague.Coordination.Base.Adapters
         {
             AddMappingDependency<Domain.Base.Entities.ProxyWorkflowGroup, Dtos.Base.ProxyWorkflowGroup>();
             AddMappingDependency<Domain.Base.Entities.DemographicField, Dtos.Base.DemographicField>();
+            AddMappingDependency<Domain.Base.Entities.ProxyAndUserPermissionsMap, Dtos.Base.ProxyAndUserPermissionsMap>();
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2016 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Filters;
@@ -19,6 +19,7 @@ using Ellucian.Colleague.Api.Utility;
 using System.Linq;
 using Ellucian.Web.Security;
 using System.Net;
+using System.Net.Http;
 
 namespace Ellucian.Colleague.Api.Controllers
 {
@@ -370,5 +371,66 @@ namespace Ellucian.Colleague.Api.Controllers
 
         #endregion
 
+        #region Anonymous Grading
+
+        /// <summary>
+        /// Retrieves all Anonymous Grading Ids for a student either by terms or by sections.
+        /// </summary>
+        /// <param name="criteria">A <see cref="AnonymousGradingQueryCriteria ">AnonymousGradingQueryCriteria</see> used to retrieve Anonymous Grading Ids for a student.</param>
+        /// <returns>A collection of <see cref="StudentAnonymousGrading">Student Anonymous Grading Ids</see> for student</returns>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.NotFound returned if Anonymous Grading Ids are not found, either for specified terms or sections</exception>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned if the student id is not provided.</exception>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.Forbidden returned if the user does not have the role or permissions required</exception>
+        /// <exception><see cref="HttpResponseException">HttpResponseException</see> with <see cref="HttpResponseMessage">HttpResponseMessage</see> containing <see cref="HttpStatusCode">HttpStatusCode</see>.BadRequest returned for other errors that may occur</exception>
+        /// <accessComments>
+        /// An authenticated student may view their Anonymous Grading Ids for academic terms or course sections.
+        /// </accessComments>
+        [HttpPost]
+        public async Task<IEnumerable<StudentAnonymousGrading>> QueryAnonymousGradingIdsAsync([FromBody] AnonymousGradingQueryCriteria criteria)
+        {
+
+            try
+            {
+                if (criteria == null || string.IsNullOrWhiteSpace(criteria.StudentId))
+                {
+                    throw new ArgumentNullException("studentId", "a student id is required in order to retrieve grading ids for a student");
+                }
+
+                if ((criteria.TermIds != null && criteria.TermIds.Any()) && (criteria.SectionIds != null && criteria.SectionIds.Any()))
+                {
+                    throw new ArgumentException("either term ids or course section ids may be provided but not both");
+                }
+
+                return await _gradeService.QueryAnonymousGradingIdsAsync(criteria);
+            }
+            catch (ArgumentNullException anex)
+            {
+                // student id was not provided.
+                var exceptionMsg = "a student id was not provided.";
+                _logger.Error(anex, exceptionMsg);
+                throw CreateHttpResponseException(exceptionMsg, HttpStatusCode.BadRequest);
+            }
+            catch (ArgumentException anex)
+            {
+                // invalid parameters passed
+                var exceptionMsg = "Either term ids or course section ids may be provided but not both..";
+                _logger.Error(anex, exceptionMsg);
+                throw CreateHttpResponseException(exceptionMsg, HttpStatusCode.BadRequest);
+            }
+            catch (PermissionsException peex)
+            {
+                string exceptionMsg = "User is not permitted to retrieve anonymous grading ids for the student.";
+                _logger.Error(peex, exceptionMsg);
+                throw CreateHttpResponseException(exceptionMsg, HttpStatusCode.Forbidden);
+            }
+            catch (Exception ex)
+            {
+                // Any other error, described in returned message
+                _logger.Error(ex, ex.Message);
+                throw CreateHttpResponseException("Could not retrieve anonymous grading ids for this student.", HttpStatusCode.BadRequest);
+            }
+        }
+
+        #endregion Anonymous Grading
     }
 }

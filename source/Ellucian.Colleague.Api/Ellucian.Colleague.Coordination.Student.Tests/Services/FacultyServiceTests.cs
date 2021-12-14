@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -2095,6 +2095,327 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
         }
 
         [TestClass]
+        public class GetFacultySections5
+        {
+            private FacultyService facultyService;
+            private Mock<IFacultyRepository> facultyRepoMock;
+            private IFacultyRepository facultyRepo;
+            private Mock<IAdapterRegistry> adapterRegistryMock;
+            private IAdapterRegistry adapterRegistry;
+            private Mock<IStudentConfigurationRepository> configRepoMock;
+            private IStudentConfigurationRepository configRepo;
+            private Mock<ISectionRepository> sectionRepoMock;
+            private ISectionRepository sectionRepo;
+            private Mock<ITermRepository> termRepoMock;
+            private ITermRepository termRepo;
+            private Mock<IReferenceDataRepository> refRepoMock;
+            private IReferenceDataRepository refRepo;
+            private Mock<IStudentReferenceDataRepository> studentRefRepoMock;
+            private IStudentReferenceDataRepository studentRefRepo;
+            private Mock<IRoleRepository> roleRepoMock;
+            private IRoleRepository roleRepo;
+            private ICurrentUserFactory currentUserFactory;
+            private ILogger logger;
+            private string faculty1Id;
+            private Domain.Student.Entities.Faculty faculty1;
+            private string faculty2Id;
+            private Domain.Student.Entities.Faculty faculty2;
+            private Domain.Student.Entities.Section section1;
+            private Domain.Student.Entities.Section section2;
+            private Domain.Student.Entities.Section section3;
+            private Domain.Student.Entities.Section section4;
+            private Domain.Student.Entities.Section section5;
+            private Domain.Student.Entities.Section section6;
+            private Domain.Student.Entities.Section section7;
+            private Domain.Student.Entities.Section section8;
+            private Domain.Student.Entities.Section section9;
+            private Domain.Student.Entities.Section section10;
+            private Domain.Student.Entities.Section section11;
+            private Domain.Student.Entities.Section section12;
+            private Domain.Student.Entities.Term term1;
+            private Domain.Student.Entities.Term term2;
+            private Domain.Student.Entities.Term term3;
+            private StudentConfiguration config;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                facultyRepoMock = new Mock<IFacultyRepository>();
+                facultyRepo = facultyRepoMock.Object;
+                adapterRegistryMock = new Mock<IAdapterRegistry>();
+                adapterRegistry = adapterRegistryMock.Object;
+                configRepoMock = new Mock<IStudentConfigurationRepository>();
+                configRepo = configRepoMock.Object;
+                sectionRepoMock = new Mock<ISectionRepository>();
+                sectionRepo = sectionRepoMock.Object;
+                termRepoMock = new Mock<ITermRepository>();
+                termRepo = termRepoMock.Object;
+                refRepoMock = new Mock<IReferenceDataRepository>();
+                refRepo = refRepoMock.Object;
+                studentRefRepoMock = new Mock<IStudentReferenceDataRepository>();
+                studentRefRepo = studentRefRepoMock.Object;
+                roleRepoMock = new Mock<IRoleRepository>();
+                roleRepo = roleRepoMock.Object;
+                logger = new Mock<ILogger>().Object;
+
+                // Set up current user
+                currentUserFactory = new CurrentUserSetup.FacultyUserFactory();
+
+                // Mock faculty repo response
+                faculty1Id = "0000002";
+                faculty1 = new Domain.Student.Entities.Faculty(faculty1Id, "Quincy");
+                faculty1.AddEmailAddress(new EmailAddress("xyz@xmail.com", "FAC"));
+                faculty1.AddPhone(new Phone("864-123-4564", "O"));
+                facultyRepoMock.Setup(repo => repo.GetAsync(faculty1Id)).Returns(Task.FromResult(faculty1));
+
+                // Mock faculty repo response
+                faculty2Id = "0000004";
+                faculty2 = new Domain.Student.Entities.Faculty(faculty2Id, "Jones");
+                faculty2.AddEmailAddress(new EmailAddress("abc@xmail.com", "FAC"));
+                faculty2.AddPhone(new Phone("864-123-9998", "O"));
+                facultyRepoMock.Setup(repo => repo.GetAsync(faculty2Id)).Returns(Task.FromResult(faculty2));
+
+                // Mock config repo response
+                config = new StudentConfiguration();
+                config.FacultyEmailTypeCode = "FAC";
+                config.FacultyPhoneTypeCode = "O";
+                configRepoMock.Setup(repo => repo.GetStudentConfigurationAsync()).Returns(Task.FromResult(config));
+
+                // Mock term repo response
+                term1 = new Domain.Student.Entities.Term("2011/FA", "Fall 2011", new DateTime(2011, 9, 1), new DateTime(2011, 12, 25), 2011, 1, true, true, "2011RT", true);
+                term2 = new Domain.Student.Entities.Term("2012/SP", "Spring 2012", new DateTime(2012, 1, 5), new DateTime(2012, 5, 30), 2011, 2, true, true, "2011RT", true);
+                term3 = new Domain.Student.Entities.Term("2012/SU", "Summer 2012", new DateTime(2012, 6, 4), new DateTime(2012, 8, 25), 2012, 1, true, true, "2012RT", true);
+                IEnumerable<Domain.Student.Entities.Term> termList = new List<Domain.Student.Entities.Term>() { term1, term2, term3 };
+                termRepoMock.Setup(repo => repo.GetRegistrationTermsAsync()).Returns(Task.FromResult(termList));
+
+                // Mock section repo response
+                ICollection<OfferingDepartment> depts = new List<OfferingDepartment>() { new OfferingDepartment("D1", 50m), new OfferingDepartment("D2", 50m) };
+                ICollection<string> clcs = new List<string>() { "100", "200", "300", "400" };
+                List<SectionStatusItem> statuses = new List<SectionStatusItem>() { new SectionStatusItem(SectionStatus.Active, "A", DateTime.Today.AddYears(-5)) };
+                // sections 1 -- 6 go in term 1 for range testing with test range start and end of 9/5 and 12/15, 
+                // and the test faculty ("0000001") assigned to all sections
+                // testing for overlap of time periods
+                // period           start       end
+                // section 1  <---> |            |        - runs  9/1  -  9/4,  excluded
+                // section 2  <-----|----->      |        - runs  9/1  - 11/15, included
+                // section 3        |   <----->  |        - runs 10/5  - 11/15, included
+                // section 4        |      <-----|----->  - runs 11/5  - 12/25, included
+                // section 5        |            |  <-->  - runs 12/17 - 12/25, excluded
+                // section 6  <-----|------------|----->  - runs  9/1  - 12/25, included
+                // Setup the sections in term1
+                section1 = new Domain.Student.Entities.Section("11", "11", "01", new DateTime(2011, 9, 1), 3, null, "Section1 Title", "IN", depts, clcs, "UG", statuses, false, true, false, true, false);
+                section1.TermId = "2011/FA"; section1.EndDate = new DateTime(2011, 9, 4); section1.AddFaculty("0000001");
+                // section 2 overlap start before test start date, ends before test end date
+                section2 = new Domain.Student.Entities.Section("12", "11", "02", new DateTime(2011, 9, 1), 3, null, "Section2 Title", "IN", depts, clcs, "UG", statuses, false, true, false, true, false);
+                section2.TermId = "2011/FA"; section2.EndDate = new DateTime(2011, 11, 15); section2.AddFaculty("0000001");
+                // section 3 start after test start date and end before test end date
+                section3 = new Domain.Student.Entities.Section("13", "12", "01", new DateTime(2011, 10, 5), 3, null, "Section3 Title", "IN", depts, clcs, "UG", statuses, false, true, false, true, false);
+                section3.TermId = "2011/FA"; section3.EndDate = new DateTime(2011, 11, 15); section3.AddFaculty("0000001");
+                // section 4 start after test start date and before test end date and end after test end date
+                section4 = new Domain.Student.Entities.Section("14", "12", "02", new DateTime(2011, 11, 5), 3, null, "Section4 Title", "IN", depts, clcs, "UG", statuses, false, true, false, true, false);
+                section4.TermId = "2011/FA"; section4.EndDate = new DateTime(2011, 12, 25); section4.AddFaculty("0000001");
+                // section 5 start after test end date
+                section5 = new Domain.Student.Entities.Section("15", "13", "01", new DateTime(2011, 12, 17), 3, null, "Section5 Title", "IN", depts, clcs, "UG", statuses, false, true, false, true, false);
+                section5.TermId = "2011/FA"; section5.EndDate = new DateTime(2011, 12, 25); section5.AddFaculty("0000001");
+                // section 6 start before test start date and end after test end date
+                section6 = new Domain.Student.Entities.Section("16", "13", "02", new DateTime(2011, 9, 1), 3, null, "Section6 Title", "IN", depts, clcs, "UG", statuses, false, true, false, true, false);
+                section6.TermId = "2011/FA"; section6.EndDate = new DateTime(2011, 12, 25); section6.AddFaculty("0000001");
+
+                // sections 7 -- 9 go in term2, test faculty assigned to only 2 sections
+                section7 = new Domain.Student.Entities.Section("21", "11", "01", new DateTime(2012, 1, 5), 3, null, "Section7 Title", "IN", depts, clcs, "UG", statuses, false, true, false, true, false);
+                section7.TermId = "2012/SP"; section7.EndDate = new DateTime(2012, 5, 30); section7.AddFaculty("0000001");
+                section8 = new Domain.Student.Entities.Section("22", "12", "02", new DateTime(2012, 1, 5), 3, null, "Section8 Title", "IN", depts, clcs, "UG", statuses, false, true, false, true, false);
+                section8.TermId = "2012/SP"; section8.EndDate = new DateTime(2012, 5, 30); section8.AddFaculty("0000001");
+                section9 = new Domain.Student.Entities.Section("23", "13", "03", new DateTime(2012, 1, 5), 3, null, "Section9 Title", "IN", depts, clcs, "UG", statuses, false, true, false, true, false);
+                section9.TermId = "2012/SP"; section9.EndDate = new DateTime(2012, 5, 30); section9.AddFaculty("0000002");
+
+                // sections 10 -- 12 go in term 3, test faculty assigned to no sections
+                section10 = new Domain.Student.Entities.Section("31", "11", "02", new DateTime(2012, 6, 4), 3, null, "Section10 Title", "IN", depts, clcs, "UG", statuses, false, true, false, true, false);
+                section10.TermId = "2012/SU"; section10.EndDate = new DateTime(2012, 8, 25); section10.AddFaculty("0000002");
+                section11 = new Domain.Student.Entities.Section("32", "12", "01", new DateTime(2012, 6, 4), 3, null, "Section11 Title", "IN", depts, clcs, "UG", statuses, false, true, false, true, false);
+                section11.TermId = "2012/SU"; section11.EndDate = new DateTime(2012, 8, 25); section11.AddFaculty("0000002");
+                section12 = new Domain.Student.Entities.Section("33", "13", "01", new DateTime(2012, 6, 4), 3, null, "Section12 Title", "IN", depts, clcs, "UG", statuses, false, true, false, true, false);
+                section12.TermId = "2012/SU"; section12.EndDate = new DateTime(2012, 8, 25); section12.AddFaculty("0000002");
+                IEnumerable<Domain.Student.Entities.Section> sectionList = new List<Domain.Student.Entities.Section>() { section1, section2, section3, section4, section5, section6, section7, section8, section9, section10, section11, section12 };
+                sectionRepoMock.Setup(repo => repo.GetRegistrationSectionsAsync(termList)).Returns(Task.FromResult<IEnumerable<Domain.Student.Entities.Section>>(sectionList));
+                sectionRepoMock.Setup(repo => repo.GetNonCachedFacultySectionsAsync(termList, It.IsAny<string>(), It.IsAny<bool>())).Returns(Task.FromResult<IEnumerable<Domain.Student.Entities.Section>>(sectionList));
+
+                // Mock Adapters
+                var facultyDtoAdapter = new AutoMapperAdapter<Ellucian.Colleague.Domain.Student.Entities.Faculty, Ellucian.Colleague.Dtos.Student.Faculty>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Ellucian.Colleague.Domain.Student.Entities.Faculty, Ellucian.Colleague.Dtos.Student.Faculty>()).Returns(facultyDtoAdapter);
+                var phoneDtoAdapter = new AutoMapperAdapter<Domain.Base.Entities.Phone, Dtos.Base.Phone>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Base.Entities.Phone, Dtos.Base.Phone>()).Returns(phoneDtoAdapter);
+                var sectionDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.Section, Dtos.Student.Section3>(adapterRegistry, logger);
+                adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.Section, Dtos.Student.Section3>()).Returns(sectionDtoAdapter);
+
+                // Instantiate faculty service with mocked items
+                facultyService = new FacultyService(adapterRegistry, facultyRepo, configRepo, sectionRepo, termRepo, refRepo, studentRefRepo, currentUserFactory, roleRepo, logger);
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                facultyRepo = null;
+                adapterRegistry = null;
+                configRepo = null;
+                termRepo = null;
+                sectionRepo = null;
+                logger = null;
+            }
+
+            [TestMethod]
+            public async Task GetFacultySections4_ReturnsEmptyListForNoFacultyId()
+            {
+                var result = await facultyService.GetFacultySections5Async(null, null, null, false);
+                Assert.AreEqual(0, result.Dto.Count());
+            }
+
+            [TestMethod]
+            public async Task GetFacultySections4_ReturnsEmptyListForFacultyWithNoSections()
+            {
+                var result = await facultyService.GetFacultySections5Async("0000003", null, null, false);
+                Assert.AreEqual(0, result.Dto.Count());
+            }
+
+            [TestMethod]
+            public async Task GetFacultySections4_ReturnsAllFaculty1Sections()
+            {
+                // mainly setup validation
+                DateTime start = new DateTime(2011, 8, 1);
+                DateTime end = new DateTime(2012, 12, 31);
+                var result = await facultyService.GetFacultySections5Async("0000001", start, end, false);
+                Assert.AreEqual(8, result.Dto.Count());
+            }
+
+            [TestMethod]
+            public async Task GetFacultySections4_ReturnsAllFaculty2Sections()
+            {
+                // mainly setup validation
+                DateTime start = new DateTime(2011, 8, 1);
+                DateTime end = new DateTime(2012, 12, 31);
+                var result = await facultyService.GetFacultySections5Async("0000002", start, end, false);
+                Assert.AreEqual(4, result.Dto.Count());
+            }
+
+            [TestMethod]
+            public async Task GetFacultySections4_ReturnsAllFaculty1FallSections()
+            {
+                DateTime start = new DateTime(2011, 8, 1);
+                DateTime end = new DateTime(2011, 12, 31);
+                var result = await facultyService.GetFacultySections5Async("0000001", start, end, false);
+                Assert.AreEqual(6, result.Dto.Count());
+            }
+
+            [TestMethod]
+            public async Task GetFacultySections4_ReturnsAllFaculty1FallSections_NoCache()
+            {
+                DateTime start = new DateTime(2011, 8, 1);
+                DateTime end = new DateTime(2011, 12, 31);
+                var result = await facultyService.GetFacultySections5Async("0000001", start, end, false, false);
+                Assert.AreEqual(6, result.Dto.Count());
+            }
+
+            [TestMethod]
+            public async Task GetFacultySections4_ReturnsSixFaculty1FallSections()
+            {
+                DateTime start = new DateTime(2011, 9, 5);
+                DateTime end = new DateTime(2011, 12, 15);
+                var result = await facultyService.GetFacultySections5Async("0000001", start, end, false);
+                // should omit section1, and section5
+                Assert.AreEqual(4, result.Dto.Count());
+            }
+
+            [TestMethod]
+            public async Task GetFacultySections4_ReturnsTwoFaculty1SpringSections()
+            {
+                DateTime start = new DateTime(2012, 1, 5);
+                DateTime end = new DateTime(2012, 5, 30);
+                var result = await facultyService.GetFacultySections5Async("0000001", start, end, false);
+                Assert.AreEqual(2, result.Dto.Count());
+            }
+
+            [TestMethod]
+            public async Task GetFacultySections4_ReturnsZeroFaculty1SummerSections()
+            {
+                DateTime start = new DateTime(2012, 6, 4);
+                DateTime end = new DateTime(2012, 8, 25);
+                var result = await facultyService.GetFacultySections5Async("0000001", start, end, false);
+                Assert.AreEqual(0, result.Dto.Count());
+            }
+
+            [TestMethod]
+            public async Task GetFacultySections4_ReturnsFiveFaculty1FallSpringSections()
+            {
+                DateTime start = new DateTime(2011, 11, 16);
+                // null end date maps to 11/16/2011 + 90 days
+                var result = await facultyService.GetFacultySections5Async("0000001", start, null, false);
+                Assert.AreEqual(5, result.Dto.Count());
+            }
+
+            [TestMethod]
+            public async Task GetFacultySections4_EnsuresStartEndOrder()
+            {
+                DateTime start = new DateTime(2011, 11, 16);
+                DateTime end = new DateTime(2011, 10, 15);
+                // end before start is discarded, and end is assigned start + 90 days
+                var result = await facultyService.GetFacultySections5Async("0000001", start, end, false);
+                Assert.AreEqual(5, result.Dto.Count());
+            }
+
+            [TestMethod]
+            public async Task GetFacultySections4Async_result_has_no_Privacy_Restrictions()
+            {
+                DateTime start = new DateTime(2011, 11, 16);
+                DateTime end = new DateTime(2011, 10, 15);
+                IEnumerable<Domain.Student.Entities.Section> sectionList = new List<Domain.Student.Entities.Section>() { section1, section2, section3, section4, section5, section6, section7, section8, section9, section10, section11, section12 };
+                // Assign user as faculty on every section returned by repo call
+                foreach (var section in sectionList)
+                {
+                    section.AddFaculty(currentUserFactory.CurrentUser.PersonId);
+                }
+                sectionRepoMock.Setup(repo => repo.GetRegistrationSectionsAsync(It.IsAny<IEnumerable<Domain.Student.Entities.Term>>())).Returns(Task.FromResult<IEnumerable<Domain.Student.Entities.Section>>(sectionList));
+                facultyService = new FacultyService(adapterRegistry, facultyRepo, configRepo, sectionRepo, termRepo, refRepo, studentRefRepo, currentUserFactory, roleRepo, logger);
+
+                // end before start is discarded, and end is assigned start + 90 days
+#pragma warning disable 618
+                var result = await facultyService.GetFacultySections5Async("0000001", start, end, false);
+#pragma warning restore 618
+                Assert.IsNotNull(result);
+                Assert.IsNotNull(result.Dto);
+                Assert.AreEqual(5, result.Dto.Count());
+                // Since user is faculty on every section returned by repo, none has a privacy restriction
+                Assert.IsFalse(result.HasPrivacyRestrictions);
+            }
+
+            [TestMethod]
+            public async Task GetFacultySections4Async_result_has_Privacy_Restrictions()
+            {
+                DateTime start = new DateTime(2011, 11, 16);
+                DateTime end = new DateTime(2011, 10, 15);
+                IEnumerable<Domain.Student.Entities.Section> sectionList = new List<Domain.Student.Entities.Section>() { section1, section2, section3, section4, section5, section6, section7, section8, section9, section10, section11, section12 };
+                // Only sections where user is not assigned faculty
+                sectionList = sectionList.Where(s => !s.FacultyIds.Contains(currentUserFactory.CurrentUser.PersonId)).ToList();
+                sectionRepoMock.Setup(repo => repo.GetRegistrationSectionsAsync(It.IsAny<IEnumerable<Domain.Student.Entities.Term>>())).Returns(Task.FromResult<IEnumerable<Domain.Student.Entities.Section>>(sectionList));
+                facultyService = new FacultyService(adapterRegistry, facultyRepo, configRepo, sectionRepo, termRepo, refRepo, studentRefRepo, currentUserFactory, roleRepo, logger);
+
+                // end before start is discarded, and end is assigned start + 90 days
+#pragma warning disable 618
+                var result = await facultyService.GetFacultySections5Async("0000001", start, end, false);
+#pragma warning restore 618
+                Assert.IsNotNull(result);
+                Assert.IsNotNull(result.Dto);
+                // Since user is faculty on every section returned by repo, none has a privacy restriction
+                Assert.IsTrue(result.HasPrivacyRestrictions);
+                Assert.AreEqual(0, result.Dto.ElementAt(0).ActiveStudentIds.Count());
+                Assert.AreEqual(0, result.Dto.ElementAt(1).ActiveStudentIds.Count());
+                Assert.AreEqual(0, result.Dto.ElementAt(2).ActiveStudentIds.Count());
+                Assert.AreEqual(0, result.Dto.ElementAt(3).ActiveStudentIds.Count());
+            }
+
+        }
+
+
+        [TestClass]
         public class GetFacultySections4_SectionsOutsideRegistrationTerms
         {
             // variant on GetFacultySections4 to test new case where an ongoing term
@@ -2689,6 +3010,10 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 var facultyPermissionDtoAdapter = new AutoMapperAdapter<Domain.Student.Entities.FacultyPermissions, Dtos.Student.FacultyPermissions>(adapterRegistry, logger);
                 adapterRegistryMock.Setup(x => x.GetAdapter<Domain.Student.Entities.FacultyPermissions, Dtos.Student.FacultyPermissions>()).Returns(facultyPermissionDtoAdapter);
 
+                // setup faculty registration eligibility
+                var facultyElig = new FacultyDropRegistrationPermissions(false, false);
+                facultyRepoMock.Setup(repo => repo.GetFacultyRegistrationEligibilityAsync(currentUserFactory.CurrentUser.PersonId)).ReturnsAsync(facultyElig);
+
                 facultyService = new FacultyService(adapterRegistry, facultyRepo, configRepo, sectionRepo, termRepo, referenceRepo, null, currentUserFactory, roleRepo, logger);
             }
 
@@ -2700,6 +3025,7 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 facultyRole.AddPermission(new Permission(StudentPermissionCodes.CreatePrerequisiteWaiver));
                 facultyRole.AddPermission(new Permission(StudentPermissionCodes.CreateFacultyConsent));
                 facultyRole.AddPermission(new Permission(StudentPermissionCodes.CreateStudentPetition));
+                facultyRole.AddPermission(new Permission(StudentPermissionCodes.CanDropStudent));
                 roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(new List<Role>() { facultyRole });
 
                 // Act - call method that determines whether current user has permissions
@@ -2710,6 +3036,9 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.IsTrue(result.CanWaivePrerequisiteRequirement);
                 Assert.IsTrue(result.CanGrantStudentPetition);
                 Assert.IsFalse(result.CanUpdateGrades);
+                Assert.IsTrue(result.CanDropStudent);
+                Assert.IsFalse(result.IsEligibleToDrop);
+                Assert.IsFalse(result.HasEligibilityOverrides);
             }
 
             [TestMethod]
@@ -2724,13 +3053,50 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
                 Assert.IsFalse(result.CanWaivePrerequisiteRequirement);
                 Assert.IsFalse(result.CanGrantStudentPetition);
                 Assert.IsFalse(result.CanUpdateGrades);
+                Assert.IsFalse(result.CanDropStudent);
+                Assert.IsFalse(result.IsEligibleToDrop);
+                Assert.IsFalse(result.HasEligibilityOverrides);
+            }
+
+            [TestMethod]
+            public async Task ReturnsIsEligibleToDropTrue()
+            {
+                var facultyElig = new FacultyDropRegistrationPermissions(true, false);
+                facultyRepoMock.Setup(repo => repo.GetFacultyRegistrationEligibilityAsync(currentUserFactory.CurrentUser.PersonId)).ReturnsAsync(facultyElig);
+
+                var result = await facultyService.GetFacultyPermissions2Async();
+
+                Assert.IsFalse(result.CanGrantFacultyConsent);
+                Assert.IsFalse(result.CanWaivePrerequisiteRequirement);
+                Assert.IsFalse(result.CanGrantStudentPetition);
+                Assert.IsFalse(result.CanUpdateGrades);
+                Assert.IsFalse(result.CanDropStudent);
+                Assert.IsTrue(result.IsEligibleToDrop);
+                Assert.IsFalse(result.HasEligibilityOverrides);
+            }
+
+            [TestMethod]
+            public async Task ReturnsHasEligibilityOverrides()
+            {
+                var facultyElig = new FacultyDropRegistrationPermissions(false, true);
+                facultyRepoMock.Setup(repo => repo.GetFacultyRegistrationEligibilityAsync(currentUserFactory.CurrentUser.PersonId)).ReturnsAsync(facultyElig);
+
+                var result = await facultyService.GetFacultyPermissions2Async();
+
+                Assert.IsFalse(result.CanGrantFacultyConsent);
+                Assert.IsFalse(result.CanWaivePrerequisiteRequirement);
+                Assert.IsFalse(result.CanGrantStudentPetition);
+                Assert.IsFalse(result.CanUpdateGrades);
+                Assert.IsFalse(result.CanDropStudent);
+                Assert.IsFalse(result.IsEligibleToDrop);
+                Assert.IsTrue(result.HasEligibilityOverrides);
             }
 
             [TestMethod]
             [ExpectedException(typeof(ApplicationException))]
             public async Task ThrowsApplicationException()
             {
-                roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(null);
+                roleRepoMock.Setup(rpm => rpm.GetRolesAsync()).ReturnsAsync(() => null);
                 var result = await facultyService.GetFacultyPermissions2Async();
             }
         }

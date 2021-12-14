@@ -1,4 +1,4 @@
-﻿// Copyright 2014-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2014-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
@@ -548,7 +548,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             public async Task GetPersonContactById2Async_Dictionary_Null()
             {
                 var id = peDc1.FirstOrDefault().Recordkey;                
-                dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(null);
+                dataReaderMock.Setup(repo => repo.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(() => null);
                 await emergencyInformationRepository.GetPersonContactById2Async(id);
             }
 

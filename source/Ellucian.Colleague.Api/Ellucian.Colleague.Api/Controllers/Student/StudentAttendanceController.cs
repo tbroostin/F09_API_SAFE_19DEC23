@@ -43,6 +43,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <summary>
         /// Query by post method used to get student attendance information based on criteria
         /// </summary>
+        /// <remarks>If the request header "Cache-Control" attribute is set to "no-cache" the data returned will be pulled fresh from the database; otherwise, cached data is returned from the repository.</remarks>
         /// <param name="criteria">Object containing the section for which attendances are requested and other parameter choices.</param>
         /// <returns><see cref="StudentAttendance">Student Attendance</see> DTOs.</returns>
         /// <accessComments>Only a faculty user who is assigned to the requested course section can view student attendance data for that course section</accessComments>
@@ -57,7 +58,15 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
-                return await _studentAttendanceService.QueryStudentAttendancesAsync(criteria);
+                bool useCache = true;
+                if (Request.Headers.CacheControl != null)
+                {
+                    if (Request.Headers.CacheControl.NoCache)
+                    {
+                        useCache = false;
+                    }
+                }
+                return await _studentAttendanceService.QueryStudentAttendancesAsync(criteria, useCache);
             }
             catch (PermissionsException pe)
             {

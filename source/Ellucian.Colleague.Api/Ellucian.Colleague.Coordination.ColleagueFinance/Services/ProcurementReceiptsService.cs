@@ -1,4 +1,4 @@
-﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -81,10 +81,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>Collection of <see cref="ProcurementReceipts">procurementReceipts</see> objects</returns>          
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.ProcurementReceipts>, int>> GetProcurementReceiptsAsync(int offset, int limit, Dtos.ProcurementReceipts filters, bool bypassCache = false)
         {
-            CheckViewProcurementReceiptsPermission();
-
             var procurementReceiptsCollection = new List<Ellucian.Colleague.Dtos.ProcurementReceipts>();
-
+            Tuple<IEnumerable<PurchaseOrderReceipt>, int> procurementReceiptsEntities = null;
+            var totalCount = 0;
             var purchaseOrderID = string.Empty;
             if (filters != null && filters.PurchaseOrder != null && !string.IsNullOrEmpty(filters.PurchaseOrder.Id))
             {
@@ -101,30 +100,40 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     return new Tuple<IEnumerable<Dtos.ProcurementReceipts>, int>(procurementReceiptsCollection, 0);
                 }
             }
+            try
+            {
+                procurementReceiptsEntities =
+                        await purchaseOrderReceiptsRepository.GetPurchaseOrderReceiptsAsync(offset, limit, purchaseOrderID);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
 
-            var procurementReceiptsEntities =
-                     await purchaseOrderReceiptsRepository.GetPurchaseOrderReceiptsAsync(offset, limit, purchaseOrderID);
-        
-
-            var totalRecords = procurementReceiptsEntities.Item2;
             if (procurementReceiptsEntities != null && procurementReceiptsEntities.Item1.Any())
             {
+                totalCount = procurementReceiptsEntities.Item2;
                 var ids = procurementReceiptsEntities.Item1
-                    .Where(x => (!string.IsNullOrEmpty(x.ReceivedBy)))
-                    .Select(x => x.ReceivedBy).Distinct().ToList();
+                        .Where(x => (!string.IsNullOrEmpty(x.ReceivedBy)))
+                        .Select(x => x.ReceivedBy).Distinct().ToList();
 
                 var personGuidCollection = await personRepository.GetPersonGuidsCollectionAsync(ids);
 
                 foreach (var procurementReceiptsEntity in procurementReceiptsEntities.Item1)
                 {
-                    if (procurementReceiptsEntity.Guid != null)
-                    {
-                        procurementReceiptsCollection.Add(await this.ConvertPurchaseOrderReceiptEntityToDtoAsync(procurementReceiptsEntity, personGuidCollection, bypassCache));
-                    }
+                    var receiptDto = await ConvertPurchaseOrderReceiptEntityToDtoAsync(procurementReceiptsEntity, personGuidCollection, bypassCache);
+                    if (receiptDto != null)
+                        procurementReceiptsCollection.Add(receiptDto);
                 }
-                return new Tuple<IEnumerable<Dtos.ProcurementReceipts>, int>(procurementReceiptsCollection, totalRecords);
             }
-            return new Tuple<IEnumerable<Dtos.ProcurementReceipts>, int>(new List<Dtos.ProcurementReceipts>(), 0);
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+            return new Tuple<IEnumerable<Dtos.ProcurementReceipts>, int>(procurementReceiptsCollection, totalCount);
+
+
         }
 
         /// <summary>
@@ -135,39 +144,36 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>The <see cref="ProcurementReceipts">procurementReceipts</see></returns>
         public async Task<Ellucian.Colleague.Dtos.ProcurementReceipts> GetProcurementReceiptsByGuidAsync(string guid, bool bypassCache = true)
         {
+            Dtos.ProcurementReceipts procurementReceiptsDto = null;
             if (string.IsNullOrEmpty(guid))
             {
                 throw new ArgumentNullException("guid", "A GUID is required to obtain a Procurement Receipt.");
-            }
-             CheckViewProcurementReceiptsPermission();
+            }             
 
             try
             {
                 var purchaseOrderReceiptEntity = await purchaseOrderReceiptsRepository.GetPurchaseOrderReceiptByGuidAsync(guid);
                 var personGuidCollection = await personRepository.GetPersonGuidsCollectionAsync
                (new List<string>() { purchaseOrderReceiptEntity.ReceivedBy });
-                return await ConvertPurchaseOrderReceiptEntityToDtoAsync(purchaseOrderReceiptEntity, personGuidCollection, bypassCache);
+                procurementReceiptsDto =  await ConvertPurchaseOrderReceiptEntityToDtoAsync(purchaseOrderReceiptEntity, personGuidCollection, bypassCache);
             }
             catch (KeyNotFoundException ex)
             {
-                throw new KeyNotFoundException("No Procurement Receipt was found for guid  " + guid, ex);
-            }
-            catch (InvalidOperationException ex)
-            {
-                throw new InvalidOperationException("No Procurement Receipt was found for guid  " + guid, ex);
+                throw new KeyNotFoundException("No procurement-receipts was found for guid  " + guid, ex);
             }
             catch (RepositoryException ex)
             {
-                throw new RepositoryException("No Procurement Receipt was found for guid  " + guid, ex);
-            }
-            catch (ArgumentException ex)
-            {
-                throw new ArgumentException(ex.Message, ex);
+                throw ex;
             }
             catch (Exception ex)
             {
-                throw new Exception("No Procurement Receipt was found for guid  " + guid, ex);
+                throw new Exception("No procurement-receipts was found for guid  " + guid, ex);
             }
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+            return procurementReceiptsDto;
         }
 
         /// <summary>
@@ -184,8 +190,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
             Ellucian.Colleague.Domain.ColleagueFinance.Entities.PurchaseOrderReceipt createdProcurementReceipt = null;
             Dtos.ProcurementReceipts dtoProcurementReceipts = null;
-            // verify the user has the permission to create a ProcurementReceipts
-            CheckCreateProcurementReceiptsPermission();
+           
             //extensibility
             purchaseOrderReceiptsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
@@ -228,20 +233,44 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private async Task<Dtos.ProcurementReceipts> ConvertPurchaseOrderReceiptEntityToDtoAsync(Domain.ColleagueFinance.Entities.PurchaseOrderReceipt source,
             Dictionary<string, string> personGuidCollection, bool bypassCache = false)
         {
+            var dto = new Dtos.ProcurementReceipts();
             if (source == null)
             {
-                throw new ArgumentNullException("source", "A source is required to obtain a Procurement Receipt.");
+                IntegrationApiExceptionAddError(string.Format("A source is required to obtain a Procurement Receipt."), "Bad.Data");
+                return dto;
             }
-            var dto = new Dtos.ProcurementReceipts();
-            dto.Id = source.Guid;
+            //get guid
+            if (!string.IsNullOrEmpty(source.Guid))
+                dto.Id = source.Guid;
+            else
+                IntegrationApiExceptionAddError(string.Format("No GUID was found for the procurement receipts."), "GUID.Not.Found", source.Guid, source.Recordkey);
+
+            //get PO Guid
             if (!string.IsNullOrEmpty(source.PoId))
             {
-                var purchaseOrderID = await this.purchaseOrderRepository.GetGuidFromIdAsync(source.PoId, "PURCHASE.ORDERS");
-                if (purchaseOrderID == null)
+                try
                 {
-                    throw new KeyNotFoundException(string.Concat("PurchaseOrder, ", "No purchase order was found for GUID: '", source.PoId, "'"));
+                    var purchaseOrderID = await this.purchaseOrderRepository.GetGuidFromIdAsync(source.PoId, "PURCHASE.ORDERS");
+
+                    if (!string.IsNullOrEmpty(purchaseOrderID))
+                    {
+                        dto.PurchaseOrder = new Dtos.GuidObject2(purchaseOrderID);
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Unable to find the GUID for the purchase order '{0}'", source.PoId), "GUID.Not.Found", source.Guid, source.Recordkey);
+                    }
+
                 }
-                dto.PurchaseOrder = new Dtos.GuidObject2(purchaseOrderID);
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found",
+                        source.Guid, source.Recordkey);
+                }
+            }
+            else
+            {
+                IntegrationApiExceptionAddError(string.Format("The required property purchase-order is missing from the data record '{0}'.", source.Recordkey), "Bad.Data", source.Guid, source.Recordkey);
             }
 
             if (!string.IsNullOrEmpty(source.PackingSlip))
@@ -263,7 +292,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     lineItem.LineItemNumber = line.Id;
                     if ((line.ReceivedAmt.HasValue) || (line.ReceivedQty.HasValue))
                     {
-                        var amount = new Dtos.DtoProperties.QuantityAmount2DtoProperty()  { };
+                        var amount = new Dtos.DtoProperties.QuantityAmount2DtoProperty() { };
                         if (line.ReceivedAmt.HasValue)
                         {
                             amount.Cost = new Dtos.DtoProperties.Amount2DtoProperty()
@@ -290,7 +319,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                         amount.Quantity = line.RejectedQty;
                         lineItem.Rejected = amount;
                     }
-                    
+
                     if (!string.IsNullOrEmpty(line.ReceivingComments))
                     {
                         lineItem.Comment = line.ReceivingComments;
@@ -302,36 +331,55 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     dto.LineItems = lineItems;
                 }
             }
+            else
+            {
+                IntegrationApiExceptionAddError(string.Format("The required property lineItems is missing from the data record '{0}'.", source.Recordkey), "Bad.Data", source.Guid, source.Recordkey);
+            }
 
             if (!string.IsNullOrEmpty(source.ArrivedVia))
             {
-                var shippingMethods = await this.GetShippingMethodsAsync(bypassCache);
-                if (shippingMethods == null || !shippingMethods.Any())
+                try
                 {
-                    throw new InvalidOperationException("Shipping Methods not found.");
+                    var arrivedVia = await colleagueFinanceReferenceDataRepository.GetShippingMethodGuidAsync(source.ArrivedVia);
+                    if (!string.IsNullOrEmpty(arrivedVia))
+                    {
+                        dto.ShippingMethod = new Dtos.GuidObject2(arrivedVia);
+                    }
                 }
-           
-                var shippingMethod = shippingMethods.FirstOrDefault(sm => sm.Code == source.ArrivedVia);
-                if (shippingMethod == null)
+                catch (RepositoryException ex)
                 {
-                    throw new KeyNotFoundException(string.Concat("ShippingMethod, ", "Shipping Method not found for : '", source.ArrivedVia, "'"));
+                    IntegrationApiExceptionAddError(ex.Message, "GUID.Not.Found",
+                        source.Guid, source.Recordkey);
                 }
-                dto.ShippingMethod = new Dtos.GuidObject2(shippingMethod.Guid);
-            }    
-            
+            }              
+
             if (source.ReceivedDate.HasValue)
                 dto.ReceivedOn = source.ReceivedDate;
 
-            if ((!string.IsNullOrEmpty(source.ReceivedBy)) && (personGuidCollection != null) && (personGuidCollection.Any()))
+            if (string.IsNullOrEmpty(source.ReceivedBy))
             {
-                var receivedByGuid = string.Empty;
-                personGuidCollection.TryGetValue(source.ReceivedBy, out receivedByGuid);
-                if (string.IsNullOrEmpty(receivedByGuid))
+                IntegrationApiExceptionAddError(string.Format("The required property receivedBy is missing from the data record '{0}'.", source.Recordkey), "Bad.Data", source.Guid, source.Recordkey);
+            }
+            else
+            {
+                if ((personGuidCollection != null) && (personGuidCollection.Any()))
                 {
-                    throw new KeyNotFoundException(string.Concat("ReceivedBy, ", "Unable to locate guid for : '", source.ReceivedBy, "'"));
+                    var receivedByGuid = string.Empty;
+                    personGuidCollection.TryGetValue(source.ReceivedBy, out receivedByGuid);
+                    if (string.IsNullOrEmpty(receivedByGuid))
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("ReceivedBy, ", "Unable to locate person guid for : '", source.ReceivedBy, "'"), "GUID.Not.Found", source.Guid, source.Recordkey);
+                    }
+                    else
+                    {
+                        dto.ReceivedBy = new Dtos.GuidObject2(receivedByGuid);
+                    }
+
                 }
-                dto.ReceivedBy = new Dtos.GuidObject2(receivedByGuid);
-                
+                else
+                {
+                    IntegrationApiExceptionAddError(string.Concat("ReceivedBy, ", "Unable to locate person guid for : '", source.ReceivedBy, "'"), "GUID.Not.Found", source.Guid, source.Recordkey);
+                }
             }
 
             if (!string.IsNullOrEmpty(source.ReceivingComments))
@@ -435,6 +483,10 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 procurementReceiptsEntity.ArrivedVia = shippingMethod.Code;
             }
          
+            if (dto.ReceivedBy == null || dto.ReceivedBy.Id == null || string.IsNullOrEmpty(dto.ReceivedBy.Id))
+            {
+                throw new Exception("The required property receivedBy.id is missing from the request.");
+            }
             var submittedById = await personRepository.GetPersonIdFromGuidAsync(dto.ReceivedBy.Id);
             if (string.IsNullOrEmpty(submittedById))
             {
@@ -657,36 +709,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             return currency;
         }
-
-        /// <summary>
-        /// Permissions code that allows an external system to do a READ operation. This API will integrate information related to purchase orders that 
-        /// could be deemed personal.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckViewProcurementReceiptsPermission()
-        {
-            var hasPermission = HasPermission(ColleagueFinancePermissionCodes.ViewProcurementReceipts) || HasPermission(ColleagueFinancePermissionCodes.CreateProcurementReceipts);
-
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view procurement-receipts.");
-            }
-        }
-
-        /// <summary>
-        /// Permissions code that allows an external system to do a POST operation. This API will integrate information related to purchase orders that 
-        /// could be deemed personal.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckCreateProcurementReceiptsPermission()
-        {
-            var hasPermission = HasPermission(ColleagueFinancePermissionCodes.CreateProcurementReceipts);
-
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to create or update procurement-receipts.");
-            }
-        }
+        
 
         /// <summary>
         /// Convert CurrencyIsoCode domain enumeration to CurrencyCode DTO enumeration

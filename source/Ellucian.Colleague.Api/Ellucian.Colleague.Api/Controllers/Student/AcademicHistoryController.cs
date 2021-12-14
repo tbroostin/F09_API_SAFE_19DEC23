@@ -323,6 +323,7 @@ namespace Ellucian.Colleague.Api.Controllers
         /// Get Academic Credits with Invalid Keys for the list of sections.
         /// This returns collection of Academic Credits for the given sections and list of Invalid Academic Credit Ids that were not found in a file.
         /// </summary>
+        /// <remarks>If the request header "Cache-Control" attribute is set to "no-cache" the data returned will be pulled fresh from the database; otherwise, cached data is returned from the repository.</remarks>
         /// <param name="criteria">Contains selection criteria:
         /// Section Ids: List of section IDs. Must include at least 1.
         /// CreditStatuses: (Optional) If no statuses are specified all statuses will be included.</param>
@@ -335,7 +336,15 @@ namespace Ellucian.Colleague.Api.Controllers
         {
             try
             {
-                AcademicCreditsWithInvalidKeys academicCreditsWithInvalidKeys= await _academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria);
+                bool useCache = true;
+                if (Request.Headers.CacheControl != null)
+                {
+                    if (Request.Headers.CacheControl.NoCache)
+                    {
+                        useCache = false;
+                    }
+                }
+                AcademicCreditsWithInvalidKeys academicCreditsWithInvalidKeys = await _academicHistoryService.QueryAcademicCreditsWithInvalidKeysAsync(criteria, useCache);
                 return academicCreditsWithInvalidKeys;
             }
             catch (PermissionsException pex)

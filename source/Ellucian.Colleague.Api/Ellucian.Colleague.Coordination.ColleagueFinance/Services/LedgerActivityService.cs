@@ -1,4 +1,4 @@
-//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.Base.Services;
 using Ellucian.Colleague.Domain.Base.Repositories;
@@ -47,11 +47,11 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             ILedgerActivityRepository ledgerActivityRepository,
             IGeneralLedgerConfigurationRepository generalLedgerConfigurationRepository,
             IColleagueFinanceReferenceDataRepository referenceDataRepository,
-            IAdapterRegistry adapterRegistry, 
-            ICurrentUserFactory currentUserFactory, 
-            IRoleRepository roleRepository, 
-            ILogger logger, 
-            IStaffRepository staffRepository = null, 
+            IAdapterRegistry adapterRegistry,
+            ICurrentUserFactory currentUserFactory,
+            IRoleRepository roleRepository,
+            ILogger logger,
+            IStaffRepository staffRepository = null,
             IConfigurationRepository configurationRepository = null
         ) : base(adapterRegistry, currentUserFactory, roleRepository, logger, staffRepository, configurationRepository)
         {
@@ -68,18 +68,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         public async Task<Tuple<IEnumerable<LedgerActivity>, int>> GetLedgerActivitiesAsync(int offset, int limit, string fiscalYear, string fiscalPeriod, string reportingSegment,
             string transactionDate, bool bypassCache = false)
         {
-            if (!await CheckViewLedgerActivitiesPermission())
-            {
-                IntegrationApiExceptionAddError("User " + CurrentUser.UserId + " does not have permission to view ledger activities.",
-                    "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
-                throw IntegrationApiException;
-            }
+        
 
             string newFiscalYear = string.Empty;
             string newFiscalPeriod = string.Empty;
             string fiscalPeriodYear = string.Empty;
             string newTransactionDate = null;
-             string fiscalPeriodGuid = string.Empty;
+            string fiscalPeriodGuid = string.Empty;
 
             try
             {
@@ -215,7 +210,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 ledgerActivitiesEntities = await _ledgerActivityRepository.GetGlaFyrAsync(offset, limit, newFiscalYear, newFiscalPeriod, fiscalPeriodYear, reportingSegment, newTransactionDate);
                 glConfiguration = await _generalLedgerConfigurationRepository.GetAccountStructureAsync();
-                
+
                 glClassConfiguration = await _generalLedgerConfigurationRepository.GetClassConfigurationAsync();
             }
             catch (RepositoryException ex)
@@ -229,16 +224,16 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw IntegrationApiException;
             }
 
-            if (ledgerActivitiesEntities == null ||  !ledgerActivitiesEntities.Item1.Any())
+            if (ledgerActivitiesEntities == null || !ledgerActivitiesEntities.Item1.Any())
             {
                 return new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
-            }         
+            }
 
             foreach (var ledgerActivityEntity in ledgerActivitiesEntities.Item1)
             {
                 try
                 {
-                    ledgerActivitiesCollection.Add(await ConvertLedgerActivitiesEntityToDto(ledgerActivityEntity, glConfiguration, glClassConfiguration, 
+                    ledgerActivitiesCollection.Add(await ConvertLedgerActivitiesEntityToDto(ledgerActivityEntity, glConfiguration, glClassConfiguration,
                         fiscalPeriodGuid, bypassCache));
                 }
                 catch (Exception ex)
@@ -252,7 +247,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw IntegrationApiException;
             }
 
-            return ledgerActivitiesCollection.Any()? new Tuple<IEnumerable<LedgerActivity>, int>(ledgerActivitiesCollection, ledgerActivitiesEntities.Item2) :
+            return ledgerActivitiesCollection.Any() ? new Tuple<IEnumerable<LedgerActivity>, int>(ledgerActivitiesCollection, ledgerActivitiesEntities.Item2) :
                 new Tuple<IEnumerable<LedgerActivity>, int>(new List<Ellucian.Colleague.Dtos.LedgerActivity>(), 0);
         }
 
@@ -270,12 +265,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 throw IntegrationApiException;
             }
 
-            if (!await CheckViewLedgerActivitiesPermission())
-            {
-                IntegrationApiExceptionAddError("User " + CurrentUser.UserId + " does not have permission to view ledger activities.",
-                        "Access.Denied", httpStatusCode: System.Net.HttpStatusCode.Forbidden);
-                throw IntegrationApiException;
-            }
+         
             GeneralLedgerAccountStructure glConfiguration = null;
             GeneralLedgerActivity entity = null;
             GeneralLedgerClassConfiguration glClassConfiguration = null;
@@ -294,7 +284,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
             catch (KeyNotFoundException ex)
             {
-                 IntegrationApiExceptionAddError("No ledger activity was found for guid: " + guid, "GUID.Not.Found", guid, null, HttpStatusCode.NotFound);
+                IntegrationApiExceptionAddError("No ledger activity was found for guid: " + guid, "GUID.Not.Found", guid, null, HttpStatusCode.NotFound);
                 throw IntegrationApiException;
             }
             catch (Exception ex)
@@ -321,19 +311,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             return ledgerActivity;
         }
 
-        /// <summary>
-        /// Helper method to determine if the user has permission to view Ledger Activities
-        /// </summary>
-        /// <returns>boolean</returns>
-        private async Task<bool> CheckViewLedgerActivitiesPermission()
-        {
-            IEnumerable<string> userPermissions = await GetUserPermissionCodesAsync();
-            if (userPermissions.Contains(ColleagueFinancePermissionCodes.ViewLedgerActivities))
-            {
-                return true;
-            }
-            return false;
-        }
 
         #region Convert methods
 
@@ -434,8 +411,8 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                 {
                     logger.Error(string.Format("Ledger-Activities.  An exception occurred extracting GL.CLASS. {0} . GUID: '{1}'. Id: '{2}'",
                         ex.Message,
-                        recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item1: "",
-                        recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item2: ""));
+                        recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item1 : "",
+                        recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item2 : ""));
                 }
 
                 if (!string.IsNullOrEmpty(glClass))
@@ -451,7 +428,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                     }
                     else
                     {
-                        logger.Error(string.Format("Ledger-Activities. Unable to extact map glClass to LedgerType: '{0}. GUID: '{1}'. Id: '{2}' ", 
+                        logger.Error(string.Format("Ledger-Activities. Unable to extact map glClass to LedgerType: '{0}. GUID: '{1}'. Id: '{2}' ",
                             glClass,
                             recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item1 : "",
                             recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item2 : ""));
@@ -463,7 +440,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             return retval;
         }
 
-        private string ConvertEntityToDtoAccountingString(string source, string refIdSource, GeneralLedgerAccountStructure GlConfig, 
+        private string ConvertEntityToDtoAccountingString(string source, string refIdSource, GeneralLedgerAccountStructure GlConfig,
                 Tuple<string, string> recordGuidRecordKeyTuple)
         {
             if (source == null || GlConfig == null)
@@ -495,7 +472,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
 
         private string GetFormattedGlAccount(string accountNumber, GeneralLedgerAccountStructure GlConfig, Tuple<string, string> recordGuidRecordKeyTuple)
         {
-           
+
             var tempGlNo = string.Empty;
             var formattedGlAccount = Regex.Replace(accountNumber, "[^0-9a-zA-Z]", "");
 
@@ -534,7 +511,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         {
             List<GuidObject2> acctCompStrValues = new List<GuidObject2>();
 
-            if(!string.IsNullOrEmpty(acctGuid))
+            if (!string.IsNullOrEmpty(acctGuid))
             {
                 acctCompStrValues.Add(new GuidObject2(acctGuid));
             }
@@ -594,7 +571,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <param name="source"></param>
         /// <param name="bypassCache"></param>
         /// <returns></returns>
-        private async Task<GuidObject2> ConvertEntityToPeriodDtoAsync(DateTime? source, Tuple<string,string> recordGuidRecordKeyTuple, 
+        private async Task<GuidObject2> ConvertEntityToPeriodDtoAsync(DateTime? source, Tuple<string, string> recordGuidRecordKeyTuple,
             string fiscalPeriodGuid, bool bypassCache)
         {
             if (!source.HasValue)
@@ -605,13 +582,13 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
                          recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item2 : null);
                 return null;
             }
-            
+
             //Fiscal period guid will be set if a filter is provided,
             if (!string.IsNullOrEmpty(fiscalPeriodGuid))
             {
                 return new GuidObject2(fiscalPeriodGuid);
             }
-            
+
             var month = source.Value.Month;
             var year = source.Value.Year;
 
@@ -636,9 +613,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             }
 
             var period = fiscalPeriods.FirstOrDefault(i => year == i.Year && month == i.Month);
-            if(period == null)
+            if (period == null)
             {
-                IntegrationApiExceptionAddError(string.Format("Fiscal period not found for '{0}'.", source.ToString()) , "Bad.Data",
+                IntegrationApiExceptionAddError(string.Format("Fiscal period not found for '{0}'.", source.ToString()), "Bad.Data",
                    recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item1 : null,
                          recordGuidRecordKeyTuple != null ? recordGuidRecordKeyTuple.Item2 : null);
                 return null;
@@ -665,8 +642,15 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private LedgerActivityType ConvertEntityToCreditDebitTypeDto(decimal? credit, decimal? debit,
             Tuple<string, string> recordGuidRecordKeyTuple)
         {
-            if (credit.HasValue && credit.Value == 0) credit = null;
-            if (debit.HasValue && debit.Value == 0) debit = null;
+            // If either credit or debit fields have a value of zero, then null it out
+            // If they both have zero, then leave zero in the credit field and let the transaction go through
+            // This is really bad data but we don't want to report on it as such because some Colleague
+            // processes are causing the data to have a zero transaction and we can't remove them or do anything
+            // to modify then, therefore, we don't want to issue an error response to something that they cannot fix or change.
+            // SRM - 03/29/2021
+            if (credit.HasValue && credit.Value == 0 && debit.HasValue && debit.Value != 0) credit = null;
+            if (debit.HasValue && debit.Value == 0 && credit.HasValue && credit.Value != 0) debit = null;
+            if (debit.HasValue && debit.Value == 0 && credit.HasValue && credit.Value == 0) debit = null;
             if (credit.HasValue && !debit.HasValue)
             {
                 return LedgerActivityType.Credit;
@@ -735,15 +719,22 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         /// <returns>LegerActivityAmount DTO with amount and currency code.</returns>
         private LedgerActivityAmount ConvertEntityToAmountDto(decimal? credit, decimal? debit, string hostCountry)
         {
-            if (credit.HasValue && credit.Value == 0) credit = null;
-            if (debit.HasValue && debit.Value == 0) debit = null;
+            // If either credit or debit fields have a value of zero, then null it out
+            // If they both have zero, then leave zero in the credit field and let the transaction go through
+            // This is really bad data but we don't want to report on it as such because some Colleague
+            // processes are causing the data to have a zero transaction and we can't remove them or do anything
+            // to modify then, therefore, we don't want to issue an error response to something that they cannot fix or change.
+            // SRM - 03/29/2021
+            if (credit.HasValue && credit.Value == 0 && debit.HasValue && debit.Value != 0) credit = null;
+            if (debit.HasValue && debit.Value == 0 && credit.HasValue && credit.Value != 0) debit = null;
+            if (debit.HasValue && debit.Value == 0 && credit.HasValue && credit.Value == 0) debit = null;
             LedgerActivityAmount laa = null;
             if (credit.HasValue)
             {
                 laa = new LedgerActivityAmount() { Value = credit, Currency = ConvertEntityToHostCountryEnum(hostCountry) };
             }
 
-            if(debit.HasValue)
+            if (debit.HasValue)
             {
                 laa = new LedgerActivityAmount() { Value = debit, Currency = ConvertEntityToHostCountryEnum(hostCountry) };
             }
@@ -800,7 +791,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
             {
                 return null;
             }
-        }        
+        }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
         /// <summary>
@@ -848,7 +839,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Services
         private GuidObject2 ConvertEntityToGrantDto(string source)
         {
             if (!string.IsNullOrEmpty(source))
-            { 
+            {
                 return new GuidObject2(source);
             }
             return null;

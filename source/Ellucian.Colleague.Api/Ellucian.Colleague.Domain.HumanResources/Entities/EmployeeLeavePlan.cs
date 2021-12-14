@@ -1,4 +1,4 @@
-﻿/* Copyright 2016-2020 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -108,9 +108,20 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         public Decimal? AccrualMaxCarryOver { get; private set; }
 
         /// <summary>
+        /// Accrual Method
+        /// </summary>
+        public string AccrualMethod { get; private set; }
+
+        /// <summary>
+        /// Indicates if this is a leave reporting plan
+        /// </summary>
+        public bool IsLeaveReportingPlan { get; private set; }
+
+        /// <summary>
         /// List of all Earning Type IDs associated with a Employee Leave Plan
         /// </summary>
         public IEnumerable<string> EarningTypeIDList { get; private set; }
+        
         /// <summary>
         /// The start date of the current (as of today) plan year.
         /// The start date is built by using the PlanYearStartMonth and PlanYearStartDay and then deriving the year
@@ -131,6 +142,16 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
                 }
 
                 return planYearStartDate;
+            }
+        }
+       
+        /// <summary>
+        /// Calculates the current plan years end date
+        /// Effectively sets the end date to 364 days after the current plan year start date
+        /// </summary>
+        public DateTime CurrentPlanYearEndDate {
+            get {
+                return CurrentPlanYearStartDate.AddYears(1).AddDays(-1);
             }
         }
 
@@ -178,7 +199,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
                 }
                 var index = leaveTransactions.BinarySearch(endTransaction);
                 if (index < 0)
-                {                
+                {
                     return -1;//this shouldn't happen
                 }
                 return index; //index of the prior plan year end transaction 
@@ -211,7 +232,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
                 var startingTransactionIndex = PriorPlanYearEndTransactionIndex + 1; //index of the first transaction in the plan year
                 return SortedLeaveTransactions
                     .Skip(startingTransactionIndex)
-                    .Where(trans => trans.Type == LeaveTransactionType.Earned) 
+                    .Where(trans => trans.Type == LeaveTransactionType.Earned)
                     .Sum(trans => trans.TransactionHours);
             }
         }
@@ -226,7 +247,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
                 var startingTransactionIndex = PriorPlanYearEndTransactionIndex + 1; //index of the first transaction in the plan year
                 return SortedLeaveTransactions
                     .Skip(startingTransactionIndex)
-                    .Where(trans => trans.Type == LeaveTransactionType.Used)
+                    .Where(trans => trans.Type == LeaveTransactionType.Used || trans.Type == LeaveTransactionType.LeaveReporting)
                     .Sum(trans => trans.TransactionHours);
             }
         }
@@ -254,8 +275,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             get
             {
                 return CurrentPlanYearStartingBalance +
-                    CurrentPlanYearEarnedHours + 
-                    CurrentPlanYearUsedHours + 
+                    CurrentPlanYearEarnedHours +
+                    CurrentPlanYearUsedHours +
                     CurrentPlanYearAdjustedHours;
             }
         }
@@ -270,6 +291,11 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
                 return leaveTransactions.AsReadOnly();
             }
         }
+
+        /// <summary>
+        /// Indicates whether or not this leave plan has a plan year start date defined in LEAD form. 
+        /// </summary>
+        public bool IsPlanYearStartDateDefined { get; private set; }
 
         private List<EmployeeLeaveTransaction> leaveTransactions;
 
@@ -311,25 +337,33 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
 
         }
 
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="id"></param>
-        /// <param name="employeeId"></param>
-        /// <param name="startDate"></param>
-        /// <param name="endDate"></param>
-        /// <param name="leavePlanId"></param>
-        /// <param name="leavePlanDescription"></param>
-        /// <param name="leavePlanStartDate"></param>
-        /// <param name="leavePlanEndDate"></param>
-        /// <param name="leavePlanTypeCategory"></param>
-        /// <param name="earningsTypeId"></param>
-        /// <param name="earningsTypeDescription"></param>
-        /// <param name="leaveAllowedDate"></param>
-        /// <param name="priorPeriodLeaveBalance"></param>
-        /// <param name="planYearStartMonth"></param>
-        /// <param name="planYearStartDay"></param>
-        /// <param name="allowNegativeBalance"></param>
+       /// <summary>
+       /// Constructor
+       /// </summary>
+       /// <param name="id"></param>
+       /// <param name="employeeId"></param>
+       /// <param name="startDate"></param>
+       /// <param name="endDate"></param>
+       /// <param name="leavePlanId"></param>
+       /// <param name="leavePlanDescription"></param>
+       /// <param name="leavePlanStartDate"></param>
+       /// <param name="leavePlanEndDate"></param>
+       /// <param name="leavePlanTypeCategory"></param>
+       /// <param name="earningsTypeId"></param>
+       /// <param name="earningsTypeDescription"></param>
+       /// <param name="leaveAllowedDate"></param>
+       /// <param name="priorPeriodLeaveBalance"></param>
+       /// <param name="planYearStartMonth"></param>
+       /// <param name="planYearStartDay"></param>
+       /// <param name="isLeaveReportingPlan"></param>
+       /// <param name="earningTypeIDList"></param>
+       /// <param name="accrualRate"></param>
+       /// <param name="accrualLimit"></param>
+       /// <param name="accrualMaxCarryOver"></param>
+       /// <param name="accrualMethod"></param>
+       /// <param name="isPlanYearStartDateDefined"></param>
+       /// <param name="allowNegativeBalance"></param>
+       /// <param name="includeLeavePlansWithNoEarningsTypes"></param>
         public EmployeeLeavePlan(string id,
             string employeeId,
             DateTime startDate,
@@ -345,11 +379,15 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             decimal priorPeriodLeaveBalance,
             int planYearStartMonth,
             int planYearStartDay,
+            bool isLeaveReportingPlan,
             IEnumerable<string> earningTypeIDList,
             decimal? accrualRate,
             decimal? accrualLimit,
             decimal? accrualMaxCarryOver,
-            bool allowNegativeBalance = false
+            string accrualMethod,
+            bool isPlanYearStartDateDefined,
+            bool allowNegativeBalance = false,
+            bool includeLeavePlansWithNoEarningsTypes = false
             )
         {
             if (string.IsNullOrWhiteSpace(id))
@@ -367,7 +405,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
                 throw new ArgumentNullException("LeavePlanId");
             }
 
-            if (string.IsNullOrWhiteSpace(earningsTypeId))
+            // SS Leave Balance page doesn't mandate the earnigs type to be associated with a leave plan.
+            if (string.IsNullOrWhiteSpace(earningsTypeId) && !includeLeavePlansWithNoEarningsTypes)
             {
                 throw new ArgumentNullException("EarningsTypeId");
             }
@@ -392,9 +431,9 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
                 throw new ArgumentOutOfRangeException("planYearStartDay", "playYearStartDay must be between 1 and the end of the month");
             }
 
-            if(earningTypeIDList==null || !earningTypeIDList.Any())
+            // SS Leave Balance page doesn't mandate the earnigs type to be associated with a leave plan.
+            if ((earningTypeIDList == null || !earningTypeIDList.Any()) && !includeLeavePlansWithNoEarningsTypes)
             {
-
                 throw new ArgumentNullException("earningTypeIDList");
             }
 
@@ -407,8 +446,6 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             {
                 throw new ArgumentOutOfRangeException("planYearStartDay", aore);
             }
-
-
 
             this.id = id;
             EmployeeId = employeeId;
@@ -427,10 +464,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             PlanYearStartMonth = planYearStartMonth;
             PlanYearStartDay = planYearStartDay;
             EarningTypeIDList = earningTypeIDList;
+            IsLeaveReportingPlan = isLeaveReportingPlan;
             leaveTransactions = new List<EmployeeLeaveTransaction>();
             AccrualRate = accrualRate;
             AccrualLimit = accrualLimit;
             AccrualMaxCarryOver = accrualMaxCarryOver;
+            AccrualMethod = accrualMethod;
+            IsPlanYearStartDateDefined = isPlanYearStartDateDefined;
         }
 
         /// <summary>

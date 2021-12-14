@@ -173,6 +173,9 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
             public List<string> IgnoreAwardCategoriesOnChecklist;
             public string ShowBudgetDetailsOnAwardLetter;
             public string StudentAwardLetterBudgetDetailsDescription;
+            public string BlankStatusText;
+            public string BlankDueDateText;
+            public string ShowAslaInfo;
         }
 
         public List<OfficeParameterRecord> officeParameterRecordData = new List<OfficeParameterRecord>()
@@ -245,7 +248,10 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 IgnoreActionStatusesOnChecklist = new List<string>() {"E" },
                 IgnoreAwardCategoriesOnChecklist = new List<string>() {"LOAN" },
                 ShowBudgetDetailsOnAwardLetter = "N",
-                StudentAwardLetterBudgetDetailsDescription = "2014/2015 Budget breakdown"
+                StudentAwardLetterBudgetDetailsDescription = "2014/2015 Budget breakdown",
+                BlankStatusText = "For when the status is blank 1",
+                BlankDueDateText = "For when the due date is blank 1",
+                ShowAslaInfo = "Y"
             },
             new OfficeParameterRecord() 
             { 
@@ -315,7 +321,11 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 IgnoreActionStatusesOnChecklist = new List<string>() {"E" },
                 IgnoreAwardCategoriesOnChecklist = new List<string>(),
                 ShowBudgetDetailsOnAwardLetter = "N",
-                StudentAwardLetterBudgetDetailsDescription = "2013/2014 Budget details"
+                StudentAwardLetterBudgetDetailsDescription = "2013/2014 Budget details",
+                BlankStatusText = "For when the status is blank 2",
+                BlankDueDateText = "For when the due date is blank 2",
+                ShowAslaInfo = "Y"
+
             },
             new OfficeParameterRecord() 
             { 
@@ -385,7 +395,10 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 IgnoreActionStatusesOnChecklist = new List<string>() {"E", "O" },
                 IgnoreAwardCategoriesOnChecklist = new List<string>() {"LOAN" },
                 ShowBudgetDetailsOnAwardLetter = "N",
-                StudentAwardLetterBudgetDetailsDescription = "2014/2015 Budget breakdown"
+                StudentAwardLetterBudgetDetailsDescription = "2014/2015 Budget breakdown",
+                BlankStatusText = "For when the status is blank 3",
+                BlankDueDateText = "For when the due date is blank 3",
+                ShowAslaInfo = "Y"
             },
             new OfficeParameterRecord() 
             { 
@@ -455,7 +468,10 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 IgnoreActionStatusesOnChecklist = new List<string>(),
                 IgnoreAwardCategoriesOnChecklist = new List<string>(),
                 ShowBudgetDetailsOnAwardLetter = "N",
-                StudentAwardLetterBudgetDetailsDescription = "2014/2015 Budget breakdown"
+                StudentAwardLetterBudgetDetailsDescription = "2014/2015 Budget breakdown",
+                BlankStatusText = "For when the status is blank 4",
+                BlankDueDateText = "For when the due date is blank 4",
+                ShowAslaInfo = "Y"
                 },
             new OfficeParameterRecord()
             {
@@ -525,7 +541,10 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 IgnoreActionStatusesOnChecklist = new List<string>(),
                 IgnoreAwardCategoriesOnChecklist = new List<string>(),
                 ShowBudgetDetailsOnAwardLetter = "N",
-                StudentAwardLetterBudgetDetailsDescription = "2015/2016 Budget breakdown"
+                StudentAwardLetterBudgetDetailsDescription = "2015/2016 Budget breakdown",
+                BlankStatusText = "For when the status is blank 5",
+                BlankDueDateText = "For when the due date is blank 5",
+                ShowAslaInfo = "N"
             },            
             new OfficeParameterRecord()
             {
@@ -595,7 +614,10 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 IgnoreActionStatusesOnChecklist = new List<string>(),
                 IgnoreAwardCategoriesOnChecklist = new List<string>(),
                 ShowBudgetDetailsOnAwardLetter = "N",
-                StudentAwardLetterBudgetDetailsDescription = "2016/2017 Budget breakdown"
+                StudentAwardLetterBudgetDetailsDescription = "2016/2017 Budget breakdown",
+                BlankStatusText = "For when the status is blank 6",
+                BlankDueDateText = "For when the due date is blank 6",
+                ShowAslaInfo = "N"
             },
             new OfficeParameterRecord() 
             { 
@@ -665,7 +687,10 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 IgnoreActionStatusesOnChecklist = new List<string>(),
                 IgnoreAwardCategoriesOnChecklist = new List<string>(),
                 ShowBudgetDetailsOnAwardLetter = "N",
-                StudentAwardLetterBudgetDetailsDescription = "2017/2018 Budget breakdown"
+                StudentAwardLetterBudgetDetailsDescription = "2017/2018 Budget breakdown",
+                BlankStatusText = "For when the status is blank 7",
+                BlankDueDateText = "For when the due date is blank 7",
+                ShowAslaInfo = "Y"
             }
         };
 
@@ -1216,6 +1241,8 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Tests
                 singleConfiguration.IgnoreAwardCategoriesOnChecklist = officeParameterRecord.IgnoreAwardCategoriesOnChecklist;
                 singleConfiguration.IgnoreAwardsOnChecklist = officeParameterRecord.IgnoreAwardsOnChecklist;
                 singleConfiguration.IgnoreAwardStatusesOnChecklist = officeParameterRecord.IgnoreActionStatusesOnChecklist;
+
+                singleConfiguration.ShowAslaInfo = !string.IsNullOrEmpty(officeParameterRecord.ShowAslaInfo) && officeParameterRecord.ShowAslaInfo.ToUpper() == "Y";
             }
 
             if (shoppingSheetParameterRecord != null)

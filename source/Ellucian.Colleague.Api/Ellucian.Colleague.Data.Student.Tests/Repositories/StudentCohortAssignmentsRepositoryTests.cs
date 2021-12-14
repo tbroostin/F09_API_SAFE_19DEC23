@@ -1,14 +1,14 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
+using Ellucian.Colleague.Domain.Base.Transactions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Colleague.Domain.Student.Repositories;
 using Ellucian.Data.Colleague;
 using Ellucian.Data.Colleague.DataContracts;
 using Ellucian.Dmi.Runtime;
-using Ellucian.Web.Http.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System;
@@ -115,6 +115,35 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 dataReaderMock.SetupSequence(s => s.SelectAsync(It.IsAny<RecordKeyLookup[]>()))
                     .Returns(Task.FromResult(dict1))
                     .Returns(Task.FromResult(dict2));
+
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 100,
+                    CacheName = "AllStudentCohortAssignments",
+                    Entity = "",
+                    Sublist = new List<string>(){ "1746" , "2746" },
+                    TotalCount = 2,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+               {
+                   new KeyCacheInfo()
+                   {
+                       KeyCacheMax = 5905,
+                       KeyCacheMin = 1,
+                       KeyCachePart = "000",
+                       KeyCacheSize = 5905
+                   },
+                   new KeyCacheInfo()
+                   {
+                       KeyCacheMax = 7625,
+                       KeyCacheMin = 5906,
+                       KeyCachePart = "001",
+                       KeyCacheSize = 1720
+                   }
+               }
+                };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
 
             }
 

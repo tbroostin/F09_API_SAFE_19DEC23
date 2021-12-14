@@ -24,6 +24,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Ellucian.Web.Http.ModelBinding;
 using System.Web.Http.ModelBinding;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -57,7 +58,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="personFilter">Selection from SaveListParms definition or person-filters</param>
         /// <returns></returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewAdmissionDecisions, StudentPermissionCodes.UpdateAdmissionDecisions})]
         [ValidateQueryStringFilter()]
         [QueryStringFilterFilter("criteria", typeof(Dtos.AdmissionDecisions)), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("personFilter", typeof(Dtos.Filters.PersonFilterFilter2))]
@@ -74,6 +75,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _admissionDecisionsService.ValidatePermissions(GetPermissionsMetaData());
                 string personFilterValue = string.Empty;
                 var personFilterObj = GetFilterObject<Dtos.Filters.PersonFilterFilter2>(_logger, "personFilter");
                 if (personFilterObj != null)
@@ -151,7 +153,8 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID to desired admissionDecisions</param>
         /// <returns>A admissionDecisions object <see cref="Dtos.AdmissionDecisions"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewAdmissionDecisions, StudentPermissionCodes.UpdateAdmissionDecisions})]
+
         public async Task<Dtos.AdmissionDecisions> GetAdmissionDecisionsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -169,6 +172,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _admissionDecisionsService.ValidatePermissions(GetPermissionsMetaData());
                 var admissionDecision = await _admissionDecisionsService.GetAdmissionDecisionsByGuidAsync(guid);
 
                 if (admissionDecision != null)
@@ -220,7 +224,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="admissionDecisions">DTO of the new admissionDecisions</param>
         /// <returns>A admissionDecisions object <see cref="Dtos.AdmissionDecisions"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpPost, EedmResponseFilter]
+        [HttpPost, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.UpdateAdmissionDecisions)]
         public async Task<Dtos.AdmissionDecisions> PostAdmissionDecisionsAsync([ModelBinder(typeof(EedmModelBinder))] Dtos.AdmissionDecisions admissionDecisions)
         {
             if (admissionDecisions == null)
@@ -240,6 +244,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _admissionDecisionsService.ValidatePermissions(GetPermissionsMetaData());
                 ValidateAdmissionDecisions(admissionDecisions);
                 //call import extend method that needs the extracted extension data and the config
                 await _admissionDecisionsService.ImportExtendedEthosData(await ExtractExtendedData(await _admissionDecisionsService.GetExtendedEthosConfigurationByResource(GetEthosResourceRouteInfo()), _logger));

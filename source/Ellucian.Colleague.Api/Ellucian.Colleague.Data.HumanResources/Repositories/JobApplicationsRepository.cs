@@ -1,9 +1,7 @@
-﻿using Ellucian.Colleague.Data.Base.DataContracts;
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
-using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Exceptions;
-//Copyright 2017 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using Ellucian.Data.Colleague;
@@ -16,7 +14,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Ellucian.Dmi.Runtime;
-using Ellucian.Colleague.Data.HumanResources.Transactions;
+using Ellucian.Colleague.Domain.Base.Services;
+using System.Text;
 
 namespace Ellucian.Colleague.Data.HumanResources.Repositories
 {
@@ -24,6 +23,10 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
     public class JobApplicationsRepository : BaseColleagueRepository, IJobApplicationsRepository
     {
         public static char _VM = Convert.ToChar(DynamicArray.VM);
+        private readonly int _readSize;
+        const string AllJobApplicationsRecordsCache = "AllJobApplicationsRecordKeys";
+        const int AllJobApplicationsRecordsCacheTimeout = 20;
+        private RepositoryException exception = new RepositoryException();
 
         /// <summary>
         /// ..ctor
@@ -48,49 +51,103 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <returns>collection of JobApplication domain entity objects</returns>
         public async Task<Tuple<IEnumerable<JobApplication>, int>> GetJobApplicationsAsync(int offset, int limit, bool bypassCache = false)
         {
-            var totalCount = 0;
-            var jobApplicationEntities = new List<JobApplication>();
-            var criteria = "WITH JBAP.INTG.POS.IDX NE '' BY.EXP JBAP.INTG.POS.IDX";
+            string selectedRecordCacheKey = CacheSupport.BuildCacheKey(AllJobApplicationsRecordsCache);
+            List<JobApplication> jobApplications = new List<JobApplication>();
 
-            var jobappsIds = await DataReader.SelectAsync("JOBAPPS", criteria);
+            if (limit == 0) limit = _readSize;
+            int totalCount = 0;
+            var selectionCriteria = new StringBuilder();
 
-            criteria = string.Concat(criteria, " SAVING JBAP.INTG.POS.IDX");
-            var jobappsIndexIds = await DataReader.SelectAsync("JOBAPPS", criteria);
+            var keyCacheObject = await CacheSupport.GetOrAddKeyCacheToCache(
+                this,
+                ContainsKey,
+                GetOrAddToCacheAsync,
+                AddOrUpdateCacheAsync,
+                transactionInvoker,
+                selectedRecordCacheKey,
+                "",
+                offset,
+                limit,
+                AllJobApplicationsRecordsCacheTimeout,
+                async () =>
+                {
+                    var criteria = "WITH JBAP.INTG.POS.IDX NE '' BY.EXP JBAP.INTG.POS.IDX";
 
-            var jobappsIds2 = new List<string>();
-            int index = 0;
-            foreach (var jobappId in jobappsIds)
+                    var jobappsIds = await DataReader.SelectAsync("JOBAPPS", criteria);
+
+                    criteria = string.Concat(criteria, " SAVING JBAP.INTG.POS.IDX");
+                    var jobappsIndexIds = await DataReader.SelectAsync("JOBAPPS", criteria);
+
+                    var jobappsIds2 = new List<string>();
+                    int index = 0;
+                    foreach (var jobappId in jobappsIds)
+                    {
+                        var jobappKey = string.Concat(jobappId.Split(_VM)[0], "|", jobappsIndexIds[index]);
+                        jobappsIds2.Add(jobappKey);
+                        index++;
+                    }
+
+                    CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
+                    {
+                        limitingKeys = jobappsIds2,
+                        criteria = ""
+                    };
+                    return requirements;
+                });
+
+            if (keyCacheObject == null || keyCacheObject.Sublist == null || !keyCacheObject.Sublist.Any())
             {
-                var jobappKey = string.Concat(jobappId.Split(_VM)[0], "|", jobappsIndexIds[index]);
-                jobappsIds2.Add(jobappKey);
-                index++;
+                return new Tuple<IEnumerable<JobApplication>, int>(new List<JobApplication>(), 0);
             }
 
-            totalCount = jobappsIds2.Count();
-            jobappsIds2.Sort();
+            totalCount = keyCacheObject.TotalCount.Value;
 
-            var keysSubList = jobappsIds2.Skip(offset).Take(limit).ToArray().Distinct();
-            
+            var keysSubList = keyCacheObject.Sublist.ToArray();
+
+            if (keysSubList == null || !keysSubList.Any())
+            {
+                return new Tuple<IEnumerable<JobApplication>, int>(new List<JobApplication>(), 0);
+            }
+
+            var jobApplicationEntities = new List<JobApplication>();
+                       
             if (keysSubList.Any())
             {
                 var keysJobappsSubList = keysSubList.Select(k => k.Split('|')[0]).Distinct();
-                var jobappsCollection = await DataReader.BulkReadRecordAsync<Jobapps>("JOBAPPS", keysJobappsSubList.ToArray());
+                
+                var jobApplicationsContracts = await DataReader.BulkReadRecordWithInvalidKeysAndRecordsAsync<DataContracts.Jobapps>("JOBAPPS", keysJobappsSubList.ToArray());
+                if ((jobApplicationsContracts.InvalidKeys != null && jobApplicationsContracts.InvalidKeys.Any()) ||
+                   jobApplicationsContracts.InvalidRecords != null && jobApplicationsContracts.InvalidRecords.Any())
+                {
+                    if (jobApplicationsContracts.InvalidKeys.Any())
+                    {
+                        exception.AddErrors(jobApplicationsContracts.InvalidKeys
+                            .Select(key => new RepositoryError("Bad.Data",
+                            string.Format("Unable to locate the following JOBAPPS key '{0}'.", key.ToString()))));
+                    }
+                    if (jobApplicationsContracts.InvalidRecords.Any())
+                    {
+                        exception.AddErrors(jobApplicationsContracts.InvalidRecords
+                           .Select(r => new RepositoryError("Bad.Data",
+                           string.Format("Error: '{0}' ", r.Value))
+                           { SourceId = r.Key }));
+                    }
+                }
 
                 foreach (var key in keysSubList)
                 {
                     var jobappsKey = key.Split('|')[0];
                     var indexKey = key.Split('|')[1];
-                    var jobapps = jobappsCollection.FirstOrDefault(x => x.Recordkey == jobappsKey);
+                    var jobapps = jobApplicationsContracts.BulkRecordsRead.FirstOrDefault(x => x.Recordkey == jobappsKey);
 
                     try
                     {
-                        index = 0;
+                        var index = 0;
                         foreach (var jobappsIndex in jobapps.JbapIntgPosIdx)
                         {
                             if (jobappsIndex == indexKey)
                             {
                                 var jobApplicationGuidInfo = await GetGuidFromRecordInfoAsync("JOBAPPS", jobapps.Recordkey, "JBAP.INTG.POS.IDX", jobappsIndex);
-
                                 jobApplicationEntities.Add(new JobApplication(jobApplicationGuidInfo, jobapps.Recordkey)
                                 {
                                     PositionId = (jobapps.JbapPosId.Count >= index + 1) ? jobapps.JbapPosId[index] : null,
@@ -104,9 +161,16 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                     }
                     catch (Exception e)
                     {
-                        throw new Exception(e.Message);
+                        exception.AddError(new RepositoryError("GUID.Not.Found", e.Message)
+                        {
+                            Id = jobapps != null && jobapps.Recordkey != null ? jobapps.Recordkey : ""
+                        });
                     }
                 }
+            }
+            if (exception != null && exception.Errors != null && exception.Errors.Any())
+            {
+                throw exception;
             }
             return new Tuple<IEnumerable<JobApplication>, int>(jobApplicationEntities, totalCount);
 
@@ -115,17 +179,31 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
         /// <summary>
         /// Returns a review for a specified Job Application key.
         /// </summary>
-        /// <param name="ids">Key to Job Application to be returned</param>
+        /// <param name="guid">Key to Job Application to be returned</param>
         /// <returns>JobApplication Objects</returns>
         public async Task<JobApplication> GetJobApplicationByIdAsync(string id)
         {
-            var jobApplicationId = await GetRecordInfoFromGuidAsync(id);
+            if (string.IsNullOrEmpty(id))
+            {
+                var errorMessage = "ID is required to get job-applications.";
+                throw new ArgumentException(errorMessage);
+            }
 
-            if (jobApplicationId == null)
+            var jobApplication = await GetRecordInfoFromGuidAsync(id);
+
+            if (jobApplication == null)
                 throw new KeyNotFoundException();
 
-            var jobapps = await DataReader.ReadRecordAsync<Jobapps>("JOBAPPS", jobApplicationId.PrimaryKey);
+            if (jobApplication.Entity != "JOBAPPS")
+            {
+                throw new RepositoryException("GUID " + id + " has different entity, " + jobApplication.Entity + ", than expected, JOBAPPS");
+            }
 
+            var jobapps = await DataReader.ReadRecordAsync<Jobapps>("JOBAPPS", jobApplication.PrimaryKey);
+            if (jobapps == null && !string.IsNullOrEmpty(jobApplication.PrimaryKey))
+            {
+                throw new KeyNotFoundException("Invalid JOBAPPS ID: " + jobApplication.PrimaryKey);
+            }
             int index = 0;
             foreach (var jobappsRecord in jobapps.JbapIntgPosIdx)
             {
@@ -149,77 +227,11 @@ namespace Ellucian.Colleague.Data.HumanResources.Repositories
                 //}
             }
 
-            throw new KeyNotFoundException(String.Format("No job application was found for guid '{0}'.", id));
+            throw new KeyNotFoundException(String.Format("No job-applications found for GUID {0}.", id));
         }
 
         #endregion
 
-        /// <summary>
-        /// Get the GUID for a entity using its ID
-        /// </summary>
-        /// <param name="id">entity ID</param>
-        /// <param name="entity">entity</param>
-        /// <returns>entity GUID</returns>
-        public async Task<string> GetGuidFromIdAsync(string id, string entity)
-        {
-            try
-            {
-                return await GetGuidFromRecordInfoAsync(entity, id);
-            }
-            catch (ArgumentNullException)
-            {
-                throw;
-            }
-            catch (RepositoryException ex)
-            {
-                ex.AddError(new RepositoryError("perpos.guid.NotFound", "GUID not found for employment performance review " + id));
-                throw ex;
-            }
-        }
-
-        /// <summary>
-        /// Gets id from guid input
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        public async Task<string> GetIdFromGuidAsync(string id)
-        {
-            try
-            {
-                return await GetRecordKeyFromGuidAsync(id);
-            }
-            catch (ArgumentNullException)
-            {
-                throw;
-            }
-            catch (RepositoryException ex)
-            {
-                ex.AddError(new RepositoryError("review.guid.NotFound", "GUID not found for employment performance review " + id));
-                throw ex;
-            }
-        }
-
-        /// <summary>
-        /// Gets id from guid input
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        public async Task<GuidLookupResult> GetInfoFromGuidAsync(string id)
-        {
-            try
-            {
-                return await GetRecordInfoFromGuidAsync(id);
-            }
-            catch (ArgumentNullException)
-            {
-                throw;
-            }
-            catch (RepositoryException ex)
-            {
-                ex.AddError(new RepositoryError("review.guid.NotFound", "GUID not found for employment performance review " + id));
-                throw ex;
-            }
-        }
 
     }
 

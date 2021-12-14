@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -242,7 +242,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools); 
             
 
@@ -293,7 +293,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
 
             _referenceDataRepositoryMock.Setup(x => x.GetGuidLookupResultFromGuidAsync(SchoolGuid))
@@ -318,7 +318,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
 
             _referenceDataRepositoryMock.Setup(x => x.GetGuidLookupResultFromGuidAsync(SchoolGuid))
@@ -352,7 +352,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
 
             _referenceDataRepositoryMock.Setup(x => x.GetGuidLookupResultFromGuidAsync(DivisionGuid))
@@ -380,7 +380,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools); 
             
             _referenceDataRepositoryMock.Setup(x => x.GetGuidLookupResultFromGuidAsync(DepartmentGuid))
@@ -421,7 +421,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
            _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                .ReturnsAsync(_allDepartments);
-           _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+           _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                .ReturnsAsync(_allSchools);
                  
             _referenceDataRepositoryMock.Setup(x => x.GetGuidLookupResultFromGuidAsync(DepartmentGuid))
@@ -482,7 +482,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
                 var educationalInstitutionUnits =
                 await _educationalInstitutionUnitsService.GetEducationalInstitutionUnitsByTypeAsync("department");
@@ -518,7 +518,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools); 
             
 
@@ -569,7 +569,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
 
             _referenceDataRepositoryMock.Setup(x => x.GetGuidLookupResultFromGuidAsync(SchoolGuid))
@@ -594,7 +594,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
 
             _referenceDataRepositoryMock.Setup(x => x.GetGuidLookupResultFromGuidAsync(SchoolGuid))
@@ -628,7 +628,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
 
             _referenceDataRepositoryMock.Setup(x => x.GetGuidLookupResultFromGuidAsync(DivisionGuid))
@@ -656,7 +656,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools); 
             
             _referenceDataRepositoryMock.Setup(x => x.GetGuidLookupResultFromGuidAsync(DepartmentGuid))
@@ -697,7 +697,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
            _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                .ReturnsAsync(_allDepartments);
-           _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+           _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                .ReturnsAsync(_allSchools);
                  
             _referenceDataRepositoryMock.Setup(x => x.GetGuidLookupResultFromGuidAsync(DepartmentGuid))
@@ -739,7 +739,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
 
             _referenceDataRepositoryMock.Setup(x => x.GetGuidLookupResultFromGuidAsync(DepartmentGuid))
@@ -759,7 +759,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
                 var educationalInstitutionUnits =
                 await _educationalInstitutionUnitsService.GetEducationalInstitutionUnitsByType2Async("department");
@@ -974,7 +974,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
 
 
@@ -1009,7 +1009,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
 
 
@@ -1042,7 +1042,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
 
 
@@ -1076,7 +1076,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
 
 
@@ -1110,7 +1110,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
 
 
@@ -1145,7 +1145,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
 
 
@@ -1188,7 +1188,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
 
             _referenceDataRepositoryMock.Setup(x => x.GetGuidLookupResultFromGuidAsync(SchoolGuid))
@@ -1213,7 +1213,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
 
             _referenceDataRepositoryMock.Setup(x => x.GetGuidLookupResultFromGuidAsync(SchoolGuid))
@@ -1247,7 +1247,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
 
             _referenceDataRepositoryMock.Setup(x => x.GetGuidLookupResultFromGuidAsync(DivisionGuid))
@@ -1275,7 +1275,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
 
             _referenceDataRepositoryMock.Setup(x => x.GetGuidLookupResultFromGuidAsync(DepartmentGuid))
@@ -1316,7 +1316,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
 
             _referenceDataRepositoryMock.Setup(x => x.GetGuidLookupResultFromGuidAsync(DepartmentGuid))
@@ -1358,7 +1358,7 @@ namespace Ellucian.Colleague.Coordination.Base.Tests.Services
                 .ReturnsAsync(_allDivisions);
             _referenceDataRepositoryMock.Setup(repo => repo.GetDepartmentsAsync(It.IsAny<bool>()))
                 .ReturnsAsync(_allDepartments);
-            _referenceDataRepositoryMock.Setup(repo => repo.GetSchoolsAsync(It.IsAny<bool>()))
+            _referenceDataRepositoryMock.Setup(repo => repo.GetSchools2Async(It.IsAny<bool>()))
                 .ReturnsAsync(_allSchools);
 
             _referenceDataRepositoryMock.Setup(x => x.GetGuidLookupResultFromGuidAsync(DepartmentGuid))

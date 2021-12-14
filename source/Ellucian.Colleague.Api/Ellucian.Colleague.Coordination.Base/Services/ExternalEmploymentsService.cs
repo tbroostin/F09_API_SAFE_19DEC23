@@ -1,10 +1,8 @@
-﻿//Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Ellucian.Colleague.Coordination.Base.Adapters;
 using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Repositories;
@@ -15,10 +13,8 @@ using slf4net;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Colleague.Dtos.EnumProperties;
-using Ellucian.Colleague.Domain.Base;
-using Ellucian.Data.Colleague.Repositories;
 using Ellucian.Colleague.Dtos.DtoProperties;
-using System.Diagnostics;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Base.Services
 {
@@ -58,20 +54,38 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns>Collection of ExternalEmployments DTO objects</returns>
         public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.ExternalEmployments>, int>> GetExternalEmploymentsAsync(int offset, int limit, bool bypassCache = false)
         {
-            CheckExternalEmploymentsPermission();
-            var externalEmploymentsCollection = new List<Ellucian.Colleague.Dtos.ExternalEmployments>();
-            var externalEmploymentsEntities = await _externalEmploymentsRepository.GetExternalEmploymentsAsync(offset, limit);
-            var totalRecords = externalEmploymentsEntities.Item2;
-           
 
-            if (externalEmploymentsEntities != null && externalEmploymentsEntities.Item1.Any())
+            var externalEmploymentsCollection = new List<Ellucian.Colleague.Dtos.ExternalEmployments>();
+            Tuple<IEnumerable<Ellucian.Colleague.Domain.Base.Entities.ExternalEmployments>, int> externalEmploymentsData = null;
+            try
             {
-                foreach (var externalEmployments in externalEmploymentsEntities.Item1)
+                externalEmploymentsData = await _externalEmploymentsRepository.GetExternalEmploymentsAsync(offset, limit);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+
+            if (externalEmploymentsData != null)
+            {
+                var externalEmploymentsEntities = externalEmploymentsData.Item1;
+                if (externalEmploymentsEntities != null && externalEmploymentsEntities.Any())
                 {
-                    externalEmploymentsCollection.Add(await ConvertExternalEmploymentsEntityToDto(externalEmployments,bypassCache));
+                    externalEmploymentsCollection = (await BuildExternalEmploymentsDtoAsync(externalEmploymentsEntities, bypassCache)).ToList();
                 }
             }
-           return new Tuple<IEnumerable<Ellucian.Colleague.Dtos.ExternalEmployments>, int>(externalEmploymentsCollection, totalRecords); 
+            else
+            {
+                return new Tuple<IEnumerable<Dtos.ExternalEmployments>, int>(externalEmploymentsCollection, 0);
+            }
+
+            if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+            {
+                throw IntegrationApiException;
+            }
+
+            return new Tuple<IEnumerable<Dtos.ExternalEmployments>, int>(externalEmploymentsCollection, externalEmploymentsData.Item2);  
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -85,19 +99,94 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             {
                 throw new ArgumentNullException("guid", "A GUID is required to obtain an external-employments.");
             }
-            CheckExternalEmploymentsPermission();
+
             try
             {
-                return await ConvertExternalEmploymentsEntityToDto(await _externalEmploymentsRepository.GetExternalEmploymentsByGuidAsync(guid));
+                var externalEmploymentsEntity = await _externalEmploymentsRepository.GetExternalEmploymentsByGuidAsync(guid);
+
+                var externalEmploymentsDto = await BuildExternalEmploymentsDtoAsync(new List<Domain.Base.Entities.ExternalEmployments>()
+                { externalEmploymentsEntity });
+
+                if (IntegrationApiException != null && IntegrationApiException.Errors != null && IntegrationApiException.Errors.Any())
+                {
+                    throw IntegrationApiException;
+                }
+
+                if (externalEmploymentsDto.Any())
+                {
+                    return externalEmploymentsDto.FirstOrDefault();
+                }
+                else
+                {
+                    throw new KeyNotFoundException("No external-employments found for GUID " + guid);
+                }
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex, guid: guid);
+                throw IntegrationApiException;
             }
             catch (KeyNotFoundException ex)
             {
-                throw new KeyNotFoundException("external-employments not found for GUID " + guid, ex);
+                throw new KeyNotFoundException("No external-employments found for GUID " + guid, ex);
             }
             catch (InvalidOperationException ex)
             {
-                throw new KeyNotFoundException("external-employments not found for GUID " + guid, ex);
+                throw new KeyNotFoundException("No external-employments found for GUID " + guid, ex);
+            }                       
+        }
+
+        /// <summary>
+        /// BuildExternalEmploymentsDtoAsync
+        /// </summary>
+        /// <param name="sources">Collection of ExternalEmployments domain entities</param>
+        /// <param name="bypassCache">bypassCache flag.  Defaulted to false</param>
+        /// <returns>Collection of ExternalEmployments DTO objects </returns>
+        private async Task<IEnumerable<Dtos.ExternalEmployments>> BuildExternalEmploymentsDtoAsync(IEnumerable<Domain.Base.Entities.ExternalEmployments> sources,
+            bool bypassCache = false)
+        {
+
+            if ((sources == null) || (!sources.Any()))
+            {
+                return null;
             }
+
+            var externalEmployment = new List<Dtos.ExternalEmployments>();
+            Dictionary<string, string> personGuidCollection = null;
+
+            try
+            {
+                var personIds = sources
+                     .Where(x => (!string.IsNullOrEmpty(x.PersonId)))
+                     .Select(x => x.PersonId).Distinct().ToList();
+                var organizationIds = sources
+                     .Where(x => (!string.IsNullOrEmpty(x.OrganizationId)))
+                     .Select(x => x.OrganizationId).Distinct().ToList();
+                personIds.AddRange(organizationIds);
+                personGuidCollection = await this._personRepository.GetPersonGuidsCollectionAsync(personIds);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message);
+            }
+
+
+            foreach (var source in sources)
+            {
+                try
+                {
+                    externalEmployment.Add(await ConvertExternalEmploymentsEntityToDto(source, personGuidCollection, bypassCache));
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, id: source.Id, guid: source.Guid);
+                }
+            }
+
+            if (IntegrationApiException != null)
+                throw IntegrationApiException;
+
+            return externalEmployment;
         }
 
 
@@ -107,203 +196,247 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// </summary>
         /// <param name="source">ExternalEmployments domain entity</param>
         /// <returns>ExternalEmployments DTO</returns>
-        private async Task<Ellucian.Colleague.Dtos.ExternalEmployments> ConvertExternalEmploymentsEntityToDto(Ellucian.Colleague.Domain.Base.Entities.ExternalEmployments source, bool bypassCache = false)
+        private async Task<Ellucian.Colleague.Dtos.ExternalEmployments> ConvertExternalEmploymentsEntityToDto(Ellucian.Colleague.Domain.Base.Entities.ExternalEmployments source,
+            Dictionary<string, string> personGuidCollection, bool bypassCache = false)
         {
+            if (source == null)
+            {
+                IntegrationApiExceptionAddError("External Employments entity must be provided.");
+                return null;
+            }
             var externalEmployments = new Ellucian.Colleague.Dtos.ExternalEmployments();
             //get guid
             if (string.IsNullOrEmpty(source.Guid))
             {
-                throw new ArgumentException(string.Concat("Unable to find a GUID for external employments. Entity: 'EMPLOYMT', Record ID: '", source.Id, "' "));
-            }
-            externalEmployments.Id = source.Guid;
-            //get person guid
-            if (!string.IsNullOrEmpty(source.PersonId))
-            {
-                var personGuid = await _personRepository.GetPersonGuidFromIdAsync(source.PersonId);
-                if (string.IsNullOrEmpty(personGuid))
-                {
-                    throw new ArgumentException(string.Concat("Unable to find a GUID for Person '", source.PersonId, "' person.id.Entity: 'EMPLOYMT', Record ID: '", source.Id, "' "));
-                }
-                externalEmployments.Person = new Dtos.GuidObject2(personGuid);
+                IntegrationApiExceptionAddError(string.Format("GUID not found for external-employments '{0}'", source.Id), "GUID.Not.Found", "", source.Id);
             }
             else
             {
-                throw new ArgumentException(string.Concat("Unable to find Person Id. Person Id is required. Entity: 'EMPLOYMT', Record ID: '", source.Id, "' "));
-            }
-            //get position info
-            if (!string.IsNullOrEmpty(source.PositionId))
-            {
-                var positions = await GetAllExternalPositionsAsync(bypassCache);
-                if (positions == null)
+                externalEmployments.Id = source.Guid;
+                //get person guid
+                if (!string.IsNullOrEmpty(source.PersonId))
                 {
-                    throw new Exception("Unable to retrieve external employments positions");
-                }
-                var extPosition = positions.FirstOrDefault(id => id.Code == source.PositionId);
-                if (extPosition == null)
-                {
-                    throw new ArgumentException(string.Concat("Unable to find a GUID for external employments position '", source.PositionId, "' position.id. Entity: 'EMPLOYMT', Record ID: '", source.Id, "' "));
-                }
-                externalEmployments.Position = new Dtos.GuidObject2(extPosition.Guid);
-            }
-            //get organization info
-            var orgInfo = new ExternalEmploymentsOrganization();
-            if (!string.IsNullOrEmpty(source.OrganizationId))
-            {
-                var orgGuid = await _personRepository.GetPersonGuidFromIdAsync(source.OrganizationId);
-                if (string.IsNullOrEmpty(orgGuid))
-                {
-                    throw new ArgumentException(string.Concat("Unable to find a GUID for Organization '", source.OrganizationId, "' organization.id.   Entity: 'EMPLOYMT', Record ID: '", source.Id, "' "));
-                }
-                orgInfo.Detail = new Dtos.GuidObject2(orgGuid);
-                orgInfo.Name = source.OrgName;
-                
-            }
-            else
-            {
-                //Otherwise, if the EMP.SELF.EMPLOYED.FLAG is 'Y' then publish "Self Employed".
-               //the EMP.UNKNOWN.EMPLOYER.FLAG is 'Y' then publish "Unknown Employer".
-                if (String.Equals(source.selfEmployed, (string)"Y", StringComparison.OrdinalIgnoreCase)) 
-                {
-                    orgInfo.Name = "Self Employed";
-                }
-                else if (String.Equals(source.unknownEmployer, (string)"Y", StringComparison.OrdinalIgnoreCase))
-                {
-                    orgInfo.Name = "Unknown Employer";
+
+                    if (personGuidCollection == null)
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("GUID not found for person id '", source.PersonId, "'"),
+                            "", source.Guid, source.Id);
+                    }
+                    else
+                    {
+                        var personGuid = string.Empty;
+                        personGuidCollection.TryGetValue(source.PersonId, out personGuid);
+                        if (string.IsNullOrEmpty(personGuid))
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("GUID not found for person id: '", source.PersonId, "'"),
+                               "GUID.Not.Found", source.Guid, source.Id);
+                        }
+                        else
+                        {
+                            externalEmployments.Person = new Dtos.GuidObject2(personGuid);
+                        }
+                    }
                 }
                 else
                 {
-                    orgInfo.Name = "Unknown Employer";
+                    IntegrationApiExceptionAddError(string.Concat("GUID not found for person id: '", source.PersonId, "'"),
+                               "GUID.Not.Found", source.Guid, source.Id);
                 }
-
-            }
-            externalEmployments.Organization = orgInfo;
-            // get starton
-            if (source.StartDate.HasValue)
-            {
-                var startDate = new DateDtoProperty
+                //get position info
+                if (!string.IsNullOrEmpty(source.PositionId))
                 {
-                    Month = source.StartDate.Value.Month,
-                    Day = source.StartDate.Value.Day,
-                    Year = source.StartDate.Value.Year
-                };
-                externalEmployments.StartOn = startDate;
-            }                                                                                                                                                                                      
-            // get Endon
-            if (source.EndDate.HasValue)
-            {
-                var endtDate = new DateDtoProperty
-                {
-                    Month = source.EndDate.Value.Month,
-                    Day = source.EndDate.Value.Day,
-                    Year = source.EndDate.Value.Year
-                };
-                externalEmployments.EndOn = endtDate;
-            }
-            //get job title
-            if (!string.IsNullOrEmpty(source.JobTitle))
-            {
-                externalEmployments.JobTitle = source.JobTitle;
-            }
-            //get priority 
-            if (!string.IsNullOrEmpty(source.PrincipalEmployment))
-            {
-                 if (String.Equals(source.PrincipalEmployment, (string)"Y", StringComparison.OrdinalIgnoreCase))
-                 {
-                     externalEmployments.Priority = ExternalEmploymentsPriority.Primary;
-                 }
-                 else
-                 {
-                     externalEmployments.Priority = ExternalEmploymentsPriority.Secondary;
-                 }
-            }
-            //get status
-            if (!string.IsNullOrEmpty(source.Status))
-            {
-                var statuses = await GetAllExternalEmploymentStatusesAsync(bypassCache);
-                if (statuses == null)
-                {
-                    throw new Exception("Unable to retrieve external employment statuses");
-                }
-                var exstatus = statuses.FirstOrDefault(id => id.Code == source.Status);
-                if (exstatus == null)
-                {
-                    throw new ArgumentException(string.Concat("Unable to find a GUID for  external employment status ", source.Status, " status.id.   Entity: 'EMPLOYMT', Record ID: '", source.Id, "' "));
-                }
-                externalEmployments.Status = new Dtos.GuidObject2(exstatus.Guid);
-            }
-            //get hours worked
-            if (source.HoursWorked != null)
-            {
-                var hoursworked = new HoursPerPeriodDtoProperty();
-                hoursworked.Period = Ellucian.Colleague.Dtos.EnumProperties.PayPeriods.Week;
-                hoursworked.Hours = source.HoursWorked;
-                externalEmployments.HoursWorked = hoursworked;
-            }
-            // get vocations
-            if (source.Vocations != null && source.Vocations.Any())
-            {
-                var allvocations = await GetAllEmploymenVocationsAsync(bypassCache);
-                var vocations = new List<Dtos.GuidObject2>();
-                if (allvocations == null)
-                {
-                    throw new Exception("Unable to retrieve employment vocations");
-                }
-                foreach (var voc in source.Vocations)
-                {
-                    var vocation = allvocations.FirstOrDefault(id => id.Code == voc);
-                    if (vocation == null)
+                    var positions = await GetAllExternalPositionsAsync(bypassCache);
+                    if (positions != null)
                     {
-                        throw new ArgumentException(string.Concat("Unable to find a GUID for employment vocation ", voc, " vocations.id.   Entity: 'EMPLOYMT', Record ID: '", source.Id, "' "));
+                        var extPosition = positions.FirstOrDefault(id => id.Code == source.PositionId);
+                        if (extPosition == null)
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("GUID not found for external employments position '", source.PositionId, "'"),
+                           "GUID.Not.Found", source.Guid, source.Id);
+                        }
+                        else
+                        {
+                            externalEmployments.Position = new Dtos.GuidObject2(extPosition.Guid);
+                        }
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("GUID not found for external employments position '", source.PositionId, "'"),
+                           "GUID.Not.Found", source.Guid, source.Id);
                     }
 
-                    vocations.Add(new Dtos.GuidObject2(vocation.Guid));
                 }
-                externalEmployments.Vocations = vocations;
-            }
-            // get superviosrs
-            if (source.Supervisors != null && source.Supervisors.Any())
-            {
-                var supervisors = new List<ExternalEmploymentsSupervisors>();
-                foreach (var super in source.Supervisors)
+                //get organization info               
+                var orgInfo = new ExternalEmploymentsOrganization();
+                if (!string.IsNullOrEmpty(source.OrganizationId))
+                {    
+                    if(personGuidCollection == null)
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("GUID not found for organization id '", source.OrganizationId, "'"),
+                            "GUID.Not.Found", source.Guid, source.Id);
+                    }
+                    else
+                    {
+                        var personGuid = string.Empty;
+                        personGuidCollection.TryGetValue(source.OrganizationId, out personGuid);
+                        if (string.IsNullOrEmpty(personGuid))
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("GUID not found for organization id: '", source.OrganizationId, "'"),
+                               "GUID.Not.Found", source.Guid, source.Id);
+                        }
+                        else
+                        {
+                            orgInfo.Detail = new Dtos.GuidObject2(personGuid);
+                            orgInfo.Name = source.OrgName;
+                        }
+                    }
+                }
+                else
                 {
-                    var supervisor = new ExternalEmploymentsSupervisors();
-                    if (!string.IsNullOrEmpty(super.SupervisorFirstName) && !string.IsNullOrEmpty(super.SupervisorLastName))
-                        supervisor.Name = string.Concat(super.SupervisorFirstName, " ", super.SupervisorLastName);
-                    else if (!string.IsNullOrEmpty(super.SupervisorFirstName))
-                        supervisor.Name = super.SupervisorFirstName;
-                    else if (!string.IsNullOrEmpty(super.SupervisorLastName))
-                        supervisor.Name = super.SupervisorLastName;
-                    if (!string.IsNullOrEmpty(super.SupervisorEmail))
-                        supervisor.Email = super.SupervisorEmail;
-                    if (!string.IsNullOrEmpty(super.SupervisorPhone))
-                        supervisor.Phone = super.SupervisorPhone;
-                    supervisors.Add(supervisor);
+                    //Otherwise, if the EMP.SELF.EMPLOYED.FLAG is 'Y' then publish "Self Employed".
+                    //the EMP.UNKNOWN.EMPLOYER.FLAG is 'Y' then publish "Unknown Employer".
+                    if (String.Equals(source.selfEmployed, (string)"Y", StringComparison.OrdinalIgnoreCase))
+                    {
+                        orgInfo.Name = "Self Employed";
+                    }
+                    else if (String.Equals(source.unknownEmployer, (string)"Y", StringComparison.OrdinalIgnoreCase))
+                    {
+                        orgInfo.Name = "Unknown Employer";
+                    }
+                    else
+                    {
+                        orgInfo.Name = "Unknown Employer";
+                    }
+
                 }
-                externalEmployments.Supervisors = supervisors;
+                externalEmployments.Organization = orgInfo;               
+                // get starton
+                if (source.StartDate.HasValue)
+                {
+                    var startDate = new DateDtoProperty
+                    {
+                        Month = source.StartDate.Value.Month,
+                        Day = source.StartDate.Value.Day,
+                        Year = source.StartDate.Value.Year
+                    };
+                    externalEmployments.StartOn = startDate;
+                }
+                // get Endon
+                if (source.EndDate.HasValue)
+                {
+                    var endtDate = new DateDtoProperty
+                    {
+                        Month = source.EndDate.Value.Month,
+                        Day = source.EndDate.Value.Day,
+                        Year = source.EndDate.Value.Year
+                    };
+                    externalEmployments.EndOn = endtDate;
+                }
+                //get job title
+                if (!string.IsNullOrEmpty(source.JobTitle))
+                {
+                    externalEmployments.JobTitle = source.JobTitle;
+                }
+                //get priority 
+                if (!string.IsNullOrEmpty(source.PrincipalEmployment))
+                {
+                    if (String.Equals(source.PrincipalEmployment, (string)"Y", StringComparison.OrdinalIgnoreCase))
+                    {
+                        externalEmployments.Priority = ExternalEmploymentsPriority.Primary;
+                    }
+                    else
+                    {
+                        externalEmployments.Priority = ExternalEmploymentsPriority.Secondary;
+                    }
+                }
+                //get status
+                if (!string.IsNullOrEmpty(source.Status))
+                {
+                    var statuses = await GetAllExternalEmploymentStatusesAsync(bypassCache);
+                    if (statuses != null)
+                    {
+                        var exstatus = statuses.FirstOrDefault(id => id.Code == source.Status);
+                        if (exstatus == null)
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("GUID not found for external employment status '", source.Status, "'"),
+                            "GUID.Not.Found", source.Guid, source.Id);
+                        }
+                        else
+                        {
+                            externalEmployments.Status = new Dtos.GuidObject2(exstatus.Guid);
+                        }
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Concat("GUID not found for external employment status '", source.Status, "'"),
+                           "GUID.Not.Found", source.Guid, source.Id);
+                    }      
+                }
+                //get hours worked
+                if (source.HoursWorked != null)
+                {
+                    var hoursworked = new HoursPerPeriodDtoProperty();
+                    hoursworked.Period = Ellucian.Colleague.Dtos.EnumProperties.PayPeriods.Week;
+                    hoursworked.Hours = source.HoursWorked;
+                    externalEmployments.HoursWorked = hoursworked;
+                }
+                // get vocations
+                if (source.Vocations != null && source.Vocations.Any())
+                {
+                    var allvocations = await GetAllEmploymenVocationsAsync(bypassCache);
+                    var vocations = new List<Dtos.GuidObject2>();
+                    if (allvocations != null)
+                    {
+                        foreach (var voc in source.Vocations)
+                        {
+                            var vocation = allvocations.FirstOrDefault(id => id.Code == voc);
+                            if (vocation == null)
+                            {
+                                IntegrationApiExceptionAddError(string.Concat("GUID not found for employment vocation '", voc, "'"),
+                           "GUID.Not.Found", source.Guid, source.Id);
+                            }
+                            else
+                            {
+                                vocations.Add(new Dtos.GuidObject2(vocation.Guid));
+                            }
+                        }
+                        if (vocations.Any())
+                        {
+                            externalEmployments.Vocations = vocations;
+                        }
+                    }
+                    else
+                    {
+                        IntegrationApiExceptionAddError(string.Format("GUIDs not found for employment vocations"), "GUID.Not.Found", source.Guid, source.Id);
+                    }
+                }
+                // get superviosrs
+                if (source.Supervisors != null && source.Supervisors.Any())
+                {
+                    var supervisors = new List<ExternalEmploymentsSupervisors>();
+                    foreach (var super in source.Supervisors)
+                    {
+                        var supervisor = new ExternalEmploymentsSupervisors();
+                        if (!string.IsNullOrEmpty(super.SupervisorFirstName) && !string.IsNullOrEmpty(super.SupervisorLastName))
+                            supervisor.Name = string.Concat(super.SupervisorFirstName, " ", super.SupervisorLastName);
+                        else if (!string.IsNullOrEmpty(super.SupervisorFirstName))
+                            supervisor.Name = super.SupervisorFirstName;
+                        else if (!string.IsNullOrEmpty(super.SupervisorLastName))
+                            supervisor.Name = super.SupervisorLastName;
+                        if (!string.IsNullOrEmpty(super.SupervisorEmail))
+                            supervisor.Email = super.SupervisorEmail;
+                        if (!string.IsNullOrEmpty(super.SupervisorPhone))
+                            supervisor.Phone = super.SupervisorPhone;
+                        supervisors.Add(supervisor);
+                    }
+                    externalEmployments.Supervisors = supervisors;
+                }
+                //get comments
+                if (!string.IsNullOrEmpty(source.comments))
+                    externalEmployments.Comment = source.comments;
             }
-            //get comments
-            if (!string.IsNullOrEmpty(source.comments))
-                externalEmployments.Comment = source.comments;
             return externalEmployments;
         }
-
-        
-
-        /// <summary>
-        /// Permissions code that allows an external system to do a READ operation. This API will integrate information related to external employments that 
-        /// could be deemed personal.
-        /// </summary>
-        /// <exception><see cref="PermissionsException">PermissionsException</see></exception>
-        private void CheckExternalEmploymentsPermission()
-        {
-            var hasPermission = HasPermission(BasePermissionCodes.ViewAnyExternalEmployments);
-
-            if (!hasPermission)
-            {
-                throw new PermissionsException("User " + CurrentUser.UserId + " does not have permission to view external employments.");
-            }
-        }
-
 
         /// <summary>
         /// Get all external employment positions
@@ -346,7 +479,5 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             }
             return _employmentVocations;
         }
-      
     }
-   
 }

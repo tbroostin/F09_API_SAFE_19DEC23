@@ -1,5 +1,6 @@
-//Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -7,10 +8,12 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Hosting;
+using System.Web.Http.Routing;
 using Ellucian.Colleague.Api.Controllers.ColleagueFinance;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Domain.Base.Exceptions;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Http.Exceptions;
@@ -137,6 +140,86 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
                 var expected = procurementReceiptsCollection[i];
                 var actual = ActualsAPI[i];
                 Assert.AreEqual(expected.Id, actual.Id, "Id, Index=" + i.ToString());
+            }
+        }
+
+        [TestMethod]
+        public async Task procurementReceiptsController_GetProcurementReceipts_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "ProcurementReceiptsController" },
+                { "action", "GetProcurementReceipts" }
+            };
+            HttpRoute route = new HttpRoute("procurement-receipts", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            procurementReceiptsController.Request.SetRouteData(data);
+            procurementReceiptsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.ViewProcurementReceipts });
+
+            var controllerContext = procurementReceiptsController.ControllerContext;
+            var actionDescriptor = procurementReceiptsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            //var tuple = new Tuple<IEnumerable<ProcurementReceipts>, int>(studentCourseTransfersCollection, 5);
+            procurementReceiptsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                   .Returns(true);
+            procurementReceiptsServiceMock.Setup(s => s.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<ProcurementReceipts>(), It.IsAny<bool>())).ReturnsAsync(procurementTuple);
+            var resp = await procurementReceiptsController.GetProcurementReceiptsAsync(new Paging(10, 0), criteriaFilter);
+
+            Object filterObject;
+            procurementReceiptsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.ViewProcurementReceipts));
+
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task procurementReceiptsController_GetStudentCourseTransfers_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "ProcurementReceiptsController" },
+                { "action", "GetProcurementReceipts" }
+            };
+            HttpRoute route = new HttpRoute("procurement-receipts", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            procurementReceiptsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = procurementReceiptsController.ControllerContext;
+            var actionDescriptor = procurementReceiptsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                //var tuple = new Tuple<IEnumerable<ProcurementReceipts>, int>(studentCourseTransfersCollection, 5);
+
+                procurementReceiptsServiceMock.Setup(s => s.GetProcurementReceiptsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<ProcurementReceipts>(), It.IsAny<bool>())).ReturnsAsync(procurementTuple);
+                procurementReceiptsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                     .Throws(new PermissionsException("User is not authorized to view person-holds."));
+                var resp = await procurementReceiptsController.GetProcurementReceiptsAsync(new Paging(10, 0), criteriaFilter);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
             }
         }
 
@@ -439,6 +522,88 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.ColleagueFinance
         public async Task ProcurementReceiptsController_DeleteProcurementReceiptsAsync_Exception()
         {
             await procurementReceiptsController.DeleteProcurementReceiptsAsync(procurementReceiptsCollection.FirstOrDefault().Id);
+        }
+
+        [TestMethod]
+        public async Task procurementReceiptsController_PostProcurementReceiptsAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "ProcurementReceiptsController" },
+                { "action", "PostProcurementReceiptsAsync" }
+            };
+            HttpRoute route = new HttpRoute("procurement-receipts", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            procurementReceiptsController.Request.SetRouteData(data);
+            procurementReceiptsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { ColleagueFinancePermissionCodes.CreateProcurementReceipts });
+
+            var controllerContext = procurementReceiptsController.ControllerContext;
+            var actionDescriptor = procurementReceiptsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            //var tuple = new Tuple<IEnumerable<ProcurementReceipts>, int>(studentCourseTransfersCollection, 5);
+            procurementReceiptsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                   .Returns(true);
+            var expected = procurementReceiptsCollection.FirstOrDefault();
+            procurementReceiptsServiceMock.Setup(s => s.CreateProcurementReceiptsAsync(It.IsAny<Dtos.ProcurementReceipts>())).ReturnsAsync(expected);
+            var resp = await procurementReceiptsController.PostProcurementReceiptsAsync(new Dtos.ProcurementReceipts() { Id = Guid.Empty.ToString() });
+
+            Object filterObject;
+            procurementReceiptsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(ColleagueFinancePermissionCodes.CreateProcurementReceipts));
+
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task procurementReceiptsController_PostProcurementReceiptsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+            {
+                { "controller", "ProcurementReceiptsController" },
+                { "action", "PostProcurementReceiptsAsync" }
+            };
+            HttpRoute route = new HttpRoute("procurement-receipts", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            procurementReceiptsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = procurementReceiptsController.ControllerContext;
+            var actionDescriptor = procurementReceiptsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                //var tuple = new Tuple<IEnumerable<ProcurementReceipts>, int>(studentCourseTransfersCollection, 5);
+
+                var expected = procurementReceiptsCollection.FirstOrDefault();
+                procurementReceiptsServiceMock.Setup(s => s.CreateProcurementReceiptsAsync(It.IsAny<Dtos.ProcurementReceipts>())).ReturnsAsync(expected);
+                procurementReceiptsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                     .Throws(new PermissionsException("User is not authorized to view person-holds."));
+                var resp = await procurementReceiptsController.PostProcurementReceiptsAsync(new Dtos.ProcurementReceipts() { Id = Guid.Empty.ToString() });
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
         }
     }
 }

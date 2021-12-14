@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.ColleagueFinance.DataContracts;
 using Ellucian.Colleague.Data.ColleagueFinance.Utilities;
@@ -68,7 +68,7 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
             #region Error checking
             if (generalLedgerUser == null)
             {
-                LogDataError("generalLedgerUser", "", generalLedgerUser);
+                logger.Error("General Ledger User is null. No Finance Query line items to return.");
                 return filteredFinanceQueryGlAccountLineItems;
             }
 

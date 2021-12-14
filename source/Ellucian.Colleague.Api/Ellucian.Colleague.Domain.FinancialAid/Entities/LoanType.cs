@@ -9,6 +9,7 @@ namespace Ellucian.Colleague.Domain.FinancialAid.Entities
         SubsidizedLoan,
         UnsubsidizedLoan,
         GraduatePlusLoan,
+        PlusLoan,
         OtherLoan
     }
 }

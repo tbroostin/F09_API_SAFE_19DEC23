@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using System.Linq;
@@ -24,6 +24,11 @@ using Newtonsoft.Json.Linq;
 using Ellucian.Colleague.Dtos.Filters;
 using System.Net;
 using Newtonsoft.Json;
+using System.Web.Http.Routing;
+using System.Web.Http.Controllers;
+using System.Collections;
+using Ellucian.Colleague.Domain.Student;
+using Ellucian.Web.Http.Filters;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -502,6 +507,356 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     .ThrowsAsync(new Exception());
                 await sectionRegistrationsController.GetSectionRegistrationAsync("asdf");
             }
+
+            //GET v16.1.0 / v16.0.0
+            //Successful
+            //GetSectionRegistrations3Async
+
+            [TestMethod]
+            public async Task SectionRegistrationsController_GetSectionRegistrations3Async_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrations" },
+                    { "action", "GetSectionRegistrations3Async" }
+                };
+                HttpRoute route = new HttpRoute("section-registrations", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                sectionRegistrationsController.Request.SetRouteData(data);
+                sectionRegistrationsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(new string[] { SectionPermissionCodes.ViewRegistrations, SectionPermissionCodes.UpdateRegistrations });
+
+                var controllerContext = sectionRegistrationsController.ControllerContext;
+                var actionDescriptor = sectionRegistrationsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(allSectionRegistrations4Dtos, 2);
+
+                sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                sectionRegistrationServiceMock.Setup(s => s.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It
+                                    .IsAny<SectionRegistration4>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RegistrationStatusesByAcademicPeriodFilter>(),
+                                    It.IsAny<bool>())).ReturnsAsync(tuple); 
+                var sectionRegistrations = await sectionRegistrationsController.GetSectionRegistrations3Async(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>());
+
+                Object filterObject;
+                sectionRegistrationsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(SectionPermissionCodes.ViewRegistrations));
+                Assert.IsTrue(permissionsCollection.Contains(SectionPermissionCodes.UpdateRegistrations));
+
+            }
+
+            //GET v16.1.0 / v16.0.0
+            //Exception
+            //GetSectionRegistrations3Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_GetSectionRegistrations3Async_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrations" },
+                    { "action", "GetSectionRegistrations3Async" }
+                };
+                HttpRoute route = new HttpRoute("section-registrations", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                sectionRegistrationsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = sectionRegistrationsController.ControllerContext;
+                var actionDescriptor = sectionRegistrationsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                    
+                    sectionRegistrationServiceMock.Setup(s => s.GetSectionRegistrations3Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SectionRegistration4>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RegistrationStatusesByAcademicPeriodFilter>(), It.IsAny<bool>())).ThrowsAsync(new PermissionsException()); 
+                    sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view section-registrations."));
+                    await sectionRegistrationsController.GetSectionRegistrations3Async(It.IsAny<Paging>(), It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>(),It.IsAny<QueryStringFilter>(), It.IsAny<QueryStringFilter>());
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+            //GET by id v16.1.0 / v16.0.0
+            //Successful
+            //GetSectionRegistrationByGuid3Async
+
+            [TestMethod]
+            public async Task SectionRegistrationsController_GetSectionRegistrationByGuid3Async_Permissions()
+            {
+                var guid = "1d95b329-edbe-4420-909a-df57a962a30c";
+                var sectionRegistrationsDto = allSectionRegistrations4Dtos.ElementAt(0);
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrations" },
+                    { "action", "GetSectionRegistrationByGuid3Async" }
+                };
+                HttpRoute route = new HttpRoute("section-registrations", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                sectionRegistrationsController.Request.SetRouteData(data);
+                sectionRegistrationsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(new string[] { SectionPermissionCodes.ViewRegistrations, SectionPermissionCodes.UpdateRegistrations });
+
+                var controllerContext = sectionRegistrationsController.ControllerContext;
+                var actionDescriptor = sectionRegistrationsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(allSectionRegistrations4Dtos, 2);
+                
+                sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                sectionRegistrationServiceMock.Setup(s => s.GetSectionRegistrationByGuid3Async(guid, It.IsAny<bool>())).ReturnsAsync(sectionRegistrationsDto);
+
+                var sectReg = await sectionRegistrationsController.GetSectionRegistrationByGuid3Async("1d95b329-edbe-4420-909a-df57a962a30c");
+
+                Object filterObject;
+                sectionRegistrationsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(SectionPermissionCodes.ViewRegistrations));
+                Assert.IsTrue(permissionsCollection.Contains(SectionPermissionCodes.UpdateRegistrations));
+
+            }
+
+            //GET by id v16.1.0 / v16.0.0
+            //Exception
+            //GetSectionRegistrationByGuid3Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_GetSectionRegistrationByGuid3Async_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrations" },
+                    { "action", "GetSectionRegistrationByGuid3Async" }
+                };
+                HttpRoute route = new HttpRoute("section-registrations", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                sectionRegistrationsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = sectionRegistrationsController.ControllerContext;
+                var actionDescriptor = sectionRegistrationsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    sectionRegistrationServiceMock.Setup(s => s.GetSectionRegistrationByGuid3Async("GUID", It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                    sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view section-registrations."));
+                    await sectionRegistrationsController.GetSectionRegistrationByGuid3Async("GUID");
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+            //GET and GET by id v7
+            //Successful
+            //GetSectionRegistrations2Async
+
+            [TestMethod]
+            public async Task SectionRegistrationsController_GetSectionRegistrations2Async_Permissions()
+            {
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrations" },
+                    { "action", "GetSectionRegistrations2Async" }
+                };
+                HttpRoute route = new HttpRoute("section-registrations", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                sectionRegistrationsController.Request.SetRouteData(data);
+                sectionRegistrationsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(new string[] { SectionPermissionCodes.ViewRegistrations, SectionPermissionCodes.UpdateRegistrations });
+
+                var controllerContext = sectionRegistrationsController.ControllerContext;
+                var actionDescriptor = sectionRegistrationsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.SectionRegistration3>, int>(allSectionRegistrations3Dtos, 5);
+
+                sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                sectionRegistrationServiceMock.Setup(s => s.GetSectionRegistrations2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(tuple);
+
+                var sectionRegistrations = await sectionRegistrationsController.GetSectionRegistrations2Async(new Paging(10, 0), "", "");
+
+                Object filterObject;
+                sectionRegistrationsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(SectionPermissionCodes.ViewRegistrations));
+                Assert.IsTrue(permissionsCollection.Contains(SectionPermissionCodes.UpdateRegistrations));
+
+            }
+
+            //GET and GET by id v7
+            //Exception
+            //GetSectionRegistrations2Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_GetSectionRegistrations2Async_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrations" },
+                    { "action", "GetSectionRegistrations2Async" }
+                };
+                HttpRoute route = new HttpRoute("section-registrations", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                sectionRegistrationsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = sectionRegistrationsController.ControllerContext;
+                var actionDescriptor = sectionRegistrationsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    sectionRegistrationServiceMock.Setup(s => s.GetSectionRegistrations2Async(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new PermissionsException());
+                    sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view section-registrations."));
+                    await sectionRegistrationsController.GetSectionRegistrations2Async(It.IsAny<Paging>(), "", "");
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+            //GET and GET by id v6
+            //Successful
+            //GetSectionRegistrationAsync
+
+            [TestMethod]
+            public async Task SectionRegistrationsController_GetSectionRegistrationAsync_Permissions()
+            {
+                string guid = allSectionRegistrationsDtos.ElementAt(0).Id;
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrations" },
+                    { "action", "GetSectionRegistrationAsync" }
+                };
+                HttpRoute route = new HttpRoute("section-registrations", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                sectionRegistrationsController.Request.SetRouteData(data);
+                sectionRegistrationsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(new string[] { SectionPermissionCodes.ViewRegistrations, SectionPermissionCodes.UpdateRegistrations });
+
+                var controllerContext = sectionRegistrationsController.ControllerContext;
+                var actionDescriptor = sectionRegistrationsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                var tuple = new Tuple<IEnumerable<Dtos.SectionRegistration4>, int>(allSectionRegistrations4Dtos, 2);
+
+                sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                sectionRegistrationServiceMock.Setup(x => x.GetSectionRegistrationAsync(guid)).Returns(Task.FromResult(allSectionRegistrationsDtos.ElementAt(0)));
+
+                var sectionRegistration = await sectionRegistrationsController.GetSectionRegistrationAsync(guid);
+
+                Object filterObject;
+                sectionRegistrationsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(SectionPermissionCodes.ViewRegistrations));
+                Assert.IsTrue(permissionsCollection.Contains(SectionPermissionCodes.UpdateRegistrations));
+
+            }
+
+            //GET and GET by id v6
+            //Exception
+            //GetSectionRegistrationAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_GetSectionRegistrationAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrations" },
+                    { "action", "GetSectionRegistrationAsync" }
+                };
+                HttpRoute route = new HttpRoute("section-registrations", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                sectionRegistrationsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = sectionRegistrationsController.ControllerContext;
+                var actionDescriptor = sectionRegistrationsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    sectionRegistrationServiceMock.Setup(s => s.GetSectionRegistrationAsync("asdf")).ThrowsAsync(new PermissionsException());
+                    sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to view section-registrations."));
+                    await sectionRegistrationsController.GetSectionRegistrationAsync("asdf");
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
             #endregion
 
         }
@@ -664,6 +1019,94 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     .ThrowsAsync(new Exception());
                 await sectionRegistrationsController.PutSectionRegistrationAsync("asdf", It.IsAny<SectionRegistration2>());
             }
+
+            //PUT v6
+            //Successful
+            //PutSectionRegistrationAsync
+
+            [TestMethod]
+            public async Task SectionRegistrationsController_PutSectionRegistrationAsync_Permissions()
+            {
+                Dtos.SectionRegistration2 registration = allSectionRegistrationsDtos.ElementAt(0);
+                string guid = registration.Id;
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrations" },
+                    { "action", "PutSectionRegistrationAsync" }
+                };
+                HttpRoute route = new HttpRoute("section-registrations", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                sectionRegistrationsController.Request.SetRouteData(data);
+                sectionRegistrationsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(SectionPermissionCodes.UpdateRegistrations);
+
+                var controllerContext = sectionRegistrationsController.ControllerContext;
+                var actionDescriptor = sectionRegistrationsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                
+                sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                sectionRegistrationServiceMock.Setup(x => x.UpdateSectionRegistrationAsync(guid, It.IsAny<SectionRegistration2>())).ReturnsAsync(registration);
+                var result = await sectionRegistrationsController.PutSectionRegistrationAsync(guid, registration);
+
+                Object filterObject;
+                sectionRegistrationsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(SectionPermissionCodes.UpdateRegistrations));
+
+
+            }
+
+            //PUT v6
+            //Exception
+            //PutSectionRegistrationAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PutSectionRegistrationAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrations" },
+                    { "action", "PutSectionRegistrationAsync" }
+                };
+                HttpRoute route = new HttpRoute("section-registrations", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                sectionRegistrationsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = sectionRegistrationsController.ControllerContext;
+                var actionDescriptor = sectionRegistrationsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    sectionRegistrationServiceMock.Setup(s => s.UpdateSectionRegistrationAsync("asdf", It.IsAny<SectionRegistration2>())).ThrowsAsync(new PermissionsException());
+                    sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to update section-registrations."));
+                    await sectionRegistrationsController.PutSectionRegistrationAsync("asdf", It.IsAny<SectionRegistration2>());
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
             #endregion
 
         }
@@ -827,6 +1270,93 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     .ThrowsAsync(new Exception());
                 await sectionRegistrationsController.PutSectionRegistration2Async("asdf", It.IsAny<SectionRegistration3>());
             }
+
+            //PUT v7
+            //Successful
+            //PutSectionRegistration2Async
+
+            [TestMethod]
+            public async Task SectionRegistrationsController_PutSectionRegistration2Async_Permissions()
+            {
+                Dtos.SectionRegistration3 registration = allSectionRegistrationsDtos.ElementAt(0);
+                string guid = registration.Id;
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrations" },
+                    { "action", "PutSectionRegistration2Async" }
+                };
+                HttpRoute route = new HttpRoute("section-registrations", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                sectionRegistrationsController.Request.SetRouteData(data);
+                sectionRegistrationsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(SectionPermissionCodes.UpdateRegistrations);
+
+                var controllerContext = sectionRegistrationsController.ControllerContext;
+                var actionDescriptor = sectionRegistrationsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                
+                sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                sectionRegistrationServiceMock.Setup(x => x.UpdateSectionRegistration2Async(guid, It.IsAny<SectionRegistration3>())).ReturnsAsync(registration);
+                var result = await sectionRegistrationsController.PutSectionRegistration2Async(guid, registration);
+
+                Object filterObject;
+                sectionRegistrationsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(SectionPermissionCodes.UpdateRegistrations));
+
+
+            }
+
+            //PUT v7
+            //Exception
+            //PutSectionRegistration2Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PutSectionRegistration2Async_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrations" },
+                    { "action", "PutSectionRegistration2Async" }
+                };
+                HttpRoute route = new HttpRoute("section-registrations", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                sectionRegistrationsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = sectionRegistrationsController.ControllerContext;
+                var actionDescriptor = sectionRegistrationsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    sectionRegistrationServiceMock.Setup(s => s.UpdateSectionRegistration2Async("asdf", It.IsAny<SectionRegistration3>())).ThrowsAsync(new PermissionsException());
+                    sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to update section-registrations."));
+                    await sectionRegistrationsController.PutSectionRegistration2Async("asdf", It.IsAny<SectionRegistration3>());
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
             #endregion
 
         }
@@ -990,6 +1520,94 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     .ThrowsAsync(new Exception());
                 await sectionRegistrationsController.PutSectionRegistrations3Async("asdf", It.IsAny<SectionRegistration4>());
             }
+
+            //PUT v16.0.0 / v16.1.0
+            //Successful
+            //PutSectionRegistrations3Async
+
+            [TestMethod]
+            public async Task SectionRegistrationsController_PutSectionRegistrations3Async_Permissions()
+            {
+                Dtos.SectionRegistration4 registration = allSectionRegistrationsDtos.ElementAt(0);
+                string guid = registration.Id;
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrations" },
+                    { "action", "PutSectionRegistrations3Async" }
+                };
+                HttpRoute route = new HttpRoute("section-registrations", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                sectionRegistrationsController.Request.SetRouteData(data);
+                sectionRegistrationsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(SectionPermissionCodes.UpdateRegistrations);
+
+                var controllerContext = sectionRegistrationsController.ControllerContext;
+                var actionDescriptor = sectionRegistrationsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                
+                sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                sectionRegistrationServiceMock.Setup(x => x.UpdateSectionRegistration3Async(guid, It.IsAny<SectionRegistration4>())).ReturnsAsync(registration);
+                var result = await sectionRegistrationsController.PutSectionRegistrations3Async(guid, registration);
+
+                Object filterObject;
+                sectionRegistrationsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(SectionPermissionCodes.UpdateRegistrations));
+
+
+            }
+
+            //PUT v16.0.0 / v16.1.0
+            //Exception
+            //PutSectionRegistrations3Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PutSectionRegistrations3Async_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrations" },
+                    { "action", "PutSectionRegistrations3Async" }
+                };
+                HttpRoute route = new HttpRoute("section-registrations", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                sectionRegistrationsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = sectionRegistrationsController.ControllerContext;
+                var actionDescriptor = sectionRegistrationsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    sectionRegistrationServiceMock.Setup(s => s.UpdateSectionRegistration3Async("asdf", It.IsAny<SectionRegistration4>())).ThrowsAsync(new PermissionsException());
+                    sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to update section-registrations."));
+                    await sectionRegistrationsController.PutSectionRegistrations3Async("asdf", It.IsAny<SectionRegistration4>());
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
             #endregion
 
         }
@@ -1042,7 +1660,12 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 allSectionRegistrationsDtos = SectionRegistrationControllerTests.BuildSectionRegistrations();
 
-                sectionRegistrationsController = new SectionRegistrationsController(AdapterRegistry, studentReferenceDataRepository, sectionRegistrationService, logger);
+                sectionRegistrationsController = new SectionRegistrationsController(AdapterRegistry, studentReferenceDataRepository, sectionRegistrationService, logger)
+                {
+                    Request = new HttpRequestMessage()
+                };
+                sectionRegistrationsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+
             }
 
             [TestCleanup]
@@ -1166,6 +1789,92 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     .ThrowsAsync(new Exception());
                 await sectionRegistrationsController.PostSectionRegistrationAsync(It.IsAny<SectionRegistration2>());
             }
+
+            //POST v6
+            //Successful
+            //PostSectionRegistrationAsync
+
+            [TestMethod]
+            public async Task SectionRegistrationsController_PostSectionRegistrationAsync_Permissions()
+            {
+                Dtos.SectionRegistration2 registration = allSectionRegistrationsDtos.ElementAt(0);
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrations" },
+                    { "action", "PostSectionRegistrationAsync" }
+                };
+                HttpRoute route = new HttpRoute("section-registrations", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                sectionRegistrationsController.Request.SetRouteData(data);
+                sectionRegistrationsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(SectionPermissionCodes.UpdateRegistrations);
+
+                var controllerContext = sectionRegistrationsController.ControllerContext;
+                var actionDescriptor = sectionRegistrationsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                sectionRegistrationServiceMock.Setup(x => x.CreateSectionRegistrationAsync(registration)).ReturnsAsync(allSectionRegistrationsDtos.ElementAt(0));
+                var sectionRegistration = await sectionRegistrationsController.PostSectionRegistrationAsync(registration);
+
+                Object filterObject;
+                sectionRegistrationsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(SectionPermissionCodes.UpdateRegistrations));
+            }
+
+            //POST v6
+            //Exception
+            //PostSectionRegistrationAsync
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PostSectionRegistrationAsync_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrations" },
+                    { "action", "PostSectionRegistrationAsync" }
+                };
+                HttpRoute route = new HttpRoute("section-registrations", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                sectionRegistrationsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = sectionRegistrationsController.ControllerContext;
+                var actionDescriptor = sectionRegistrationsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    sectionRegistrationServiceMock.Setup(s => s.CreateSectionRegistrationAsync(It.IsAny<SectionRegistration2>())).ThrowsAsync(new PermissionsException());
+                    sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to create section-registrations."));
+                    await sectionRegistrationsController.PostSectionRegistrationAsync(It.IsAny<SectionRegistration2>());
+
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
             #endregion
         }
 
@@ -1217,7 +1926,11 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 allSectionRegistrationsDtos = SectionRegistrationControllerTests.BuildSectionRegistrations3();
 
-                sectionRegistrationsController = new SectionRegistrationsController(AdapterRegistry, studentReferenceDataRepository, sectionRegistrationService, logger);
+                sectionRegistrationsController = new SectionRegistrationsController(AdapterRegistry, studentReferenceDataRepository, sectionRegistrationService, logger)
+                {
+                    Request = new HttpRequestMessage()
+                };
+                sectionRegistrationsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
             }
 
             [TestCleanup]
@@ -1343,6 +2056,92 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     .ThrowsAsync(new Exception());
                 await sectionRegistrationsController.PostSectionRegistration2Async(It.IsAny<SectionRegistration3>());
             }
+
+            //POST v7
+            //Successful
+            //PostSectionRegistration2Async
+
+            [TestMethod]
+            public async Task SectionRegistrationsController_PostSectionRegistration2Async_Permissions()
+            {
+                Dtos.SectionRegistration3 registration = allSectionRegistrationsDtos.ElementAt(0);
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrations" },
+                    { "action", "PostSectionRegistration2Async" }
+                };
+                HttpRoute route = new HttpRoute("section-registrations", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                sectionRegistrationsController.Request.SetRouteData(data);
+                sectionRegistrationsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(SectionPermissionCodes.UpdateRegistrations);
+
+                var controllerContext = sectionRegistrationsController.ControllerContext;
+                var actionDescriptor = sectionRegistrationsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                sectionRegistrationServiceMock.Setup(x => x.CreateSectionRegistration2Async(registration)).ReturnsAsync(allSectionRegistrationsDtos.ElementAt(0));
+                var sectionRegistration = await sectionRegistrationsController.PostSectionRegistration2Async(registration);
+
+                Object filterObject;
+                sectionRegistrationsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(SectionPermissionCodes.UpdateRegistrations));
+            }
+
+            //POST v7
+            //Exception
+            //PostSectionRegistration2Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PostSectionRegistration2Async_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrations" },
+                    { "action", "PostSectionRegistration2Async" }
+                };
+                HttpRoute route = new HttpRoute("section-registrations", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                sectionRegistrationsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = sectionRegistrationsController.ControllerContext;
+                var actionDescriptor = sectionRegistrationsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                   
+                    sectionRegistrationServiceMock.Setup(s => s.CreateSectionRegistration2Async(It.IsAny<SectionRegistration3>())).ThrowsAsync(new PermissionsException());
+                    sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to create section-registrations."));
+                    await sectionRegistrationsController.PostSectionRegistration2Async(It.IsAny<SectionRegistration3>());
+
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
             #endregion
         }
 
@@ -1394,7 +2193,12 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 
                 allSectionRegistrationsDtos = SectionRegistrationControllerTests.BuildSectionRegistrations4();
 
-                sectionRegistrationsController = new SectionRegistrationsController(AdapterRegistry, studentReferenceDataRepository, sectionRegistrationService, logger);
+                sectionRegistrationsController = new SectionRegistrationsController(AdapterRegistry, studentReferenceDataRepository, sectionRegistrationService, logger)
+                {
+                    Request = new HttpRequestMessage()
+                };
+                sectionRegistrationsController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+
             }
 
             [TestCleanup]
@@ -1520,6 +2324,92 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                     .ThrowsAsync(new Exception());
                 await sectionRegistrationsController.PostSectionRegistrations3Async(It.IsAny<SectionRegistration4>());
             }
+
+            //POST v16.0.0 / v16.1.0
+            //Successful
+            //PostSectionRegistrations3Async
+
+            [TestMethod]
+            public async Task SectionRegistrationsController_PostSectionRegistrations3Async_Permissions()
+            {
+                Dtos.SectionRegistration4 registration = allSectionRegistrationsDtos.ElementAt(0);
+                var contextPropertyName = "PermissionsFilter";
+
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrations" },
+                    { "action", "PostSectionRegistrations3Async" }
+                };
+                HttpRoute route = new HttpRoute("section-registrations", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                sectionRegistrationsController.Request.SetRouteData(data);
+                sectionRegistrationsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+                var permissionsFilter = new PermissionsFilter(SectionPermissionCodes.UpdateRegistrations);
+
+                var controllerContext = sectionRegistrationsController.ControllerContext;
+                var actionDescriptor = sectionRegistrationsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+                sectionRegistrationServiceMock.Setup(x => x.CreateSectionRegistration3Async(registration)).ReturnsAsync(allSectionRegistrationsDtos.ElementAt(0));
+                var sectionRegistration = await sectionRegistrationsController.PostSectionRegistrations3Async(registration);
+
+                Object filterObject;
+                sectionRegistrationsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+                var cancelToken = new System.Threading.CancellationToken(false);
+                Assert.IsNotNull(filterObject);
+
+                var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                     .Select(x => x.ToString())
+                                     .ToArray();
+
+                Assert.IsTrue(permissionsCollection.Contains(SectionPermissionCodes.UpdateRegistrations));
+            }
+
+            //POST v16.0.0 / v16.1.0
+            //Exception
+            //PostSectionRegistrations3Async
+            [TestMethod]
+            [ExpectedException(typeof(HttpResponseException))]
+            public async Task SectionRegistrationsController_PostSectionRegistrations3Async_Invalid_Permissions()
+            {
+                HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "SectionRegistrations" },
+                    { "action", "PostSectionRegistrations3Async" }
+                };
+                HttpRoute route = new HttpRoute("section-registrations", routeValueDict);
+                HttpRouteData data = new HttpRouteData(route);
+                sectionRegistrationsController.Request.SetRouteData(data);
+
+                var permissionsFilter = new PermissionsFilter("invalid");
+
+                var controllerContext = sectionRegistrationsController.ControllerContext;
+                var actionDescriptor = sectionRegistrationsController.ActionContext.ActionDescriptor
+                         ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+                var _context = new HttpActionContext(controllerContext, actionDescriptor);
+                try
+                {
+                    await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                    sectionRegistrationServiceMock.Setup(s => s.CreateSectionRegistration3Async(It.IsAny<SectionRegistration4>())).ThrowsAsync(new PermissionsException());
+                    sectionRegistrationServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                        .Throws(new PermissionsException("User 'npuser' does not have permission to create section-registrations."));
+                    await sectionRegistrationsController.PostSectionRegistrations3Async(It.IsAny<SectionRegistration4>());
+
+                }
+                catch (PermissionsException ex)
+                {
+                    throw ex;
+                }
+            }
+
+
             #endregion
         }
 

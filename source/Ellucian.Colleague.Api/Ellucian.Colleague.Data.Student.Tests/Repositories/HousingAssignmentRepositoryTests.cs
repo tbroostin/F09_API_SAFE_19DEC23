@@ -200,7 +200,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                   .Returns(Task.FromResult(new Dictionary<string, GuidLookupResult>() { { "KEY", new GuidLookupResult() { Entity = "ROOM.ASSIGNMENT", PrimaryKey = "KEY" } } }));
 
                 dataReaderMock.Setup(d => d.ReadRecordAsync<RoomAssignment>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
-                              .ReturnsAsync(null);
+                              .ReturnsAsync(() => null);
 
                 await housingAssignmentRepository.GetHousingAssignmentByGuidAsync(roomAssignments.FirstOrDefault().RecordGuid);
             }
@@ -235,7 +235,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                               .Returns(Task.FromResult(roomPrefIds));
 
                 dataReaderMock.Setup(d => d.BulkReadRecordAsync<DataContracts.ArAddnlAmts>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>()))
-                              .ReturnsAsync(null);
+                              .ReturnsAsync(() => null);
 
                 var result = await housingAssignmentRepository.GetHousingAssignmentByGuidAsync(roomAssignments.FirstOrDefault().RecordGuid);
 
@@ -409,7 +409,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task UpdateHousingAssignmentAsync_Get_KeyNotFoundException_HousingAssignmentDc_Null()
             {
-                dataReaderMock.Setup(r => r.ReadRecordAsync<RoomAssignment>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<RoomAssignment>(It.IsAny<string>(), It.IsAny<string>(), true)).ReturnsAsync(() => null);
 
                 await repository.UpdateHousingAssignmentAsync(housingAssignment);
             }

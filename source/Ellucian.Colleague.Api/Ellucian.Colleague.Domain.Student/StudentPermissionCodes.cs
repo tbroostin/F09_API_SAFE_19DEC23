@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Domain.Base;
 using System;
@@ -23,6 +23,9 @@ namespace Ellucian.Colleague.Domain.Student
 
         // Access to view student information
         public const string ViewStudentInformation = "VIEW.STUDENT.INFORMATION";
+        
+        // Access to view person information
+        public const string ViewPersonInformation = "VIEW.PERSON.INFORMATION";
 
         // Permission to view financial aid information
         public const string ViewFinancialAidInformation = "VIEW.FINANCIAL.AID.INFORMATION";
@@ -244,5 +247,11 @@ namespace Ellucian.Colleague.Domain.Student
 
         //Permissions code that allows users to perform instant enrollment operations.
         public const string InstantEnrollmentAllowAll = "IE.ALLOW.ALL";
+
+        //Permission code that allows users to delete, update, sync courses and sections for Portal functionality.
+        public const string PortalCatalogAdmin = "PORTAL.CATALOG.ADMIN";
+
+        // Permission to allow faculty to drop students from sections.
+        public const string CanDropStudent = "DROP.STUDENT";
     }
 }

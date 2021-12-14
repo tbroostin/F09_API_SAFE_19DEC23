@@ -1,4 +1,4 @@
-﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -19,10 +19,8 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
-using System.Web.Http.ModelBinding;
-using Ellucian.Web.Http.ModelBinding;
 using System.Linq;
-using System.Net.Http;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -56,7 +54,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="section">filter section</param>
         /// <returns>List of StudentUnverifiedGrades <see cref="Dtos.StudentUnverifiedGrades"/> objects representing matching studentUnverifiedGrades</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, FilteringFilter(IgnoreFiltering = true)]
+        [HttpGet, FilteringFilter(IgnoreFiltering = true), PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentUnverifiedGrades, StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions })]
         [ValidateQueryStringFilter()]
         [QueryStringFilterFilter("criteria", typeof(Dtos.StudentUnverifiedGrades))]
         [QueryStringFilterFilter("section", typeof(Dtos.Filters.StudentUnverifiedGradesFilter))]
@@ -93,6 +91,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
 
             try
             {
+                _studentUnverifiedGradesService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -145,7 +144,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="guid">GUID to desired studentUnverifiedGrades</param>
         /// <returns>A studentUnverifiedGrades object <see cref="Dtos.StudentUnverifiedGrades"/> in EEDM format</returns>
         [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
-        [HttpGet, EedmResponseFilter]    
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentUnverifiedGrades, StudentPermissionCodes.ViewStudentUnverifiedGradesSubmissions })]    
         public async Task<Dtos.StudentUnverifiedGrades> GetStudentUnverifiedGradesByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -163,6 +162,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _studentUnverifiedGradesService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                    await _studentUnverifiedGradesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                    await _studentUnverifiedGradesService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -239,6 +239,5 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
 
         }
-
     }
 }

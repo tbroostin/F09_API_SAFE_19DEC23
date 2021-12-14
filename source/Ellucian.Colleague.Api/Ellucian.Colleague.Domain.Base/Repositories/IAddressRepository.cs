@@ -61,6 +61,15 @@ namespace Ellucian.Colleague.Domain.Base.Repositories
         /// <returns>Updated Address Entity</returns>
         Task<Address> UpdateAsync(string addressKey, Address addressEntity);
 
+
+        /// <summary>
+        /// Get an Address Id from a GUID
+        /// </summary>
+        /// <param name="addressKey">Key to Addres Record</param>
+        /// <param name="addressEntity">Address Domain object for update into Colleague</param>
+        /// <returns>Updated Address Entity</returns>
+        Task<Address> Update2Async(string addressKey, Address addressEntity);
+
         /// <summary>
         /// Delete an Address Id from a GUID
         /// </summary>

@@ -1,4 +1,4 @@
-﻿//Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using System.Collections.Generic;
 using Ellucian.Web.Http.Controllers;
@@ -25,6 +25,7 @@ using Ellucian.Colleague.Domain.Base.Exceptions;
 using System.Web.Http.ModelBinding;
 using Ellucian.Web.Http.ModelBinding;
 using Newtonsoft.Json.Linq;
+using Ellucian.Colleague.Domain.HumanResources;
 
 namespace Ellucian.Colleague.Api.Controllers.HumanResources
 {
@@ -54,7 +55,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Return all InstitutionJobs
         /// </summary>
         /// <returns>List of InstitutionJobs <see cref="Dtos.InstitutionJobs"/> objects representing matching institutionJobs</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewInstitutionJob, HumanResourcesPermissionCodes.CreateInstitutionJob })]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.InstitutionJobs))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
@@ -105,7 +106,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
-               var pageOfItems = await _institutionJobsService.GetInstitutionJobsAsync(page.Offset, page.Limit, person, employer, position,
+                _institutionJobsService.ValidatePermissions(GetPermissionsMetaData());
+                var pageOfItems = await _institutionJobsService.GetInstitutionJobsAsync(page.Offset, page.Limit, person, employer, position,
                     department, startOn, endOn, status, classification, preference, bypassCache);
                
                 AddEthosContextProperties(
@@ -158,7 +160,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Return all InstitutionJobs
         /// </summary>
         /// <returns>List of InstitutionJobs <see cref="Dtos.InstitutionJobs2"/> objects representing matching institutionJobs</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewInstitutionJob, HumanResourcesPermissionCodes.CreateInstitutionJob })]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.InstitutionJobs2))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
@@ -209,6 +211,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                _institutionJobsService.ValidatePermissions(GetPermissionsMetaData());
                 var pageOfItems = await _institutionJobsService.GetInstitutionJobs2Async(page.Offset, page.Limit, person, employer, position,
                     department, startOn, endOn, status, classification, preference, bypassCache);
 
@@ -262,7 +265,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// Return all InstitutionJobs
         /// </summary>
         /// <returns>List of InstitutionJobs <see cref="Dtos.InstitutionJobs3"/> objects representing matching institutionJobs</returns>
-        [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewInstitutionJob, HumanResourcesPermissionCodes.CreateInstitutionJob })]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.InstitutionJobs3))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
@@ -315,6 +319,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                _institutionJobsService.ValidatePermissions(GetPermissionsMetaData());
                 var pageOfItems = await _institutionJobsService.GetInstitutionJobs3Async(page.Offset, page.Limit, person, employer, position,
                     department, startOn, endOn, status, classification, preference, bypassCache, filterQualifiers);
 
@@ -369,7 +374,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="guid">GUID to desired institutionJobs</param>
         /// <returns>An InstitutionJobs DTO object <see cref="Dtos.InstitutionJobs"/> in EEDM format</returns>
-        [System.Web.Http.HttpGet, EedmResponseFilter]
+        [System.Web.Http.HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewInstitutionJob, HumanResourcesPermissionCodes.CreateInstitutionJob })]
         public async Task<Dtos.InstitutionJobs> GetInstitutionJobsByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -389,6 +394,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                _institutionJobsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                   await _institutionJobsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                   await _institutionJobsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -432,7 +438,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="guid">GUID to desired institutionJobs</param>
         /// <returns>An InstitutionJobs DTO object <see cref="Dtos.InstitutionJobs2"/> in EEDM format</returns>
-        [System.Web.Http.HttpGet, EedmResponseFilter]
+        [System.Web.Http.HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewInstitutionJob, HumanResourcesPermissionCodes.CreateInstitutionJob })]
         public async Task<Dtos.InstitutionJobs2> GetInstitutionJobsByGuid2Async(string guid)
         {
             var bypassCache = false;
@@ -452,6 +458,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                _institutionJobsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                   await _institutionJobsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                   await _institutionJobsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -495,7 +502,8 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="guid">GUID to desired institutionJobs</param>
         /// <returns>An InstitutionJobs DTO object <see cref="Dtos.InstitutionJobs3"/> in EEDM format</returns>
-        [System.Web.Http.HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [System.Web.Http.HttpGet, EedmResponseFilter, PermissionsFilter(new string[] { HumanResourcesPermissionCodes.ViewInstitutionJob, HumanResourcesPermissionCodes.CreateInstitutionJob })]
         public async Task<Dtos.InstitutionJobs3> GetInstitutionJobsByGuid3Async(string guid)
         {
             var bypassCache = false;
@@ -515,6 +523,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
             }
             try
             {
+                _institutionJobsService.ValidatePermissions(GetPermissionsMetaData());
                 AddEthosContextProperties(
                   await _institutionJobsService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
                   await _institutionJobsService.GetExtendedEthosDataByResource(GetEthosResourceRouteInfo(),
@@ -584,7 +593,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// </summary>
         /// <param name="institutionJobs">DTO of the new institutionJobs</param>
         /// <returns>An InstitutionJobs DTO object <see cref="Dtos.InstitutionJobs3"/> in EEDM format</returns>
-        [System.Web.Http.HttpPost, EedmResponseFilter]
+        [System.Web.Http.HttpPost, EedmResponseFilter, PermissionsFilter(HumanResourcesPermissionCodes.CreateInstitutionJob)]
         public async Task<Dtos.InstitutionJobs3> PostInstitutionJobs3Async([ModelBinder(typeof(EedmModelBinder))] Dtos.InstitutionJobs3 institutionJobs)
         {
            
@@ -596,6 +605,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
           
             try
             {
+                _institutionJobsService.ValidatePermissions(GetPermissionsMetaData());
                 if (institutionJobs.Id != Guid.Empty.ToString())
                 {
                     throw new ArgumentNullException("institutionJobsDto", "Nil GUID must be used in POST operation.");
@@ -689,7 +699,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
         /// <param name="guid">GUID of the institutionJobs to update</param>
         /// <param name="institutionJobs">DTO of the updated institutionJobs</param>
         /// <returns>An InstitutionJobs DTO object <see cref="Dtos.InstitutionJobs3"/> in EEDM format</returns>
-        [System.Web.Http.HttpPut, EedmResponseFilter]
+        [System.Web.Http.HttpPut, EedmResponseFilter, PermissionsFilter(HumanResourcesPermissionCodes.CreateInstitutionJob)]
         public async Task<Dtos.InstitutionJobs3> PutInstitutionJobs3Async([FromUri] string guid, [ModelBinder(typeof(EedmModelBinder))] Dtos.InstitutionJobs3 institutionJobs)
         {
             if (string.IsNullOrEmpty(guid))
@@ -719,6 +729,7 @@ namespace Ellucian.Colleague.Api.Controllers.HumanResources
 
             try
             {
+                _institutionJobsService.ValidatePermissions(GetPermissionsMetaData());
                 //get Data Privacy List
                 var dpList = await _institutionJobsService.GetDataPrivacyListByApi(GetRouteResourceName(), true);    
                             

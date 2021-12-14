@@ -13,14 +13,14 @@
   
   FGU-dev
       purpose..............: matches build that is currently deployed to PROJDB18
-      Colleague.Api Version: 1.29.1.9
-      deployed date........: 12/15/20
+      Colleague.Api Version: 1.33.1.6
+      deployed date........: 12/08/21
       deployed commit......: see server for actual commit (this is inside source control)
 
   master
       purpose..............: matches build that is currently deployed to PRODUCTION
-      Colleague.Api Version: 1.29.1.9
-      deployed date........: 12/15/20
+      Colleague.Api Version: 1.33.1.6
+      deployed date........: 12/13/21
       deployed commit......: see server for actual commit (this is inside source control)
 
 **-----------------------------------------------------------------
@@ -34,6 +34,8 @@
   12/15/20 TEST18   v1.29.1.9                                          -upgrade API to v1.29
   12/15/20 PROJDB18 v1.29.1.9                                          -upgrade API to v1.29
   12/15/20 LIVE18   v1.29.1.9                                          -upgrade API to v1.29
+  12/08/21 TEST18   v1.33.1.6                                          -upgrade API to v1.33
+  12/13/21 TEST18   v1.33.1.6                                          -upgrade API to v1.33
 
 **-----------------------------------------------------------------
           Summary of Custom CTX Transactions
@@ -62,5 +64,8 @@
  delete "public class Questions"
  because KA grading already defines that class, we simply need to reuse it
  
-     
+ F09 teresa@toad-code.com 05/18/21, 12/08/21
+ -change PDF report column header from "Acadmic Program" to "Program (Catalog)"
+ in:
+ \source\Ellucian.Colleague.Api\Ellucian.Colleague.Api\Reports\F09\StudentTrackingSheet.rdlc 
  

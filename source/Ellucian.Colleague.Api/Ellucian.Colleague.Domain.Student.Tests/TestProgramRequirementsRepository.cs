@@ -328,10 +328,11 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                           .SubRequirements.First(sr => sr.Code == "STSS.CORE.SUB.MATH").AllowedGrades.Add(grades.First(grd => grd.LetterGrade == "P"));
 
                         pr.Requirements.First(rq => rq.Code == "STSS.MATH.MAJ").RequirementType = requirementTypes.First(rt => rt.Code == "MAJ");
-                        pr.Requirements.First(rq => rq.Code == "STSS.MATH.MAJ").Exclusions.Add("MAJ");
-                        pr.Requirements.First(rq => rq.Code == "STSS.MATH.MAJ").Exclusions.Add("MIN");
-                        pr.Requirements.First(rq => rq.Code == "STSS.MATH.MAJ").Exclusions.Add("ELE");
-                        pr.Requirements.First(rq => rq.Code == "STSS.MATH.MAJ").Exclusions.Add("GEN");
+
+                        pr.Requirements.First(rq => rq.Code == "STSS.MATH.MAJ").RequirementExclusions.Add(new RequirementBlockExclusion("MAJ"));
+                        pr.Requirements.First(rq => rq.Code == "STSS.MATH.MAJ").RequirementExclusions.Add(new RequirementBlockExclusion("MIN"));
+                        pr.Requirements.First(rq => rq.Code == "STSS.MATH.MAJ").RequirementExclusions.Add(new RequirementBlockExclusion("ELE"));
+                        pr.Requirements.First(rq => rq.Code == "STSS.MATH.MAJ").RequirementExclusions.Add(new RequirementBlockExclusion("GEN"));
                         pr.Requirements.First(rq => rq.Code == "STSS.MATH.MAJ").MinGpa = 3.0m;
 
 
@@ -410,7 +411,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                         foreach (var req in programRequirements.Requirements)
                         {
                             req.RequirementType = requirementTypes.First(rt => rt.Code == "GEN");
-                            req.Exclusions.Add("GEN");
+                            req.RequirementExclusions.Add(new RequirementBlockExclusion("GEN"));
                         }
                         return programRequirements;
                     }
@@ -436,7 +437,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                         foreach (var req in programRequirements.Requirements)
                         {
                             req.RequirementType = requirementTypes.First(rt => rt.Code == "GEN");
-                            req.Exclusions.Add("GEN");
+                            req.RequirementExclusions.Add(new RequirementBlockExclusion("GEN"));
                         }
                         return programRequirements;
                     }
@@ -459,7 +460,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                         foreach (var req in programRequirements.Requirements)
                         {
                             req.RequirementType = requirementTypes.First(rt => rt.Code == "GEN");
-                            req.Exclusions.Add("GEN");
+                            req.RequirementExclusions.Add(new RequirementBlockExclusion("GEN"));
                         }
                         return programRequirements;
                     }
@@ -481,7 +482,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                         foreach (var req in programRequirements.Requirements)
                         {
                             req.RequirementType = requirementTypes.First(rt => rt.Code == "GEN");
-                            req.Exclusions.Add("GEN");
+                            req.RequirementExclusions.Add(new RequirementBlockExclusion("GEN"));
                         }
                         return programRequirements;
                     }
@@ -504,8 +505,37 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                         foreach (var req in programRequirements.Requirements)
                         {
                             req.RequirementType = requirementTypes.First(rt => rt.Code == "GEN");
-                            req.Exclusions.Add("GEN");
+                            req.RequirementExclusions.Add(new RequirementBlockExclusion("GEN"));
                         }
+                        return programRequirements;
+                    }
+
+                case "EXCLUDED_REQ_WITH_EXCLUSION_FLAG":
+                    {
+                        // Simple program with three requirements,
+                        //R1 type MAJ   with S1 -> G1 -> Take 10 courses from level 100,200,300,400,500 (SIMPLY.ANY)
+                        //R2 type MAJ  with S2 -> G1 -> ake 10 courses from level 100,200,300,400,500 (SIMPLY.ANY) and S1 -> G2 (TAKE mus-209)
+                        //R3 type MIN this excludes MAJ with flag=Y with S3 ->G2 -> take MUST-209
+                        string progname = id + "*" + cat;
+                        string reqname1 = progname + "1";
+                        string reqname2 = progname + "2";
+                        string reqname3 = progname + "3";
+                        List<string> requirementNames = new List<string>() { reqname1, reqname2, reqname3 };
+                        Dictionary<string, List<string>> SubrequirementNames = new Dictionary<string, List<string>>();
+                        Dictionary<string, List<string>> groupNames = new Dictionary<string, List<string>>();
+                        List<string> Subreqs = new List<string>() { "Subreq1","Subreq2", "Subreq3" };
+                        SubrequirementNames.Add(reqname1, new List<string>() { Subreqs[0] });
+                        SubrequirementNames.Add(reqname2, new List<string>() { Subreqs[1] });
+                        SubrequirementNames.Add(reqname3, new List<string>() { Subreqs[2] });
+                        List<string> groups1 = new List<string>() { "SIMPLE.ANY", "MUSC-209"};
+                        groupNames.Add(Subreqs[0], new List<string>() { groups1[0] });
+                        groupNames.Add(Subreqs[1], new List<string>() { groups1[0] , groups1[1]});
+                        groupNames.Add(Subreqs[2], new List<string>() {  groups1[1] });
+                        var programRequirements = await BuildTestProgramRequirementsAsync(progname, requirementNames, SubrequirementNames, groupNames);
+                        programRequirements.Requirements[0].RequirementType = requirementTypes.First(rt => rt.Code == "MAJ");
+                        programRequirements.Requirements[1].RequirementType = requirementTypes.First(rt => rt.Code == "MAJ");
+                        programRequirements.Requirements[2].RequirementType = requirementTypes.First(rt => rt.Code == "MIN");
+                        programRequirements.Requirements[2].RequirementExclusions.Add(new RequirementBlockExclusion("MAJ",true));
                         return programRequirements;
                     }
 
@@ -646,8 +676,9 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                         pr.Requirements.First(rq => rq.Code == "REQU2").RequirementType = requirementTypes.First(rt => rt.Code == "MIN"); // priority 2
 
                         // Neither allows sharing with each other
-                        pr.Requirements.First(rq => rq.Code == "REQU1").Exclusions.Add("MIN");
-                        pr.Requirements.First(rq => rq.Code == "REQU2").Exclusions.Add("GEN");
+
+                        pr.Requirements.First(rq => rq.Code == "REQU1").RequirementExclusions.Add(new RequirementBlockExclusion("MIN"));
+                        pr.Requirements.First(rq => rq.Code == "REQU2").RequirementExclusions.Add(new RequirementBlockExclusion("GEN"));
 
                         return pr;
                     }
@@ -678,8 +709,8 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                         pr.Requirements.First(rq => rq.Code == "REQU2").RequirementType = requirementTypes.First(rt => rt.Code == "MIN"); // priority 2
 
                         // Neither allows sharing with each other
-                        pr.Requirements.First(rq => rq.Code == "REQU1").Exclusions.Add("MIN");
-                        pr.Requirements.First(rq => rq.Code == "REQU2").Exclusions.Add("CCD");
+                        pr.Requirements.First(rq => rq.Code == "REQU1").RequirementExclusions.Add(new RequirementBlockExclusion("MIN"));
+                        pr.Requirements.First(rq => rq.Code == "REQU2").RequirementExclusions.Add(new RequirementBlockExclusion("CCD"));
 
                         return pr;
                     }
@@ -770,8 +801,9 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                         pr.Requirements[0].SubRequirements[0].MinGroups = 1;
                         pr.Requirements[0].RequirementType = requirementTypes.First(rt => rt.Code == "MAJ");
                         pr.Requirements[1].RequirementType = requirementTypes.First(rt => rt.Code == "GEN");
-                        pr.Requirements[0].Exclusions = new List<string>() { "GEN" };
-                        pr.Requirements[1].Exclusions = new List<string>() { "MAJ" };
+
+                        pr.Requirements[0].RequirementExclusions = new List<RequirementBlockExclusion>() { new RequirementBlockExclusion("GEN")};
+                        pr.Requirements[1].RequirementExclusions = new List<RequirementBlockExclusion>() { new RequirementBlockExclusion("MAJ") };
                         return pr;
                     }
 
@@ -820,12 +852,14 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                         pr.Requirements[0].SubRequirements[0].AllowsCourseReuse = false;
                         pr.Requirements[0].SubRequirements[1].AllowsCourseReuse = false;
                         pr.Requirements[0].RequirementType = requirementTypes.First(rt => rt.Code == "MAJ");
-                        pr.Requirements[0].Exclusions = new List<string>() { "GEN", "MAJ" };
+                        pr.Requirements[0].RequirementExclusions = new List<RequirementBlockExclusion>() { new RequirementBlockExclusion("GEN"), new RequirementBlockExclusion("MAJ") };
+
 
                         pr.Requirements[1].AllowsCourseReuse = false;
                         pr.Requirements[1].SubRequirements[0].AllowsCourseReuse = false;
                         pr.Requirements[1].RequirementType = requirementTypes.First(rt => rt.Code == "GEN");
-                        pr.Requirements[1].Exclusions = new List<string>() { "MAJ","GEN" };
+                        pr.Requirements[1].RequirementExclusions = new List<RequirementBlockExclusion>() { new RequirementBlockExclusion("MAJ"), new RequirementBlockExclusion("GEN") };
+
                         return pr;
                     }
 
@@ -939,9 +973,11 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                         //modify settings of requirments here
                         pr.Requirements[0].RequirementType = requirementTypes.First(rt => rt.Code == "MIN");
                         pr.Requirements[1].RequirementType = requirementTypes.First(rt => rt.Code == "SPC");
-                        pr.Requirements[0].Exclusions = new List<string>() { "SPC" };
-                        pr.Requirements[1].Exclusions = new List<string>() { "MIN" };
-                     
+                        pr.Requirements[0].RequirementExclusions = new List<RequirementBlockExclusion>() { new RequirementBlockExclusion("SPC")};
+                        pr.Requirements[1].RequirementExclusions = new List<RequirementBlockExclusion>() { new RequirementBlockExclusion("MIN") };
+
+
+
                         return pr;
                     }
 
@@ -983,9 +1019,9 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                         //modify settings of requirments here
                         pr.Requirements[0].RequirementType = requirementTypes.First(rt => rt.Code == "MAJ");
                         pr.Requirements[1].RequirementType = requirementTypes.First(rt => rt.Code == "MIN");
-                        pr.Requirements[0].Exclusions = new List<string>() { "MIN" };
-                        pr.Requirements[1].Exclusions = new List<string>() { "MAJ" };
                         pr.Requirements[0].SubRequirements[0].MinGroups = 1;
+                        pr.Requirements[0].RequirementExclusions = new List<RequirementBlockExclusion>() { new RequirementBlockExclusion("MIN") };
+                        pr.Requirements[1].RequirementExclusions = new List<RequirementBlockExclusion>() { new RequirementBlockExclusion("MAJ") };
 
                         return pr;
                     }
@@ -1057,6 +1093,64 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                         ProgramRequirements pr = await BuildTestProgramRequirementsAsync(reqname + "*" + cat, reqnames, Subreq, groups);
                         //modify settings of requirments here
                         pr.Requirements[0].RequirementType = requirementTypes.First(rt => rt.Code == "MAJ");
+
+                        return pr;
+                    }
+
+                case "DEGREE.PLAN.REVIEW.MIN.GRADE":
+                    {
+                        /* 
+                         -----------------------------------------------------------------
+                        Reqmt 1: DP-PREVIEW-REQ-1 (Repeat-req-1)
+                           Type: MAJ (priority 2)
+                           Scheme: UG
+ 
+                           Complete 2 of 2 subrequirements
+                           ..............................................................
+                           Subreqmt 1) sreq-1
+ 
+                              Complete 2 of 2 groups
+                              - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                              Group 1 of 1
+                                 Block ID: "76161"
+                                 Block Type: 33
+ 
+                                 Take 3 courses
+                                 From department BIOLOGY
+
+                        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                              Group 1 of 1
+                                 Block ID: "76161"
+                                 Block Type: 33
+ 
+                                 Take BIOL-100, CHEM-100
+                           ..............................................................
+                           Subreqmt 2) sreq2
+ 
+                              Complete 1 of 1 groups
+                              - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                              Group 1 of 1
+                                 Block ID: "76163"
+                                 Block Type: 30
+ 
+                                 Take BIOL-100, SPAN-300
+                           ..............................................................
+                         */
+                        string reqname = id;
+                        List<string> reqnames = new List<string>();
+                        Dictionary<string, List<string>> Subreq = new Dictionary<string, List<string>>();
+                        Dictionary<string, List<string>> groups = new Dictionary<string, List<string>>();
+
+                        reqnames.Add("DP-PREVIEW-REQ-1");
+                        //one sub-requirment for requirment 1 that have 2 groups
+                        Subreq.Add("DP-PREVIEW-REQ-1", new List<string>() { "REQ-1-SUBREQ-1", "REQ-1-SUBREQ-2"});
+                        groups.Add(Subreq["DP-PREVIEW-REQ-1"][0], new List<string>() { "GROUP-1-DP-PREVIEW", "GROUP-2-DP-PREVIEW" });
+                        groups.Add(Subreq["DP-PREVIEW-REQ-1"][1], new List<string>() { "GROUP-3-DP-PREVIEW" });
+
+
+
+                        ProgramRequirements pr = await BuildTestProgramRequirementsAsync(reqname + "*" + cat, reqnames, Subreq, groups);
+                        pr.MinGrade= (await graderepo.GetAsync()).Where(g => g.Id == "C").First(); //min grade is A at program requirments level
 
                         return pr;
                     }
@@ -2343,6 +2437,7 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                             group1.FromSubjects.Add("MUSC");
                             group1.GroupType = GroupType.TakeCredits;
                             group1.Exclusions = new List<string>() { "MAJ", "MIN" };
+
                             break;
                         }
                     case "SUBJ_MUSC_4CREDITS":
@@ -2550,6 +2645,41 @@ namespace Ellucian.Colleague.Domain.Student.Tests
                             group1.InListOrder = true;
                             break;
 
+                        }
+                    case "GROUP-1-DP-PREVIEW":
+                        {
+                            //TAKE 3 COURSES FROM DEPARTMENT BIOLOGY;
+                            group1.Id = "GROUP-1-DP-PREVIEW";
+                            group1.MinCourses = 3;
+                            group1.FromDepartments = new List<string>() { "BIOL" };
+                            group1.GroupType = GroupType.TakeCourses;
+                            group1.MinGrade= (await graderepo.GetAsync()).Where(g => g.Id == "C").First();
+                            break;
+                        }
+
+                    case "GROUP-2-DP-PREVIEW":
+                        {
+                            //TAKE 3 COURSES FROM BIOL-100 MATH-103;
+                            group1.Id = "GROUP-2-DP-PREVIEW";
+                            group1.MinCourses = 3;
+                            group1.GroupType = GroupType.TakeCourses;
+                            group1.FromCourses.Add(courses["BIOL-100"].Id);
+                            group1.FromCourses.Add(courses["MATH-103"].Id);
+                            group1.MinGrade= (await graderepo.GetAsync()).Where(g => g.Id == "C").First();
+                            break;
+                        }
+
+                    case "GROUP-3-DP-PREVIEW":
+                        {
+                            //TAKE BIOL-100 SPAN-300;
+                            group1.Id = "GROUP-3-DP-PREVIEW";
+                            group1.MinCourses = 3;
+                            group1.GroupType = GroupType.TakeAll;
+                            group1.Courses.Add(courses["BIOL-100"].Id);
+                            group1.Courses.Add(courses["SPAN-300"].Id);
+                            group1.MinGrade=(await graderepo.GetAsync()).Where(g => g.Id == "C").First();
+
+                            break;
                         }
                     default:
                         {

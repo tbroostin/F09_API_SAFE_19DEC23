@@ -359,13 +359,13 @@ namespace Ellucian.Colleague.Coordination.Student.Tests.Services
             await _prospectOpportunitiesService.GetProspectOpportunitiesByGuidAsync(null);
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(PermissionsException))]
-        public async Task AdmissionDecisionsService_GetAdmissionDecisionsAsync_PermissionsException()
-        {
-            _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
-            await _prospectOpportunitiesService.GetProspectOpportunitiesAsync(0, 100, null, null);
-        }
+        //[TestMethod]
+        //[ExpectedException(typeof(PermissionsException))]
+        //public async Task AdmissionDecisionsService_GetAdmissionDecisionsAsync_PermissionsException()
+        //{
+        //    _roleRepositoryMock.Setup(i => i.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>() { });
+        //    await _prospectOpportunitiesService.GetProspectOpportunitiesAsync(0, 100, null, null);
+        //}
 
         [TestMethod]
         public async Task AdmissionDecisionsService_GetAdmissionDecisionsAsync_Empty_Tuple_Invalid_Prospect_Id()

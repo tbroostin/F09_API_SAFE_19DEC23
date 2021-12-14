@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -17,6 +17,11 @@ namespace Ellucian.Colleague.Dtos.ColleagueFinance
         /// Default value of APType 
         /// </summary>
         public string DefaultAPTypeCode { get; set; }
+
+        /// <summary>
+        /// Voucher documents are restricted to use this list of AP Types
+        /// </summary>
+        public IEnumerable<string> RestrictToListedApTypeCodes { get; set; }
 
         /// <summary>
         /// Invoice entry required Flag

@@ -1,9 +1,10 @@
-﻿// Copyright 2016-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2016-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
+using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
@@ -53,7 +54,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// <param name="accountingString">Accounting String to search for, may contain project number</param>
         /// <param name="validOn">date to check for to see if accounting string is valid on the date</param>
         /// <returns>An AccountingString object <see cref="Dtos.AccountingString"/> in DataModel format</returns>
-        [HttpGet, EedmResponseFilter, FilteringFilter(IgnoreFiltering = true)]
+        [HttpGet, EedmResponseFilter, FilteringFilter(IgnoreFiltering = true), PermissionsFilter(ColleagueFinancePermissionCodes.ViewAccountingStrings)]
         [ValidateQueryStringFilter(new string[] { "accountingString", "validOn" }, false, true)]
         public async Task<Dtos.AccountingString> GetAccountingStringByFilterAsync([FromUri] string accountingString = "", [FromUri] string validOn = "")
         {
@@ -74,6 +75,8 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
 
             try
             {
+                _accountingStringService.ValidatePermissions(GetPermissionsMetaData());
+
                 DateTime? validOnDate = null;
 
                 if (!string.IsNullOrEmpty(validOn))
@@ -94,17 +97,22 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
                 
                 return await _accountingStringService.GetAccoutingStringByFilterCriteriaAsync(accountingString, validOnDate);
             }
+            catch (KeyNotFoundException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.NotFound);
+            }
+            catch (PermissionsException e)
+            {
+                _logger.Error(e.ToString());
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
+            }          
             catch (RepositoryException e)
             {
                 _logger.Error(e.ToString());
                 var exception = new Exception(e.Message);
                 throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(exception));
-            }
-            catch (PermissionsException e)
-            {
-                _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e));
-            }
+            }           
             catch (ArgumentException e)
             {
                 _logger.Error(e.ToString());
@@ -142,11 +150,43 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         [HttpPost]
         public async Task<Dtos.AccountingString> PostAccountingStringsAsync([FromBody] Dtos.AccountingString accountingString)
         {
-            //Post is not supported for Colleague but Data Model requires full crud support.
-            throw CreateHttpResponseException(
-                new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage,
-                    IntegrationApiUtility.DefaultNotSupportedApiError), HttpStatusCode.MethodNotAllowed);
+            //Update is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
         }
+
+        /// <summary>
+        /// AccountingString Get by Id
+        /// </summary>
+        /// <returns>MethodNotAllowed error</returns>
+        [HttpGet]
+        public async Task<Dtos.AccountingString> GetAccountingStringsByGuidAsync(string guid)
+        {
+            //Update is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+        }
+
+        /// <summary>
+        /// AccountingString Put
+        /// </summary>
+        /// <returns>MethodNotAllowed error</returns>
+        [HttpPut]
+        public async Task<Dtos.AccountingString> PutAccountingStringsAsync([FromUri] string guid, [FromBody] Dtos.AccountingString accountingString)
+        {
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+        }
+
+        /// <summary>
+        /// AccountingString Delete
+        /// </summary>
+        /// <returns>MethodNotAllowed error</returns>
+        [HttpDelete]
+        public async Task DeleteAccountingStringsAsync(string guid)
+        {
+            //Delete is not supported for Colleague but HeDM requires full crud support.
+            throw CreateHttpResponseException(new IntegrationApiException(IntegrationApiUtility.DefaultNotSupportedApiErrorMessage, IntegrationApiUtility.DefaultNotSupportedApiError));
+        }
+
+
 
         #endregion
 
@@ -443,7 +483,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// Return all accountingStringComponentValues
         /// </summary>
         /// <returns>List of AccountingStringComponentValues <see cref="Dtos.AccountingStringComponentValues"/> objects representing matching accountingStringComponentValues</returns>
-        [HttpGet, ValidateQueryStringFilter()]
+        [HttpGet, ValidateQueryStringFilter(), PermissionsFilter(ColleagueFinancePermissionCodes.ViewAccountingStrings)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.AccountingStringComponentValuesFilter)), FilteringFilter(IgnoreFiltering = true)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         public async Task<IHttpActionResult> GetAccountingStringComponentValuesAsync(Paging page, QueryStringFilter criteria)
@@ -458,6 +498,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                _accountingStringService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(200, 0);
@@ -501,7 +542,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -530,7 +571,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="guid">GUID to desired accountingStringComponentValues</param>
         /// <returns>A accountingStringComponentValues object <see cref="Dtos.AccountingStringComponentValues"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(ColleagueFinancePermissionCodes.ViewAccountingStrings)]
         public async Task<Dtos.AccountingStringComponentValues> GetAccountingStringComponentValuesByGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -540,6 +581,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                _accountingStringService.ValidatePermissions(GetPermissionsMetaData());
                 bool bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {
@@ -565,7 +607,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -632,7 +674,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// Return all accountingStringComponentValues
         /// </summary>
         /// <returns>List of AccountingStringComponentValues <see cref="Dtos.AccountingStringComponentValues"/> objects representing matching accountingStringComponentValues</returns>
-        [HttpGet, ValidateQueryStringFilter()]
+        [HttpGet, ValidateQueryStringFilter(), PermissionsFilter(ColleagueFinancePermissionCodes.ViewAccountingStrings)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.AccountingStringComponentValues2)), FilteringFilter(IgnoreFiltering = true)]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
         public async Task<IHttpActionResult> GetAccountingStringComponentValues2Async(Paging page, QueryStringFilter criteria)
@@ -647,6 +689,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                _accountingStringService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(200, 0);
@@ -685,7 +728,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -713,7 +756,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// Return all accountingStringComponentValues
         /// </summary>
         /// <returns>List of AccountingStringComponentValues <see cref="Dtos.AccountingStringComponentValues"/> objects representing matching accountingStringComponentValues</returns>
-        [HttpGet, ValidateQueryStringFilter()]
+        [HttpGet, ValidateQueryStringFilter(), PermissionsFilter(ColleagueFinancePermissionCodes.ViewAccountingStrings)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.AccountingStringComponentValues3)), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("effectiveOn", typeof(Dtos.Filters.AccountingStringsFilter))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 200), EedmResponseFilter]
@@ -729,6 +772,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                _accountingStringService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(200, 0);
@@ -781,7 +825,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -810,7 +854,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="guid">GUID to desired accountingStringComponentValues</param>
         /// <returns>A accountingStringComponentValues object <see cref="Dtos.AccountingStringComponentValues"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(ColleagueFinancePermissionCodes.ViewAccountingStrings)]
         public async Task<Dtos.AccountingStringComponentValues3> GetAccountingStringComponentValues3ByGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -820,6 +864,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                _accountingStringService.ValidatePermissions(GetPermissionsMetaData());
                 bool bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {
@@ -844,7 +889,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {
@@ -873,7 +918,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
         /// </summary>
         /// <param name="guid">GUID to desired accountingStringComponentValues</param>
         /// <returns>A accountingStringComponentValues object <see cref="Dtos.AccountingStringComponentValues"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(ColleagueFinancePermissionCodes.ViewAccountingStrings)]
         public async Task<Dtos.AccountingStringComponentValues2> GetAccountingStringComponentValues2ByGuidAsync(string guid)
         {
             if (string.IsNullOrEmpty(guid))
@@ -883,6 +928,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             }
             try
             {
+                _accountingStringService.ValidatePermissions(GetPermissionsMetaData());
                 bool bypassCache = false;
                 if (Request.Headers.CacheControl != null)
                 {
@@ -908,7 +954,7 @@ namespace Ellucian.Colleague.Api.Controllers.ColleagueFinance
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentException e)
             {

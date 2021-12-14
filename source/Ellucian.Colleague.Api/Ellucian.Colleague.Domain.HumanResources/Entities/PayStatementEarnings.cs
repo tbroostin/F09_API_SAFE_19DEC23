@@ -1,4 +1,4 @@
-﻿/*Copyright 2017-2018 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2017-2021 Ellucian Company L.P. and its affiliates.*/
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,7 +53,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
         /// <param name="rate"></param>
         /// <param name="periodPaymentAmount"></param>
         /// <param name="yearToDateEarningsEntries"></param>
-        public PayStatementEarnings(EarningsType earningsType, decimal? unitsWorked, decimal? rate, decimal periodPaymentAmount, IEnumerable<PayrollRegisterEarningsEntry> yearToDateEarningsEntries)
+        public PayStatementEarnings(EarningsType earningsType, decimal? unitsWorked, decimal? rate, decimal periodPaymentAmount, 
+            IEnumerable<PayrollRegisterEarningsEntry> yearToDateEarningsEntries)
         {
             if (earningsType == null)
             {
@@ -83,12 +84,13 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
             }
 
             PeriodPaymentAmount = periodPaymentAmount;
-            YearToDatePaymentAmount = yearToDateEarningsEntries.Sum(ytd => ytd.BasePeriodEarningsAmount + ytd.EarningsFactorPeriodAmount);
+            YearToDatePaymentAmount = yearToDateEarningsEntries.Sum(ytd => ytd.BasePeriodEarningsAmount + ytd.EarningsFactorPeriodAmount 
+                + ytd.EarningsAdjustmentAmount);
 
         }
 
         /// <summary>
-        /// Create a line itme for standard year-to-date only earnings
+        /// Create a line item for standard year-to-date only earnings
         /// </summary>
         /// <param name="earningsType"></param>
         /// <param name="yearToDateEarningsEntries"></param>
@@ -105,7 +107,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Entities
 
             EarningsTypeId = earningsType.Id;
             EarningsTypeDescription = earningsType.Description;
-            YearToDatePaymentAmount = yearToDateEarningsEntries.Sum(ytd => ytd.BasePeriodEarningsAmount + ytd.EarningsFactorPeriodAmount);        
+            YearToDatePaymentAmount = yearToDateEarningsEntries.Sum(ytd => ytd.BasePeriodEarningsAmount + ytd.EarningsFactorPeriodAmount + ytd.EarningsAdjustmentAmount);        
         }
 
         /// <summary>

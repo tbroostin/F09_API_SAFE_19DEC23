@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ellucian.Colleague.Domain.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -67,7 +68,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     var financialAidFundClassifications = await _referenceDataRepository.GetFinancialAidFundClassificationsAsync(bypassCache);
 
                     if (financialAidFundClassifications != null && financialAidFundClassifications.Any())
-                    { 
+                    {
                         foreach (var classGuid in classificationGuids)
                         {
                             if (classGuid != null && !string.IsNullOrEmpty(classGuid.Id))
@@ -137,28 +138,36 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
             }
 
-            var pageOfItems = await _fundRepository.GetFinancialAidFundsAsync(offset, limit, code, source, aidType, classifications, awardCategory, bypassCache);
-
-            var financialAidFundsEntities = pageOfItems.Item1;
-            int totalRecords = pageOfItems.Item2;
-
-            var aidYearsEntities = await _referenceDataRepository.GetFinancialAidYearsAsync(bypassCache);
-            var aidYears = aidYearsEntities.Where(ay => ay.status != "D").Select(ay => ay.Code).Distinct().ToList();
-            var hostCountry = await _referenceDataRepository.GetHostCountryAsync();
-
-            var financialAidFundFinancials = await _fundRepository.GetFinancialAidFundFinancialsAsync("", aidYears, hostCountry);
-
-            if (financialAidFundsEntities != null && financialAidFundsEntities.Any())
+            try
             {
-                foreach (var financialAidFunds in financialAidFundsEntities)
+                var pageOfItems = await _fundRepository.GetFinancialAidFundsAsync(offset, limit, code, source, aidType, classifications, awardCategory, bypassCache);
+
+                var financialAidFundsEntities = pageOfItems.Item1;
+                int totalRecords = pageOfItems.Item2;
+
+                var aidYearsEntities = await _referenceDataRepository.GetFinancialAidYearsAsync(bypassCache);
+                var aidYears = aidYearsEntities.Where(ay => ay.status != "D").Select(ay => ay.Code).Distinct().ToList();
+                var hostCountry = await _referenceDataRepository.GetHostCountryAsync();
+
+                var financialAidFundFinancials = await _fundRepository.GetFinancialAidFundFinancialsAsync("", aidYears, hostCountry);
+
+                if (financialAidFundsEntities != null && financialAidFundsEntities.Any())
                 {
-                    financialAidFundsCollection.Add(await ConvertFinancialAidFundsEntityToDto(financialAidFunds, financialAidFundFinancials, bypassCache));
+                    foreach (var financialAidFunds in financialAidFundsEntities)
+                    {
+                        financialAidFundsCollection.Add(await ConvertFinancialAidFundsEntityToDto(financialAidFunds, financialAidFundFinancials, bypassCache));
+                    }
+                    return new Tuple<IEnumerable<Dtos.FinancialAidFunds>, int>(financialAidFundsCollection, totalRecords);
                 }
-                return new Tuple<IEnumerable<Dtos.FinancialAidFunds>, int>(financialAidFundsCollection, totalRecords);
+                else
+                {
+                    return new Tuple<IEnumerable<FinancialAidFunds>, int>(new List<Dtos.FinancialAidFunds>(), 0);
+                }
             }
-            else
+            catch (RepositoryException ex)
             {
-                return new Tuple<IEnumerable<FinancialAidFunds>, int>(new List<Dtos.FinancialAidFunds>(), 0);
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
             }
         }
 

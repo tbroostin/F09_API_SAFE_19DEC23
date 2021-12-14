@@ -25,7 +25,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         Task<PrivacyWrapper<IEnumerable<Dtos.Student.StudentBatch3>>> QueryStudentsById4Async(IEnumerable<string> studentIds, bool inheritFromPerson = false, bool getDegreePlan = false, string term = null);
         Task<Tuple<byte[], string>> GetUnofficialTranscriptAsync(string studentId, string path, string transcriptGrouping, string reportWatermarkPath, string deviceInfoPath);
         Task<Dtos.Student.RegistrationResponse> RegisterAsync(string studentId, IEnumerable<Dtos.Student.SectionRegistration> sectionRegistrations);
-
+        Task<Dtos.Student.RegistrationResponse> DropRegistrationAsync(string studentId, Dtos.Student.SectionDropRegistration sectionDropRegistration);
         Task CheckStudentAccessAsync(string studentId);
 
         //StudentCohort
@@ -44,6 +44,12 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         Task<Tuple<IEnumerable<Dtos.Students>, int>> GetStudentsAsync(int offset, int limit, bool bypassCache = false, string person = "", string type = "", string cohorts = "", string residency = "");
         Task<Tuple<IEnumerable<Dtos.Students2>, int>> GetStudents2Async(int offset, int limit, Dtos.Students2 criteriaFilter, string personFilter, bool bypassCache = false);
         Task<PrivacyWrapper<List<Dtos.Student.Student>>> Search3Async(Dtos.Student.StudentSearchCriteria criteria, int pageSize = int.MaxValue, int pageIndex = 1);
+        /// <summary>
+        /// Retreive Student's academic levels
+        /// </summary>
+        /// <param name="studentId">Student Id</param>
+        /// <returns>List of all the academic levels of the student</returns>
+        Task<IEnumerable<Dtos.Student.StudentAcademicLevel>> GetStudentAcademicLevelsAsync(string studentId);
 
         #region Planning Student
         Task<PrivacyWrapper<Dtos.Student.PlanningStudent>> GetPlanningStudentAsync(string studentId);

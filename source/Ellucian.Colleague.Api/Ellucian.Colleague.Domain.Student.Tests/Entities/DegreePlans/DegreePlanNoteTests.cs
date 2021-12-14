@@ -1,7 +1,8 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Ellucian.Colleague.Domain.Student.Entities.DegreePlans;
+using Ellucian.Colleague.Dtos.Student;
 
 namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
 {
@@ -68,6 +69,78 @@ namespace Ellucian.Colleague.Domain.Student.Tests.Entities.DegreePlans
             {
                 text = "";
                 dpNote = new DegreePlanNote(text);
+            }
+        }
+
+        [TestClass]
+        public class DegreePlanNoteBaseConstructor1
+        {
+            private string personId;
+            private string text;
+            private PersonType personType;
+            private DegreePlanNote dpNote;
+
+            [TestInitialize]
+            public void Initialize()
+            {
+                personId = null;
+                text = "Note text added by faculty 0000002";
+                personType = Dtos.Student.PersonType.Advisor;
+                dpNote = new DegreePlanNote(text, personType);
+                
+            }
+
+            [TestCleanup]
+            public void Cleanup()
+            {
+                dpNote = null;
+            }
+
+            [TestMethod]
+            public void Id()
+            {
+                // Id defaults to zero
+                Assert.AreEqual(0, dpNote.Id);
+            }
+
+            [TestMethod]
+            public void PersonId()
+            {
+                Assert.AreEqual(personId, null);
+            }
+
+            [TestMethod]
+            public void Date()
+            {
+                Assert.AreEqual(dpNote.Date, null);
+            }
+
+            [TestMethod]
+            public void Text()
+            {
+                Assert.AreEqual(text, dpNote.Text);
+            }
+
+            [TestMethod]
+            public void PersonType()
+            {
+                Assert.AreEqual(dpNote.PersonType, Dtos.Student.PersonType.Advisor);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public void TextThrowsExceptionWhenNull()
+            {
+                text = null;
+                dpNote = new DegreePlanNote(text, Dtos.Student.PersonType.Advisor);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public void TextThrowsExceptionWhenEmpty()
+            {
+                text = "";
+                dpNote = new DegreePlanNote(text, Dtos.Student.PersonType.Advisor);
             }
         }
 

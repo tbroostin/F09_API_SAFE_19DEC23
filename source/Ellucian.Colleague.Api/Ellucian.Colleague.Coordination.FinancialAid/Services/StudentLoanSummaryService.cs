@@ -67,8 +67,8 @@ namespace Ellucian.Colleague.Coordination.FinancialAid.Services
                 throw new PermissionsException(message);
             }
 
-            var studentLoanSummaryEntity = await studentLoanSummaryRepository.GetStudentLoanSummaryAsync(studentId);            
-
+            var studentLoanSummaryEntity = await studentLoanSummaryRepository.GetStudentLoanSummaryAsync(studentId);
+            
             var studentLoanSummaryDtoAdapter = _adapterRegistry.GetAdapter<Domain.FinancialAid.Entities.StudentLoanSummary, Dtos.FinancialAid.StudentLoanSummary>();            
 
             return studentLoanSummaryDtoAdapter.MapToType(studentLoanSummaryEntity);

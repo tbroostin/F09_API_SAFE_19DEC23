@@ -1,5 +1,6 @@
-﻿/* Copyright 2016-2018 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2016-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Coordination.Base.Services;
+using Ellucian.Colleague.Domain.Base.Entities;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.HumanResources;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
@@ -126,8 +127,9 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// Gets all HumanResourceDemographics available to the user
         /// </summary>
         /// <param name="effectivePersonId">Optional parameter for effective personId</param>
+        /// <param name="lookupStartDate">Optional lookback date to limit results</param>
         /// <returns></returns>
-        public async Task<IEnumerable<HumanResourceDemographics>> GetHumanResourceDemographics2Async(string effectivePersonId = null)
+        public async Task<IEnumerable<HumanResourceDemographics>> GetHumanResourceDemographics2Async(string effectivePersonId = null, DateTime? lookupStartDate = null)
         {
             if (effectivePersonId == null)
             {
@@ -142,7 +144,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             var cumulativeHrPersonIds = new List<string>() { effectivePersonId, CurrentUser.PersonId };
 
-            var supervisorIds = (await supervisorsRepository.GetSupervisorsBySuperviseeAsync(effectivePersonId)).ToList();
+            var supervisorIds = (await supervisorsRepository.GetSupervisorsBySuperviseeAsync(effectivePersonId, lookupStartDate)).ToList();
 
             if (supervisorIds.Any())
             {
@@ -151,7 +153,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
 
             if (HasPermission(HumanResourcesPermissionCodes.ViewSuperviseeData))
             {
-                var subordinateIds = (await supervisorsRepository.GetSuperviseesBySupervisorAsync(effectivePersonId)).ToList();
+                var subordinateIds = (await supervisorsRepository.GetSuperviseesBySupervisorAsync(effectivePersonId, lookupStartDate)).ToList();
 
                 if (subordinateIds == null)
                 {
@@ -162,7 +164,7 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 {
                     foreach (var subordinateId in subordinateIds)
                     {
-                        supervisorIds = (await supervisorsRepository.GetSupervisorsBySuperviseeAsync(subordinateId)).ToList();
+                        supervisorIds = (await supervisorsRepository.GetSupervisorsBySuperviseeAsync(subordinateId, lookupStartDate)).ToList();
                         if (supervisorIds.Any())
                         {
                             cumulativeHrPersonIds = cumulativeHrPersonIds.Concat(supervisorIds).ToList();
@@ -190,13 +192,11 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
         /// <summary>
         /// Gets HumanResourceDemographics for a specific person
         /// </summary>
-        /// <returns></returns>
-        public async Task<HumanResourceDemographics> GetSpecificHumanResourceDemographicsAsync(string id)
+        /// <param name="id">Id of the peron whose HumanResourceDemographics information requested</param>
+        /// <param name="effectivePersonId">Optional parameter for passing effective person Id</param>
+        /// <returns>HumanResourceDemographics informaion of the requested person.</returns>
+        public async Task<HumanResourceDemographics> GetSpecificHumanResourceDemographicsAsync(string id, string effectivePersonId = null)
         {
-
-            //var userAndSubordinateIds = new List<string>() { CurrentUser.PersonId };
-            // Domain.Base.Entities.PersonBase personBaseEntity = null;
-
             //make sure the supplied Id is not null or empty
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -204,19 +204,26 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
                 logger.Error(message);
                 throw new ArgumentNullException(message);
             }
+
             if (!CurrentUser.IsPerson(id))
             {
-                if (!(HasPermission(HumanResourcesPermissionCodes.ViewSuperviseeData) || (HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest))))
+                bool hasProxyAccess = HasProxyAccessForPerson(id, ProxyWorkflowConstants.TimeManagementLeaveApproval);
+
+                if (!(HasPermission(HumanResourcesPermissionCodes.ViewSuperviseeData) || HasPermission(HumanResourcesPermissionCodes.ApproveRejectLeaveRequest) || hasProxyAccess))
                 {
                     throw new PermissionsException(string.Format("User {0} does not have permission to access demographics for {1}", CurrentUser.PersonId, id));
                 }
+                if (string.IsNullOrEmpty(effectivePersonId))
+                {
+                    effectivePersonId = CurrentUser.PersonId;
+                }
 
-                var superviseeIds = await supervisorsRepository.GetSuperviseesBySupervisorAsync(CurrentUser.PersonId);
-                if (superviseeIds == null || !superviseeIds.Any() || !superviseeIds.Contains(id))
+                var superviseeIds = await supervisorsRepository.GetSuperviseesBySupervisorAsync(effectivePersonId);
+                if ((superviseeIds == null || !superviseeIds.Any() || !superviseeIds.Contains(id)) && !hasProxyAccess)
                 {
                     throw new PermissionsException(string.Format("Supervisor {0} does not supervise {1} and is not permitted to view their data", CurrentUser.PersonId, id));
                 }
-            }
+            }          
 
             //user is authorized to get hr demographics for the given id
             var personBaseEntity = await personBaseRepository.GetPersonBaseAsync(id, true);

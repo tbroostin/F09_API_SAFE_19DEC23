@@ -16,6 +16,11 @@ using Ellucian.Web.Security;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Exceptions;
 using Ellucian.Colleague.Api.Controllers.BudgetManagement;
+using System.Web.Http.Routing;
+using Ellucian.Colleague.Domain.BudgetManagement;
+using Ellucian.Web.Http.Filters;
+using System.Web.Http.Controllers;
+using System.Collections;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.BudgetManagement
 {
@@ -284,6 +289,168 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.BudgetManagement
         public async Task BudgetCodesController_DeleteBudgetCodesAsync_Exception()
         {
             await budgetCodesController.DeleteBudgetCodesAsync(budgetCodesCollection.FirstOrDefault().Id);
+        }
+
+        [TestMethod]
+        public async Task BudgetCodesController_GetBudgetCodesByGuidAsync_Permissions()
+        {
+            var expected = budgetCodesCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "BudgetCodes" },
+                    { "action", "GetBudgetCodesByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("budget-codes", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            budgetCodesController.Request.SetRouteData(data);
+            budgetCodesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BudgetManagementPermissionCodes.ViewBudgetCode });
+
+            var controllerContext = budgetCodesController.ControllerContext;
+            var actionDescriptor = budgetCodesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            budgetCodesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            budgetCodesServiceMock.Setup(x => x.GetBudgetCodesByGuidAsync(It.IsAny<string>(),It.IsAny<bool>())).ReturnsAsync(expected);
+            var actual = await budgetCodesController.GetBudgetCodesByGuidAsync(expectedGuid);
+
+            Object filterObject;
+            budgetCodesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BudgetManagementPermissionCodes.ViewBudgetCode));
+        }
+
+        //GET by id v11.2.0 v11.1.0 v11
+        //Exception
+        //GetBudgetCodesByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task BudgetCodesController_GetBudgetCodesByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "BudgetCodes" },
+                    { "action", "GetBudgetCodesByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("budget-codes", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            budgetCodesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = budgetCodesController.ControllerContext;
+            var actionDescriptor = budgetCodesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                budgetCodesServiceMock.Setup(x => x.GetBudgetCodesByGuidAsync(It.IsAny<string>(),It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                budgetCodesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view budget-codes."));
+                var actual = await budgetCodesController.GetBudgetCodesByGuidAsync(expectedGuid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET v11.2.0 v11.1.0 v11
+        //Successful
+        //GetBudgetCodesAsync
+        [TestMethod]
+        public async Task BudgetCodesController_GetBudgetCodesAsync_Permissions()
+        {
+           
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "BudgetCodes" },
+                    { "action", "GetBudgetCodesAsync" }
+                };
+            HttpRoute route = new HttpRoute("budget-codes", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            budgetCodesController.Request.SetRouteData(data);
+            budgetCodesController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(new string[] { BudgetManagementPermissionCodes.ViewBudgetCode });
+
+            var controllerContext = budgetCodesController.ControllerContext;
+            var actionDescriptor = budgetCodesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+            budgetCodesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            budgetCodesServiceMock.Setup(x => x.GetBudgetCodesAsync(It.IsAny<bool>())).ReturnsAsync(budgetCodesCollection);
+            var actuals = await budgetCodesController.GetBudgetCodesAsync();
+
+            Object filterObject;
+            budgetCodesController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(BudgetManagementPermissionCodes.ViewBudgetCode));
+
+        }
+
+        //GET v11.2.0 v11.1.0 v11
+        //Exception
+        //GetBudgetCodesAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task BudgetCodesController_GetBudgetCodesAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "BudgetCodes" },
+                    { "action", "GetBudgetCodesAsync" }
+                };
+            HttpRoute route = new HttpRoute("budget-codes", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            budgetCodesController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = budgetCodesController.ControllerContext;
+            var actionDescriptor = budgetCodesController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                budgetCodesServiceMock.Setup(x => x.GetBudgetCodesAsync( It.IsAny<bool>())).ThrowsAsync(new PermissionsException());
+                budgetCodesServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view budget-codes."));
+                var actuals = await budgetCodesController.GetBudgetCodesAsync();
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
         }
     }
 }

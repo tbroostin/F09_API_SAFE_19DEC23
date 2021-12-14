@@ -49,12 +49,16 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <param name="bypassCache">Bypass cache flag</param>
         /// <returns>Collection of IntgMappingSettings</returns>
         public async Task<Tuple<IEnumerable<MappingSettings>, int>> GetMappingSettingsAsync(int offset, int limit, List<string> resources, List<string> propertyNames, bool bypassCache)
-        {
+        {            
             string[] intgMappingSettingsIds = new string[] { };
             int totalCount = 0;
             string[] subList = null;
 
-            string intgMappingSettingsCacheKey = CacheSupport.BuildCacheKey(AllIntgMappingSettingsCache);
+            string intgMappingSettingsCacheKey = CacheSupport.BuildCacheKey(AllIntgMappingSettingsCache, resources, propertyNames);
+            if (bypassCache && ContainsKey(BuildFullCacheKey(intgMappingSettingsCacheKey)))
+            {
+                ClearCache(new List<string> { intgMappingSettingsCacheKey });
+            }
             var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
                 this,
                 ContainsKey,
@@ -711,7 +715,11 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             int totalCount = 0;
             string[] subList = null;
 
-            string intgMappingSettingsOptionsCacheKey = CacheSupport.BuildCacheKey(AllIntgMappingSettingsOptionsCache);
+            string intgMappingSettingsOptionsCacheKey = CacheSupport.BuildCacheKey(AllIntgMappingSettingsOptionsCache, resources, propertyNames);
+            if (bypassCache && ContainsKey(BuildFullCacheKey(intgMappingSettingsOptionsCacheKey)))
+            {
+                ClearCache(new List<string> { intgMappingSettingsOptionsCacheKey });
+            }
             var keyCache = await CacheSupport.GetOrAddKeyCacheToCache(
                 this,
                 ContainsKey,

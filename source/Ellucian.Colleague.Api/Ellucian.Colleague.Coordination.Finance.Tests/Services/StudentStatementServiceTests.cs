@@ -705,8 +705,8 @@ namespace Ellucian.Colleague.Coordination.Finance.Tests.Services
                     Returns(accountDuePeriod);
                 adRepoMock.Setup(repo => repo.Get(personId)).
                     Returns(accountDuePeriod.Current);
-                arRepoMock.Setup(repo => repo.GetAccountHolder(personId)).
-                    Returns(allAccountHolders.Where(ah => ah.Id == personId).FirstOrDefault());
+                arRepoMock.Setup(repo => repo.GetAccountHolderAsync(personId, false)).
+                    ReturnsAsync(allAccountHolders.Where(ah => ah.Id == personId).FirstOrDefault());
                 acRepoMock.Setup(repo => repo.GetAcademicCreditByStudentIdsAsync(It.IsAny<ICollection<string>>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>()))
                     .Returns(Task.FromResult<Dictionary<string, List<Domain.Student.Entities.AcademicCredit>>>(allAcademicCredits));
             }

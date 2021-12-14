@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Dtos.Student;
 using System.Collections.Generic;
@@ -54,6 +54,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="retentionAlertQueryCriteria">The retention alert query criteria.</param>
         /// <returns>A list of retention alert work case</returns>
         Task<IEnumerable<RetentionAlertWorkCase>> GetRetentionAlertCasesAsync(RetentionAlertQueryCriteria retentionAlertQueryCriteria);
+
+        /// <summary>
+        /// Gets the retention alert cases asynchronous.
+        /// </summary>
+        /// <param name="retentionAlertQueryCriteria">The retention alert query criteria.</param>
+        /// <returns>A list of retention alert work case 2</returns>
+        Task<IEnumerable<RetentionAlertWorkCase2>> GetRetentionAlertCases2Async(RetentionAlertQueryCriteria retentionAlertQueryCriteria);
 
         /// <summary>
         /// Adds the retention alert case asynchronous.

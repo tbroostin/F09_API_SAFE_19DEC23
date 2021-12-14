@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -449,7 +449,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                                     break;
                             }
                             string isProtected = pc.IsProtected == true ? "Y" : "N";
-                            dpterm.PlannedCoursesEntityAssociation.Add(new DataContracts.DegreePlanTermsPlannedCourses(pc.CourseId, pc.SectionId, pc.Credits, isAlt, gradingType, null, null, null, isProtected));
+                            dpterm.PlannedCoursesEntityAssociation.Add(new DataContracts.DegreePlanTermsPlannedCourses(pc.CourseId, pc.SectionId, pc.Credits, isAlt, gradingType, null, null, null, isProtected,null));
                         }
                         degreePlanTermsList.Add(dpterm);
                     }
@@ -472,7 +472,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                             default:
                                 break;
                         }
-                        dpterm.PlannedCoursesEntityAssociation.Add(new DataContracts.DegreePlanTermsPlannedCourses(npc.CourseId, npc.SectionId, npc.Credits, isAlt, gradingType, null, null, null, null));
+                        dpterm.PlannedCoursesEntityAssociation.Add(new DataContracts.DegreePlanTermsPlannedCourses(npc.CourseId, npc.SectionId, npc.Credits, isAlt, gradingType, null, null, null, null,null));
                         degreePlanTermsList.Add(dpterm);
                     }
                 }
@@ -623,7 +623,6 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 cacheProviderMock.Setup<Task<Tuple<object, SemaphoreSlim>>>(x =>
                    x.GetAndLockSemaphoreAsync(It.IsAny<string>(), null))
                    .ReturnsAsync(new Tuple<object, SemaphoreSlim>(null, new SemaphoreSlim(1, 1)));
-
             }
 
             [TestCleanup]
@@ -759,7 +758,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                             default:
                                 break;
                         }
-                        dpterm.PlannedCoursesEntityAssociation.Add(new DataContracts.DegreePlanTermsPlannedCourses(pc.CourseId, pc.SectionId, pc.Credits, isAlt, gradingType, null, null, null, null));
+                        dpterm.PlannedCoursesEntityAssociation.Add(new DataContracts.DegreePlanTermsPlannedCourses(pc.CourseId, pc.SectionId, pc.Credits, isAlt, gradingType, null, null, null, null,null));
                     }
                     degreePlanTermsList.Add(dpterm);
                 }
@@ -782,7 +781,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                         default:
                             break;
                     }
-                    dpterm.PlannedCoursesEntityAssociation.Add(new DataContracts.DegreePlanTermsPlannedCourses(npc.CourseId, npc.SectionId, npc.Credits, isAlt, gradingType, null, null, null, null));
+                    dpterm.PlannedCoursesEntityAssociation.Add(new DataContracts.DegreePlanTermsPlannedCourses(npc.CourseId, npc.SectionId, npc.Credits, isAlt, gradingType, null, null, null, null,null));
                     degreePlanTermsList.Add(dpterm);
                 }
                 Collection<DataContracts.DegreePlanTerms> degreePlanTermsResponse = new Collection<DataContracts.DegreePlanTerms>(degreePlanTermsList);

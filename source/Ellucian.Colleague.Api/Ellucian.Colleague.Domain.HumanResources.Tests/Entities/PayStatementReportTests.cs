@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -66,6 +66,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
         List<LeaveType> leaveTypes;
         public List<Position> positions;
 
+        public bool isAdj;
+
         [TestInitialize]
         public void Initialize()
         {
@@ -87,8 +89,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             sourceData_0 = new PayStatementSourceData("14301", employeeId, employeeName, employeeSSN, mailingLabel, "12010", "ref-009", payDate.AddMonths(-1), periodEndDate.AddMonths(-1), periodGrossPay, periodNetPay, ytdGrossPay, ytdNetPay, comments);
             yearToDateSourceEntities = new List<PayStatementSourceData>() { sourceData_0, sourceData };
 
-            payrollRegisterEntry = new PayrollRegisterEntry("54321", employeeId, periodEndDate.AddMonths(-1).AddDays(1), periodEndDate, "PC", 1, "ref", "ref-008", false);
-            payrollRegisterEntry_0 = new PayrollRegisterEntry("54322", employeeId, periodEndDate.AddMonths(-2).AddDays(1), periodEndDate.AddMonths(-1), "PC", 1, "12010", "ref-009", true);
+            payrollRegisterEntry = new PayrollRegisterEntry("54321", employeeId, periodEndDate.AddMonths(-1).AddDays(1), periodEndDate, "PC", 1, "ref", "ref-008", false, null);
+            payrollRegisterEntry_0 = new PayrollRegisterEntry("54322", employeeId, periodEndDate.AddMonths(-2).AddDays(1), periodEndDate.AddMonths(-1), "PC", 1, "12010", "ref-009", true, null);
 
             benefitDeductionId = "401k";
             enrollmentDate = new DateTime(2017, 1, 1);
@@ -872,14 +874,14 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             public void EarningsTest()
             {
                 // add some earnings for current period
-                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Hourly));
-                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Hourly));
-                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(ovtEarningsTypeId, 112.5m, 70, 42.5m, 5, 15, HourlySalaryIndicator.Hourly));
+                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Hourly, isAdj));
+                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Hourly, isAdj));
+                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(ovtEarningsTypeId, 112.5m, 70, 42.5m, 5, 15, HourlySalaryIndicator.Hourly, isAdj));
 
                 // add some earnings for prior period
-                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Salary));
-                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 300m, 300, 0, 30, 10m, HourlySalaryIndicator.Salary));
-                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(adjEarningsTypeId, 1000m, 1000, 0, 10, null, HourlySalaryIndicator.Salary));
+                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Salary, isAdj));
+                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 300m, 300, 0, 30, 10m, HourlySalaryIndicator.Salary, isAdj));
+                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(adjEarningsTypeId, 1000m, 1000, 0, 10, null, HourlySalaryIndicator.Salary, isAdj));
 
                 List<PayStatementReportEarnings> expectedPayStatementEarningsItems;
                 expectedPayStatementEarningsItems = new List<PayStatementReportEarnings>()
@@ -937,8 +939,8 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             public void EarningsRateIsNullWhenRatesAreDifferentTest()
             {
                 // add some earnings for same earnings type but different pay rates
-                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Hourly));
-                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 300m, 300, 0, 20, 15m, HourlySalaryIndicator.Hourly));
+                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Hourly, isAdj));
+                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 300m, 300, 0, 20, 15m, HourlySalaryIndicator.Hourly, isAdj));
 
                 PayStatementReportEarnings expectedPayStatementEarningsItem;
                 expectedPayStatementEarningsItem =
@@ -970,15 +972,15 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             public void ExcludeAccruedCompTimeEarningsTest()
             {
                 // add some earnings including comp time earned and taken for current period
-                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Hourly));
-                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Hourly));
-                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(compTimeAccruedEarningsTypeId, 90, 90, 0, 6, 15m, HourlySalaryIndicator.Hourly));
-                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(compTimeTakenEarningsTypeId, 45m, 45, 0, 3, 15m, HourlySalaryIndicator.Hourly));
+                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Hourly, isAdj));
+                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Hourly, isAdj));
+                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(compTimeAccruedEarningsTypeId, 90, 90, 0, 6, 15m, HourlySalaryIndicator.Hourly, isAdj));
+                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(compTimeTakenEarningsTypeId, 45m, 45, 0, 3, 15m, HourlySalaryIndicator.Hourly, isAdj));
 
                 // add some earnings including comp time  earned for prior period
-                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Hourly));
-                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Hourly));
-                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(compTimeAccruedEarningsTypeId, 300, 300, 0, 20, 15m, HourlySalaryIndicator.Hourly));
+                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Hourly, isAdj));
+                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Hourly, isAdj));
+                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(compTimeAccruedEarningsTypeId, 300, 300, 0, 20, 15m, HourlySalaryIndicator.Hourly, isAdj));
 
                 payStatementReportDatacontext = new PayStatementReportDataContext(sourceData, payrollRegisterEntry, benefitDeductions, personEmploymentStatuses);
                 payStatementReportDatacontext_0 = new PayStatementReportDataContext(sourceData_0, payrollRegisterEntry_0, benefitDeductions, personEmploymentStatuses);
@@ -994,15 +996,15 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             public void StipendEarningsTest()
             {
                 // add some earnings for current period including stipend earnings
-                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 600m, 600, 0, 60, 10m, HourlySalaryIndicator.Hourly));
-                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, "STIP001", 200m, 200, 0, 20, 10m, HourlySalaryIndicator.Hourly));
-                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(ovtEarningsTypeId, 112.5m, 75m, 37.5m, 5, 15, HourlySalaryIndicator.Hourly));
+                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 600m, 600, 0, 60, 10m, HourlySalaryIndicator.Hourly, isAdj));
+                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, "STIP001", 200m, 200, 0, 20, 10m, HourlySalaryIndicator.Hourly, isAdj));
+                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(ovtEarningsTypeId, 112.5m, 75m, 37.5m, 5, 15, HourlySalaryIndicator.Hourly, isAdj));
 
                 // add some earnings for prior period including stipend earnings
-                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Salary));
-                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, "STIP001", 300m, 300, 0, 30, 10m, HourlySalaryIndicator.Salary));
-                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(adjEarningsTypeId, 1000m, 1000, 0, 10, null, HourlySalaryIndicator.Salary));
-                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(adjEarningsTypeId, "STIP002", 750m, 750, 0, 10, null, HourlySalaryIndicator.Salary));
+                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Salary, isAdj));
+                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(regEarningsTypeId, "STIP001", 300m, 300, 0, 30, 10m, HourlySalaryIndicator.Salary, isAdj));
+                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(adjEarningsTypeId, 1000m, 1000, 0, 10, null, HourlySalaryIndicator.Salary, isAdj));
+                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(adjEarningsTypeId, "STIP002", 750m, 750, 0, 10, null, HourlySalaryIndicator.Salary, isAdj));
 
                 List<PayStatementReportEarnings> expectedPayStatementEarningsItems;
                 expectedPayStatementEarningsItems = new List<PayStatementReportEarnings>()
@@ -1078,17 +1080,17 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             public void DifferentialEarningsTest()
             {
                 // add some earnings for current period including differential earnings
-                earningsEntryWith1stShiftDiff = new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Hourly);
+                earningsEntryWith1stShiftDiff = new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Hourly, isAdj);
                 earningsEntryWith1stShiftDiff.SetEarningsDifferential(firstShiftId, 110m, 10, 11m);
                 payrollRegisterEntry.EarningsEntries.Add(earningsEntryWith1stShiftDiff);
-                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(ovtEarningsTypeId, 112.5m, 50, 62.5m, 5, 15, HourlySalaryIndicator.Hourly));
+                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(ovtEarningsTypeId, 112.5m, 50, 62.5m, 5, 15, HourlySalaryIndicator.Hourly, isAdj));
 
                 // add some earnings for prior period including differential earnings
                 payrollRegisterEntry_0.EarningsEntries.Add(earningsEntryWith1stShiftDiff);
-                earningsEntryWith2ndShiftDiff = new PayrollRegisterEarningsEntry(regEarningsTypeId, 300m, 300, 0, 30, 10m, HourlySalaryIndicator.Hourly);
+                earningsEntryWith2ndShiftDiff = new PayrollRegisterEarningsEntry(regEarningsTypeId, 300m, 300, 0, 30, 10m, HourlySalaryIndicator.Hourly, isAdj);
                 earningsEntryWith2ndShiftDiff.SetEarningsDifferential(secondShiftId, 60m, 5, 12m);
                 payrollRegisterEntry_0.EarningsEntries.Add(earningsEntryWith2ndShiftDiff);
-                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(adjEarningsTypeId, 1000m, 1000, 0, 10, null, HourlySalaryIndicator.Salary));
+                payrollRegisterEntry_0.EarningsEntries.Add(new PayrollRegisterEarningsEntry(adjEarningsTypeId, 1000m, 1000, 0, 10, null, HourlySalaryIndicator.Salary, isAdj));
 
                 List<PayStatementReportEarnings> expectedPayStatementEarningsItems;
                 expectedPayStatementEarningsItems = new List<PayStatementReportEarnings>()
@@ -1164,10 +1166,10 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
             public void DifferentialRateIsNullWhenRatesAreDifferentTest()
             {
                 // add some earnings for same differential code but different rates
-                earningsEntryWith1stShiftDiff = new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Hourly);
+                earningsEntryWith1stShiftDiff = new PayrollRegisterEarningsEntry(regEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Hourly, isAdj);
                 earningsEntryWith1stShiftDiff.SetEarningsDifferential(firstShiftId, 110m, 10, 11m);
                 payrollRegisterEntry.EarningsEntries.Add(earningsEntryWith1stShiftDiff);
-                earningsEntryWith1stShiftDiff = new PayrollRegisterEarningsEntry(adjEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Hourly);
+                earningsEntryWith1stShiftDiff = new PayrollRegisterEarningsEntry(adjEarningsTypeId, 400m, 400, 0, 40, 10m, HourlySalaryIndicator.Hourly, isAdj);
                 earningsEntryWith1stShiftDiff.SetEarningsDifferential(firstShiftId, 120m, 10, 12m);
                 payrollRegisterEntry.EarningsEntries.Add(earningsEntryWith1stShiftDiff);
 
@@ -1204,7 +1206,7 @@ namespace Ellucian.Colleague.Domain.HumanResources.Tests.Entities
                 //Units Worked = 5
                 //Math is invalid because Units Worked * Rate != Period Amount
                 // 5 * 15 == 75 != 112.5
-                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(ovtEarningsTypeId, 112.5m, 50, 62.5m, 5, 10, HourlySalaryIndicator.Hourly));
+                payrollRegisterEntry.EarningsEntries.Add(new PayrollRegisterEarningsEntry(ovtEarningsTypeId, 112.5m, 50, 62.5m, 5, 10, HourlySalaryIndicator.Hourly, false));
 
 
 

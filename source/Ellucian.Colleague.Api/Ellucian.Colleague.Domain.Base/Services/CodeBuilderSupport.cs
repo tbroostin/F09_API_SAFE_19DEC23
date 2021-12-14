@@ -125,7 +125,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
             }
 
             string codeSource = codeBuilderObject.SourceCode;
-            object[] inputData = new object[] { codeBuilderObject, transactionInvoker, dataReader };
+            object[] inputData = new object[] { codeBuilderObject, transactionInvoker, dataReader, rep, GetOrAddToCacheFunc, cacheTimeout, bypassCache };
 
             var instanceObject = GetOrAddToCacheFunc(
                 cacheName,
@@ -318,7 +318,7 @@ namespace Ellucian.Colleague.Domain.Base.Services
             sb.Append("char _SM = Convert.ToChar(DynamicArray.SM); \n");
             sb.Append("char _TM = Convert.ToChar(DynamicArray.TM); \n");
             sb.Append("char _XM = Convert.ToChar(250); \n");
-            sb.Append("public CodeBuilderObject EvalCode(CodeBuilderObject inputData, IColleagueTransactionInvoker transactionInvoker, IColleagueDataReader dataReader){\n");
+            sb.Append("public CodeBuilderObject EvalCode(CodeBuilderObject inputData, IColleagueTransactionInvoker transactionInvoker, IColleagueDataReader dataReader, BaseCachingRepository rep, Func<string, Func<object>, double?, object> GetOrAddToCacheFunc, double? cacheTimeOut, bool bypassCache){\n");
             sb.Append("var outputData = new CodeBuilderObject();\n");
             sb.Append("try{");
             sb.Append(codeSource + " \n");

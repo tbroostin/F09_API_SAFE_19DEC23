@@ -381,6 +381,12 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// <returns></returns>
         Task<Dtos.Base.PersonProxyDetails> GetPersonProxyDetailsAsync(string personId);
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="personId"></param>
+        /// <returns></returns>
+        Task<GuidObject2> GetPersonGuidByIdAsync(string personId);
 
     }
 }

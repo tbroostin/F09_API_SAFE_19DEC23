@@ -334,7 +334,15 @@ namespace Ellucian.Colleague.Data.ColleagueFinance.Repositories
                     SourceId = !string.IsNullOrEmpty(glaFyr.Recordkey) ? glaFyr.Recordkey : null
                 });
             }
-
+            // If either credit or debit fields have a value of zero, then null it out
+            // If they both have zero, then leave zero in the credit field and let the transaction go through
+            // This is really bad data but we don't want to report on it as such because some Colleague
+            // processes are causing the data to have a zero transaction and we can't remove them or do anything
+            // to modify then, therefore, we don't want to issue an error response to something that they cannot fix or change.
+            // SRM - 03/29/2021
+            if (glaFyr.GlaCredit.HasValue && glaFyr.GlaCredit.Value == 0 && glaFyr.GlaDebit.HasValue && glaFyr.GlaDebit.Value != 0) glaFyr.GlaCredit = null;
+            if (glaFyr.GlaDebit.HasValue && glaFyr.GlaDebit.Value == 0 && glaFyr.GlaCredit.HasValue && glaFyr.GlaCredit.Value != 0) glaFyr.GlaDebit = null;
+            if (glaFyr.GlaDebit.HasValue && glaFyr.GlaDebit.Value == 0 && glaFyr.GlaCredit.HasValue && glaFyr.GlaCredit.Value == 0) glaFyr.GlaDebit = null;
             if ((!glaFyr.GlaDebit.HasValue && !glaFyr.GlaCredit.HasValue) || (glaFyr.GlaDebit == 0 && glaFyr.GlaCredit == 0))
             {
                 if (exception == null)

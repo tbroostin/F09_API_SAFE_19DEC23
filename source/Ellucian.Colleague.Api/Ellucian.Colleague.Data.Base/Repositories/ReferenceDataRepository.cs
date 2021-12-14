@@ -1,4 +1,4 @@
-﻿// Copyright 2012-2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2012-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -534,6 +534,48 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
+        /// Get guid for building code
+        /// </summary>
+        /// <param name="code">Building code</param>
+        /// <returns>Guid</returns>
+        public async Task<string> GetBuildingGuidAsync(string code)
+        {
+            //get all the codes from the cache
+            string guid = string.Empty;
+            if (string.IsNullOrEmpty(code))
+                return guid;
+            var allCodesCache = await GetBuildings2Async(false);
+            Building codeCache = null;
+            if (allCodesCache != null && allCodesCache.Any())
+            {
+                codeCache = allCodesCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            }
+
+            //if we cannot find that code in the cache, then refresh the cache and try again.
+            if (codeCache == null)
+            {
+                var allCodesNoCache = await GetBuildings2Async(true);
+                if (allCodesCache == null)
+                {
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'BUILDINGS', Record ID:'", code, "'"));
+                }
+                var codeNoCache = allCodesNoCache.FirstOrDefault(c => c.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+                if (codeNoCache != null && !string.IsNullOrEmpty(codeNoCache.Guid))
+                    guid = codeNoCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'BUILDINGS', Record ID:'", code, "'"));
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(codeCache.Guid))
+                    guid = codeCache.Guid;
+                else
+                    throw new RepositoryException(string.Concat("No Guid found, Entity:'BUILDINGS', Record ID:'", code, "'"));
+            }
+            return guid;
+        }
+
+        /// <summary>
         /// Get a collection of buildings
         /// </summary>
         /// <param name="ignoreCache">Bypass cache flag</param>
@@ -673,26 +715,34 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 return commerceTaxCodeRateCollection;
             }
 
-            var subList = apTaxDataContracts.Select(x => x.Recordkey).ToArray();
-
-            if (subList == null || !subList.Any())
+            var subList = new List<string>();
+            foreach (var apTaxDataContract in apTaxDataContracts)
+            {
+                if (apTaxDataContract.ApTaxEffectiveDate != null && apTaxDataContract.ApTaxEffectiveDate.Any())
+                {
+                    foreach (var effectiveDate in apTaxDataContract.ApTaxEffectiveDate)
+                    {
+                        subList.Add(string.Concat(apTaxDataContract.Recordkey, "|", DmiString.DateTimeToPickDate(Convert.ToDateTime(effectiveDate))));
+                    }
+                }
+            }
+            if (!subList.Any())
             {
                 return commerceTaxCodeRateCollection;
             }
-            // Execute primary select against indexed field that is most likely to return the smallest resulting set of guids
-            var guidPrimaryList = await DataReader.SelectAsync("LDM.GUID", "WITH LDM.GUID.PRIMARY.KEY EQ '?'", subList);
+          
+            var guidLookup = subList
+                   .Where(s => !string.IsNullOrWhiteSpace(s))
+                   .Distinct().ToList()
+                   .ConvertAll(p => new RecordKeyLookup("AP.TAXES", p.Split('|')[0], "AP.TAX.EFFECTIVE.DATE", p.Split('|')[1], false)).ToArray();
 
-            // Execute secondary select against this subset of guids to further filter it down to the one(s) we want
-            var guidList = await DataReader.SelectAsync("LDM.GUID", guidPrimaryList, "WITH LDM.GUID.SECONDARY.FLD EQ 'AP.TAX.EFFECTIVE.DATE' AND LDM.GUID.ENTITY EQ 'AP.TAXES' AND LDM.GUID.REPLACED.BY EQ ''");
+            var recordKeyLookupResults = await DataReader.SelectAsync(guidLookup);
 
-
-            if (guidList == null || !guidList.Any())
+            if (recordKeyLookupResults == null || !recordKeyLookupResults.Any())
             {
                 repositoryException.AddError(new RepositoryError("CommerceTaxCodeRates", "An error orrurred extracting valid guids with LDM.GUID.SECONDARY.FLD EQ 'AP.TAX.EFFECTIVE.DATE' "));
                 throw repositoryException;
             }
-
-            var ldmGuidRecords = await DataReader.BulkReadRecordAsync<LdmGuid>(guidList);
 
             foreach (var apTaxDataContract in apTaxDataContracts)
             {
@@ -700,17 +750,16 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 {
                     if (apTaxDataContract.TaxInfoEntityAssociation != null && apTaxDataContract.TaxInfoEntityAssociation.Any())
                     {
-
                         var taxinfoEntities = apTaxDataContract.TaxInfoEntityAssociation.Where(d => d.ApTaxEffectiveDateAssocMember.HasValue);
 
                         foreach (var taxInfo in taxinfoEntities)
                         {
                             var effectiveDate = DmiString.DateTimeToPickDate(Convert.ToDateTime(taxInfo.ApTaxEffectiveDateAssocMember));
-
-                            var ldmGuidRecord = ldmGuidRecords.FirstOrDefault(x => x.LdmGuidPrimaryKey.Equals(apTaxDataContract.Recordkey, StringComparison.OrdinalIgnoreCase)
-                                    && x.LdmGuidSecondaryKey.Equals(effectiveDate.ToString()));
-
-                            if (ldmGuidRecord == null)
+                            
+                            var ldmGuidRecord = recordKeyLookupResults.FirstOrDefault(
+                                  x => x.Key.Split('+')[1].Equals(apTaxDataContract.Recordkey, StringComparison.OrdinalIgnoreCase));
+                           
+                            if ((ldmGuidRecord.Value == null) || (string.IsNullOrEmpty(ldmGuidRecord.Value.Guid)))
                             {
                                 repositoryException.AddError(new RepositoryError("CommerceTaxCodeRates",
                                     string.Format("Guid not found for key {0} and effectiveDate {1}", apTaxDataContract.Recordkey, effectiveDate.ToString())));
@@ -718,7 +767,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                                 continue;
                             }
 
-                            var commerceTaxCodeRateEntity = new CommerceTaxCodeRate(ldmGuidRecord.Recordkey, apTaxDataContract.Recordkey, apTaxDataContract.ApTaxDesc)
+                            var commerceTaxCodeRateEntity = new CommerceTaxCodeRate(ldmGuidRecord.Value.Guid, apTaxDataContract.Recordkey, apTaxDataContract.ApTaxDesc)
                             {
                                 ApTaxCompoundingSequence = taxInfo.ApTaxCompoundingSeqAssocMember,
                                 ApTaxEffectiveDate = taxInfo.ApTaxEffectiveDateAssocMember,
@@ -830,34 +879,34 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             {
                 return commerceTaxCodesCollection;
             }
-            // Execute primary select against indexed field that is most likely to return the smallest resulting set of guids
-            var guidPrimaryList = await DataReader.SelectAsync("LDM.GUID", "WITH LDM.GUID.PRIMARY.KEY EQ '?'", subList);
+       
+            var guidLookup = subList
+               .Where(s => !string.IsNullOrWhiteSpace(s))
+               .Distinct().ToList()
+               .ConvertAll(p => new RecordKeyLookup("AP.TAXES", p, "", "", false)).ToArray();
 
-            // Execute secondary select against this subset of guids to further filter it down to the one(s) we want
-            var guidList = await DataReader.SelectAsync("LDM.GUID", guidPrimaryList, "WITH LDM.GUID.SECONDARY.FLD EQ '' AND LDM.GUID.ENTITY EQ 'AP.TAXES' AND LDM.GUID.SECONDARY.KEY EQ ''");
-
-
-            if (guidList == null || !guidList.Any())
+            var recordKeyLookupResults = await DataReader.SelectAsync(guidLookup);
+           
+            if (recordKeyLookupResults == null || !recordKeyLookupResults.Any())
             {
                 repositoryException.AddError(new RepositoryError("CommerceTaxCodes", "An error orrurred extracting valid guids."));
                 throw repositoryException;
             }
 
-            var ldmGuidRecords = await DataReader.BulkReadRecordAsync<LdmGuid>(guidList);
-
             foreach (var apTaxDataContract in apTaxDataContracts)
             {
                 try
                 {
-                    var ldmGuidRecord = ldmGuidRecords.FirstOrDefault(x => x.LdmGuidPrimaryKey.Equals(apTaxDataContract.Recordkey, StringComparison.OrdinalIgnoreCase));
-                    if (ldmGuidRecord == null)
+                    var ldmGuidRecord = recordKeyLookupResults.FirstOrDefault(
+                        x => x.Key.Split('+')[1].Equals(apTaxDataContract.Recordkey, StringComparison.OrdinalIgnoreCase));
+                    if ((ldmGuidRecord.Value == null) || (string.IsNullOrEmpty(ldmGuidRecord.Value.Guid)))
                     {
-                        repositoryException.AddError(new RepositoryError("CommerceTaxCodes",
-                            string.Format("Guid not found for key {0}", apTaxDataContract.Recordkey)));
+                        repositoryException.AddError(new RepositoryError("GUID.Not.Found", string.Concat("No Guid found, Entity:'AP.TAXES', Record ID:'", apTaxDataContract.Recordkey, "'")
+                            ));
 
                         continue;
                     }
-                    var commerceTaxCodeEntity = new CommerceTaxCode(ldmGuidRecord.Recordkey, apTaxDataContract.Recordkey, apTaxDataContract.ApTaxDesc)
+                    var commerceTaxCodeEntity = new CommerceTaxCode(ldmGuidRecord.Value.Guid, apTaxDataContract.Recordkey, apTaxDataContract.ApTaxDesc)
                     {
                         AppurEntryFlag = !string.IsNullOrEmpty(apTaxDataContract.ApTaxAppurEntryFlag) && apTaxDataContract.ApTaxAppurEntryFlag == "Y" ? true : false,
                         UseTaxFlag = !string.IsNullOrEmpty(apTaxDataContract.ApUseTaxFlag) && apTaxDataContract.ApUseTaxFlag == "Y" ? true : false,
@@ -900,7 +949,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             if (codeCache == null)
             {
                 var allCodesNoCache = await GetCommerceTaxCodesAsync(true);
-                if (allCodesCache == null)
+                if (allCodesNoCache == null)
                 {
                     throw new RepositoryException(string.Concat("No Guid found, Entity:'AP.TAXES', Record ID:'", code, "'"));
                 }
@@ -1356,11 +1405,26 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns>Department domain entity</returns>
         public async Task<Department> GetDepartmentByGuidAsync(string guid)
         {
+
+            if (string.IsNullOrEmpty(guid))
+            {
+                throw new ArgumentNullException("guid");
+            }
+            var guidRecord = await DataReader.ReadRecordAsync<LdmGuid>("LDM.GUID", guid);
+            if (guidRecord == null)
+            {
+                throw new KeyNotFoundException("DEPTS GUID " + guid + " not found.");
+            }
+            if ((guidRecord.LdmGuidEntity != "DEPTS") || (!string.IsNullOrEmpty(guidRecord.LdmGuidSecondaryFld)))
+            {
+                throw new KeyNotFoundException("GUID " + guid + " has different entity, than expected, DEPTS with an empty secondary field");
+            }
+
             var dept = await DataReader.ReadRecordAsync<Depts>(new GuidLookup(guid), false);
 
             if (dept == null)
             {
-                throw new ApplicationException("Department record not found for guid " + guid + ".");
+                throw new ApplicationException("Department record not found for GUID '" + guid + "'.");
             }
 
             if (string.IsNullOrEmpty(dept.DeptsDesc))
@@ -1419,7 +1483,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 throw new ApplicationException("Division record for id '" + divs.Recordkey + "', guid " + divs.RecordGuid + " is missing a required description.");
             }
 
-            var div = new Division(guid, (String.IsNullOrEmpty(divs.DivDesc) ? divs.Recordkey : divs.DivDesc), divs.DivDesc)
+            var div = new Division(guid, divs.Recordkey, (String.IsNullOrEmpty(divs.DivDesc) ? divs.Recordkey : divs.DivDesc))
             { SchoolCode = divs.DivSchool, InstitutionId = divs.DivInstitutionsId, };
 
             return div;
@@ -2568,18 +2632,6 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         }
 
         /// <summary>
-        /// Get a collection of phone types, non-guid
-        /// </summary>
-        /// <param name="ignoreCache"></param>
-        /// <returns></returns>
-        //public async Task<IEnumerable<PhoneType>> GetPhoneTypesBaseAsync(bool ignoreCache)
-        //{
-        //    return await GetValcodeAsync<PhoneType>("CORE", "PHONE.TYPES",
-        //        e => new PhoneType(e.ValInternalCodeAssocMember, e.ValInternalCodeAssocMember, e.ValExternalRepresentationAssocMember,
-        //            ConvertPhoneTypeCodeToPhoneType(e.ValActionCode3AssocMember)), bypassCache: ignoreCache);
-        //}
-
-        /// <summary>
         /// Get a collection of item condition.
         /// </summary>
         /// <param name="ignoreCache"></param>
@@ -2597,7 +2649,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <returns></returns>
         public async Task<IEnumerable<AcquisitionMethod>> GetAcquisitionMethodsAsync(bool ignoreCache)
         {
-            return await GetCodeItemAsync<DataContracts.AcquisitionMethods, AcquisitionMethod>("AllAacquisionMethods", "ACQUISITION.METHODS",
+            return await GetCodeItemAsync<DataContracts.AcquisitionMethods, AcquisitionMethod>("AllAcquisitionMethods", "ACQUISITION.METHODS",
                 ac => new AcquisitionMethod(ac.Recordkey, ac.AcqDesc, ac.AcqType), bypassCache: ignoreCache);
         }
 
@@ -3072,6 +3124,9 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                 rest = new Restriction(guid, restriction.Recordkey, restriction.RestDesc, null, string.Empty, string.Empty, string.Empty, string.Empty,
                     string.Empty, string.Empty, string.Empty, string.Empty);
                 rest.RestIntgCategory = ConvertRestrictionCategoryToType(restriction.RestIntgCategory);
+
+                rest.RestPrtlDisplayFlag = restriction.RestPrtlDisplayFlag;
+
                 return rest;
             }
             catch (Exception ex)
@@ -3433,6 +3488,17 @@ namespace Ellucian.Colleague.Data.Base.Repositories
             return await GetGuidCodeItemAsync<Schools, School>("AllEedmSchools", "SCHOOLS",
               (s, g) => BuildSchools(g, s), CacheTimeout, this.DataReader.IsAnonymous, ignoreCache);
 
+        }
+
+        /// <summary>
+        /// Get all Schools         
+        /// Omit/exclude invalid schools (unlike GetSchoolsAsync which returns null values for invalid schools)
+        /// </summary>
+        public async Task<IEnumerable<School>> GetSchools2Async(bool ignoreCache)
+        {
+            return await GetGuidCodeItemAsync<Schools, School>("AllEedmSchools2", "SCHOOLS",
+              (s, g) => new School(g, s.Recordkey, (String.IsNullOrEmpty(s.SchoolsDesc) ? s.Recordkey : s.SchoolsDesc)), CacheTimeout,
+                this.DataReader.IsAnonymous, ignoreCache);
         }
 
         /// <summary>
@@ -4284,6 +4350,7 @@ namespace Ellucian.Colleague.Data.Base.Repositories
                     restriction.RestPrtlDisplayDesc, restriction.RestPrtlDisplayDescDtl, restriction.RestPrtlFollowUpApp, restriction.RestPrtlFollowUpLinkDef,
                     restriction.RestPrtlFollowUpWaForm, restriction.RestPrtlFollowUpLabel, restriction.RestPrtlFollowUpIsMtxt);
 
+                rest.RestPrtlDisplayFlag = restriction.RestPrtlDisplayFlag;
                 GetRestrictionHyperlinksRequest hyperlinksRequest = new GetRestrictionHyperlinksRequest()
                 {
                     RestrictionIds = new List<string>() { rest.Code },
@@ -4540,9 +4607,8 @@ namespace Ellucian.Colleague.Data.Base.Repositories
         /// <summary>
         /// Return host country of the Colleague environment
         /// </summary>
-        /// <param name="hostCountry">Host country</param>
         /// <returns>Collegue host country</returns>
-        public async Task<string> GetHostCountry(string hostCountry)
+        public async Task<string> GetHostCountryAsync()
         {
             var internationalParameters = await GetInternationalParametersAsync();
             return internationalParameters.HostCountry;
@@ -4595,6 +4661,39 @@ namespace Ellucian.Colleague.Data.Base.Repositories
 
             if ((!string.IsNullOrEmpty(place.PlacesCountry))
                 && (string.IsNullOrEmpty(place.PlacesRegion)) && (string.IsNullOrEmpty(place.PlacesSubRegion)))
+            {
+                var places = BuildPlaces(new List<Places>() { place });
+                if ((places == null) || (!places.Any()))
+                {
+                    var execption = new RepositoryException();
+                    exception.AddError(new RepositoryError("places", "An error ocurred building the places record.")
+                    {
+                        Id = guid,
+                        SourceId = place.Recordkey
+                    });
+                    throw execption;
+                }
+                return places.FirstOrDefault();
+            }
+            return null;
+        }
+
+        /// <summary>
+        ///  Get and return a single place entity by guid without using the cache
+        ///  where the PLACES.REGION ne null but PLACES.SUB.REGION equal null.  
+        /// </summary>
+        /// <returns>Place domain entity</returns>
+        public async Task<Place> GetRegionPlaceByGuidAsync(string guid)
+        {
+            var place = await DataReader.ReadRecordAsync<DataContracts.Places>(new GuidLookup(guid), false);
+
+            if (place == null)
+            {
+                throw new KeyNotFoundException("Place record not found for guid " + guid + ".");
+            }
+
+            if ((!string.IsNullOrEmpty(place.PlacesRegion))
+                && (string.IsNullOrEmpty(place.PlacesSubRegion)))
             {
                 var places = BuildPlaces(new List<Places>() { place });
                 if ((places == null) || (!places.Any()))

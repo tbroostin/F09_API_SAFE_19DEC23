@@ -1,4 +1,4 @@
-﻿//Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2019-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Linq;
@@ -20,6 +20,11 @@ using Ellucian.Colleague.Dtos;
 using Ellucian.Web.Http.Models;
 using Ellucian.Colleague.Domain.Student.Tests;
 using Ellucian.Colleague.Domain.Student.Entities;
+using System.Web.Http.Routing;
+using System.Collections;
+using System.Web.Http.Controllers;
+using Ellucian.Web.Http.Filters;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -173,9 +178,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                // Assert.AreEqual(expected.Code, actual.Code, "Code, Index=" + i.ToString());
             }
         }
-
-       
-
+        
         [TestMethod]
         [ExpectedException(typeof(HttpResponseException))]
         public async Task StudentAcademicPeriodsController_GetStudentAcademicPeriods_KeyNotFoundException()
@@ -330,5 +333,177 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
         {
             await studentAcademicPeriodsController.DeleteStudentAcademicPeriodsAsync(studentAcademicPeriodsCollection.FirstOrDefault().Id);
         }
+
+        //GET v1.0.0
+        //Successful
+        //GetStudentAcademicPeriodsByGuidAsync
+
+        [TestMethod]
+        public async Task StudentAcademicPeriodsController_GetStudentAcademicPeriodsByGuidAsync_Permissions()
+        {
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentAcademicPeriods" },
+                    { "action", "GetStudentAcademicPeriodsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-academic-periods", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentAcademicPeriodsController.Request.SetRouteData(data);
+            studentAcademicPeriodsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentAcademicPeriods);
+
+            var controllerContext = studentAcademicPeriodsController.ControllerContext;
+            var actionDescriptor = studentAcademicPeriodsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var studentAcadPerdiodTuple = new Tuple<IEnumerable<Dtos.StudentAcademicPeriods>, int>(studentAcademicPeriodsCollection, 5);
+
+            studentAcademicPeriodsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            studentAcademicPeriodsServiceMock.Setup(x => x.GetStudentAcademicPeriodsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<StudentAcademicPeriods>(), false)).ReturnsAsync(studentAcadPerdiodTuple);
+            var sourceContexts = (await studentAcademicPeriodsController.GetStudentAcademicPeriodsAsync(page, criteriaFilter, personFilterFilter));
+
+            Object filterObject;
+            studentAcademicPeriodsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentAcademicPeriods));
+
+        }
+
+        //GET v1.0.0
+        //Exception
+        //GetStudentAcademicPeriodsByGuidAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentAcademicPeriodsController_GetStudentAcademicPeriodsByGuidAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentAcademicPeriods" },
+                    { "action", "GetStudentAcademicPeriodsByGuidAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-academic-periods", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentAcademicPeriodsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = studentAcademicPeriodsController.ControllerContext;
+            var actionDescriptor = studentAcademicPeriodsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+
+                studentAcademicPeriodsServiceMock.Setup(x => x.GetStudentAcademicPeriodsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<StudentAcademicPeriods>(), false)).Throws<PermissionsException>();
+                studentAcademicPeriodsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view student-academic-periods."));
+                await studentAcademicPeriodsController.GetStudentAcademicPeriodsAsync(page, criteriaFilter, personFilterFilter);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+        //GET by id v1.0.0
+        //Successful
+        //GetStudentAcademicPeriodsAsync
+
+        [TestMethod]
+        public async Task StudentAcademicPeriodsController_GetStudentAcademicPeriodsAsync_Permissions()
+        {
+            var expected = studentAcademicPeriodsCollection.FirstOrDefault();
+            var contextPropertyName = "PermissionsFilter";
+
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentAcademicPeriods" },
+                    { "action", "GetStudentAcademicPeriodsAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-academic-periods", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentAcademicPeriodsController.Request.SetRouteData(data);
+            studentAcademicPeriodsController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+
+            var permissionsFilter = new PermissionsFilter(StudentPermissionCodes.ViewStudentAcademicPeriods);
+
+            var controllerContext = studentAcademicPeriodsController.ControllerContext;
+            var actionDescriptor = studentAcademicPeriodsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+            var studentAcadPerdiodTuple = new Tuple<IEnumerable<Dtos.StudentAcademicPeriods>, int>(studentAcademicPeriodsCollection, 5);
+
+
+            studentAcademicPeriodsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>())).Returns(true);
+            studentAcademicPeriodsServiceMock.Setup(x => x.GetStudentAcademicPeriodsByGuidAsync(expected.Id, It.IsAny<bool>())).ReturnsAsync(expected);
+            var actual = await studentAcademicPeriodsController.GetStudentAcademicPeriodsByGuidAsync(expected.Id);
+
+            Object filterObject;
+            studentAcademicPeriodsController.ActionContext.Request.Properties.TryGetValue(contextPropertyName, out filterObject);
+            var cancelToken = new System.Threading.CancellationToken(false);
+            Assert.IsNotNull(filterObject);
+
+            var permissionsCollection = ((IEnumerable)filterObject).Cast<object>()
+                                 .Select(x => x.ToString())
+                                 .ToArray();
+
+            Assert.IsTrue(permissionsCollection.Contains(StudentPermissionCodes.ViewStudentAcademicPeriods));
+
+        }
+
+        //GET by id v1.0.0
+        //Exception
+        //GetStudentAcademicPeriodsAsync
+        [TestMethod]
+        [ExpectedException(typeof(HttpResponseException))]
+        public async Task StudentAcademicPeriodsController_GetStudentAcademicPeriodsAsync_Invalid_Permissions()
+        {
+            HttpRouteValueDictionary routeValueDict = new HttpRouteValueDictionary
+                {
+                    { "controller", "StudentAcademicPeriods" },
+                    { "action", "GetStudentAcademicPeriodsAsync" }
+                };
+            HttpRoute route = new HttpRoute("student-academic-periods", routeValueDict);
+            HttpRouteData data = new HttpRouteData(route);
+            studentAcademicPeriodsController.Request.SetRouteData(data);
+
+            var permissionsFilter = new PermissionsFilter("invalid");
+
+            var controllerContext = studentAcademicPeriodsController.ControllerContext;
+            var actionDescriptor = studentAcademicPeriodsController.ActionContext.ActionDescriptor
+                     ?? new Mock<HttpActionDescriptor>() { CallBase = true }.Object;
+
+            var _context = new HttpActionContext(controllerContext, actionDescriptor);
+            try
+            {
+                await permissionsFilter.OnActionExecutingAsync(_context, new System.Threading.CancellationToken(false));
+                
+                studentAcademicPeriodsServiceMock.Setup(x => x.GetStudentAcademicPeriodsByGuidAsync(It.IsAny<string>(), It.IsAny<bool>())).Throws<PermissionsException>(); 
+                studentAcademicPeriodsServiceMock.Setup(s => s.ValidatePermissions(It.IsAny<Tuple<string[], string, string>>()))
+                    .Throws(new PermissionsException("User 'npuser' does not have permission to view student-academic-periods."));
+                await studentAcademicPeriodsController.GetStudentAcademicPeriodsByGuidAsync(expectedGuid);
+            }
+            catch (PermissionsException ex)
+            {
+                throw ex;
+            }
+        }
+
+
     }
 }

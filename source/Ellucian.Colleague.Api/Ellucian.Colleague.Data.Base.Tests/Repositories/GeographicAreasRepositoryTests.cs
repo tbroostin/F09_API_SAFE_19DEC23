@@ -1,4 +1,4 @@
-﻿// Copyright 2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2019-2020 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Colleague.Data.Base.Transactions;
@@ -238,7 +238,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         public async Task GetAllGeographicAreas_NullChaptersException_V6()
         {
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Chapters>("CHAPTERS", It.IsAny<string[]>(), It.IsAny<bool>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
             
             var testData = await geographicAreasRepository.GetGeographicAreasAsync(0, 100);
         }
@@ -258,7 +258,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         public async Task GetAllGeographicAreas_NullCountiesException_V6()
         {
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<Counties>("COUNTIES", It.IsAny<string[]>(), It.IsAny<bool>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
 
             var testData = await geographicAreasRepository.GetGeographicAreasAsync(0, 100);
         }
@@ -278,7 +278,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         public async Task GetAllGeographicAreas_NullZipCodesException_V6()
         {
             dataReaderMock.Setup(repo => repo.BulkReadRecordAsync<ZipCodeXlat>("ZIP.CODE.XLAT", It.IsAny<string[]>(), It.IsAny<bool>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
 
             var testData = await geographicAreasRepository.GetGeographicAreasAsync(0, 100);
         }
@@ -376,7 +376,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             dataReaderMock.Setup(i => i.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(lookUpResults);
 
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<Chapters>(It.IsAny<string>(), It.IsAny<bool>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
 
             var testData = await geographicAreasRepository.GetGeographicAreaByIdAsync(guid);
 
@@ -397,7 +397,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             dataReaderMock.Setup(i => i.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(lookUpResults);
 
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<Counties>(It.IsAny<string>(), It.IsAny<bool>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
 
             var testData = await geographicAreasRepository.GetGeographicAreaByIdAsync(guid);
 
@@ -418,7 +418,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
             dataReaderMock.Setup(i => i.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(lookUpResults);
 
             dataReaderMock.Setup(repo => repo.ReadRecordAsync<ZipCodeXlat>(It.IsAny<string>(), It.IsAny<bool>()))
-                .ReturnsAsync(null);
+                .ReturnsAsync(() => null);
 
             var testData = await geographicAreasRepository.GetGeographicAreaByIdAsync(guid);
 

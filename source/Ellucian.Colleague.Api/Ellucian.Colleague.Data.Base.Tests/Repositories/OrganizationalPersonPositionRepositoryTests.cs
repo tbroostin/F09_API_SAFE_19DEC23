@@ -1,4 +1,4 @@
-﻿// Copyright 2017 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Data.Base.DataContracts;
 using Ellucian.Colleague.Data.Base.Repositories;
 using Ellucian.Data.Colleague.DataContracts;
@@ -215,7 +215,7 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         public async Task GetOrgPersonPositionAsync_NullOrgRoleReponse_ReturnsEmptyList()
         {
             // Mock null return for ORG.ROLE select
-            dataReaderMock.Setup(r => r.SelectAsync("ORG.ROLE", It.IsAny<string>(), It.IsAny<string[]>(), "?", true, 425)).ReturnsAsync(null);
+            dataReaderMock.Setup(r => r.SelectAsync("ORG.ROLE", It.IsAny<string>(), It.IsAny<string[]>(), "?", true, 425)).ReturnsAsync(() => null);
 
             var result = await repository.GetOrganizationalPersonPositionAsync(personIds, new List<string>());
 
@@ -226,8 +226,8 @@ namespace Ellucian.Colleague.Data.Base.Tests.Repositories
         public async Task GetOrgPersonPositionAsync_NullOrgEntityRoleReponse_ReturnsEmptyList()
         {
             // Mock null return for ORG.ENTITY.ROLE select
-            dataReaderMock.Setup(r => r.SelectAsync("ORG.ENTITY.ROLE", It.IsAny<string>(), It.IsAny<string[]>(), "?", true, 425)).ReturnsAsync(null);
-            dataReaderMock.Setup(r => r.SelectAsync("ORG.ENTITY.ROLE", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(null);
+            dataReaderMock.Setup(r => r.SelectAsync("ORG.ENTITY.ROLE", It.IsAny<string>(), It.IsAny<string[]>(), "?", true, 425)).ReturnsAsync(() => null);
+            dataReaderMock.Setup(r => r.SelectAsync("ORG.ENTITY.ROLE", It.IsAny<string[]>(), It.IsAny<string>())).ReturnsAsync(() => null);
 
             var orgPerPos = await repository.GetOrganizationalPersonPositionAsync(personIds, new List<string>());
 

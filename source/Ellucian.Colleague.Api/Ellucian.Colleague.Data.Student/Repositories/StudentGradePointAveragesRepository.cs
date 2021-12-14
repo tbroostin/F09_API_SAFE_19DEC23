@@ -111,6 +111,10 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                                     return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
                                 }
                                 personStIds = student.PstStudentAcadCred.ToArray();
+                                if (personStIds == null || !personStIds.Any())
+                                {
+                                    return new CacheSupport.KeyCacheRequirements() { NoQualifyingRecords = true };
+                                }
                             }                            
                             
                             CacheSupport.KeyCacheRequirements requirements = new CacheSupport.KeyCacheRequirements()
@@ -157,17 +161,29 @@ namespace Ellucian.Colleague.Data.Student.Repositories
                 */
                 if (limitingKeys == null) limitingKeys = stAcadKeys.ToArray();
                 stAcadCredIds = await DataReader.SelectAsync("STUDENT.ACAD.CRED", limitingKeys, acadIdsCriteria);
-                foreach (var personStDataContract in personStDataContracts)
+                // Need to loop through the subList PERSON.ST keys in case the record is missing or doesn't have
+                // the appropriate references to PST.STUDENT.ACAD.CRED so that we can report on invalid PERSON.ST
+                // records.  When we were looping through the data contracts, then we might have a situation where
+                // the subList contains a full page but the data contracts only have a subset of the full page.
+                foreach (var personStId in subList)
                 {
-                    string[] credIds = personStDataContract.PstStudentAcadCred.Intersect(stAcadCredIds).ToArray();
-                    var creds = tempCreds.Where(cr => credIds.Contains(cr.Recordkey)).Select(rec => rec);
-                    if ((personStDataContract != null) && (!string.IsNullOrWhiteSpace(personStDataContract.RecordGuid)))
+                    var personStDataContract = personStDataContracts.Where(pst => pst.Recordkey.Equals(personStId, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+                    if (personStDataContract == null || personStDataContract.PstStudentAcadCred == null || !personStDataContract.PstStudentAcadCred.Any())
                     {
-                        studentGpas.Add(BuildStudentAcadCred(personStDataContract, creds));
+                        exception.AddError(new RepositoryError("Data.Access", string.Format("Unable to locate a PERSON.ST record with  STC references for id: '{0}'", personStId)));
                     }
                     else
                     {
-                        exception.AddError(new RepositoryError("Data.Access", string.Format("Unable to locate guid for personSt id: '{0}'", personStDataContract.Recordkey)));
+                        string[] credIds = personStDataContract.PstStudentAcadCred.Intersect(stAcadCredIds).ToArray();
+                        var creds = tempCreds.Where(cr => credIds.Contains(cr.Recordkey)).Select(rec => rec);
+                        if ((personStDataContract != null) && (!string.IsNullOrWhiteSpace(personStDataContract.RecordGuid)))
+                        {
+                            studentGpas.Add(BuildStudentAcadCred(personStDataContract, creds));
+                        }
+                        else
+                        {
+                            exception.AddError(new RepositoryError("Data.Access", string.Format("Unable to locate guid for PERSON.ST id: '{0}'", personStId)));
+                        }
                     }
                 }
 

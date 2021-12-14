@@ -1,20 +1,15 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates. */
-using Ellucian.Data.Colleague;
+﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates. */
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Repositories;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Ellucian.Data.Colleague.DataContracts;
 
 namespace Ellucian.Colleague.Domain.HumanResources.Tests
 {
     public class TestPayStatementRepository : IPayStatementRepository
     {
-        // public static string TestPersonId = "12345";
-        //public static string OtherTestPersonId = "54321";
         public class PayStatementRecord
         {
             public string recordKey;

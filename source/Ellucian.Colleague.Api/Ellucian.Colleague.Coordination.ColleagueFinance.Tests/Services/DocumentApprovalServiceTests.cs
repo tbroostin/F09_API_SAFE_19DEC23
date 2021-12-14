@@ -1,4 +1,4 @@
-﻿// Copyright 2020 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2020-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories;
@@ -58,6 +58,9 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
         private List<ApprovalDocumentRequest> approvalDocumentRequests;
         private Dtos.ColleagueFinance.DocumentApprovalRequest documentApprovalRequest;
 
+        public ApprovedDocumentFilterCriteria entityFilterCriteria;
+        public Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria dtoFilterCriteria;
+
         [TestInitialize]
         public void Initialize()
         {
@@ -112,6 +115,12 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             var approvalItemEntityToDtoAdapter = new AutoMapperAdapter<ApprovalItem, Dtos.ColleagueFinance.ApprovalItem>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
             documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<ApprovalItem, Dtos.ColleagueFinance.ApprovalItem>()).Returns(approvalItemEntityToDtoAdapter);
 
+            var approvalInformationEntityToDtoAdapter = new AutoMapperAdapter<Approver, Dtos.ColleagueFinance.Approver>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Approver, Dtos.ColleagueFinance.Approver>()).Returns(approvalInformationEntityToDtoAdapter);
+
+            var associatedDocumentEntityToDtoAdapter = new AutoMapperAdapter<AssociatedDocument, Dtos.ColleagueFinance.AssociatedDocument>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<AssociatedDocument, Dtos.ColleagueFinance.AssociatedDocument>()).Returns(associatedDocumentEntityToDtoAdapter);
+
             var documentApprovalResponseEntityToDtoAdapter = new AutoMapperAdapter<DocumentApprovalResponse, Dtos.ColleagueFinance.DocumentApprovalResponse>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
             documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<DocumentApprovalResponse, Dtos.ColleagueFinance.DocumentApprovalResponse>()).Returns(documentApprovalResponseEntityToDtoAdapter);
 
@@ -122,10 +131,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.DocumentApprovalRequest, DocumentApprovalRequest>()).Returns(documentApprovalRequestDtoToEntityAdapter);
 
             var approvalDocumentRequestDtoToEntityAdapter = new AutoMapperAdapter<Dtos.ColleagueFinance.ApprovalDocumentRequest, ApprovalDocumentRequest>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+
             documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.ApprovalDocumentRequest, ApprovalDocumentRequest>()).Returns(approvalDocumentRequestDtoToEntityAdapter);
 
             var approvalItemDtoToEntityAdapter = new AutoMapperAdapter<Dtos.ColleagueFinance.ApprovalItem, ApprovalItem>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
             documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.ApprovalItem, ApprovalItem>()).Returns(approvalItemDtoToEntityAdapter);
+
+            var approvedDocumentEntityToDtoAdapter = new AutoMapperAdapter<ApprovedDocument, Dtos.ColleagueFinance.ApprovedDocument>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<ApprovedDocument, Dtos.ColleagueFinance.ApprovedDocument>()).Returns(approvedDocumentEntityToDtoAdapter);
+
+            var approvedDocumentFilterCriteriaDtoToEntityAdapter = new AutoMapperAdapter<Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria, ApprovedDocumentFilterCriteria>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria, ApprovedDocumentFilterCriteria>()).Returns(approvedDocumentFilterCriteriaDtoToEntityAdapter);
 
             // Build a service for getting and updating the document approval.
             documentApprovalService = new DocumentApprovalService(testDocumentApprovalRepository, staffRepositoryMock.Object, documentApprovalAdapterRegistryMock.Object,
@@ -142,7 +158,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             // Build a service for a user that has no permissions.
             serviceForNoPermission = new DocumentApprovalService(testDocumentApprovalRepositoryNoPermissionMock.Object, staffRepositoryMock.Object, documentApprovalAdapterRegistryMock.Object,
                 noPermissionsUser, roleRepository, loggerMock.Object);
-
 
             approvalDocumentRequests = new List<ApprovalDocumentRequest>()
             {
@@ -195,6 +210,17 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 
                 }
             };
+
+            dtoFilterCriteria = new Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria()
+            {
+                DocumentType = null,
+                VendorIds = null,
+                DocumentDateFrom = null,
+                DocumentDateTo = null,
+                ApprovalDateFrom = null,
+                ApprovalDateTo = null
+            };
+            entityFilterCriteria = new ApprovedDocumentFilterCriteria();
         }
 
         [TestCleanup]
@@ -215,7 +241,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             documentApprovalUser = null;
         }
         #endregion
-
 
         #region Get a document approval tests
         [TestMethod]
@@ -251,6 +276,16 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                     && x.ChangeDate == approvalItemDto.ChangeDate
                     && x.ChangeTime == approvalItemDto.ChangeTime);
                     Assert.IsNotNull(matchingApprovalItemEntity);
+                }
+
+                // Confirm that the number of approval entities is the same as the number of approval DTOs.
+                Assert.AreEqual(documentApprovalDto.ApprovalDocuments.Count(), documentApprovalDomain.ApprovalDocuments.Count());
+                foreach (var approverDto in approvalDocumentDto.DocumentApprovers)
+                {
+                    var matchingApprovalInformationEntity = matchingApprovalDocumentEntity.DocumentApprovers.FirstOrDefault(x => x.ApproverId.ToUpperInvariant() == approverDto.ApproverId.ToUpperInvariant());
+                    Assert.IsNotNull(matchingApprovalInformationEntity);
+                    Assert.AreEqual(matchingApprovalInformationEntity.ApprovalName, approverDto.ApprovalName);
+                    Assert.AreEqual(matchingApprovalInformationEntity.ApprovalDate, approverDto.ApprovalDate);
                 }
             }
         }
@@ -347,6 +382,115 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             documentApprovalRequest.ApprovalDocumentRequests = null;
             var documentApprovalResponseDto = await documentApprovalService.UpdateDocumentApprovalRequestAsync(documentApprovalRequest);
         }
+        #endregion
+
+        #region QueryApprovedDocumentsAsync Tests
+
+        [TestMethod]
+        public async Task QueryApprovedDocumentsAsync_Success_NoFilterValues()
+        {
+            // Test the filter conversion from DTO to entity with no values.
+            var approvedDocumentFilterCriteriaDtoToEntityAdapter = new AutoMapperAdapter<Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria, ApprovedDocumentFilterCriteria>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria, ApprovedDocumentFilterCriteria>()).Returns(approvedDocumentFilterCriteriaDtoToEntityAdapter);
+            entityFilterCriteria = approvedDocumentFilterCriteriaDtoToEntityAdapter.MapToType(dtoFilterCriteria);
+
+            Assert.AreEqual(entityFilterCriteria.DocumentType.Count(), 0);
+            Assert.AreEqual(entityFilterCriteria.VendorIds.Count(), 0);
+            Assert.AreEqual(entityFilterCriteria.DocumentDateFrom, dtoFilterCriteria.DocumentDateFrom);
+            Assert.AreEqual(entityFilterCriteria.DocumentDateTo, dtoFilterCriteria.DocumentDateTo);
+            Assert.AreEqual(entityFilterCriteria.ApprovalDateFrom, dtoFilterCriteria.ApprovalDateFrom);
+            Assert.AreEqual(entityFilterCriteria.ApprovalDateTo, dtoFilterCriteria.ApprovalDateTo);
+
+            // Confirm that the QueryApprovedDocumentsAsync service method returns a DTO with
+            // the same information that is in the test approved document domain entity.
+            var testApprovedDocumentEntity = await testDocumentApprovalRepository.QueryApprovedDocumentsAsync("TGL", entityFilterCriteria);
+            var actualApprovedDocumentDto = await documentApprovalService.QueryApprovedDocumentsAsync(dtoFilterCriteria);
+
+            foreach (var approvedDocDto in actualApprovedDocumentDto)
+            {
+                var testMatchingApprovedDocument = testApprovedDocumentEntity.FirstOrDefault(x => x.Id == approvedDocDto.Id
+                    && x.Number == approvedDocDto.Number
+                    && x.DocumentType == approvedDocDto.DocumentType
+                    && x.Date == approvedDocDto.Date
+                    && x.VendorName == approvedDocDto.VendorName
+                    && x.NetAmount == approvedDocDto.NetAmount);
+                Assert.IsNotNull(testMatchingApprovedDocument);
+
+                // Confirm that the number of approval information entities and DTOs matchs.
+                Assert.AreEqual(approvedDocDto.DocumentApprovers.Count(), testMatchingApprovedDocument.DocumentApprovers.Count());
+                foreach (var approverDto in approvedDocDto.DocumentApprovers)
+                {
+                    var matchingApprovalInformationEntity = testMatchingApprovedDocument.DocumentApprovers.FirstOrDefault(x => x.ApproverId.ToUpperInvariant() == approverDto.ApproverId.ToUpperInvariant());
+                    Assert.IsNotNull(matchingApprovalInformationEntity);
+                    Assert.AreEqual(matchingApprovalInformationEntity.ApprovalName, approverDto.ApprovalName);
+                    Assert.AreEqual(matchingApprovalInformationEntity.ApprovalDate, approverDto.ApprovalDate);
+                }
+            }
+        }
+
+        [TestMethod]
+        public async Task QueryApprovedDocumentsAsync_Success_WithFilterValues()
+        {
+            // Test the filter conversion from DTO to entity with values.
+            dtoFilterCriteria.DocumentType = new List<string>() { "REQ", "PO", "VOU" };
+            dtoFilterCriteria.VendorIds = new List<string>() { "0001666", "0000877", "0001272" };
+            dtoFilterCriteria.DocumentDateFrom = DateTime.Today.AddDays(-5);
+            dtoFilterCriteria.DocumentDateTo = DateTime.Today.AddDays(-4);
+            dtoFilterCriteria.ApprovalDateFrom = DateTime.Today.AddDays(-3);
+            dtoFilterCriteria.ApprovalDateTo = DateTime.Today.AddDays(-1);
+
+            var approvedDocumentFilterCriteriaDtoToEntityAdapter = new AutoMapperAdapter<Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria, ApprovedDocumentFilterCriteria>(documentApprovalAdapterRegistryMock.Object, loggerMock.Object);
+            documentApprovalAdapterRegistryMock.Setup(x => x.GetAdapter<Dtos.ColleagueFinance.ApprovedDocumentFilterCriteria, ApprovedDocumentFilterCriteria>()).Returns(approvedDocumentFilterCriteriaDtoToEntityAdapter);
+            entityFilterCriteria = approvedDocumentFilterCriteriaDtoToEntityAdapter.MapToType(dtoFilterCriteria);
+
+            Assert.AreEqual(entityFilterCriteria.DocumentType.Count(), dtoFilterCriteria.DocumentType.Count());
+            Assert.AreEqual(entityFilterCriteria.VendorIds.Count(), dtoFilterCriteria.VendorIds.Count());
+            Assert.AreEqual(entityFilterCriteria.DocumentDateFrom, dtoFilterCriteria.DocumentDateFrom);
+            Assert.AreEqual(entityFilterCriteria.DocumentDateTo, dtoFilterCriteria.DocumentDateTo);
+            Assert.AreEqual(entityFilterCriteria.ApprovalDateFrom, dtoFilterCriteria.ApprovalDateFrom);
+            Assert.AreEqual(entityFilterCriteria.ApprovalDateTo, dtoFilterCriteria.ApprovalDateTo);
+
+            // Confirm that the QueryApprovedDocumentsAsync service method returns a DTO with
+            // the same information that is in the test approved document domain entity.
+            var testApprovedDocumentEntity = await testDocumentApprovalRepository.QueryApprovedDocumentsAsync("TGL", entityFilterCriteria);
+            var actualApprovedDocumentDto = await documentApprovalService.QueryApprovedDocumentsAsync(dtoFilterCriteria);
+
+            foreach (var approvedDocDto in actualApprovedDocumentDto)
+            {
+                var testMatchingApprovedDocument = testApprovedDocumentEntity.FirstOrDefault(x => x.Id == approvedDocDto.Id
+                    && x.Number == approvedDocDto.Number
+                    && x.DocumentType == approvedDocDto.DocumentType
+                    && x.Date == approvedDocDto.Date
+                    && x.VendorName == approvedDocDto.VendorName
+                    && x.NetAmount == approvedDocDto.NetAmount);
+                Assert.IsNotNull(testMatchingApprovedDocument);
+
+                // Confirm that the number of approval information entities and DTOs matchs.
+                Assert.AreEqual(approvedDocDto.DocumentApprovers.Count(), testMatchingApprovedDocument.DocumentApprovers.Count());
+                foreach (var approverDto in approvedDocDto.DocumentApprovers)
+                {
+                    var matchingApprovalInformationEntity = testMatchingApprovedDocument.DocumentApprovers.FirstOrDefault(x => x.ApproverId.ToUpperInvariant() == approverDto.ApproverId.ToUpperInvariant());
+                    Assert.IsNotNull(matchingApprovalInformationEntity);
+                    Assert.AreEqual(matchingApprovalInformationEntity.ApprovalName, approverDto.ApprovalName);
+                    Assert.AreEqual(matchingApprovalInformationEntity.ApprovalDate, approverDto.ApprovalDate);
+                }
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task QueryApprovedDocumentsAsync_PermissionException()
+        {
+            await serviceForNoPermission.QueryApprovedDocumentsAsync(dtoFilterCriteria);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(PermissionsException))]
+        public async Task QueryApprovedDocumentsAsync_NoStaffLoginId_PermissionException()
+        {
+            await noStaffLoginservice.QueryApprovedDocumentsAsync(dtoFilterCriteria);
+        }
+
         #endregion
     }
 }

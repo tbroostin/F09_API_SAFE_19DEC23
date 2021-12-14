@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Text;
 using System.Collections.Generic;
-using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Ellucian.Colleague.Domain.Planning.Entities;
 
@@ -16,13 +14,15 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
             CourseBlocks block;
             string description;
             List<string> courseIds;
+            List<string> coursePlaceholderIds;
 
             [TestInitialize]
             public void Initialize()
             {
                 description = "Freshman Fall Block";
                 courseIds = new List<string>() { "1", "2", "3" };
-                block = new CourseBlocks(description, courseIds);
+                coursePlaceholderIds = new List<string>() { "a", "b", "c" };
+                block = new CourseBlocks(description: description, courseIds: courseIds, coursePlaceholderIds: coursePlaceholderIds);
             }
 
             [TestMethod]
@@ -34,39 +34,103 @@ namespace Ellucian.Colleague.Domain.Planning.Tests.Entities
             [TestMethod]
             public void CourseIds()
             {
-                Assert.AreEqual(courseIds.ElementAt(0), block.CourseIds.ElementAt(0));
-                Assert.AreEqual(courseIds.ElementAt(1), block.CourseIds.ElementAt(1));
-                Assert.AreEqual(courseIds.ElementAt(2), block.CourseIds.ElementAt(2));
+                for (var i = 0; i < courseIds.Count; i++)
+                {
+                    Assert.AreEqual(courseIds[i], block.CourseIds[i]);
+                }
+            }
+
+            [TestMethod]
+            public void CoursePlaceholderIds()
+            {
+                for (var i = 0; i < coursePlaceholderIds.Count; i++)
+                {
+                    Assert.AreEqual(coursePlaceholderIds[i], block.CoursePlaceholderIds[i]);
+                }
+            }
+
+            [TestMethod]
+            public void NoExceptionWhenCourseIdsNullAndCoursePlaceholderIdsNotNull()
+            {
+                courseIds = null;
+                var block1 = new CourseBlocks(description, courseIds, coursePlaceholderIds);
+            }
+
+            [TestMethod]
+            public void NoExceptionWhenCourseIdsNotNullAndCoursePlaceholderIdsNull()
+            {
+                coursePlaceholderIds = null;
+                var block1 = new CourseBlocks(description, courseIds, coursePlaceholderIds);
+            }
+
+            [TestMethod]
+            public void NoExceptionWhenCourseIdsEmptyAndCoursePlaceholderIdsNotNull()
+            {
+                courseIds = new List<string>();
+                var block1 = new CourseBlocks(description, courseIds, coursePlaceholderIds);
+            }
+
+            [TestMethod]
+            public void NoExceptionWhenCourseIdsNotNullAndCoursePlaceholderIdsEmpty()
+            {
+                coursePlaceholderIds = new List<string>();
+                var block1 = new CourseBlocks(description, courseIds, coursePlaceholderIds);
+            }
+
+
+            [TestMethod]
+            public void NoExceptionWhenCourseIdsInvalidValuesAndCoursePlaceholderIdsValid()
+            {
+                courseIds = new List<string>() { "", null, "   " };
+                var block1 = new CourseBlocks(description, courseIds, coursePlaceholderIds);
+            }
+
+            [TestMethod]
+            public void NoExceptionWhenCourseIdsNotValidAndCoursePlaceholderIdsInvalidValues()
+            {
+                coursePlaceholderIds = new List<string>() { "", null, "   " };
+                var block1 = new CourseBlocks(description, courseIds, coursePlaceholderIds);
             }
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public void ThrowsExceptionIfDescriptionIsNull()
             {
-                var block1 = new CourseBlocks(null, courseIds);
+                var block1 = new CourseBlocks(null, courseIds, coursePlaceholderIds);
             }
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
             public void ThrowsExceptionIfDescriptionIsBlank()
             {
-                var block1 = new CourseBlocks("", courseIds);
+                var block1 = new CourseBlocks("", courseIds, coursePlaceholderIds);
             }
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
-            public void ThrowsExceptionIfCourseIdsNull()
+            public void ThrowsExceptionIfCourseIdsNullAndCoursePlaceholderIdsNull()
             {
                 courseIds = null;
-                var block1 = new CourseBlocks(description, courseIds);
+                coursePlaceholderIds = null;
+                var block1 = new CourseBlocks(description, courseIds, coursePlaceholderIds);
             }
 
             [TestMethod]
             [ExpectedException(typeof(ArgumentNullException))]
-            public void ThrowsExceptionIfCourseIdsEmpty()
+            public void ThrowsExceptionIfCourseIdsEmptyAndCoursePlaceholderIdsEmpty()
             {
                 courseIds = new List<string>();
-                var block1 = new CourseBlocks(description, courseIds);
+                coursePlaceholderIds = new List<string>();
+                var block1 = new CourseBlocks(description, courseIds, coursePlaceholderIds);
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(ArgumentNullException))]
+            public void ThrowsExceptionIfCourseIdsBlankValuesAndCoursePlaceholderIdsBlankValues()
+            {
+                courseIds = new List<string>() { "", null, "   " };
+                coursePlaceholderIds = new List<string>() { "", null, "   " };
+                var block1 = new CourseBlocks(description, courseIds, coursePlaceholderIds);
             }
         }
     }

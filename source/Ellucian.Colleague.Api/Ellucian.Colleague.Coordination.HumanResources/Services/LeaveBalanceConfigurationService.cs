@@ -1,8 +1,5 @@
-﻿//Copyright 2018 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Ellucian.Colleague.Dtos.HumanResources;
 using Ellucian.Colleague.Coordination.Base.Services;
@@ -34,35 +31,18 @@ namespace Ellucian.Colleague.Coordination.HumanResources.Services
             this.leaveBalanceConfiguratioRepository = leaveBalanceConfiguratioRepository;
         }
 
-        /// <summary>
-        /// Converts a LeaveBalanceConfiguration domain entity to its corresponding DTO
-        /// </summary>
-        /// <param name="source">LeaveBalanceConfiguration domain entity</param>
-        /// <returns>LeaveBalanceConfiguration DTO</returns>
-        private async Task<Dtos.HumanResources.LeaveBalanceConfiguration> ConvertLeaveBalanceConfigurationEntityToDto(Domain.HumanResources.Entities.LeaveBalanceConfiguration source)
-        {
-            if (source != null)
-            {
-                var leaveConfigurationDto = new Dtos.HumanResources.LeaveBalanceConfiguration();
-                leaveConfigurationDto.ExcludedLeavePlanIds = source.ExcludedLeavePlanIds;
-                return leaveConfigurationDto;
-            }
-            else
-            {
-                return null;
-            }
-        }
-
+        
         /// <summary>
         /// Gets the configurations for leave balance
         /// </summary>
         /// <returns>LeaveBalanceConfiguration</returns>
         public async Task<LeaveBalanceConfiguration> GetLeaveBalanceConfigurationAsync()
         {
+            var adapter = _adapterRegistry.GetAdapter<Domain.HumanResources.Entities.LeaveBalanceConfiguration, LeaveBalanceConfiguration>();
             try
             {
                 var leaveManagementConfiguration = await leaveBalanceConfiguratioRepository.GetLeaveBalanceConfigurationAsync();
-                return await ConvertLeaveBalanceConfigurationEntityToDto(leaveManagementConfiguration);
+                return adapter.MapToType(leaveManagementConfiguration);
             }
             catch (Exception ex)
             {

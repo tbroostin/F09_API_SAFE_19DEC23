@@ -1134,5 +1134,17 @@ namespace Ellucian.Colleague.Domain.ColleagueFinance.Tests
         {
             throw new NotImplementedException();
         }
+
+        public async Task<IEnumerable<PurchaseOrderSummary>> QueryPurchaseOrderSummariesAsync(ProcurementDocumentFilterCriteria criteria)
+        {
+            if (criteria != null && criteria.VendorIds != null && criteria.VendorIds.Any())
+            {
+                return await Task.Run(() => purchaseOrdersSummaryList.Where(x => x.VendorId == criteria.VendorIds.FirstOrDefault()));
+            }
+            else
+            {
+                return await Task.Run(() => purchaseOrdersSummaryList);
+            }
+        }
     }
 }

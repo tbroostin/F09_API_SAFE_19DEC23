@@ -1,4 +1,4 @@
-﻿/*Copyright 2014-2016 Ellucian Company L.P. and its affiliates.*/
+﻿/*Copyright 2014-2021 Ellucian Company L.P. and its affiliates.*/
 
 using System;
 using System.Collections.Generic;
@@ -199,6 +199,10 @@ namespace Ellucian.Colleague.Domain.Base.Entities
         /// </summary>
         public Decimal? Longitude { get; set; }
 
+        /// <summary>
+        /// The list of different address types - this address has
+        /// </summary>
+        public List<string> AddressTypeCodes { get; set; }
 
         /// <summary>
         /// Constructor used by HEDM
@@ -257,6 +261,7 @@ namespace Ellucian.Colleague.Domain.Base.Entities
             }
 
             _addressId = addressId;
+            AddressTypeCodes = new List<string>();
         }
         
         /// <summary>

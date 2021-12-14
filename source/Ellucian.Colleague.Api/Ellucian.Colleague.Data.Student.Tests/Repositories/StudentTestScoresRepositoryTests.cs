@@ -1,9 +1,10 @@
-﻿// Copyright 2017-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.Student.DataContracts;
 using Ellucian.Colleague.Data.Student.Repositories;
 using Ellucian.Colleague.Data.Student.Transactions;
+using Ellucian.Colleague.Domain.Base.Transactions;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Student.Entities;
 using Ellucian.Data.Colleague;
@@ -398,12 +399,12 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         {
             var id = "3d390690-7b66-4b66-820e-7610c96c5973";
             var key = "1";
-            dataReaderMock.Setup(acc => acc.ReadRecordAsync<StudentNonCourses>(key, true)).ReturnsAsync(null);
+            dataReaderMock.Setup(acc => acc.ReadRecordAsync<StudentNonCourses>(key, true)).ReturnsAsync(() => null);
             await _studentAptitudeAssessmentsRepository.GetStudentTestScoresByGuidAsync(id);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task StudentTestScoresRepository_GetByIdAsync_NonCourse_NotFound_ArgumentException()
         {
             var record = records.FirstOrDefault();
@@ -422,14 +423,14 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 }
                 return Task.FromResult(LkupResult);
             });
-            dataReaderMock.Setup(acc => acc.ReadRecordAsync<NonCourses>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(null);
+            dataReaderMock.Setup(acc => acc.ReadRecordAsync<NonCourses>(It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(() => null);
 
             dataReaderMock.Setup(acc => acc.ReadRecordAsync<StudentNonCourses>(key, true)).ReturnsAsync(record);
            await _studentAptitudeAssessmentsRepository.GetStudentTestScoresByGuidAsync(id);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
+        [ExpectedException(typeof(RepositoryException))]
         public async Task StudentTestScoresRepository_GetByIdAsync_NoCourseCategory_NotFound_ArgumentException()
         {
             var record = records.FirstOrDefault();
@@ -711,6 +712,36 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
                 return Task.FromResult(result);
             });
 
+            var ids = _studentTestScoresEntities.Select(x => x.RecordKey).ToList();
+            GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+            {
+                Offset = 0,
+                Limit = 100,
+                CacheName = "AllStudentTestScoreValues",
+                Entity = "",
+                Sublist = ids,
+                TotalCount = ids.Count,
+                KeyCacheInfo = new List<KeyCacheInfo>()
+               {
+                   new KeyCacheInfo()
+                   {
+                       KeyCacheMax = 5905,
+                       KeyCacheMin = 1,
+                       KeyCachePart = "000",
+                       KeyCacheSize = 5905
+                   },
+                   new KeyCacheInfo()
+                   {
+                       KeyCacheMax = 7625,
+                       KeyCacheMin = 5906,
+                       KeyCachePart = "001",
+                       KeyCacheSize = 1720
+                   }
+               }
+            };
+            transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                .ReturnsAsync(resp);
+
             // Construct repository
             _studentAptitudeAssessmentsRepository = new StudentTestScoresRepository(cacheProviderMock.Object, transFactoryMock.Object, loggerMock.Object, apiSettings);
 
@@ -742,7 +773,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         {
             var studentTestScore = _studentTestScoresEntities.FirstOrDefault(x => x.Guid == guid);
 
-            dataReaderMock.Setup(r => r.ReadRecordAsync<DataContracts.StudentNonCourses>(It.IsAny<string>(), true)).ReturnsAsync(null);
+            dataReaderMock.Setup(r => r.ReadRecordAsync<DataContracts.StudentNonCourses>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
             await _studentAptitudeAssessmentsRepository.CreateStudentTestScoresAsync(studentTestScore);
         }
 
@@ -813,7 +844,7 @@ namespace Ellucian.Colleague.Data.Student.Tests.Repositories
         public async Task StudentTestScoresRepository_UpdateStudentTestScoresAsync_Get_BuildstudentTestScore_ArgumentNullException_studentTestScore_Null()
         {
             var studentTestScore = _studentTestScoresEntities.FirstOrDefault(x => x.Guid == guid);
-            dataReaderMock.Setup(r => r.ReadRecordAsync<DataContracts.StudentNonCourses>(It.IsAny<string>(), true)).ReturnsAsync(null);
+            dataReaderMock.Setup(r => r.ReadRecordAsync<DataContracts.StudentNonCourses>(It.IsAny<string>(), true)).ReturnsAsync(() => null);
             await _studentAptitudeAssessmentsRepository.UpdateStudentTestScoresAsync(studentTestScore);
         }
 

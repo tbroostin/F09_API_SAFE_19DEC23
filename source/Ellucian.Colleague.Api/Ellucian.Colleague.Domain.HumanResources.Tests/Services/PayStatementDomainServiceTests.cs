@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Ellucian Company L.P. and its affiliates. */
+﻿/* Copyright 2017-2021 Ellucian Company L.P. and its affiliates. */
 using System;
 using System.Linq;
 using Ellucian.Colleague.Domain.HumanResources.Services;

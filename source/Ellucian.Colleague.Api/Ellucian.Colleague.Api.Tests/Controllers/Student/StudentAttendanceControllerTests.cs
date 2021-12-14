@@ -1,4 +1,4 @@
-﻿// Copyright 2017-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Api.Controllers.Student;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
@@ -12,8 +12,10 @@ using slf4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Hosting;
 
 namespace Ellucian.Colleague.Api.Tests.Controllers.Student
 {
@@ -73,6 +75,12 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 };
 
                 studentAttendanceController = new StudentAttendanceController(studentAttendanceService, logger);
+                studentAttendanceController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                studentAttendanceController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+                studentAttendanceController.Request.Headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = false
+                };
             }
 
             [TestCleanup]
@@ -86,9 +94,27 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
             public async Task QueryStudentAttendancesAsync_ReturnsStudentAttendanceDtos()
             {
                 var criteria = new StudentAttendanceQueryCriteria() { SectionId = "SectionId", AttendanceDate = DateTime.Today, IncludeCrossListedAttendances = true };
-                studentAttendanceServiceMock.Setup(x => x.QueryStudentAttendancesAsync(criteria)).Returns(Task.FromResult(studentAttendances));
+                studentAttendanceServiceMock.Setup(x => x.QueryStudentAttendancesAsync(criteria, true)).Returns(Task.FromResult(studentAttendances));
                 var results = await studentAttendanceController.QueryStudentAttendancesAsync(criteria);
                 Assert.AreEqual(studentAttendances.Count(), results.Count() );
+            }
+
+            [TestMethod]
+            public async Task QueryStudentAttendancesAsync_ReturnsStudentAttendanceDtos_UseCache_false()
+            {
+                studentAttendanceController = new StudentAttendanceController(studentAttendanceService, logger);
+                studentAttendanceController.Request = new System.Net.Http.HttpRequestMessage() { RequestUri = new Uri("http://localhost") };
+                studentAttendanceController.Request.Properties.Add(HttpPropertyKeys.HttpConfigurationKey, new HttpConfiguration());
+                studentAttendanceController.Request.Headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = true
+                };
+
+                var criteria = new StudentAttendanceQueryCriteria() { SectionId = "SectionId", AttendanceDate = DateTime.Today, IncludeCrossListedAttendances = true };
+                studentAttendanceServiceMock.Setup(x => x.QueryStudentAttendancesAsync(criteria, true)).ThrowsAsync(new Exception("Coordination service called with incorrect useCache param!"));
+                studentAttendanceServiceMock.Setup(x => x.QueryStudentAttendancesAsync(criteria, false)).Returns(Task.FromResult(studentAttendances));
+                var results = await studentAttendanceController.QueryStudentAttendancesAsync(criteria);
+                Assert.AreEqual(studentAttendances.Count(), results.Count());
             }
 
             [TestMethod]
@@ -98,7 +124,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 try
                 {
                     var criteria = new StudentAttendanceQueryCriteria() { SectionId = "SectionId", AttendanceDate = DateTime.Today, IncludeCrossListedAttendances = true };
-                    studentAttendanceServiceMock.Setup(x => x.QueryStudentAttendancesAsync(criteria)).Throws(new PermissionsException());
+                    studentAttendanceServiceMock.Setup(x => x.QueryStudentAttendancesAsync(criteria, true)).Throws(new PermissionsException());
                     var studentAttendance = await studentAttendanceController.QueryStudentAttendancesAsync(criteria);
                 }
                 catch (HttpResponseException ex)
@@ -115,7 +141,7 @@ namespace Ellucian.Colleague.Api.Tests.Controllers.Student
                 try
                 {
                     var criteria = new StudentAttendanceQueryCriteria() { SectionId = "SectionId", AttendanceDate = DateTime.Today, IncludeCrossListedAttendances = true };
-                    studentAttendanceServiceMock.Setup(x => x.QueryStudentAttendancesAsync(criteria)).Throws(new Exception());
+                    studentAttendanceServiceMock.Setup(x => x.QueryStudentAttendancesAsync(criteria, true)).Throws(new Exception());
                     var studentAttendance = await studentAttendanceController.QueryStudentAttendancesAsync(criteria);
 
                 }

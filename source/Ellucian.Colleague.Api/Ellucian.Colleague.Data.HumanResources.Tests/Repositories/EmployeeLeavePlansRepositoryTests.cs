@@ -1,6 +1,9 @@
-﻿using Ellucian.Colleague.Data.Base.Tests.Repositories;
+﻿// Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
+using Ellucian.Colleague.Data.Base.Tests.Repositories;
 using Ellucian.Colleague.Data.HumanResources.DataContracts;
 using Ellucian.Colleague.Data.HumanResources.Repositories;
+using Ellucian.Colleague.Domain.Base.Transactions;
+using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.HumanResources.Entities;
 using Ellucian.Colleague.Domain.HumanResources.Tests;
 using Ellucian.Data.Colleague;
@@ -10,7 +13,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
@@ -90,6 +92,8 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 dataReaderMock.Setup(r => r.SelectAsync("PERLEAVE", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(perleaveKeys.ToArray());
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<DataContracts.Perleave>(It.IsAny<string[]>(), It.IsAny<bool>()))
                     .ReturnsAsync(empLeavePlans);
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<DataContracts.Perleave>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>()))
+                  .ReturnsAsync(empLeavePlans);
                 dataReaderMock.Setup(r => r.ReadRecordAsync<DataContracts.Perleave>("PERLEAVE", It.IsAny<string>(), true)).ReturnsAsync(perLeaveData);
 
                 dicResult = new Dictionary<string, GuidLookupResult>() { { guid, new GuidLookupResult() { Entity = "PERLVDTL", PrimaryKey = "1" } } };
@@ -111,46 +115,63 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 dataReaderMock.Setup(r => r.SelectAsync(It.IsAny<GuidLookup[]>())).ReturnsAsync(dicResult);
                 dataReaderMock.Setup(r => r.SelectAsync("PERLVDTL", It.IsAny<string>())).ReturnsAsync(PerleaveDetailsKeys.ToArray());
                 dataReaderMock.Setup(r => r.SelectAsync("PERLVDTL", It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<int>())).ReturnsAsync(PerleaveDetailsKeys.ToArray());
+
                 dataReaderMock.Setup(r => r.BulkReadRecordAsync<Perlvdtl>(It.IsAny<string[]>(), It.IsAny<bool>()))
-                    .ReturnsAsync(empLeaveTrans);
+                   .ReturnsAsync(empLeaveTrans);
+
+
                 dataReaderMock.Setup(r => r.ReadRecordAsync<Perlvdtl>("PERLVDTL", It.IsAny<string>(), true)).ReturnsAsync(perLeaveDetailsData);
+
+
+                var ids = empLeaveTrans.Select(x => x.Recordkey).ToList();
+                GetCacheApiKeysResponse resp = new GetCacheApiKeysResponse()
+                {
+                    Offset = 0,
+                    Limit = 100,
+                    CacheName = "AllEmployeLeavePlans",
+                    Entity = "PERLEAVE",
+                    Sublist = ids.ToList(),
+                    TotalCount = ids.Count,
+                    KeyCacheInfo = new List<KeyCacheInfo>()
+               {
+                   new KeyCacheInfo()
+                   {
+                       KeyCacheMax = 5905,
+                       KeyCacheMin = 1,
+                       KeyCachePart = "000",
+                       KeyCacheSize = 5905
+                   },
+                   new KeyCacheInfo()
+                   {
+                       KeyCacheMax = 7625,
+                       KeyCacheMin = 5906,
+                       KeyCachePart = "001",
+                       KeyCacheSize = 1720
+                   }
+               }
+                };
+                transManagerMock.Setup(mgr => mgr.ExecuteAsync<GetCacheApiKeysRequest, GetCacheApiKeysResponse>(It.IsAny<GetCacheApiKeysRequest>()))
+                    .ReturnsAsync(resp);
             }
             #endregion
 
             [TestMethod]
-            public async Task EmployeeLeavePlanRepository_GetEmployeeLeavePlansAsync_DataReader_Returns_Null()
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task EmployeeLeavePlanRepository_GetEmployeeLeavePlansAsync_BulkReadRecord_Returns_Null()
             {
-                dataReaderMock.Setup(r => r.SelectAsync("PERLEAVE", It.IsAny<string>())).ReturnsAsync(null);
-                var result = await empLeavePlansRepository.GetEmployeeLeavePlansAsync(0, 1);
-
-                Assert.IsNotNull(result);
-                Assert.AreEqual(0, result.Item2);
-            }
-
-            [TestMethod]
-            public async Task EmployeeLeavePlanRepository_GetEmployeeLeavePlansAsync_DataReader_Empty()
-            {
-                dataReaderMock.Setup(r => r.SelectAsync("PERLEAVE", It.IsAny<string>())).ReturnsAsync(new string[] { });
-                var result = await empLeavePlansRepository.GetEmployeeLeavePlansAsync(0, 1);
-
-                Assert.IsNotNull(result);
-                Assert.AreEqual(0, result.Item2);
-            }
-
-            [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task EmployeeLeavePlanRepository_GetEmployeeLeavePlansAsync_SelectAsync_Exception()
-            {
-                dataReaderMock.Setup(r => r.SelectAsync("PERLEAVE", It.IsAny<string>())).ThrowsAsync(new Exception());
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<DataContracts.Perleave>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>()))
+                 .ReturnsAsync(() => null);
                 await empLeavePlansRepository.GetEmployeeLeavePlansAsync(0, 1);
             }
 
             [TestMethod]
-            [ExpectedException(typeof(Exception))]
-            public async Task EmployeeLeavePlanRepository_GetEmployeeLeavePlansAsync_BulkReadRecord_Excep()
+            [ExpectedException(typeof(RepositoryException))]
+            public async Task EmployeeLeavePlanRepository_GetEmployeeLeavePlansAsync_BulkReadRecord_Empty()
             {
-                dataReaderMock.Setup(r => r.BulkReadRecordAsync<DataContracts.Perleave>(It.IsAny<string[]>(), false)).ThrowsAsync(new Exception());
+                dataReaderMock.Setup(r => r.BulkReadRecordAsync<DataContracts.Perleave>(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<bool>()))
+                  .ReturnsAsync(new Collection<DataContracts.Perleave>());
                 await empLeavePlansRepository.GetEmployeeLeavePlansAsync(0, 1);
+
             }
 
             [TestMethod]
@@ -191,7 +212,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task EmployeeLeavePlanRepository_GetEmployeeLeavePlansByIdAsync_ReadRecordAsync_Record_Null()
             {
-                dataReaderMock.Setup(r => r.ReadRecordAsync<DataContracts.Perleave>("PERLEAVE", It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<DataContracts.Perleave>("PERLEAVE", It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 await empLeavePlansRepository.GetEmployeeLeavePlansByIdAsync(guid);
             }
 
@@ -199,7 +220,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task EmployeeLeavePlanRepository_GetEmployeeLeavePlansByGuidAsync_ReadRecordAsync_Record_Null()
             {
-                dataReaderMock.Setup(r => r.ReadRecordAsync<DataContracts.Perleave>("PERLEAVE", It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<DataContracts.Perleave>("PERLEAVE", It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 await empLeavePlansRepository.GetEmployeeLeavePlansByGuidAsync(guid);
             }
 
@@ -207,7 +228,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             [ExpectedException(typeof(KeyNotFoundException))]
             public async Task EmployeeLeavePlanRepository_GetEmployeeLeavePlansByIdAsync_ReadRecordAsync_Id_Null()
             {
-                dataReaderMock.Setup(r => r.ReadRecordAsync<DataContracts.Perleave>("PERLEAVE", It.IsAny<string>(), true)).ReturnsAsync(null);
+                dataReaderMock.Setup(r => r.ReadRecordAsync<DataContracts.Perleave>("PERLEAVE", It.IsAny<string>(), true)).ReturnsAsync(() => null);
                 await empLeavePlansRepository.GetEmployeeLeavePlansByIdAsync(string.Empty);
             }
 
@@ -223,7 +244,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             //[TestMethod]
             //public async Task EmployeeLeaveRepository_GetEmployeeLeavePlansByGuidAsync()
             //{
-                
+
             //    var result = await empLeavePlansRepository.GetEmployeeLeavePlansByGuidAsync(guid);
 
             //    Assert.IsNotNull(result);
@@ -267,7 +288,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 
             public async Task<IEnumerable<EmployeeLeavePlan>> getActual(IEnumerable<string> inputEmployeeIds = null)
             {
-                return await repositoryUnderTest.GetEmployeeLeavePlansByEmployeeIdsAsync(inputEmployeeIds == null ? employeeIds : inputEmployeeIds, testData.leavePlans, testData.leaveTypes, testData.earnTypes);
+                return await repositoryUnderTest.GetEmployeeLeavePlansByEmployeeIdsAsync(inputEmployeeIds == null ? employeeIds : inputEmployeeIds, testData.leavePlans, testData.leaveTypes, testData.earnTypes, true);
             }
 
             [TestInitialize]
@@ -291,6 +312,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                             PerlvHrpId = r.personId,
                             PerlvLpnId = r.leavePlanId,
                             PerlvStartDate = r.startDate,
+                            PerlvLeaveReporting = null
                         }).ToList())));
 
                 dataReaderMock.Setup(dr => dr.BulkReadRecordAsync<Perlvdtl>(It.IsAny<string[]>(), true))
@@ -402,7 +424,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
             public async Task NoPerLeaveKeysTest()
             {
                 dataReaderMock.Setup(dr => dr.SelectAsync("PERLEAVE", "WITH PERLV.HRP.ID.INDEX EQ '?'", It.IsAny<string[]>(), "?", true, 425))
-                    .ReturnsAsync(null);
+                    .ReturnsAsync(() => null);
                 var actual = await getActual();
                 Assert.IsFalse(actual.Any());
             }
@@ -416,14 +438,14 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                 loggerMock.Verify(l => l.Error(It.IsAny<string>()));
             }
 
-            [TestMethod]
-            public async Task NoEarnTypesTest()
-            {
-                testData.earnTypes = null;
-                var actual = await getActual();
-                Assert.IsFalse(actual.Any());
-                loggerMock.Verify(l => l.Error(It.IsAny<string>()));
-            }
+            //[TestMethod]
+            //public async Task NoEarnTypesTest()
+            //{
+            //    testData.earnTypes = null;
+            //    var actual = await getActual();
+            //    Assert.IsFalse(actual.Any());
+            //    loggerMock.Verify(l => l.Error(It.IsAny<string>()));
+            //}
 
             [TestMethod]
             public async Task NoLeaveTypesTest()
@@ -434,7 +456,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
 
             }
 
-           
+
 
             [TestMethod]
             public async Task UndefinedLeavePlanOnEmployeePlanTest()
@@ -464,7 +486,7 @@ namespace Ellucian.Colleague.Data.HumanResources.Tests.Repositories
                     var leaveType = testData.leaveTypes.FirstOrDefault(t => t.Code == leavePlan.Type);
                     Assert.AreEqual(leaveType.TimeType, plan.LeavePlanTypeCategory);
                 }
-            } 
+            }
 
             [TestMethod]
             public async Task NoStartDateTest()

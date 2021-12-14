@@ -20,6 +20,7 @@ using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Web.Http.Models;
 using Ellucian.Web.Http.Filters;
 using Ellucian.Web.Http;
+using Ellucian.Colleague.Domain.Student;
 
 namespace Ellucian.Colleague.Api.Controllers.Student
 {
@@ -50,21 +51,25 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>
         /// <returns>List of StudentSectionWaitlists <see cref="Dtos.StudentSectionWaitlist"/> objects representing matching studentSectionWaitlists</returns>
-        [HttpGet]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentSectionWaitlist })]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100), EedmResponseFilter]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         public async Task<IHttpActionResult> GetStudentSectionWaitlistsAsync(Paging page)
         {
-            var bypassCache = true;
-            if (Request.Headers.CacheControl != null)
-            {
-                if (Request.Headers.CacheControl.NoCache)
-                {
-                    bypassCache = true;
-                }
-            }
             try
             {
+                _studentSectionWaitlistsService.ValidatePermissions(GetPermissionsMetaData());
+
+                var bypassCache = true;
+                if (Request.Headers.CacheControl != null)
+                {
+                    if (Request.Headers.CacheControl.NoCache)
+                    {
+                        bypassCache = true;
+                    }
+                }
+
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -116,25 +121,28 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired studentSectionWaitlists</param>
         /// <returns>A studentSectionWaitlists object <see cref="Dtos.StudentSectionWaitlist"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [CustomMediaTypeAttributeFilter(ErrorContentType = IntegrationErrors2)]
+        [HttpGet, PermissionsFilter(new string[] { StudentPermissionCodes.ViewStudentSectionWaitlist }), EedmResponseFilter]
         public async Task<Dtos.StudentSectionWaitlist> GetStudentSectionWaitlistsByGuidAsync(string guid)
         {
-            var bypassCache = true;
-            if (Request.Headers.CacheControl != null)
-            {
-                if (Request.Headers.CacheControl.NoCache)
-                {
-                    bypassCache = true;
-                }
-            }
-
-            if (string.IsNullOrEmpty(guid))
-            {
-                throw CreateHttpResponseException(new IntegrationApiException("Null id argument",
-                    IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
-            }
             try
             {
+                _studentSectionWaitlistsService.ValidatePermissions(GetPermissionsMetaData());
+
+                var bypassCache = true;
+                if (Request.Headers.CacheControl != null)
+                {
+                    if (Request.Headers.CacheControl.NoCache)
+                    {
+                        bypassCache = true;
+                    }
+                }
+
+                if (string.IsNullOrEmpty(guid))
+                {
+                    throw CreateHttpResponseException(new IntegrationApiException("Null id argument",
+                        IntegrationApiUtility.GetDefaultApiError("The GUID must be specified in the request URL.")));
+                }
                 var item = await _studentSectionWaitlistsService.GetStudentSectionWaitlistsByGuidAsync(guid);
 
                 if (item != null)

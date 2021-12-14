@@ -1,10 +1,11 @@
-//Copyright 2018 Ellucian Company L.P. and its affiliates.
+//Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 
 using Ellucian.Colleague.Api.Licensing;
 using Ellucian.Colleague.Api.Utility;
 using Ellucian.Colleague.Configuration.Licensing;
 using Ellucian.Colleague.Coordination.Student.Services;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Colleague.Domain.Student;
 using Ellucian.Web.Http;
 using Ellucian.Web.Http.Controllers;
 using Ellucian.Web.Http.Exceptions;
@@ -51,7 +52,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// <param name="page">API paging info for used to Offset and limit the amount of data being returned.</param>        
         /// <param name="criteria">StudentFinancialAidAcademicProgressStatuses search criteria in JSON format.</param>  
         /// <returns>List of StudentFinancialAidAcademicProgressStatuses <see cref="Dtos.StudentFinancialAidAcademicProgressStatuses"/> objects representing matching studentFinancialAidAcademicProgressStatuses</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewStudentFinancialAidAcadProgress)]
         [ValidateQueryStringFilter(), FilteringFilter(IgnoreFiltering = true)]
         [QueryStringFilterFilter("criteria", typeof(Dtos.StudentFinancialAidAcademicProgressStatuses))]
         [PagingFilter(IgnorePaging = true, DefaultLimit = 100)]
@@ -67,6 +68,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _studentFinancialAidAcademicProgressStatusesService.ValidatePermissions(GetPermissionsMetaData());
                 if (page == null)
                 {
                     page = new Paging(100, 0);
@@ -97,7 +99,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException e)
             {
@@ -131,7 +133,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
         /// </summary>
         /// <param name="guid">GUID to desired studentFinancialAidAcademicProgressStatuses</param>
         /// <returns>A studentFinancialAidAcademicProgressStatuses object <see cref="Dtos.StudentFinancialAidAcademicProgressStatuses"/> in EEDM format</returns>
-        [HttpGet, EedmResponseFilter]
+        [HttpGet, EedmResponseFilter, PermissionsFilter(StudentPermissionCodes.ViewStudentFinancialAidAcadProgress)]
         public async Task<Dtos.StudentFinancialAidAcademicProgressStatuses> GetStudentFinancialAidAcademicProgressStatusesByGuidAsync(string guid)
         {
             var bypassCache = false;
@@ -149,6 +151,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             }
             try
             {
+                _studentFinancialAidAcademicProgressStatusesService.ValidatePermissions(GetPermissionsMetaData());
                 //AddDataPrivacyContextProperty((await _studentFinancialAidAcademicProgressStatusesService.GetDataPrivacyListByApi(GetRouteResourceName(), bypassCache)).ToList());
                 AddEthosContextProperties(
                    await _studentFinancialAidAcademicProgressStatusesService.GetDataPrivacyListByApi(GetEthosResourceRouteInfo(), bypassCache),
@@ -164,7 +167,7 @@ namespace Ellucian.Colleague.Api.Controllers.Student
             catch (PermissionsException e)
             {
                 _logger.Error(e.ToString());
-                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Unauthorized);
+                throw CreateHttpResponseException(IntegrationApiUtility.ConvertToIntegrationApiException(e), HttpStatusCode.Forbidden);
             }
             catch (ArgumentNullException e)
             {

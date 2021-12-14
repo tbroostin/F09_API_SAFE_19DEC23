@@ -1,4 +1,4 @@
-﻿//Copyright 2017-2020 Ellucian Company L.P. and its affiliates.
+﻿//Copyright 2017-2021 Ellucian Company L.P. and its affiliates.
 
 using System;
 using System.Collections.Generic;
@@ -16,6 +16,8 @@ using Ellucian.Colleague.Dtos.EnumProperties;
 using Ellucian.Colleague.Domain.Student;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.Exceptions;
+using Ellucian.Web.Http.Exceptions;
+using Ellucian.Colleague.Data.Student.DataContracts;
 
 namespace Ellucian.Colleague.Coordination.Student.Services
 {
@@ -98,27 +100,27 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="limit">Limit for paging results</param>
         /// <param name="bypassCache">Flag to bypass cache</param>
         /// <returns>Collection of <see cref="StudentAptitudeAssessments">studentAptitudeAssessments</see> objects</returns>          
-        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.StudentAptitudeAssessments>,int>> GetStudentAptitudeAssessmentsAsync(int offset, int limit, bool bypassCache = false)
+        public async Task<Tuple<IEnumerable<Ellucian.Colleague.Dtos.StudentAptitudeAssessments>, int>> GetStudentAptitudeAssessmentsAsync(int offset, int limit, bool bypassCache = false)
         {
             var studentAptitudeAssessmentsCollection = new List<Ellucian.Colleague.Dtos.StudentAptitudeAssessments>();
             CheckGetStudentAptitudeAssessmentsPermission();
-            var studentAptitudeAssessmentsEntitiesTuple = await _studentAptitudeAssessmentsRepository.GetStudentTestScoresAsync("", offset, limit, bypassCache); if (studentAptitudeAssessmentsEntitiesTuple != null )
+            var studentAptitudeAssessmentsEntitiesTuple = await _studentAptitudeAssessmentsRepository.GetStudentTestScoresAsync("", offset, limit, bypassCache); if (studentAptitudeAssessmentsEntitiesTuple != null)
             {
                 var studentAptitudeAssessmentsEntities = studentAptitudeAssessmentsEntitiesTuple.Item1;
                 var totalCount = studentAptitudeAssessmentsEntitiesTuple.Item2;
                 if (studentAptitudeAssessmentsEntities != null && studentAptitudeAssessmentsEntities.Any())
                 {
-                    return new Tuple<IEnumerable<Dtos.StudentAptitudeAssessments>,int>(await ConvertStudentTestScoresEntityToDtoCollectionAsync(studentAptitudeAssessmentsEntities.ToList(), bypassCache), totalCount);
+                    return new Tuple<IEnumerable<Dtos.StudentAptitudeAssessments>, int>(await ConvertStudentTestScoresEntityToDtoCollectionAsync(studentAptitudeAssessmentsEntities.ToList(), bypassCache), totalCount);
                 }
                 else
                 {
-                    return new Tuple<IEnumerable<Dtos.StudentAptitudeAssessments>,int>(new List<Dtos.StudentAptitudeAssessments>(),0);
+                    return new Tuple<IEnumerable<Dtos.StudentAptitudeAssessments>, int>(new List<Dtos.StudentAptitudeAssessments>(), 0);
                 }
             }
             else
             {
                 return new Tuple<IEnumerable<Dtos.StudentAptitudeAssessments>, int>(new List<Dtos.StudentAptitudeAssessments>(), 0);
-            }           
+            }
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -249,21 +251,44 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             #endregion
 
-            var studentAptitudeAssessmentsEntitiesTuple = await _studentAptitudeAssessmentsRepository.GetStudentTestScores2Async(offset, limit, studentId,
-                assessmentId, filterPersonIds, personFilter, bypassCache);
-            if (studentAptitudeAssessmentsEntitiesTuple != null)
+            Tuple<IEnumerable<Domain.Student.Entities.StudentTestScores>, int> studentAptitudeAssessmentsEntitiesTuple = null;
+
+
+            try
             {
-                var studentAptitudeAssessmentsEntities = studentAptitudeAssessmentsEntitiesTuple.Item1;
-                var totalCount = studentAptitudeAssessmentsEntitiesTuple.Item2;
-                if (studentAptitudeAssessmentsEntities != null && studentAptitudeAssessmentsEntities.Any())
+                studentAptitudeAssessmentsEntitiesTuple = await _studentAptitudeAssessmentsRepository.GetStudentTestScores2Async(offset, limit, studentId,
+                assessmentId, filterPersonIds, personFilter, bypassCache);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex);
+                throw IntegrationApiException;
+            }
+
+            if (studentAptitudeAssessmentsEntitiesTuple == null)
+
+            {
+                return new Tuple<IEnumerable<Dtos.StudentAptitudeAssessments2>, int>(new List<Dtos.StudentAptitudeAssessments2>(), 0);
+            }
+
+            var studentAptitudeAssessmentsEntities = studentAptitudeAssessmentsEntitiesTuple.Item1;
+            var totalCount = studentAptitudeAssessmentsEntitiesTuple.Item2;
+            if (studentAptitudeAssessmentsEntities != null && studentAptitudeAssessmentsEntities.Any())
+            {
+                IEnumerable<Ellucian.Colleague.Dtos.StudentAptitudeAssessments2> results = null;
+                try
                 {
-                  
-                    return new Tuple<IEnumerable<Dtos.StudentAptitudeAssessments2>, int>(await ConvertStudentTestScoresEntityToDtoCollection3Async(studentAptitudeAssessmentsEntities.ToList(), bypassCache), totalCount);
+                    results = await ConvertStudentTestScoresEntityToDtoCollection3Async(studentAptitudeAssessmentsEntities.ToList(), bypassCache);
                 }
-                else
+                catch (Exception ex)
                 {
-                    return new Tuple<IEnumerable<Dtos.StudentAptitudeAssessments2>, int>(new List<Dtos.StudentAptitudeAssessments2>(), 0);
+                    IntegrationApiExceptionAddError(ex.Message);
                 }
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+                return new Tuple<IEnumerable<Dtos.StudentAptitudeAssessments2>, int>(results, totalCount); ;
             }
             else
             {
@@ -356,36 +381,53 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <returns>The <see cref="StudentAptitudeAssessments">studentAptitudeAssessments</see></returns>
         public async Task<Ellucian.Colleague.Dtos.StudentAptitudeAssessments2> GetStudentAptitudeAssessmentsByGuid3Async(string guid, bool bypassCache = true)
         {
+
+            if (string.IsNullOrEmpty(guid))
+            {
+                IntegrationApiExceptionAddError("GUID is required to get an Student Aptitude Assessments.", "Missing.GUID");
+                throw IntegrationApiException;
+            }
+            CheckGetStudentAptitudeAssessmentsPermission();
+            Domain.Student.Entities.StudentTestScores studentAptitudeAssessment = null;
+            Dictionary<string, string> personGuidCollection = null;
             try
             {
-                if (string.IsNullOrEmpty(guid))
+                studentAptitudeAssessment = await _studentAptitudeAssessmentsRepository.GetStudentTestScoresByGuidAsync(guid);
+                if (studentAptitudeAssessment != null)
                 {
-                    throw new ArgumentNullException("guid", "GUID is required to get an Student Aptitude Assessments.");
+                    personGuidCollection = await this._personRepository.GetPersonGuidsCollectionAsync(new List<string>() { studentAptitudeAssessment.StudentId });
                 }
-                CheckGetStudentAptitudeAssessmentsPermission();
-
-                var studentAptitudeAssessment = await _studentAptitudeAssessmentsRepository.GetStudentTestScoresByGuidAsync(guid);
-                if (studentAptitudeAssessment == null)
-                {
-                    throw new KeyNotFoundException("student-aptitude-assessments not found for GUID " + guid);
-                }
-
-                var personGuidCollection = await this._personRepository.GetPersonGuidsCollectionAsync(new List<string>() { studentAptitudeAssessment.StudentId });
-
-                return await ConvertStudentTestScoresEntityToDto2Async(studentAptitudeAssessment, personGuidCollection, bypassCache);
             }
-            catch (KeyNotFoundException ex)
+            catch (RepositoryException ex)
             {
-                throw ex;
+                IntegrationApiExceptionAddError(ex, guid: guid);
+                throw IntegrationApiException;
             }
-            catch (InvalidOperationException ex)
+            catch (KeyNotFoundException)
             {
-                throw new KeyNotFoundException("student-aptitude-assessments not found for GUID " + guid, ex);
+                throw new KeyNotFoundException("student-aptitude-assessments not found for GUID " + guid);
+            }
+            if (studentAptitudeAssessment == null)
+            {
+                throw new KeyNotFoundException("student-aptitude-assessments not found for GUID " + guid);
+            }
+
+            Ellucian.Colleague.Dtos.StudentAptitudeAssessments2 retval = null;
+            try
+            {
+                retval = await ConvertStudentTestScoresEntityToDto2Async(studentAptitudeAssessment, personGuidCollection, bypassCache);
             }
             catch (Exception ex)
             {
-                throw ex;
+                IntegrationApiExceptionAddError(ex.Message, guid: guid);
+
             }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            return retval;
+
         }
 
         /// <summary>
@@ -428,7 +470,7 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     //    personGuidCollection = await this._personRepository.GetPersonGuidsCollectionAsync(new List<string>() { studentAptitudeAssessmentsEntity.StudentId });
                     //}
 
-                    return await this.ConvertStudentTestScoresEntityToDtoAsync(updatedStudentAptitudeAssessmentsEntity,  true);
+                    return await this.ConvertStudentTestScoresEntityToDtoAsync(updatedStudentAptitudeAssessmentsEntity, true);
                 }
                 catch (RepositoryException ex)
                 {
@@ -460,14 +502,30 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         public async Task<StudentAptitudeAssessments2> UpdateStudentAptitudeAssessments2Async(StudentAptitudeAssessments2 studentAptitudeAssessments)
         {
             if (studentAptitudeAssessments == null)
-                throw new ArgumentNullException("StudentAptitudeAssessments", "Must provide a StudentAptitudeAssessments for update");
+            {
+                IntegrationApiExceptionAddError("Must provide a StudentAptitudeAssessments for update", "Missing.Request.Body");
+                throw IntegrationApiException;
+            }
             if (string.IsNullOrEmpty(studentAptitudeAssessments.Id))
-                throw new ArgumentNullException("StudentAptitudeAssessments", "Must provide a guid for StudentAptitudeAssessments update");
+                IntegrationApiExceptionAddError("Must provide a guid for StudentAptitudeAssessments update", "Missing.Request.ID");
             if ((studentAptitudeAssessments.Form != null && string.IsNullOrEmpty(studentAptitudeAssessments.Form.Name) && !string.IsNullOrEmpty(studentAptitudeAssessments.Form.Number)) || (studentAptitudeAssessments.Form != null && !string.IsNullOrEmpty(studentAptitudeAssessments.Form.Name) && string.IsNullOrEmpty(studentAptitudeAssessments.Form.Number)))
-                throw new ArgumentException("StudentAptitudeAssessments", "Both form name and form number must be provided or excluded for StudentAptitudeAssessments.");
-
+                IntegrationApiExceptionAddError("Both form name and form number must be provided or excluded for StudentAptitudeAssessments.", "Validation.Exception", guid: studentAptitudeAssessments.Id);
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
             // get the ID associated with the incoming guid
-            var studentAptitudeAssessmentsEntityId = await _studentAptitudeAssessmentsRepository.GetStudentTestScoresIdFromGuidAsync(studentAptitudeAssessments.Id);
+            string studentAptitudeAssessmentsEntityId = string.Empty;
+            try
+            {
+                studentAptitudeAssessmentsEntityId = await _studentAptitudeAssessmentsRepository.GetStudentTestScoresIdFromGuidAsync(studentAptitudeAssessments.Id);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex, "Validation.Exception");
+                throw IntegrationApiException;
+            }
+
             if (!string.IsNullOrEmpty(studentAptitudeAssessmentsEntityId))
             {
                 // verify the user has the permission to update a studentAptitudeAssessments
@@ -476,40 +534,66 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 // pass down the extended data dictionary
                 _studentAptitudeAssessmentsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
 
+                #region create domain entity from request
+                StudentTestScores studentAptitudeAssessmentsEntity = null;
                 try
                 {
-                    // map the DTO to entities
-                    var studentAptitudeAssessmentsEntity
-                    = await ConvertStudentAptitudeAssessments2DtoToEntityAsync(studentAptitudeAssessmentsEntityId, studentAptitudeAssessments);
+                    studentAptitudeAssessmentsEntity = await ConvertStudentAptitudeAssessments2DtoToEntityAsync(studentAptitudeAssessmentsEntityId, studentAptitudeAssessments);
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError("Record not updated.  Error extracting request. " + ex.Message, "Global.Internal.Error",
+                        guid: studentAptitudeAssessments.Id);
+                }
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+                #endregion
 
-                    // update the entity in the database
-                    var updatedStudentAptitudeAssessmentsEntity =
-                        await _studentAptitudeAssessmentsRepository.UpdateStudentTestScoresAsync(studentAptitudeAssessmentsEntity);
+                #region Create record from domain entity
+                StudentTestScores updatedStudentAptitudeAssessmentsEntity = null;
+                try
+                {
+                    updatedStudentAptitudeAssessmentsEntity =
+                    await _studentAptitudeAssessmentsRepository.UpdateStudentTestScoresAsync(studentAptitudeAssessmentsEntity);
+                }
+                catch (RepositoryException ex)
+                {
+                    IntegrationApiExceptionAddError(ex, guid: studentAptitudeAssessments.Id);
+                    throw IntegrationApiException;
+                }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(ex.Message, "Global.Internal.Error",
+                          guid: studentAptitudeAssessments.Id);
+                    throw IntegrationApiException;
+                }
+                #endregion
 
+                #region Build DTO response
+                Ellucian.Colleague.Dtos.StudentAptitudeAssessments2 retval = null;
+                try
+                {
                     Dictionary<string, string> personGuidCollection = null;
                     if (studentAptitudeAssessmentsEntity != null)
                     {
                         personGuidCollection = await this._personRepository.GetPersonGuidsCollectionAsync(new List<string>() { studentAptitudeAssessmentsEntity.StudentId });
                     }
-
-                    return await this.ConvertStudentTestScoresEntityToDto2Async(updatedStudentAptitudeAssessmentsEntity, personGuidCollection, true);
-                }
-                catch (RepositoryException ex)
-                {
-                    throw ex;
-                }
-                catch (KeyNotFoundException ex)
-                {
-                    throw ex;
-                }
-                catch (ArgumentException ex)
-                {
-                    throw ex;
+                    retval = await this.ConvertStudentTestScoresEntityToDto2Async(updatedStudentAptitudeAssessmentsEntity, personGuidCollection, true);
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception(ex.Message, ex.InnerException);
+                    IntegrationApiExceptionAddError("Record updated. Error building response. " + ex.Message, "Global.Internal.Error",
+                        updatedStudentAptitudeAssessmentsEntity.Guid, updatedStudentAptitudeAssessmentsEntity.RecordKey);
                 }
+                if (IntegrationApiException != null)
+                {
+                    throw IntegrationApiException;
+                }
+                #endregion
+
+                return retval;
             }
             // perform a create instead
             return await CreateStudentAptitudeAssessments2Async(studentAptitudeAssessments);
@@ -522,61 +606,6 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         /// <param name="studentAptitudeAssessments">The <see cref="StudentAptitudeAssessments">studentAptitudeAssessments</see> entity to create in the database.</param>
         /// <returns>The newly created <see cref="StudentAptitudeAssessments">studentAptitudeAssessments</see></returns>
         public async Task<StudentAptitudeAssessments> CreateStudentAptitudeAssessmentsAsync(StudentAptitudeAssessments studentAptitudeAssessments)
-        {
-            if (studentAptitudeAssessments == null)
-                throw new ArgumentNullException("StudentAptitudeAssessments", "Must provide a StudentAptitudeAssessments for create");
-            if (string.IsNullOrEmpty(studentAptitudeAssessments.Id))
-                throw new ArgumentNullException("StudentAptitudeAssessments", "Must provide a guid for StudentAptitudeAssessments create");
-
-            if (studentAptitudeAssessments.Status != null &&  studentAptitudeAssessments.Status != StudentAptitudeAssessmentsStatus.NotSet)
-            {
-                throw new ArgumentException("status", "Status can not be set on StudentAptitudeAssessments create");
-            }
-
-            if ((studentAptitudeAssessments.Form != null && string.IsNullOrEmpty(studentAptitudeAssessments.Form.Name) && !string.IsNullOrEmpty(studentAptitudeAssessments.Form.Number)) || (studentAptitudeAssessments.Form != null && !string.IsNullOrEmpty(studentAptitudeAssessments.Form.Name) && string.IsNullOrEmpty(studentAptitudeAssessments.Form.Number)))
-                throw new ArgumentException("StudentAptitudeAssessments", "Both form name and form number must be provided or excluded for StudentAptitudeAssessments.");
-
-            // verify the user has the permission to create a studentAptitudeAssessments
-            this.CheckCreateStudentAptitudeAssessmentsPermission();
-
-            // pass down the extended data dictionary
-            _studentAptitudeAssessmentsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
-
-            try
-            {
-
-                var studentAptitudeAssessmentsEntity
-                         = await ConvertStudentAptitudeAssessmentsDtoToEntityAsync(string.Empty, studentAptitudeAssessments);
-
-                // create a studentAptitudeAssessments entity in the database
-                var createdStudentTestScores =
-                    await _studentAptitudeAssessmentsRepository.CreateStudentTestScoresAsync(studentAptitudeAssessmentsEntity);
-
-                //Dictionary<string, string> personGuidCollection = null;
-                //if (studentAptitudeAssessmentsEntity != null)
-                //{
-                //    personGuidCollection = await this._personRepository.GetPersonGuidsCollectionAsync(new List<string>() { studentAptitudeAssessmentsEntity.StudentId });
-                //}
-                // return the newly created studentAptitudeAssessments
-                return await this.ConvertStudentTestScoresEntityToDtoAsync(createdStudentTestScores, true);
-
-            }
-            catch (RepositoryException ex)
-            {
-                throw ex;
-            }
-            catch (Exception ex)
-            {
-                throw new Exception(ex.Message, ex.InnerException);
-            }
-        }
-
-        /// <summary>
-        /// Create a StudentAptitudeAssessments.
-        /// </summary>
-        /// <param name="studentAptitudeAssessments">The <see cref="StudentAptitudeAssessments">studentAptitudeAssessments</see> entity to create in the database.</param>
-        /// <returns>The newly created <see cref="StudentAptitudeAssessments">studentAptitudeAssessments</see></returns>
-        public async Task<StudentAptitudeAssessments2> CreateStudentAptitudeAssessments2Async(StudentAptitudeAssessments2 studentAptitudeAssessments)
         {
             if (studentAptitudeAssessments == null)
                 throw new ArgumentNullException("StudentAptitudeAssessments", "Must provide a StudentAptitudeAssessments for create");
@@ -601,19 +630,14 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
 
                 var studentAptitudeAssessmentsEntity
-                         = await ConvertStudentAptitudeAssessments2DtoToEntityAsync(string.Empty, studentAptitudeAssessments);
+                         = await ConvertStudentAptitudeAssessmentsDtoToEntityAsync(string.Empty, studentAptitudeAssessments);
 
                 // create a studentAptitudeAssessments entity in the database
                 var createdStudentTestScores =
                     await _studentAptitudeAssessmentsRepository.CreateStudentTestScoresAsync(studentAptitudeAssessmentsEntity);
 
-                Dictionary<string, string> personGuidCollection = null;
-                if (studentAptitudeAssessmentsEntity != null)
-                {
-                    personGuidCollection = await this._personRepository.GetPersonGuidsCollectionAsync(new List<string>() { studentAptitudeAssessmentsEntity.StudentId });
-                }
                 // return the newly created studentAptitudeAssessments
-                return await this.ConvertStudentTestScoresEntityToDto2Async(createdStudentTestScores, personGuidCollection, true);
+                return await this.ConvertStudentTestScoresEntityToDtoAsync(createdStudentTestScores, true);
 
             }
             catch (RepositoryException ex)
@@ -624,6 +648,103 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             {
                 throw new Exception(ex.Message, ex.InnerException);
             }
+        }
+
+        /// <summary>
+        /// Create a StudentAptitudeAssessments.
+        /// </summary>
+        /// <param name="studentAptitudeAssessments">The <see cref="StudentAptitudeAssessments">studentAptitudeAssessments</see> entity to create in the database.</param>
+        /// <returns>The newly created <see cref="StudentAptitudeAssessments">studentAptitudeAssessments</see></returns>
+        public async Task<StudentAptitudeAssessments2> CreateStudentAptitudeAssessments2Async(StudentAptitudeAssessments2 studentAptitudeAssessments)
+        {
+            // verify the user has the permission to create a studentAptitudeAssessments
+            this.CheckCreateStudentAptitudeAssessmentsPermission();
+
+            if (studentAptitudeAssessments == null)
+            {
+                IntegrationApiExceptionAddError("Must provide a StudentAptitudeAssessments for create", "Missing.Request.Body");
+                throw IntegrationApiException;
+            }
+            if (string.IsNullOrEmpty(studentAptitudeAssessments.Id))
+            {
+                IntegrationApiExceptionAddError("Must provide a guid for StudentAptitudeAssessments create", "Missing.Request.ID");
+            }
+            
+            if (studentAptitudeAssessments.Status != null && studentAptitudeAssessments.Status != StudentAptitudeAssessmentsStatus.NotSet)
+            {
+                IntegrationApiExceptionAddError("Status can not be set on StudentAptitudeAssessments create");
+            }
+
+            if ((studentAptitudeAssessments.Form != null && string.IsNullOrEmpty(studentAptitudeAssessments.Form.Name) && !string.IsNullOrEmpty(studentAptitudeAssessments.Form.Number)) || (studentAptitudeAssessments.Form != null && !string.IsNullOrEmpty(studentAptitudeAssessments.Form.Name) && string.IsNullOrEmpty(studentAptitudeAssessments.Form.Number)))
+                IntegrationApiExceptionAddError("StudentAptitudeAssessments", "Both form name and form number must be provided or excluded for StudentAptitudeAssessments.");
+
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+
+            // pass down the extended data dictionary
+            _studentAptitudeAssessmentsRepository.EthosExtendedDataDictionary = EthosExtendedDataDictionary;
+
+            #region create domain entity from request
+            StudentTestScores studentAptitudeAssessmentsEntity = null;
+            try
+            {
+                studentAptitudeAssessmentsEntity = await ConvertStudentAptitudeAssessments2DtoToEntityAsync(string.Empty, studentAptitudeAssessments);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError("Record not created.  Error extracting request. " + ex.Message, "Global.Internal.Error",
+                    guid: studentAptitudeAssessments.Id);
+            }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            #endregion
+
+            #region Create record from domain entity
+            StudentTestScores updatedStudentAptitudeAssessmentsEntity = null;
+            try
+            {
+                updatedStudentAptitudeAssessmentsEntity =
+                await _studentAptitudeAssessmentsRepository.CreateStudentTestScoresAsync(studentAptitudeAssessmentsEntity);
+            }
+            catch (RepositoryException ex)
+            {
+                IntegrationApiExceptionAddError(ex, guid: studentAptitudeAssessments.Id);
+                throw IntegrationApiException;
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError(ex.Message, "Global.Internal.Error",
+                      guid: studentAptitudeAssessments.Id);
+                throw IntegrationApiException;
+            }
+            #endregion
+
+            #region Build DTO response
+            Ellucian.Colleague.Dtos.StudentAptitudeAssessments2 retval = null;
+            try
+            {
+                Dictionary<string, string> personGuidCollection = null;
+                if (studentAptitudeAssessmentsEntity != null)
+                {
+                    personGuidCollection = await this._personRepository.GetPersonGuidsCollectionAsync(new List<string>() { studentAptitudeAssessmentsEntity.StudentId });
+                }
+                retval = await this.ConvertStudentTestScoresEntityToDto2Async(updatedStudentAptitudeAssessmentsEntity, personGuidCollection, true);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError("Record created. Error building response. " + ex.Message, "Global.Internal.Error",
+                    updatedStudentAptitudeAssessmentsEntity.Guid, updatedStudentAptitudeAssessmentsEntity.RecordKey);
+            }
+            if (IntegrationApiException != null)
+            {
+                throw IntegrationApiException;
+            }
+            #endregion
+            return retval;
         }
 
         /// <summary>
@@ -830,9 +951,44 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     }
                 }
 
-                // When the reported value is 'Official', then ApplicationTestSource will be empty;
-                if (studentAptitudeAssessmentsDto.Reported == StudentAptitudeAssessmentsReported.Unofficial)
+                //If reported has a value of "official" and no source.id is included in the payload do not set 
+                //STNC.SOURCE as a null source is considered official.
+                if (studentAptitudeAssessmentsDto.Reported == StudentAptitudeAssessmentsReported.Official)
                 {
+                    if ((studentAptitudeAssessmentsDto.Source == null) ||
+                       string.IsNullOrEmpty(studentAptitudeAssessmentsDto.Source.Id))
+                    {
+                        studentTestScoreEntity.Source = string.Empty;
+                    }
+                }
+                else if (studentAptitudeAssessmentsDto.Reported == StudentAptitudeAssessmentsReported.Unofficial)
+                {
+                    //If reported has a value of "unofficial" and no source.id is included in the payload, 
+                    //then set STNC.SOURCE to the first code in the APPL.TEST.SOURCES valcode table with the 1st special processing set to 1. 
+                    //If there is no code found with special processing of 1 then issue an error.
+
+                    // Only compare the incoming reported enumeration against the source.id if both are included in 
+                    //the payload.
+                    if ((studentAptitudeAssessmentsDto.Source == null) ||
+                        string.IsNullOrEmpty(studentAptitudeAssessmentsDto.Source.Id))
+                    {
+                        var testSources = await this.GetTestSourcesAsync();
+                        if (testSources == null)
+                        {
+                            IntegrationApiExceptionAddError("Unable to retrieve test sources",
+                                "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+                        }
+                        var testSource = testSources.FirstOrDefault(x => x.actionCode1 == "1");
+                        if (testSource == null)
+                        {
+                            IntegrationApiExceptionAddError("Unable to set source. APPL.TEST.SOURCES does not contain any records with special processing of 1",
+                                "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+                        }
+                        else
+                        {
+                            studentTestScoreEntity.Source = testSource.Code;
+                        }
+                    }
                     studentTestScoreEntity.ApplicationTestSource = "1";
                 }
 
@@ -854,182 +1010,313 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         {
             if (studentAptitudeAssessmentsDto == null)
             {
-                throw new ArgumentNullException("studentAptitudeAssessmentsDto", "studentAptitudeAssessmentsDto is a required field");
+                IntegrationApiExceptionAddError("studentTestScore DTO must be provided.", "Validation.Exception");
+                return null;
             }
 
             var aptitudeCode = string.Empty;
-            try
-            {
-                if (studentAptitudeAssessmentsDto.Student == null || string.IsNullOrEmpty(studentAptitudeAssessmentsDto.Student.Id))
-                {
-                    throw new ArgumentNullException("student.id", "student.id is a required field");
-                }
-                var studentId = await _personRepository.GetPersonIdFromGuidAsync(studentAptitudeAssessmentsDto.Student.Id);
-                if (string.IsNullOrEmpty(studentId))
-                {
-                    throw new ArgumentException(string.Format("Invalid student.id '{0}'.", studentAptitudeAssessmentsDto.Student.Id), "student.id");
-                }
-                if (await _personRepository.IsCorpAsync(studentId))
-                {
-                    throw new ArgumentException(string.Format("Invalid student.id '{0}'. An assessment cannot be assigned to a corporation.", studentAptitudeAssessmentsDto.Student.Id),"student.id");
-                }
+            var studentId = string.Empty;
 
-                if (studentAptitudeAssessmentsDto.Assessment == null || string.IsNullOrEmpty(studentAptitudeAssessmentsDto.Assessment.Id))
+            if (studentAptitudeAssessmentsDto.Student == null || string.IsNullOrEmpty(studentAptitudeAssessmentsDto.Student.Id))
+            {
+                IntegrationApiExceptionAddError("student.id is a required field.", "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+            }
+            else
+            {
+                try
                 {
-                    throw new ArgumentNullException("assessment.id", "assessment.id is a required field");
+                    studentId = await _personRepository.GetPersonIdFromGuidAsync(studentAptitudeAssessmentsDto.Student.Id);
+                    if (string.IsNullOrEmpty(studentId))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Invalid student.id '{0}'.", studentAptitudeAssessmentsDto.Student.Id),
+                            "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+                    }
+
+                    if (await _personRepository.IsCorpAsync(studentId))
+                    {
+                        IntegrationApiExceptionAddError(string.Format("Invalid student.id '{0}'. An assessment cannot be assigned to a corporation.", studentAptitudeAssessmentsDto.Student.Id),
+                             "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+                    }
                 }
+                catch (Exception ex)
+                {
+                    IntegrationApiExceptionAddError(string.Format("Invalid student.id '{0}'. Message: {1}.", studentAptitudeAssessmentsDto.Student.Id, ex.Message),
+                            "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+                }
+            }
+            if (studentAptitudeAssessmentsDto.Assessment == null || string.IsNullOrEmpty(studentAptitudeAssessmentsDto.Assessment.Id))
+            {
+                IntegrationApiExceptionAddError("assessment.id is a required field.",
+                    "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+            }
+            else
+            {
                 var nonCourses = await this.GetAptitudeAssessmentAsync();
-                if (nonCourses != null)
+                if (nonCourses == null)
+                {
+                    IntegrationApiExceptionAddError("AptitudeAssessments missing or not found.",
+                    "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+                }
+                else
                 {
                     var nonCourse = nonCourses.FirstOrDefault(asc => asc.Guid == studentAptitudeAssessmentsDto.Assessment.Id);
                     if (nonCourse == null)
                     {
-                        throw new KeyNotFoundException("The student-aptitude-assessments with ID '" + studentAptitudeAssessmentsDto.Id + "' is missing a valid Assessment.Id.");
+                        IntegrationApiExceptionAddError("Missing a valid Assessment.Id '" + studentAptitudeAssessmentsDto.Assessment.Id + "'.",
+                            "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
                     }
-                    aptitudeCode = nonCourse.Code;
-                }
-
-
-                if ((!studentAptitudeAssessmentsDto.AssessedOn.HasValue) || (studentAptitudeAssessmentsDto.AssessedOn == default(DateTimeOffset)))
-                {
-                    throw new ArgumentNullException("AssessedOn", "AssessedOn is a required field");
-                }
-                var studentTestScoreEntity = new StudentTestScores(studentAptitudeAssessmentsDto.Id,
-                    studentTestScoresId, studentId, aptitudeCode, "", studentAptitudeAssessmentsDto.AssessedOn.Value.DateTime);
-
-                if (studentTestScoreEntity == null)
-                {
-                    throw new Exception("An error occurred setting required fields on Student Aptitude Assessment.");
-                }
-
-                if ((studentAptitudeAssessmentsDto.Score == null) || (!studentAptitudeAssessmentsDto.Score.Value.HasValue))
-                {
-                    throw new KeyNotFoundException("The student-aptitude-assessments with ID '" + studentAptitudeAssessmentsDto.Id + "' does not have a score. Score is required.");
-                }
-
-                if (studentAptitudeAssessmentsDto.Score.Type == StudentAptitudeAssessmentsScoreType.Literal)
-                {
-                    throw new ArgumentException("'Literal' score types are not accepted.");
-                }
-                studentTestScoreEntity.Score = studentAptitudeAssessmentsDto.Score.Value;
-
-                if ((studentAptitudeAssessmentsDto.Percentile != null) && (studentAptitudeAssessmentsDto.Percentile.Any()))
-                {
-                    var assesmentPercentileTypes = await this.GetAssesmentPercentileTypesAsync();
-
-                    foreach (var percentile in studentAptitudeAssessmentsDto.Percentile)
+                    else
                     {
-                        if ((percentile.Type == null) || (string.IsNullOrEmpty(percentile.Type.Id)))
-                        {
-                            throw new KeyNotFoundException("The student-aptitude-assessments with ID '" + studentAptitudeAssessmentsDto.Id + "' is missing a percentile.Type. Percentile.Type is required.");
-                        }
+                        aptitudeCode = nonCourse.Code;
+                    }
+                }
+            }
 
+            if ((!studentAptitudeAssessmentsDto.AssessedOn.HasValue) || (studentAptitudeAssessmentsDto.AssessedOn == default(DateTimeOffset)))
+            {
+                IntegrationApiExceptionAddError("AssessedOn is a required field.",
+                    "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+            }
+            if (IntegrationApiException != null)
+            {
+                return null;
+            }
+            StudentTestScores studentTestScoreEntity = null;
+            try
+            {
+                studentTestScoreEntity = new StudentTestScores(studentAptitudeAssessmentsDto.Id,
+                studentTestScoresId, studentId, aptitudeCode, "", studentAptitudeAssessmentsDto.AssessedOn.Value.DateTime);
+            }
+            catch (Exception ex)
+            {
+                IntegrationApiExceptionAddError("An error occurred setting required fields on Student Aptitude Assessment." + ex.Message,
+                   "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+            }
+            if (studentTestScoreEntity == null)
+            {
+                IntegrationApiExceptionAddError("An error occurred setting required fields on Student Aptitude Assessment.",
+                    "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+            }
+
+            if (IntegrationApiException != null)
+            {
+                return null;
+            }
+            if ((studentAptitudeAssessmentsDto.Score == null) || (!studentAptitudeAssessmentsDto.Score.Value.HasValue))
+            {
+                IntegrationApiExceptionAddError("Score is required.",
+                    "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+            }
+
+            if (studentAptitudeAssessmentsDto.Score.Type == StudentAptitudeAssessmentsScoreType.Literal)
+            {
+                IntegrationApiExceptionAddError("'Literal' score types are not accepted.",
+                   "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+            }
+            else
+            {
+                studentTestScoreEntity.Score = studentAptitudeAssessmentsDto.Score.Value;
+            }
+
+            if ((studentAptitudeAssessmentsDto.Percentile != null) && (studentAptitudeAssessmentsDto.Percentile.Any()))
+            {
+                var assesmentPercentileTypes = await this.GetAssesmentPercentileTypesAsync();
+
+                foreach (var percentile in studentAptitudeAssessmentsDto.Percentile)
+                {
+                    if ((percentile.Type == null) || (string.IsNullOrEmpty(percentile.Type.Id)))
+                    {
+                        IntegrationApiExceptionAddError("Percentile.Type is required.",
+                            "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+                        continue;
+                    }
+                    else
+                    {
                         if (!percentile.Value.HasValue)
                         {
                             throw new ArgumentNullException("Percentile value is required.");
                         }
-
+                    }
+                    if (assesmentPercentileTypes == null)
+                    {
+                        IntegrationApiExceptionAddError("AssesmentPercentileTypes missing or not found.",
+                                "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+                    }
+                    else
+                    {
                         var assesmentPercentileType = assesmentPercentileTypes.FirstOrDefault(apt => apt.Guid == percentile.Type.Id);
                         if (assesmentPercentileType == null)
                         {
-                            throw new KeyNotFoundException("The student-aptitude-assessments with ID '" + studentAptitudeAssessmentsDto.Id + "' is missing a valid percentile.Type. Percentile.Type is required.");
+                            IntegrationApiExceptionAddError("Percentile.Type not found for GUID'" + percentile.Type.Id + "'.",
+                                "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
                         }
-                        switch (assesmentPercentileType.Code)
+                        else
                         {
-                            case "1":
-                                if (studentTestScoreEntity.Percentile1.HasValue)
-                                {
-                                    throw new ArgumentException("Duplicate percentile types are not permitted");
-                                }
-                                studentTestScoreEntity.Percentile1 = Convert.ToInt16(percentile.Value);
-                                break;
-                            case "2":
-                                if (studentTestScoreEntity.Percentile2.HasValue)
-                                {
-                                    throw new ArgumentException("Duplicate percentile types are not permitted");
-                                }
-                                studentTestScoreEntity.Percentile2 = Convert.ToInt16(percentile.Value);
-                                break;
-                            default:
-                                throw new KeyNotFoundException("The student-aptitude-assessments with ID '" + studentAptitudeAssessmentsDto.Id + "' is missing a valid percentile.Type. Percentile.Type is required.");
+                            switch (assesmentPercentileType.Code)
+                            {
+                                case "1":
+                                    if (studentTestScoreEntity.Percentile1.HasValue)
+                                    {
+                                        IntegrationApiExceptionAddError("Duplicate percentile types are not permitted.",
+                                            "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+                                    }
+                                    studentTestScoreEntity.Percentile1 = Convert.ToInt16(percentile.Value);
+                                    break;
+                                case "2":
+                                    if (studentTestScoreEntity.Percentile2.HasValue)
+                                    {
+                                        IntegrationApiExceptionAddError("Duplicate percentile types are not permitted.",
+                                            "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+                                    }
+                                    studentTestScoreEntity.Percentile2 = Convert.ToInt16(percentile.Value);
+                                    break;
+                                default:
+                                    IntegrationApiExceptionAddError("PercentileType Code not valid: '" + assesmentPercentileType.Code + "'.",
+                                        "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+                                    break;
+                            }
                         }
                     }
                 }
+            }
 
-                if (studentAptitudeAssessmentsDto.Form != null)
+            if (studentAptitudeAssessmentsDto.Form != null)
+            {
+                studentTestScoreEntity.FormName = studentAptitudeAssessmentsDto.Form.Name;
+                studentTestScoreEntity.FormNo = studentAptitudeAssessmentsDto.Form.Number;
+            }
+
+            if ((studentAptitudeAssessmentsDto.SpecialCircumstances != null) && (studentAptitudeAssessmentsDto.SpecialCircumstances.Any()))
+            {
+                var specialFactors = new List<string>();
+
+                IEnumerable<Domain.Student.Entities.AssessmentSpecialCircumstance> assessmentSpecialCircumstances = null;
+                try
                 {
-                    studentTestScoreEntity.FormName = studentAptitudeAssessmentsDto.Form.Name;
-                    studentTestScoreEntity.FormNo = studentAptitudeAssessmentsDto.Form.Number;
+                    assessmentSpecialCircumstances
+                        = await this.GetAssessmentSpecialCircumstancesAsync();
                 }
-
-                if ((studentAptitudeAssessmentsDto.SpecialCircumstances != null) && (studentAptitudeAssessmentsDto.SpecialCircumstances.Any()))
+                catch (RepositoryException ex)
                 {
-                    var specialFactors = new List<string>();
-
-                    var assessmentSpecialCircumstances = await this.GetAssessmentSpecialCircumstancesAsync();
-                    foreach (var factor in studentAptitudeAssessmentsDto.SpecialCircumstances)
+                    IntegrationApiExceptionAddError(ex,
+                                   "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+                }
+                foreach (var factor in studentAptitudeAssessmentsDto.SpecialCircumstances)
+                {
+                    if (string.IsNullOrEmpty(factor.Id))
                     {
-                        if (!(string.IsNullOrEmpty(factor.Id)))
+                        IntegrationApiExceptionAddError("specialCircumstances.id is required.",
+                                   "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+                    }
+                    else
+                    {
+                        if (assessmentSpecialCircumstances == null)
                         {
-                            var assessmentSpecialCircumstance = assessmentSpecialCircumstances.FirstOrDefault(asc => asc.Guid == factor.Id);
-                            if (assessmentSpecialCircumstance == null)
-                            {
-                                throw new KeyNotFoundException("The student-aptitude-assessments with ID '" + studentAptitudeAssessmentsDto.Id + "' is missing a valid SpecialCircumstances.Id.");
-                            }
+                            IntegrationApiExceptionAddError("Unable to retrieve AssessmentSpecialCircumstances.",
+                                    "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+                        }
+                        var assessmentSpecialCircumstance = assessmentSpecialCircumstances.FirstOrDefault(asc => asc.Guid == factor.Id);
+                        if (assessmentSpecialCircumstance == null)
+                        {
+                            IntegrationApiExceptionAddError("Missing a valid SpecialCircumstances.Id '" + factor.Id + "'.",
+                                  "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+                        }
+                        else
+                        {
                             specialFactors.Add(assessmentSpecialCircumstance.Code);
                         }
                     }
-
-                    if (specialFactors.Any())
-                    {
-                        studentTestScoreEntity.SpecialFactors = specialFactors;
-                    }
                 }
 
-                if ((studentAptitudeAssessmentsDto.Source != null) && (!(string.IsNullOrEmpty(studentAptitudeAssessmentsDto.Source.Id))))
+                if (specialFactors.Any())
+                {
+                    studentTestScoreEntity.SpecialFactors = specialFactors;
+                }
+            }
+
+            if ((studentAptitudeAssessmentsDto.Source != null) 
+                && (!(string.IsNullOrEmpty(studentAptitudeAssessmentsDto.Source.Id))))
+            {
+                var testSources = await this.GetTestSourcesAsync();
+                if (testSources == null)
+                {
+                    IntegrationApiExceptionAddError("Unable to retrieve test sources.",
+                        "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+                }
+                else
+                {
+                    var testSource = testSources.FirstOrDefault(ts => ts.Guid == studentAptitudeAssessmentsDto.Source.Id);
+                    if (testSource == null)
+                    {
+                        IntegrationApiExceptionAddError("Missing a valid Source.Id '" + studentAptitudeAssessmentsDto.Source.Id + "'.",
+                            "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
+                    }
+                    else
+                    {
+                        studentTestScoreEntity.Source = testSource.Code;
+                    }
+                }
+            }
+
+            if (studentAptitudeAssessmentsDto.Status != StudentAptitudeAssessmentsStatus.NotSet)
+            {
+                switch (studentAptitudeAssessmentsDto.Status)
+                {
+                    case StudentAptitudeAssessmentsStatus.Inactive:
+                        studentTestScoreEntity.StatusCode = "1";
+                        break;
+                    case StudentAptitudeAssessmentsStatus.Active:
+                        studentTestScoreEntity.StatusCode = "2";
+                        break;
+                    case StudentAptitudeAssessmentsStatus.Notational:
+                        studentTestScoreEntity.StatusCode = "3";
+                        break;
+                }
+            }
+
+
+            //If reported has a value of "official" and no source.id is included in the payload do not set 
+            //STNC.SOURCE as a null source is considered official.
+            if (studentAptitudeAssessmentsDto.Reported == StudentAptitudeAssessmentsReported.Official)
+            {
+                if ((studentAptitudeAssessmentsDto.Source == null) ||
+                   string.IsNullOrEmpty(studentAptitudeAssessmentsDto.Source.Id))
+                {
+                    studentTestScoreEntity.Source = string.Empty;
+                }
+            }
+            else if (studentAptitudeAssessmentsDto.Reported == StudentAptitudeAssessmentsReported.Unofficial)
+            {
+                //If reported has a value of "unofficial" and no source.id is included in the payload, 
+                //then set STNC.SOURCE to the first code in the APPL.TEST.SOURCES valcode table with the 1st special processing set to 1. 
+                //If there is no code found with special processing of 1 then issue an error.
+                
+                // Only compare the incoming reported enumeration against the source.id if both are included in 
+                //the payload.
+                if ((studentAptitudeAssessmentsDto.Source == null) ||
+                    string.IsNullOrEmpty(studentAptitudeAssessmentsDto.Source.Id))
                 {
                     var testSources = await this.GetTestSourcesAsync();
                     if (testSources == null)
                     {
-                        throw new Exception("Unable to retrieve test sources");
+                        IntegrationApiExceptionAddError("Unable to retrieve test sources",
+                            "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
                     }
-                    var testSource = testSources.FirstOrDefault(ts => ts.Guid == studentAptitudeAssessmentsDto.Source.Id);
+                    var testSource = testSources.FirstOrDefault(x => x.actionCode1 == "1");
                     if (testSource == null)
                     {
-                        throw new KeyNotFoundException("The student-aptitude-assessments with ID '" + studentAptitudeAssessmentsDto.Id + "' is missing a valid Source.Id");
+                        IntegrationApiExceptionAddError("Unable to set source. APPL.TEST.SOURCES does not contain any records with special processing of 1",
+                            "Validation.Exception", guid: studentAptitudeAssessmentsDto.Id);
                     }
-                    studentTestScoreEntity.Source = testSource.Code;
-                }
-
-                if (studentAptitudeAssessmentsDto.Status != StudentAptitudeAssessmentsStatus.NotSet)
-                {
-                    switch (studentAptitudeAssessmentsDto.Status)
+                    else
                     {
-                        case StudentAptitudeAssessmentsStatus.Inactive:
-                            studentTestScoreEntity.StatusCode = "1";
-                            break;
-                        case StudentAptitudeAssessmentsStatus.Active:
-                            studentTestScoreEntity.StatusCode = "2";
-                            break;
-                        case StudentAptitudeAssessmentsStatus.Notational:
-                            studentTestScoreEntity.StatusCode = "3";
-                            break;
-
+                        studentTestScoreEntity.Source = testSource.Code;
                     }
                 }
-
-                // When the reported value is 'Official', then ApplicationTestSource will be empty;
-                if (studentAptitudeAssessmentsDto.Reported == StudentAptitudeAssessmentsReported.Unofficial)
-                {
-                    studentTestScoreEntity.ApplicationTestSource = "1";
-                }
-
-                return studentTestScoreEntity;
+                studentTestScoreEntity.ApplicationTestSource = "1";
             }
-            catch (Exception ex)
-            {
-                throw new KeyNotFoundException("An error occurred creating a Student Aptitude Assessment. " + ex.Message);
-            }
+
+            return studentTestScoreEntity;
         }
 
         /// <remarks>FOR USE WITH ELLUCIAN EEDM</remarks>
@@ -1346,13 +1633,13 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 if (!string.IsNullOrEmpty(studentTestScoreEntity.Source))
                 {
                     var sourceGuid = await _studentReferenceDataRepository.GetTestSourcesGuidAsync(studentTestScoreEntity.Source);
-                    if (!string.IsNullOrEmpty(sourceGuid ))
+                    if (!string.IsNullOrEmpty(sourceGuid))
                     {
                         studentAptitudeAssessmentDto.Source = new Dtos.GuidObject2(sourceGuid);
                     }
                 }
 
-                
+
                 if (!string.IsNullOrEmpty(studentTestScoreEntity.StatusCode))
                 {
                     //clients are to set special processing code 2 to EXP on the status that ETSU should use when a student's noncourse expires
@@ -1384,18 +1671,31 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 else
                     studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Active;
 
-                if (!string.IsNullOrWhiteSpace(studentTestScoreEntity.ApplicationTestSource) && studentTestScoreEntity.ApplicationTestSource.ToUpper().Equals("OFFICIAL", StringComparison.OrdinalIgnoreCase))
+                // applicationTestSource is derived from STNC.SOURCE
+                if (string.IsNullOrWhiteSpace(studentTestScoreEntity.ApplicationTestSource))
                 {
                     studentAptitudeAssessmentDto.Reported = StudentAptitudeAssessmentsReported.Official;
                 }
-                else if (!string.IsNullOrWhiteSpace(studentTestScoreEntity.ApplicationTestSource) && studentTestScoreEntity.ApplicationTestSource.ToUpper().Equals("UNOFFICIAL", StringComparison.OrdinalIgnoreCase))
+                else if (studentTestScoreEntity.ApplicationTestSource.Equals("official", StringComparison.OrdinalIgnoreCase))
+                {
+                    studentAptitudeAssessmentDto.Reported = StudentAptitudeAssessmentsReported.Official;
+                }
+                else if (studentTestScoreEntity.ApplicationTestSource.Equals("unofficial", StringComparison.OrdinalIgnoreCase))
                 {
                     studentAptitudeAssessmentDto.Reported = StudentAptitudeAssessmentsReported.Unofficial;
                 }
-                else
-                {
-                    studentAptitudeAssessmentDto.Reported = StudentAptitudeAssessmentsReported.Official;
-                }
+                //if (!string.IsNullOrWhiteSpace(studentTestScoreEntity.ApplicationTestSource) && studentTestScoreEntity.ApplicationTestSource.ToUpper().Equals("OFFICIAL", StringComparison.OrdinalIgnoreCase))
+                //{
+                //    studentAptitudeAssessmentDto.Reported = StudentAptitudeAssessmentsReported.Official;
+                //}
+                //else if (!string.IsNullOrWhiteSpace(studentTestScoreEntity.ApplicationTestSource) && studentTestScoreEntity.ApplicationTestSource.ToUpper().Equals("UNOFFICIAL", StringComparison.OrdinalIgnoreCase))
+                //{
+                //    studentAptitudeAssessmentDto.Reported = StudentAptitudeAssessmentsReported.Unofficial;
+                //}
+                //else
+                //{
+                //    studentAptitudeAssessmentDto.Reported = StudentAptitudeAssessmentsReported.Official;
+                //}
 
             }
             catch (Exception ex)
@@ -1416,29 +1716,49 @@ namespace Ellucian.Colleague.Coordination.Student.Services
         private async Task<Ellucian.Colleague.Dtos.StudentAptitudeAssessments2> ConvertStudentTestScoresEntityToDto2Async(StudentTestScores studentTestScoreEntity,
             Dictionary<string, string> personGuidCollection, bool bypassCache = false)
         {
+            if (studentTestScoreEntity == null)
+            {
+                IntegrationApiExceptionAddError("studentTestScoreEntities entities must be provided.");
+                return null;
+            }
             var studentAptitudeAssessmentDto = new StudentAptitudeAssessments2();
+
             try
             {
                 studentAptitudeAssessmentDto.Id = studentTestScoreEntity.Guid;
-             
+
                 if (!string.IsNullOrEmpty(studentTestScoreEntity.StudentId))
                 {
                     if (personGuidCollection == null)
                     {
-                        throw new KeyNotFoundException(string.Concat("Person guid not found in collection, PersonId: '", studentTestScoreEntity.StudentId, "', Record ID: '", studentTestScoreEntity.RecordKey, "'"));
+                        IntegrationApiExceptionAddError(string.Concat("GUID not found for student id '", studentTestScoreEntity.StudentId, "'"),
+                            "GUID.Not.Found", "", studentTestScoreEntity.RecordKey);
                     }
-                    var personGuid = string.Empty;
-                    personGuidCollection.TryGetValue(studentTestScoreEntity.StudentId, out personGuid);
-                    if (string.IsNullOrEmpty(personGuid))
+                    else
                     {
-                        throw new KeyNotFoundException(string.Concat("Person guid not found, PersonId: '", studentTestScoreEntity.StudentId, "', Record ID: '", studentTestScoreEntity.RecordKey, "'"));
+                        var personGuid = string.Empty;
+                        personGuidCollection.TryGetValue(studentTestScoreEntity.StudentId, out personGuid);
+                        if (string.IsNullOrEmpty(personGuid))
+                        {
+                            IntegrationApiExceptionAddError(string.Concat("GUID not found for student id: '", studentTestScoreEntity.StudentId, "'"),
+                               "GUID.Not.Found", "", studentTestScoreEntity.RecordKey);
+                        }
+
+                        studentAptitudeAssessmentDto.Student = new Dtos.GuidObject2(personGuid);
                     }
-                    studentAptitudeAssessmentDto.Student = new Dtos.GuidObject2(personGuid);
                 }
 
                 if (!string.IsNullOrEmpty(studentTestScoreEntity.Code))
                 {
-                    var nonCourse = await _aptitudeAssessmentsRepository.GetAptitudeAssessmentsGuidAsync(studentTestScoreEntity.Code);
+                    string nonCourse = string.Empty;
+                    try
+                    {
+                        nonCourse = await _aptitudeAssessmentsRepository.GetAptitudeAssessmentsGuidAsync(studentTestScoreEntity.Code);
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex);
+                    }
                     if (!string.IsNullOrEmpty(nonCourse))
                     {
                         studentAptitudeAssessmentDto.Assessment = new Ellucian.Colleague.Dtos.GuidObject2(nonCourse);
@@ -1454,12 +1774,22 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 else
                 {
-                    throw new KeyNotFoundException("The student-aptitude-assessments with ID '" + studentAptitudeAssessmentDto.Id + "' does not have a score. Score is required.");
+                    IntegrationApiExceptionAddError("The student-aptitude-assessments does not have a score. Score is required.",
+                        "Validation.Exception", studentAptitudeAssessmentDto.Id, studentTestScoreEntity.RecordKey);
                 }
                 var percentiles = new List<StudentAptitudeAssessmentsPercentile>();
                 if (studentTestScoreEntity.Percentile1.HasValue)
                 {
-                    var percentileType = await _studentReferenceDataRepository.GetIntgTestPercentileTypesGuidAsync("1");
+                    string percentileType = string.Empty;
+                    try
+                    {
+                        percentileType = await _studentReferenceDataRepository.GetIntgTestPercentileTypesGuidAsync("1");
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found", studentAptitudeAssessmentDto.Id, studentTestScoreEntity.RecordKey);
+
+                    }
                     if (!string.IsNullOrEmpty(percentileType))
                     {
                         var percentile = new StudentAptitudeAssessmentsPercentile();
@@ -1470,7 +1800,16 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 }
                 if (studentTestScoreEntity.Percentile2.HasValue)
                 {
-                    var percentileType = await _studentReferenceDataRepository.GetIntgTestPercentileTypesGuidAsync("2");
+                    string percentileType = string.Empty;
+                    try
+                    {
+                        percentileType = await _studentReferenceDataRepository.GetIntgTestPercentileTypesGuidAsync("2");
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found", studentAptitudeAssessmentDto.Id, studentTestScoreEntity.RecordKey);
+                    }
+
                     if (!string.IsNullOrEmpty(percentileType))
                     {
                         var percentile = new StudentAptitudeAssessmentsPercentile();
@@ -1494,38 +1833,59 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                 {
                     var factors = new List<Dtos.GuidObject2>();
                     foreach (var factor in studentTestScoreEntity.SpecialFactors)
+                    {
                         if (!string.IsNullOrEmpty(factor))
                         {
-                            var factorGuid = await _studentReferenceDataRepository.GetAssessmentSpecialCircumstancesGuidAsync(factor);
+                            string factorGuid = string.Empty;
+                            try
+                            {
+                                factorGuid = await _studentReferenceDataRepository.GetAssessmentSpecialCircumstancesGuidAsync(factor);
+                            }
+                            catch (RepositoryException ex)
+                            {
+                                IntegrationApiExceptionAddError(ex, "GUID.Not.Found", studentAptitudeAssessmentDto.Id, studentTestScoreEntity.RecordKey);
+                            }
+                            //string percentileType = string.Empty;
                             if (!string.IsNullOrEmpty(factorGuid))
                             {
                                 factors.Add(new Dtos.GuidObject2(factorGuid));
                             }
                         }
+                    }
                     studentAptitudeAssessmentDto.SpecialCircumstances = factors;
                 }
 
                 if (!string.IsNullOrEmpty(studentTestScoreEntity.Source))
                 {
-                    var sourceGuid = await _studentReferenceDataRepository.GetTestSourcesGuidAsync(studentTestScoreEntity.Source);
+                    string sourceGuid = string.Empty;
+                    try
+                    {
+                        sourceGuid = await _studentReferenceDataRepository.GetTestSourcesGuidAsync(studentTestScoreEntity.Source);
+                    }
+                    catch (RepositoryException ex)
+                    {
+                        IntegrationApiExceptionAddError(ex, "GUID.Not.Found", studentAptitudeAssessmentDto.Id, studentTestScoreEntity.RecordKey);
+                    }
                     if (!string.IsNullOrEmpty(sourceGuid))
                     {
                         studentAptitudeAssessmentDto.Source = new Dtos.GuidObject2(sourceGuid);
                     }
                 }
-
-                if (!string.IsNullOrWhiteSpace(studentTestScoreEntity.ApplicationTestSource) && studentTestScoreEntity.ApplicationTestSource.ToUpper().Equals("OFFICIAL", StringComparison.OrdinalIgnoreCase))
+                
+                // applicationTestSource is derived from STNC.SOURCE
+                if (string.IsNullOrWhiteSpace(studentTestScoreEntity.ApplicationTestSource))
                 {
                     studentAptitudeAssessmentDto.Reported = StudentAptitudeAssessmentsReported.Official;
                 }
-                else if (!string.IsNullOrWhiteSpace(studentTestScoreEntity.ApplicationTestSource) && studentTestScoreEntity.ApplicationTestSource.ToUpper().Equals("UNOFFICIAL", StringComparison.OrdinalIgnoreCase))
+                else if (studentTestScoreEntity.ApplicationTestSource.Equals("official", StringComparison.OrdinalIgnoreCase))
+                {
+                    studentAptitudeAssessmentDto.Reported = StudentAptitudeAssessmentsReported.Official;
+                }
+                else if (studentTestScoreEntity.ApplicationTestSource.Equals("unofficial", StringComparison.OrdinalIgnoreCase))
                 {
                     studentAptitudeAssessmentDto.Reported = StudentAptitudeAssessmentsReported.Unofficial;
                 }
-                else
-                {
-                    studentAptitudeAssessmentDto.Reported = StudentAptitudeAssessmentsReported.Official;
-                }
+                
 
                 if (!string.IsNullOrEmpty(studentTestScoreEntity.StatusCode))
                 {
@@ -1559,10 +1919,17 @@ namespace Ellucian.Colleague.Coordination.Student.Services
                     studentAptitudeAssessmentDto.Status = StudentAptitudeAssessmentsStatus.Active;
 
             }
+            //most exceptions should have already created an IntegrationApiException,
+            // however, still trapping any unexpected issues.
             catch (Exception ex)
             {
-                throw new Exception(string.Concat(ex.Message, "Student Aptitude Assessment ID." + studentTestScoreEntity.Guid));
+                IntegrationApiExceptionAddError(ex.Message,
+                    id: studentAptitudeAssessmentDto != null ?
+                        studentAptitudeAssessmentDto.Id : "",
+                    guid: studentTestScoreEntity != null ?
+                        studentTestScoreEntity.RecordKey : "");
             }
+
             return studentAptitudeAssessmentDto;
         }
 
@@ -1607,5 +1974,5 @@ namespace Ellucian.Colleague.Coordination.Student.Services
             }
             return false;
         }
-    } 
+    }
 }

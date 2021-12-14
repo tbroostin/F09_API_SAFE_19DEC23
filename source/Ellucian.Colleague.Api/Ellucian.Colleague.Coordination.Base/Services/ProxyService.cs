@@ -1,4 +1,4 @@
-﻿// Copyright 2015-2018 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2015-2021 Ellucian Company L.P. and its affiliates.
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -45,8 +45,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// Creates or updates the proxy permissions for a proxy subject
         /// </summary>
         /// <param name="assignment">A proxy permission assignment object</param>
+        /// <param name="useEmployeeGroups">Optional parameter used to differentiate between employee proxy and person proxy</param>
         /// <returns>A collection of proxy access permissions</returns>
-        public async Task<IEnumerable<ProxyAccessPermission>> PostUserProxyPermissionsAsync(ProxyPermissionAssignment assignment)
+        public async Task<IEnumerable<ProxyAccessPermission>> PostUserProxyPermissionsAsync(ProxyPermissionAssignment assignment, bool useEmployeeGroups = false)
         {
             if (assignment == null)
             {
@@ -67,6 +68,15 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                     var assignmentAdapter = _adapterRegistry.GetAdapter<ProxyPermissionAssignment, Domain.Base.Entities.ProxyPermissionAssignment>();
                     var assignmentEntity = assignmentAdapter.MapToType(assignment);
 
+                    if (useEmployeeGroups)
+                    {
+                        // Set the IsAssigned from the input ProxyPermissionAssignment dto.
+                        for (int i= 0; i < assignment.Permissions.Count; i++)
+                        {
+                            assignmentEntity.Permissions[i].IsGranted = assignment.Permissions[i].IsGranted;
+                        }
+                    }
+
                     // Reject the request if a deceased user is granted a permission.
                     var usersToCheck = assignmentEntity.Permissions.Where(p => p.IsGranted).Select(p => p.ProxyUserId).Distinct().ToList();
                     foreach (var proxyUserId in usersToCheck)
@@ -79,7 +89,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
                             throw new InvalidOperationException(message);
                         }
                     }
-                    var entities = await _proxyRepository.PostUserProxyPermissionsAsync(assignmentEntity);
+                    var entities = await _proxyRepository.PostUserProxyPermissionsAsync(assignmentEntity, useEmployeeGroups);
                     var entityAdapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.ProxyAccessPermission, ProxyAccessPermission>();
                     var dtos = new List<ProxyAccessPermission>();
                     foreach (var entity in entities)
@@ -109,8 +119,9 @@ namespace Ellucian.Colleague.Coordination.Base.Services
         /// Gets a collection of proxy access permissions, by user, for the supplied person
         /// </summary>
         /// <param name="id">The identifier of the entity of interest</param>
+        /// <param name="useEmployeeGroups">Optional parameter used to differentiate between employee proxy and person proxy</param>
         /// <returns>A collection of proxy access permissions, by user, for the supplied person</returns>
-        public async Task<IEnumerable<Dtos.Base.ProxyUser>> GetUserProxyPermissionsAsync(string id)
+        public async Task<IEnumerable<Dtos.Base.ProxyUser>> GetUserProxyPermissionsAsync(string id, bool useEmployeeGroups = false)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -124,7 +135,7 @@ namespace Ellucian.Colleague.Coordination.Base.Services
             var dtos = new List<Dtos.Base.ProxyUser>();
             var adapter = _adapterRegistry.GetAdapter<Domain.Base.Entities.ProxyUser, ProxyUser>();
 
-            var users = await _proxyRepository.GetUserProxyPermissionsAsync(id);
+            var users = await _proxyRepository.GetUserProxyPermissionsAsync(id, useEmployeeGroups);
             foreach (var user in users)
             {
                 dtos.Add(adapter.MapToType(user));

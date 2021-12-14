@@ -124,11 +124,6 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             if (creditsDict.ContainsKey(student.Id))
             {
                 credits = creditsDict[student.Id];
-                if (credits != null)
-                {
-                    //call this method to update credits with Replace and Replacement statuses.
-                    UpdateCreditsReplaceStatus(credits);
-                }
             }
 
             // List of courses needed for the evaluation (added for evaluating equated courses)
@@ -185,7 +180,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                     if (string.IsNullOrEmpty(catalogYear))
                     {
                         ICollection<Catalog> catalogs = await _catalogRepository.GetAsync();
-                        catalogCode = ProgramCatalogService.DeriveDefaultCatalog(Program, studentPrograms, catalogs, planningConfiguration.DefaultCatalogPolicy);
+                        catalogCode = ProgramCatalogService.DeriveDefaultCatalog(Program, studentPrograms, catalogs, planningConfiguration.DefaultCatalogPolicy, logger);
                     }
                     else
                     {
@@ -231,6 +226,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 // If the client has modified the sort spec, be sure DEFAULT is in the list of sortSpecIds
                 var degreeAuditParameters = await _requirementRepository.GetDegreeAuditParametersAsync();
                 bool modifiedSortSpec = degreeAuditParameters != null ? degreeAuditParameters.ModifiedDefaultSort : false;
+                bool excludeCompletedReplaceInProgressCreditsFromGPA = degreeAuditParameters != null ? degreeAuditParameters.ExcludeCompletedPossibleReplaceInProgressCoursesFromGPA : false;
 
                 // Get the main requirements from the student's program
                 ProgramRequirements ProgramRequirements = null;
@@ -348,6 +344,15 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                     {
                         // Either there are no credits to sort or it couldn't sort them using the sort specs. Either way, continue without sort overrides.
                     }
+                }
+                //pass filteredcredits and filteredplannedcourses to identify which one will be replacing the other
+                try
+                {
+                    UpdateCreditsReplaceStatus(FilteredCredits, FilteredPlannedCourses, terms, excludeCompletedReplaceInProgressCreditsFromGPA);
+                }
+                catch(Exception ex)
+                {
+                    logger.Error(ex, "Exception occurred while processing possible replace and replacement in progress for credits and planned courses.");
                 }
 
                 // All pieces in place, run the eval
@@ -517,28 +522,46 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
         }
 
         /// <summary>
-        /// This method update credit replaced and replacement status.
+        /// This method updates credits and planned courses replaced and replacement status.
         /// If a course cannot be retaken for credits but same course is taken multiple times then only one credit will be applied and marked as if its possible replacement
         /// and others credits will be marked as replace in progress.
         /// There is nothing to do for the credits that are already marked as "replaced" by Collegue on STRP screen. In this case if all the credits are completed and marked as Replaced by colleague then only one credit
         /// will be marked as "Replacement" and rest of them will remain "Replaced" .
         /// There are scenarios where credits are repeated and completed but are not marked as Replaced by Colleague like in AVG grade policy, in that case repeats is not considered.
         /// There could be scenarios where few credits are marked as Replaced and few are graded and completed but not marked as replaced like when a course was graded F and Repeat value or grade value on GRDC for F grade was empty.
+        /// If there are planned courses and course retake is not allowed then planned course will also pass through replacement process and will take precedence over inprogress and completed courses
         /// </summary>
-        /// <param name="credits"></param>
-        private void UpdateCreditsReplaceStatus(IEnumerable<AcademicCredit> allCredits)
+
+
+        private void UpdateCreditsReplaceStatus(IEnumerable<AcademicCredit> allCredits, IEnumerable<PlannedCredit> plannedCourses, IEnumerable<Term> terms, bool excludeCompletedReplaceInProgressCreditsFromGPA=false)
         {
-            if (allCredits == null)
-                return;
+            if(allCredits==null)
+            {
+                allCredits = new List<AcademicCredit>();
+            }
+            if(plannedCourses==null)
+            {
+                plannedCourses = new List<PlannedCredit>();
+            }
             //filter out dropped credits
             IEnumerable<AcademicCredit> filteredCredits = allCredits.Where(c => c != null && c.Status != CreditStatus.Dropped && c.Status != CreditStatus.Deleted && c.Status != CreditStatus.Withdrawn && c.Status != CreditStatus.Cancelled);
-            if (filteredCredits == null || !filteredCredits.Any())
+
+            //group all the credits on course key.
+            //only those credits are needed to be added to group when course does not allow retakes for credits and credits have list of other repeated credit ids was an old logic but is removed in the below condition 
+            // because if there is only one in-progress or completed course, it will have canBeReplaced flag set to yes but collection will be empty.
+            //inorder to use this course and compare with planned one, we need to pick it so that it can be made as possible replacement,
+
+            ILookup<string, AcademicCredit> groupedCredits = filteredCredits.Where(c => (c.CanBeReplaced && c.ReplacedStatus == ReplacedStatus.NotReplaced && c.ReplacementStatus == ReplacementStatus.NotReplacement && c.Course != null && !c.Course.AllowToCountCourseRetakeCredits)).ToLookup(c => c.Course.Id, c => c);
+            //grouping planned courses such as with each course we have associated planned course with its term start date to sort the planned credits with respect to each course
+            ILookup<string, Tuple<PlannedCredit, DateTime>> groupedPlannedCourses = plannedCourses.Where(c => !c.Course.AllowToCountCourseRetakeCredits).ToLookup(c => c.Course.Id, c => Tuple.Create<PlannedCredit, DateTime>(c, terms.Where(t => t.Code == c.TermCode).Select(t => t.StartDate).First()));
+           
+            if ((groupedCredits == null || !groupedCredits.Any()) && (groupedPlannedCourses == null || !groupedPlannedCourses.Any()))
             {
                 return;
             }
-            //group all the credits on course key.
-            //only those credits are needed to be added to group when course does not allow retakes for credits and credits have list of other repeated credit ids.
-            ILookup<string, AcademicCredit> groupedCredits = filteredCredits.Where(c => c.RepeatAcademicCreditIds != null && c.RepeatAcademicCreditIds.Any() && c.ReplacedStatus == ReplacedStatus.NotReplaced && c.ReplacementStatus == ReplacementStatus.NotReplacement && c.CanBeReplaced).Where(cr => cr.Course != null && !cr.Course.AllowToCountCourseRetakeCredits).ToLookup(c => c.Course.Id, c => c);
+            //collecting all the course ids
+            List<string> allTheCourses = groupedCredits.Select(g => g.Key).Union(groupedPlannedCourses.Select(s => s.Key)).Distinct().ToList();
+            //process academic credits to set replaced or relacement status
             if (groupedCredits != null && groupedCredits.Any())
             {
                 //process each grouped course to mark credits replace/replacement status
@@ -550,7 +573,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                     var creditsToProcess = groupedCredits[creditsLst.Key].ToList();
                     if (equatedCredits != null && equatedCredits.Any())
                     {
-                        creditsToProcess.AddRange(equatedCredits.Where(e => e != null && e.ReplacedStatus != ReplacedStatus.Replaced));
+                        creditsToProcess.AddRange(equatedCredits.Where(e => e != null && e.ReplacedStatus != ReplacedStatus.Replaced && e.CanBeReplaced));
                     }
                     var orderedCreditsToProcess = creditsToProcess.OrderBy(c => c.StartDate).ToList();
 
@@ -577,13 +600,76 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                         else if (orderedCreditsToProcess.Count > 1)
                         {
                             var nextCredit = orderedCreditsToProcess[1];
-                            updateReplaceStatus(currentCredit, nextCredit, orderedCreditsToProcess);
+                            updateReplaceStatus(currentCredit, nextCredit, orderedCreditsToProcess, excludeCompletedReplaceInProgressCreditsFromGPA);
+                        }
+                    }
+
+                }
+            }
+
+            //now process planned courses to set replaced or replacement status
+            if (groupedPlannedCourses != null && groupedPlannedCourses.Any())
+            {
+                //process each grouped course to mark credits replace/replacement status
+                foreach (var plannedCoursesLst in groupedPlannedCourses)
+                {
+                    var coursesToProcess = groupedPlannedCourses[plannedCoursesLst.Key].ToList();
+                    //ordering all the planned credits for each grouped course on its term start date
+                    coursesToProcess = coursesToProcess.OrderBy(c => c.Item2).ToList();
+                    if (coursesToProcess != null && coursesToProcess.Any())
+                    {
+                        int index = 0;
+                        //loop to continue replacing prior planned course until left with only one
+                        for (index = 0; index < coursesToProcess.Count() - 1; index = index + 1)
+                        {
+                            var currentCourse = coursesToProcess[index];
+                            currentCourse.Item1.ReplacedStatus = ReplacedStatus.ReplaceInProgress;
+                            currentCourse.Item1.ReplacementStatus = ReplacementStatus.NotReplacement;
+                        }
+                        //if index is > 0 it means there were more than 1 repeated planned course; therefore set the last one after the loop as possible replacement
+                        //otherwise only one planned course will have no replacement or replaced status set
+                        if (index > 0)
+                        {
+                            coursesToProcess[index].Item1.ReplacedStatus = ReplacedStatus.NotReplaced;
+                            coursesToProcess[index].Item1.ReplacementStatus = ReplacementStatus.PossibleReplacement;
+                        }
+                        else
+                        {
+                            coursesToProcess[index].Item1.ReplacedStatus = ReplacedStatus.NotReplaced;
+                            coursesToProcess[index].Item1.ReplacementStatus = ReplacementStatus.NotReplacement;
+
+                        }
+                    }
+                }
+            }
+            //now find which one to take if already there is possible replacement in academic credits - take planned one over completed/inprogress course
+            foreach (string course in allTheCourses)
+            {
+                var possibleCreditReplacement = groupedCredits[course].Where(c => (c.ReplacementStatus == ReplacementStatus.PossibleReplacement || (c.ReplacedStatus == ReplacedStatus.NotReplaced && c.ReplacementStatus == ReplacementStatus.NotReplacement) || c.ReplacementStatus == ReplacementStatus.Replacement)).FirstOrDefault();
+                if (possibleCreditReplacement != null)
+                {
+                    var possiblePlannedCourseReplacement = groupedPlannedCourses[course].Where(c => c.Item1.ReplacementStatus == ReplacementStatus.PossibleReplacement || (c.Item1.ReplacedStatus == ReplacedStatus.NotReplaced && c.Item1.ReplacementStatus == ReplacementStatus.NotReplacement)).FirstOrDefault();
+                    if (possiblePlannedCourseReplacement != null)
+                    {
+                        possiblePlannedCourseReplacement.Item1.ReplacedStatus = ReplacedStatus.NotReplaced;
+                        possiblePlannedCourseReplacement.Item1.ReplacementStatus = ReplacementStatus.PossibleReplacement;
+                        possibleCreditReplacement.ReplacedStatus = ReplacedStatus.ReplaceInProgress;
+                        possibleCreditReplacement.ReplacementStatus = ReplacementStatus.NotReplacement;
+                        //if planned course is replacing completed course then adjust the credits and gpa of completed course to 0
+                        if (possibleCreditReplacement.IsCompletedCredit)
+                        {
+                            possibleCreditReplacement.AdjustedCredit = 0M;
+                            if (excludeCompletedReplaceInProgressCreditsFromGPA == true)
+                            {
+                                possibleCreditReplacement.AdjustedGpaCredit = 0m;
+                                possibleCreditReplacement.AdjustedGradePoints = 0m;
+                            }
+
                         }
                     }
                 }
             }
         }
-
         /// <summary>
         /// This is recursive method that marks the status of credits on basis of  replace and replacement.
         /// Comparison happens between current credit and next credit in sequence
@@ -591,7 +677,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
         /// <param name="currentCredit"></param>
         /// <param name="nextCredit"></param>
         /// <param name="creditsToProcess"></param>
-        private void updateReplaceStatus(AcademicCredit currentCredit, AcademicCredit nextCredit, List<AcademicCredit> creditsToProcess)
+        private void updateReplaceStatus(AcademicCredit currentCredit, AcademicCredit nextCredit, List<AcademicCredit> creditsToProcess, bool excludeCompletedReplaceInProgressCreditsFromGPA=false)
         {
             AcademicCredit creditCompared = null;
             AcademicCredit creditToCompareWith = null;
@@ -604,13 +690,25 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
             {
                 currentCredit.ReplacedStatus = ReplacedStatus.ReplaceInProgress;
                 currentCredit.ReplacementStatus = ReplacementStatus.NotReplacement;
-                currentCredit.AdjustedCredit = 0M;
+                //if completed course is being replaced by inprogress course then adjust the credits of completed course to 0
+                //since we don't want to count possible replace in progress completed course in total completed credits or in cumulative GPA
+                if (currentCredit.IsCompletedCredit)
+                {
+                    currentCredit.AdjustedCredit = 0M;
+                    if (excludeCompletedReplaceInProgressCreditsFromGPA == true)
+                    {
+                        currentCredit.AdjustedGpaCredit = 0m;
+                        currentCredit.AdjustedGradePoints = 0m;
+                    }
+                }
                 nextCredit.ReplacementStatus = ReplacementStatus.PossibleReplacement;
                 nextCredit.ReplacedStatus = ReplacedStatus.NotReplaced;
                 creditCompared = nextCredit;
             }
 
             // If one was complete and the other was in progress, then the in-progress course is the possible replacement.
+            //if completed course is being replaced by inprogress course then adjust the credits of completed course to 0
+            //since we don't want to count possible replace in progress completed course in total completed credits or in cumulative GPA
             else if (nextCredit.IsCompletedCredit)
             {
                 currentCredit.ReplacedStatus = ReplacedStatus.NotReplaced;
@@ -618,8 +716,12 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 nextCredit.ReplacedStatus = ReplacedStatus.ReplaceInProgress;
                 nextCredit.ReplacementStatus = ReplacementStatus.NotReplacement;
                 nextCredit.AdjustedCredit = 0M;
+                if (excludeCompletedReplaceInProgressCreditsFromGPA == true)
+                {
+                    nextCredit.AdjustedGpaCredit = 0m;
+                    nextCredit.AdjustedGradePoints = 0m;
+                }
                 creditCompared = currentCredit;
-
             }
 
             //find the next credit in list
@@ -638,7 +740,7 @@ namespace Ellucian.Colleague.Coordination.Planning.Services
                 throw;
             }
 
-            updateReplaceStatus(creditCompared, creditToCompareWith, creditsToProcess);
+            updateReplaceStatus(creditCompared, creditToCompareWith, creditsToProcess, excludeCompletedReplaceInProgressCreditsFromGPA);
         }
 
         /// <summary>

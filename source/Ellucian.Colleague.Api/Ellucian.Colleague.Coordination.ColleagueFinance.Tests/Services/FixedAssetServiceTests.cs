@@ -1,11 +1,10 @@
-﻿// Copyright 2018-2019 Ellucian Company L.P. and its affiliates.
+﻿// Copyright 2018-2021 Ellucian Company L.P. and its affiliates.
 using Ellucian.Colleague.Coordination.ColleagueFinance.Services;
 using Ellucian.Colleague.Coordination.ColleagueFinance.Tests.UserFactories;
 using Ellucian.Colleague.Domain.Base.Repositories;
 using Ellucian.Colleague.Domain.ColleagueFinance;
 using Ellucian.Colleague.Domain.ColleagueFinance.Entities;
 using Ellucian.Colleague.Domain.ColleagueFinance.Repositories;
-using Ellucian.Colleague.Domain.ColleagueFinance.Tests;
 using Ellucian.Colleague.Domain.Exceptions;
 using Ellucian.Colleague.Domain.Entities;
 using Ellucian.Colleague.Domain.Repositories;
@@ -18,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ellucian.Web.Http.Exceptions;
 
 namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
 {
@@ -182,14 +182,35 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 //roleRepositoryMock.Setup(rpm => rpm.Roles).Returns(new List<Domain.Entities.Role>() { viewGrants });
                 roleRepositoryMock.Setup(r => r.GetRolesAsync()).ReturnsAsync(roles);
 
-                fixedAssetRepositoryMock.Setup(r => r.GetFixedAssetByIdAsync(It.IsAny<String>())).ReturnsAsync(fixedAsset);                
+                fixedAssetRepositoryMock.Setup(r => r.GetFixedAssetByIdAsync(It.IsAny<String>())).ReturnsAsync(fixedAsset);
+                var personGuidCollection = new Dictionary<string, string>();
+                personGuidCollection.Add("1", guid);
+                personRepositoryMock.Setup(p => p.GetPersonGuidsCollectionAsync(It.IsAny<IEnumerable<string>>())).ReturnsAsync(personGuidCollection);
                 personRepositoryMock.Setup(p => p.GetPersonIdFromGuidAsync(It.IsAny<String>())).ReturnsAsync(guid);
                 roomRepositoryMock.Setup( m => m.GetRoomsAsync(It.IsAny<bool>())).ReturnsAsync(rooms);
                 colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetAssetCategoriesAsync(It.IsAny<bool>())).ReturnsAsync(assetCategories);
+                foreach (var a in assetCategories)
+                {
+                    colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetAssetCategoriesGuidAsync(a.Code)).ReturnsAsync(a.Guid);
+                }
+
                 colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetAssetTypesAsync(It.IsAny<bool>())).ReturnsAsync(assetTypes);
+                foreach (var a in assetTypes)
+                {
+                    colleagueFinanceReferenceDataRepositoryMock.Setup(f => f.GetAssetTypesGuidAsync(a.Code)).ReturnsAsync(a.Guid);
+                }
                 referenceDataRepositoryMock.Setup(f => f.GetBuildings2Async(It.IsAny<bool>())).ReturnsAsync(buildings);
+                foreach (var a in buildings)
+                {
+                    referenceDataRepositoryMock.Setup(f => f.GetBuildingGuidAsync(a.Code)).ReturnsAsync(a.Guid);
+                }
+
                 referenceDataRepositoryMock.Setup(r => r.GetItemConditionsAsync(It.IsAny<bool>())).ReturnsAsync(itemConditions);
                 referenceDataRepositoryMock.Setup(r => r.GetAcquisitionMethodsAsync(It.IsAny<bool>())).ReturnsAsync(acquisitionMethods);
+
+                // await _referenceDataRepository.GetHostCountry()
+                referenceDataRepositoryMock.Setup(r => r.GetHostCountryAsync()).ReturnsAsync("USA");
+
                 colleagueFinanceReferenceDataRepositoryMock.Setup(r => r.GetFixedAssetTransferFlagsAsync()).ReturnsAsync(fixedAssetsFlagEntities);
                 var fixedAssetsFlagAdapter = new AutoMapperAdapter<Domain.ColleagueFinance.Entities.FixedAssetsFlag, Dtos.ColleagueFinance.FixedAssetsFlag>(adapterRegistryMock.Object, loggerMock.Object);
                 adapterRegistryMock.Setup(reg => reg.GetAdapter<Domain.ColleagueFinance.Entities.FixedAssetsFlag, Dtos.ColleagueFinance.FixedAssetsFlag>()).Returns(fixedAssetsFlagAdapter);
@@ -207,13 +228,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
                 await fixedAssetService.GetFixedAssetsByGuidAsync(null);
             }
 
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task FixedAssetService_GetFixedAssetsByGuidAsync_PermissionsException()
-            {
-                roleRepositoryMock.Setup(r => r.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>());
-                await fixedAssetService.GetFixedAssetsByGuidAsync(guid);
-            }
 
             [TestMethod]
             [ExpectedException(typeof(KeyNotFoundException))]
@@ -232,7 +246,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(RepositoryException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task FixedAssetService_GetFixedAssetsByGuidAsync_RepositoryException_From_Repository()
             {
                 fixedAssetRepositoryMock.Setup(r => r.GetFixedAssetByIdAsync(It.IsAny<String>())).ThrowsAsync(new RepositoryException());
@@ -249,7 +263,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
             
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task FixedAssetService_GetFixedAssetsByGuidAsync_ConvertEntityToAcquisiotionMethod_KeyNotFoundException()
             {
                 var fixedAsset = new FixedAssets(guid, "BLDG1", "Building one", "C", "invalidGuid", "01");
@@ -258,7 +272,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task FixedAssetService_GetFixedAssetsByGuidAsync_ConvertEntityToCapitalizationStatus_InvalidOperationException()
             {
                 var fixedAsset = new FixedAssets(guid, "BLDG1", "Building one", "invalidCapitalizationStatus", "cfb29bc7-5468-4075-a9ab-7d265b0a04f3", "01");
@@ -267,7 +281,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task FixedAssetService_GetFixedAssetsByGuidAsync_ConvertEntityToAssetTypeGuidObjectAsync_KeyNotFoundException()
             {
                 var fixedAsset = new FixedAssets(guid, "BLDG1", "Building one", "C", "cfb29bc7-5468-4075-a9ab-7d265b0a04f3", "01"){ FixAssetType = "InvalidAssetType"};
@@ -276,7 +290,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task FixedAssetService_GetFixedAssetsByGuidAsync_ConvertEntityToAssetCategoryGuidObjectAsync_KeyNotFoundException()
             {
                 var fixedAsset = new FixedAssets(guid, "BLDG1", "Building one", "C", "cfb29bc7-5468-4075-a9ab-7d265b0a04f3", "01") { FixAssetCategory = "InvalidAssetCategory" };
@@ -285,7 +299,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task FixedAssetService_GetFixedAssetsByGuidAsync_ConvertEntityToBuildingAsync_KeyNotFoundException()
             {
                 var fixedAsset = new FixedAssets(guid, "BLDG1", "Building one", "C", "cfb29bc7-5468-4075-a9ab-7d265b0a04f3", "01") { FixBuilding = "InvalidBuilding" };
@@ -294,7 +308,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task FixedAssetService_GetFixedAssetsByGuidAsync_ConvertEntityToItemConditionAsync_KeyNotFoundException()
             {
                 var fixedAsset = new FixedAssets(guid, "BLDG1", "Building one", "C", "cfb29bc7-5468-4075-a9ab-7d265b0a04f3", "01") { FixInvoiceCondition = "InvalidCondition" };
@@ -303,7 +317,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(KeyNotFoundException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task FixedAssetService_GetFixedAssetsByGuidAsync_ConvertEntityToRoomGuidObjectAsync_KeyNotFoundException()
             {
                 var fixedAsset = new FixedAssets(guid, "BLDG1", "Building one", "C", "cfb29bc7-5468-4075-a9ab-7d265b0a04f3", "01") { FixBuilding = "MCB", FixRoom = "InvalidRoom" };
@@ -312,7 +326,7 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             }
 
             [TestMethod]
-            [ExpectedException(typeof(InvalidOperationException))]
+            [ExpectedException(typeof(IntegrationApiException))]
             public async Task FixedAssetService_GetFixedAssetsByGuidAsync_ConvertEntityToAcquisiotionMethod_InvalidOperationException()
             {
                 acquisitionMethods = new List<Domain.Base.Entities.AcquisitionMethod>()
@@ -338,14 +352,6 @@ namespace Ellucian.Colleague.Coordination.ColleagueFinance.Tests.Services
             #endregion
 
             #region GETALL
-
-            [TestMethod]
-            [ExpectedException(typeof(PermissionsException))]
-            public async Task FixedAssetService_GetFixedAssetsAsync_PermissionsException()
-            {
-                roleRepositoryMock.Setup(r => r.GetRolesAsync()).ReturnsAsync(new List<Domain.Entities.Role>());
-                await fixedAssetService.GetFixedAssetsAsync(0, 100);
-            }
 
             [TestMethod]
             public async Task FixedAssetService_GetFixedAssetsAsync()

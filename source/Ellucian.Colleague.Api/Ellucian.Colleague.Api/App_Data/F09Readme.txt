@@ -14,7 +14,7 @@
   FGU-dev
       purpose..............: matches build that is currently deployed to PROJDB18
       Colleague.Api Version: 1.33.1.6
-      deployed date........: 12/08/21
+      deployed date........: 01/14/21
       deployed commit......: see server for actual commit (this is inside source control)
 
   master
@@ -36,6 +36,7 @@
   12/15/20 LIVE18   v1.29.1.9                                          -upgrade API to v1.29
   12/08/21 TEST18   v1.33.1.6                                          -upgrade API to v1.33
   12/13/21 TEST18   v1.33.1.6                                          -upgrade API to v1.33
+  01/14/21 TEST18                                                      -override reg dates cache timer
 
 **-----------------------------------------------------------------
           Summary of Custom CTX Transactions
@@ -68,4 +69,16 @@
  -change PDF report column header from "Acadmic Program" to "Program (Catalog)"
  in:
  \source\Ellucian.Colleague.Api\Ellucian.Colleague.Api\Reports\F09\StudentTrackingSheet.rdlc 
+
+ f09 teresa@toad-code.com 01/14/22
+ background: Waitlist students are not "given permission to register" until after the "standard" section registration window is closed.
+ To make this work,  the registrar uses RGUC to change the "registration ADD end-date"  for the section.
+ Then they give the waitlist student permission-to-register, and the student has 2 days to register. 
+ The trouble occurs when the student goes to SS to register.The section "registration ADD end-date" is on a 24 hour cache.
+
+ solution: for the first month of each term (Jan, May, Sept), there will only be a few students registering,
+ in those months, override the cache timer to 1 minute (instead of 24 hours)
+
+ modified:
+  source/Ellucian.Colleague.Api/Ellucian.Colleague.Data.Student/Repositories/RegistrationGroupRepository.cs
  

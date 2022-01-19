@@ -33,10 +33,11 @@
   09/05/20 PROJDB18 v1.28.1.5 aed9a805f070469a39ec82e434acf594001ee950 -upgrade API to v1.28
   12/15/20 TEST18   v1.29.1.9                                          -upgrade API to v1.29
   12/15/20 PROJDB18 v1.29.1.9                                          -upgrade API to v1.29
-  12/15/20 LIVE18   v1.29.1.9                                          -upgrade API to v1.29
+  12/15/20 LIVE     v1.29.1.9                                          -upgrade API to v1.29
   12/08/21 TEST18   v1.33.1.6                                          -upgrade API to v1.33
   12/13/21 TEST18   v1.33.1.6                                          -upgrade API to v1.33
-  01/14/21 TEST18                                                      -override reg dates cache timer
+  01/14/22 TEST18                                                      -override reg dates cache timer
+  01/19/22 LIVE                                                        -override reg dates cache timer
 
 **-----------------------------------------------------------------
           Summary of Custom CTX Transactions

@@ -29,7 +29,24 @@ namespace Ellucian.Colleague.Data.Student.Repositories
         public RegistrationGroupRepository(ICacheProvider cacheProvider, IColleagueTransactionFactory transactionFactory, ILogger logger, ApiSettings apiSettings)
             : base(cacheProvider, transactionFactory, logger)
         {
-            CacheTimeout = Level1CacheTimeoutValue;
+            //f09 teresa@toad-code.com 01/14/22
+            //background: Waitlist students are not "given permission to register" until after the "standard" section registration window is closed.
+            //To make this work,  the registrar uses RGUC to change the "registration ADD end-date"  for the section.
+            //Then they give the waitlist student permission-to-register, and the student has 2 days to register.
+            //The trouble occurs when the student goes to SS to register.The section "registration ADD end-date" is on a 24 hour cache.
+
+            //solution: for the first month of each term (Jan, May, Sept), there will only be a few students registering,
+            //in those months, override the cache timer to 1 minute (instead of 24 hours)
+            var month = DateTime.Now.Month;
+            if (month == 1 || month == 5 || month == 9)
+            {
+                CacheTimeout = 1;
+            }
+            else
+            {
+                CacheTimeout = Level1CacheTimeoutValue;
+            }
+            
             this.readSize = ((apiSettings != null) && (apiSettings.BulkReadSize > 0)) ? apiSettings.BulkReadSize : 5000;
         }
 
